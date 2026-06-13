@@ -1,4 +1,4 @@
-"""Regression tests for simulator battle-search robustness.
+"""Integration regression tests for simulator battle-search robustness.
 
 Background: with seed 2, an out-of-combat Entropic Brew pickup led into a floor-12
 battle whose Monte-Carlo search corrupted potion slots in its internal playout
@@ -7,13 +7,15 @@ copies (uninitialized-memory UB). Strict release validation then either threw an
 different binary layout, drove a non-terminating playout (hang).
 
 The fix lives in the C++ patch (patches/sts_lightspeed_python_api.patch):
-  - BattleContext.potions is initialized to EMPTY_POTION_SLOT (removes the UB),
+  - GameContext.potions / BattleContext.potions are initialized (removes the UB),
   - BattleScumSearcher2 skips non-potion values when enumerating potion actions,
-    filters stale/invalid stored edges, and caps playout length so a corrupt
-    playout can never hang.
+    filters stale/invalid stored edges, and caps playout length,
+  - ScumSearchAgent2 caps search-and-commit iterations per battle,
+  - BattleContext::executeActions throws instead of assert(false) so its overflow
+    guard fires in release builds (assert is compiled out) -> clean error, no hang.
 
-This test replays the recorded seed-2 decision path (no LLM) so it reaches the
-floor-12 battle deterministically and asserts the rollout resolves it cleanly.
+This replays the recorded seed-2 decision path (no LLM) so it reaches the floor-12
+battle deterministically. See tests/CLAUDE.md for the unit/integration convention.
 """
 from __future__ import annotations
 
@@ -22,6 +24,8 @@ import unittest
 from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.rollout import run_rollout
 from sts_ai.schemas import AgentDecision
+
+from tests.support import requires_simulator
 
 # Recorded out-of-combat decision indices for seed 2 up to (and through) the
 # floor-12 battle that previously failed. Captured from a Qwen rollout; replayed
@@ -48,6 +52,7 @@ class ScriptedReplayAgent:
         return AgentDecision(action_index=idx, raw_response=f"scripted[{self.pos - 1}]={idx}")
 
 
+@requires_simulator
 class BattleSearchRegressionTest(unittest.TestCase):
     def test_seed2_entropic_brew_floor12_battle_does_not_crash_or_hang(self):
         # battle_simulations=100 matches the failing configuration; the bug was

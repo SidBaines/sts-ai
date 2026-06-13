@@ -16,7 +16,7 @@ We are **not yet in the research / data-collection phase**. The harness is still
 
 ### Active now
 
-- **Test before claiming done.** Run `PYTHONPATH=src .venv/bin/python -m unittest discover -s tests` and at least one smoke rollout (`scripts/run_rollout.py --agent random`) before reporting a change as working. Add a regression test for every bug you fix.
+- **Test before claiming done.** Run `PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -t .` and at least one smoke rollout (`scripts/run_rollout.py --agent random`) before reporting a change as working. Add a regression test for every bug you fix. Tests are tiered: `tests/unit` (pure Python, no build) and `tests/integration` (needs the built simulator, gated by `@requires_simulator`); see [`tests/CLAUDE.md`](tests/CLAUDE.md). Note the `-t .` flag — it's required now that the tiers are packages.
 - **Match the existing style.** Type hints, `@dataclass`, `from __future__ import annotations`, small pure functions. Read the neighbouring code and mirror it rather than introducing new patterns.
 
 ### Activate once we start keeping data (≈ research_plan.md Stage 1 onward)

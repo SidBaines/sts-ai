@@ -249,7 +249,9 @@ Done:
 Acceptance criteria:
 
 - `scripts/build_lightspeed.sh` completes on the local machine;
-- `PYTHONPATH=src .venv/bin/python -m unittest discover -s tests` passes;
+- `PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -t .` passes (the
+  `tests/unit` tier runs without a build; `tests/integration` needs the simulator —
+  see `tests/CLAUDE.md`);
 - `scripts/run_rollout.py --agent first` writes a valid JSONL trace.
 
 ### Stage 1: Baseline Rollout Dataset
