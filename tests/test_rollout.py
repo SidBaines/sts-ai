@@ -3,7 +3,7 @@ import unittest
 from sts_ai.agents import FirstLegalAgent
 from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.rollout import run_rollout
-from sts_ai.schemas import AgentDecision
+from sts_ai.schemas import AgentDecision, LegalAction
 
 
 class BadIndexAgent:
@@ -11,6 +11,32 @@ class BadIndexAgent:
 
     def choose_action(self, state_text, legal_actions):
         return AgentDecision(action_index=999, raw_response="bad index")
+
+
+class FakeStepErrorEnv:
+    seed = 123
+
+    def advance_to_decision(self):
+        return 0
+
+    def is_terminal(self):
+        return False
+
+    def legal_actions(self):
+        return [LegalAction(index=0, bits=1, description="only action")]
+
+    def describe_state(self):
+        return "fake state"
+
+    def step(self, action_index):
+        raise RuntimeError("simulator exploded")
+
+    def summary(self):
+        return {"seed": self.seed, "done": False}
+
+    @staticmethod
+    def action_dict(action):
+        return {"index": action.index, "bits": action.bits, "description": action.description}
 
 
 class TerminalBoundaryTest(unittest.TestCase):
@@ -43,6 +69,15 @@ class RolloutFallbackTest(unittest.TestCase):
             record.agent["metadata"]["fallback_reason"],
             "agent returned out-of-range action",
         )
+
+    def test_simulator_step_error_stops_rollout_with_error_payload(self):
+        result = run_rollout(FakeStepErrorEnv(), FirstLegalAgent(), max_decisions=1)
+        self.assertEqual(result.stopped_reason, "simulator_error")
+        self.assertEqual(len(result.decisions), 0)
+        self.assertIsNotNone(result.error)
+        self.assertEqual(result.error["phase"], "step")
+        self.assertEqual(result.error["decision_index"], 0)
+        self.assertIn("simulator exploded", result.error["message"])
 
 
 class SerializerSmokeTest(unittest.TestCase):

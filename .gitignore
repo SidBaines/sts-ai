@@ -27,8 +27,7 @@ dist/
 external/
 
 # Generated rollout data and experiment outputs
-data/rollouts/
-data/**/*.jsonl
+data/
 outputs/
 runs/
 checkpoints/

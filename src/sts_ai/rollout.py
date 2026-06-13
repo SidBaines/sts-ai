@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
 from sts_ai.agents import ActionAgent
 from sts_ai.lightspeed import LightspeedHybridEnv
@@ -17,9 +18,16 @@ def run_rollout(
 ) -> RolloutResult:
     decisions: list[DecisionRecord] = []
     stopped_reason = "terminal"
+    error: dict[str, Any] | None = None
 
     for decision_index in range(max_decisions):
-        env.advance_to_decision()
+        try:
+            env.advance_to_decision()
+        except Exception as exc:  # noqa: BLE001 - preserve simulator failures in rollout metadata.
+            stopped_reason = "simulator_error"
+            error = error_payload(exc, "advance_to_decision", decision_index)
+            break
+
         if env.is_terminal():
             stopped_reason = "terminal"
             break
@@ -39,7 +47,13 @@ def run_rollout(
             agent_decision.metadata["fallback_reason"] = "agent returned out-of-range action"
             action_index = 0
 
-        selected = env.step(action_index)
+        try:
+            selected = env.step(action_index)
+        except Exception as exc:  # noqa: BLE001 - preserve simulator failures in rollout metadata.
+            stopped_reason = "simulator_error"
+            error = error_payload(exc, "step", decision_index)
+            break
+
         record = DecisionRecord(
             seed=env.seed,
             decision_index=decision_index,
@@ -62,6 +76,7 @@ def run_rollout(
         decisions=decisions,
         terminal_state=env.summary(),
         stopped_reason=stopped_reason,
+        error=error,
     )
 
 
@@ -70,3 +85,12 @@ def append_jsonl(path: str | Path, record: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, ensure_ascii=True) + "\n")
+
+
+def error_payload(exc: Exception, phase: str, decision_index: int) -> dict[str, Any]:
+    return {
+        "type": exc.__class__.__name__,
+        "message": str(exc),
+        "phase": phase,
+        "decision_index": decision_index,
+    }

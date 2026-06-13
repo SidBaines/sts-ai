@@ -31,6 +31,58 @@ Current behavior:
 - Combats are resolved by the built-in Lightspeed search agent.
 - The Python policy controls Neow choices, pathing, rewards, shops, events, card select screens, treasure rooms, and campfires.
 - MLX/Qwen inference has been smoke-tested with `mlx-community/Qwen3-4B-4bit`; no-thinking mode produces valid structured actions on short rollouts.
+- Simulator error handling is now strict: invalid battle actions and unknown potion values raise errors, batch rollouts write `.error.json` sidecars, and optional per-seed subprocess timeouts keep slow or faulty seeds isolated.
+
+### Latest Stage 1 Run Notes
+
+Baseline pass:
+
+- Dataset directory: `data/baseline_rollouts_100`.
+- Agents: `first`, `random`, `heuristic`.
+- Seeds: `2-51`.
+- Settings: `max_decisions=200`, `battle_simulations=100`, `seed_timeout_seconds=30`.
+- Summary CSV: `data/baseline_rollouts_100/summary.csv`.
+
+Observed baseline reliability:
+
+- `first`: 46/50 clean seeds; timeout seeds `11, 17, 22, 48`.
+- `random`: 47/50 clean seeds; timeout seeds `11, 25, 48`.
+- `heuristic`: 46/50 clean seeds; timeout seeds `11, 17, 22, 48`.
+- Clean intersection across all three agents: 45 seeds.
+- First 10 clean intersection seeds used for Qwen smoke: `2, 3, 4, 5, 6, 7, 8, 9, 10, 12`.
+
+The earlier `500` battle-simulation setting is useful as a simulator stress test but too slow/flaky for fast Stage 1 iteration. Seed `1` should be kept as a diagnostic regression seed, not included in the initial frozen dev/eval set.
+
+Serializer audit on the clean baseline traces found no raw screen numbers, unknown potion names, fallback action labels, or missing major screen coverage. Covered screen types include Neow/events, map, rewards, shops, campfires, card select, treasure rooms, and boss relic rewards.
+
+Qwen no-thinking smoke:
+
+- Dataset directory: `data/qwen_smoke_100/mlx_Qwen3_4B_4bit_nothinking_128`.
+- Model: `mlx-community/Qwen3-4B-4bit`.
+- Seeds: `2, 3, 4, 5, 6, 7, 8, 9, 10, 12`.
+- Settings: `max_decisions=20`, `battle_simulations=100`, `max_tokens=128`, `temperature=0`, `max_retries=1`, no thinking mode.
+- Result: 10/10 seed files completed, 200 total decisions, no simulator error sidecars.
+- Valid action rate: 98.0%.
+- Retry count: 29/200 decisions used one retry.
+- Invalid action count: 4/200 decisions. All observed invalids were truncated JSON after verbose reasoning, falling back to action `0`.
+- Mean final floor after 20 decisions: 5.1.
+- One run reached low HP by the cutoff: seed `6` ended at 15/80 HP on floor 5.
+
+Before a larger Qwen batch, decide between:
+
+- increasing the no-thinking output budget from `128` to `256`; or
+- tightening the prompt/schema so the model emits very short reasoning or only the final action JSON.
+
+Follow-up token-budget comparison:
+
+- Same first five seeds: `2, 3, 4, 5, 6`.
+- `128` tokens: 100 decisions, 98 valid, 14 decisions needed one retry.
+- `256` tokens: 100 decisions, 100 valid, 1 decision needed one retry.
+- No simulator error sidecars in either comparison.
+
+This suggests `256` tokens is a better near-term no-thinking rollout budget if we keep the current JSON schema with a `reasoning` field. A stricter short-reasoning prompt may recover some of the throughput while keeping parse reliability high.
+
+Do not silently change this policy because output budget and reasoning verbosity affect rollout cost, parse reliability, and the training data distribution.
 
 This hybrid approach is deliberate. The existing upstream Python binding does not expose combat micro-actions. Letting Lightspeed resolve battles gets us useful Act 1 trajectories and risk-relevant decisions quickly, while full combat control remains a later C++ binding task.
 
@@ -73,7 +125,12 @@ Updated near-term ordering:
 2. Harden JSON extraction and retry behavior. Done.
 3. Smoke-test one real Qwen3/MLX decision. Done with `mlx-community/Qwen3-4B-4bit` in no-thinking mode.
 4. Add batch rollout and metrics tooling.
-5. Only then freeze dev/eval seeds.
+5. Harden battle-search robustness against uninitialized-memory UB (seed-2 Entropic
+   Brew crash/hang). Done — contained, not fully root-caused; see
+   `docs/simulator_issue_handoff.md`.
+6. Only then freeze dev/eval seeds. (Note: the residual UB is build-/layout-dependent,
+   so frozen-seed reproducibility across toolchains is not yet guaranteed — resolve
+   the deeper UB before depending on cross-machine identical traces.)
 
 ## Design Commitments
 
@@ -121,9 +178,19 @@ Neutral rollout data should avoid framing leakage in reasoning. If Qwen reasonin
 
 ### Thinking Policy
 
-For the first Qwen rollout stage, disable Qwen3 thinking mode by default because it is much more reliable for strict JSON action outputs. A smoke test with thinking enabled showed the model can spend the full token budget inside reasoning without emitting final JSON.
+For the next Qwen rollout stage, use a two-arm policy:
 
-Thinking mode remains an explicit experimental condition rather than a default.
+- **High-throughput arm:** no-thinking mode with a small output budget for baseline rollout collection.
+- **Comparison arm:** thinking mode with `2048` output tokens on a smaller seed set.
+
+The benchmark motivating this choice was:
+
+- no-thinking, `128` tokens: 3/3 valid decisions, 0 retries, about 1.9 seconds/decision;
+- thinking, `512` and `1024` tokens: failed to emit final JSON in the tested cases;
+- thinking, `2048` tokens: 4/4 valid decisions across tested runs, 1 retry total, about 27 seconds/decision in a 3-decision run;
+- thinking, `4096` tokens: 1/1 valid, similar one-decision latency to `2048`.
+
+This is not a permanent decision. It is the working policy for Stage 1/3 de-risking so we can collect enough no-thinking data while preserving a smaller thinking-mode comparison.
 
 For later thinking-enabled training, allow thinking during generation for capability, but keep the primary supervised/action loss on the final structured action tokens.
 
@@ -143,6 +210,26 @@ Fallback order:
 2. local LoRA or tiny-slice training smoke tests;
 3. smaller Qwen model for end-to-end validation;
 4. cloud GPU for full-parameter RL or large SFT-style runs if local training is too slow.
+
+### Simulator Fault Handling
+
+Research traces should fail closed. A simulator warning is not safe to ignore, because a bad battle-search action can change the state distribution that the LLM later trains on.
+
+Current policy:
+
+- reject invalid battle actions in release builds before executing them;
+- reject unknown potion enum values instead of indexing name/effect tables out of range;
+- initialize `potions` arrays in `GameContext`/`BattleContext` and guard the battle
+  search against transiently-corrupt potion slots / non-terminating playouts (see
+  `docs/simulator_issue_handoff.md` for the uninitialized-memory root cause);
+- convert the simulator's internal `while(true)`/overflow guards from `assert(false)`
+  to thrown exceptions, since asserts are compiled out in release builds and would
+  otherwise hang instead of failing closed;
+- record recoverable simulator failures as `stopped_reason=simulator_error`;
+- record batch failures and timeouts as `seed_<n>.error.json` sidecars;
+- use `--seed-timeout-seconds` for larger non-LLM baseline batches so each seed runs in a subprocess and can be killed independently.
+
+Hard C++ asserts remain useful for local debugging, but they are not the default batch mechanism because an abort tears down the whole Python interpreter. **They are also no-ops in our release builds**, so any guard that must fire in production has to throw, not assert. Python-visible exceptions plus subprocess timeouts give cleaner failure accounting.
 
 ## Roadmap
 
@@ -171,9 +258,10 @@ Goal: produce reliable fixed-seed baseline trajectories before involving an LLM.
 
 Tasks:
 
-- add a batch rollout CLI for seed ranges;
+- add a batch rollout CLI for seed ranges; done;
 - run `first`, `random`, and `heuristic` agents on a frozen Act 1 seed set;
 - summarize floor reached, outcome, HP, gold, number of decisions, and decision screen distribution;
+- track `stopped_reason` and error sidecars separately from successful rollouts;
 - inspect sampled traces manually for bad action descriptions or missing state fields;
 - decide which seeds become the frozen dev/eval sets.
 
@@ -420,9 +508,8 @@ Later scientific metrics:
 
 ## Near-Term Next Steps
 
-1. Add a batch rollout script for seed ranges.
-2. Add a rollout metrics summarizer.
-3. Run Qwen on 10 fixed seeds in no-thinking mode and inspect every trace manually.
+1. Run baseline batch rollouts for `first`, `random`, and `heuristic`.
+2. Run Qwen no-thinking on 10 fixed seeds and inspect every trace manually.
+3. Run Qwen thinking mode with `2048` tokens on a smaller comparison seed set.
 4. Improve any state/action descriptions revealed by the manual trace audit.
 5. Freeze initial dev/eval seeds only after serializer issues are fixed.
-6. Revisit thinking-enabled Qwen after the no-thinking rollout path is stable.

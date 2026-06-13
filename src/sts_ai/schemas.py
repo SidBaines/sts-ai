@@ -39,3 +39,4 @@ class RolloutResult:
     decisions: list[DecisionRecord]
     terminal_state: dict[str, Any]
     stopped_reason: str
+    error: dict[str, Any] | None = None

@@ -44,6 +44,40 @@ PYTHONPATH=src .venv/bin/python scripts/run_rollout.py --agent random --seed 1 -
 
 Output defaults to `data/rollouts/rollout_<agent>_<seed>.jsonl`.
 
+## Batch Rollouts
+
+Run a small baseline batch:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/run_batch.py \
+  --agent heuristic \
+  --seeds 1,2,3 \
+  --max-decisions 80 \
+  --battle-simulations 500 \
+  --overwrite
+```
+
+Summarize generated traces:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/summarize_rollouts.py 'data/rollouts/heuristic/*.jsonl'
+```
+
+For larger baseline batches, use per-seed subprocess isolation so a slow or faulty simulator seed cannot stop the whole batch:
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/run_batch.py \
+  --agent heuristic \
+  --seed-start 1 \
+  --seed-count 50 \
+  --max-decisions 200 \
+  --battle-simulations 500 \
+  --seed-timeout-seconds 60 \
+  --overwrite
+```
+
+If a seed fails or times out, the runner writes `seed_<n>.error.json` next to the partial JSONL trace. The summarizer reads these sidecars and marks rows with `stopped_reason` and `error_type`.
+
 ## Optional Local LLM Agent
 
 The `mlx` agent is wired as an optional adapter and requires MLX-LM:
@@ -58,4 +92,13 @@ PYTHONPATH=src .venv/bin/python scripts/run_rollout.py \
 
 The default MLX agent disables Qwen3 thinking mode for the first rollout stage because it gives much more reliable structured JSON actions. Use `--thinking` for explicit reasoning-mode experiments after the no-thinking path is stable.
 
+Current working policy:
+
+- no-thinking mode for high-throughput Qwen baseline rollouts;
+- thinking mode with `--max-tokens 2048 --thinking` for a smaller comparison arm.
+
 The first implementation priority is to verify simulator throughput and action parsing before committing to full-parameter local training.
+
+## Simulator Fault Policy
+
+The local `sts_lightspeed` patch is strict about invalid battle actions and unknown potion enum values. These now raise Python-visible exceptions instead of silently mutating state or flooding stderr. Batch rollouts record those as error sidecars; timeout mode isolates each seed in a subprocess so native hangs or very slow searches are contained.

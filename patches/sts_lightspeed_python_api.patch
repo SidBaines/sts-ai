@@ -1,9 +1,9 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..262737c 100644
+index a9afe35..3f783ba 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -12,21 +12,254 @@
-
+@@ -12,21 +12,264 @@
+ 
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
 +#include "sim/search/GameAction.h"
@@ -38,6 +38,16 @@ index a9afe35..262737c 100644
 +        case ScreenState::BATTLE: return "BATTLE";
 +        default: return "UNKNOWN";
 +    }
++}
++
++const char* safePotionName(Potion p) {
++    if (p >= Potion::AMBROSIA && p <= Potion::WEAK_POTION) {
++        return getPotionName(p);
++    }
++    if (p == Potion::EMPTY_POTION_SLOT) {
++        return "EMPTY_POTION_SLOT";
++    }
++    return "UNKNOWN_POTION";
 +}
 +
 +std::string describeGameAction(const GameContext &gc, const search::GameAction &a) {
@@ -90,7 +100,7 @@ index a9afe35..262737c 100644
 +                case search::GameAction::RewardsActionType::POTION:
 +                    os << "take potion";
 +                    if (a.getIdx1() >= 0 && a.getIdx1() < r.potionCount) {
-+                        os << " " << getPotionName(r.potions[a.getIdx1()]);
++                        os << " " << safePotionName(r.potions[a.getIdx1()]);
 +                    }
 +                    break;
 +                case search::GameAction::RewardsActionType::KEY:
@@ -171,7 +181,7 @@ index a9afe35..262737c 100644
 +                case search::GameAction::RewardsActionType::POTION:
 +                    os << "buy potion";
 +                    if (a.getIdx1() >= 0 && a.getIdx1() < 3) {
-+                        os << " " << getPotionName(s.potions[a.getIdx1()]) << " for " << s.potionPrice(a.getIdx1()) << "g";
++                        os << " " << safePotionName(s.potions[a.getIdx1()]) << " for " << s.potionPrice(a.getIdx1()) << "g";
 +                    }
 +                    break;
 +                case search::GameAction::RewardsActionType::CARD_REMOVE:
@@ -220,7 +230,7 @@ index a9afe35..262737c 100644
 +            if (i > 0) {
 +                os << ", ";
 +            }
-+            os << getPotionName(gc.potions[i]);
++            os << safePotionName(gc.potions[i]);
 +        }
 +    }
 +
@@ -257,7 +267,7 @@ index a9afe35..262737c 100644
  
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +274,34 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -41,6 +284,34 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
          .def("playout", &search::ScumSearchAgent2::playout);
  
@@ -292,7 +302,7 @@ index a9afe35..262737c 100644
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
          .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -75,6 +336,9 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +346,9 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
  
@@ -302,3 +312,464 @@ index a9afe35..262737c 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
+@@ -836,5 +1110,3 @@ PYBIND11_MODULE(slaythespire, m) {
+ }
+ 
+ // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
+-
+-
+diff --git a/include/combat/BattleContext.h b/include/combat/BattleContext.h
+index 767bbcd..b3efb94 100644
+--- a/include/combat/BattleContext.h
++++ b/include/combat/BattleContext.h
+@@ -82,7 +82,15 @@ namespace sts {
+ 
+         int potionCount = 0;
+         int potionCapacity = 3;
+-        std::array<Potion, 5> potions;
++        // Explicitly empty by default. Without an initializer these slots hold
++        // indeterminate values; a default-constructed BattleContext that is read
++        // before init()/copy then exhibits undefined behaviour (garbage potion
++        // values in the search's playout states). Empty (not value-init INVALID=0,
++        // which obtainPotion would not treat as a free slot).
++        std::array<Potion, 5> potions {
++            Potion::EMPTY_POTION_SLOT, Potion::EMPTY_POTION_SLOT, Potion::EMPTY_POTION_SLOT,
++            Potion::EMPTY_POTION_SLOT, Potion::EMPTY_POTION_SLOT,
++        };
+ 
+         int turn = 0;
+         Player player;
+diff --git a/include/game/GameContext.h b/include/game/GameContext.h
+index 04fceda..a280e63 100644
+--- a/include/game/GameContext.h
++++ b/include/game/GameContext.h
+@@ -225,7 +225,13 @@ namespace sts {
+ 
+         int potionCount = 0;
+         int potionCapacity = 0;
+-        std::array<Potion, 5> potions;
++        // Explicitly empty by default; without an initializer the unused slots hold
++        // indeterminate values that BattleContext::init copies into combat state
++        // (potions = gc.potions), corrupting the battle search's potion handling.
++        std::array<Potion, 5> potions {
++            Potion::EMPTY_POTION_SLOT, Potion::EMPTY_POTION_SLOT, Potion::EMPTY_POTION_SLOT,
++            Potion::EMPTY_POTION_SLOT, Potion::EMPTY_POTION_SLOT,
++        };
+ 
+         RelicContainer relics;
+         Deck deck;
+diff --git a/include/sim/search/BattleScumSearcher2.h b/include/sim/search/BattleScumSearcher2.h
+index e2e9cdd..e1b8360 100644
+--- a/include/sim/search/BattleScumSearcher2.h
++++ b/include/sim/search/BattleScumSearcher2.h
+@@ -59,6 +59,7 @@ namespace sts::search {
+ 
+         double evaluateEdge(const Node &parent, int edgeIdx);
+         int selectBestEdgeToSearch(const Node &cur);
++        int selectBestValidEdgeToSearch(const Node &cur, const BattleContext &state);
+         int selectFirstActionForLeafNode(const Node &leafNode);
+ 
+         void playoutRandom(BattleContext &state, std::vector<Action> &actionStack);
+diff --git a/include/sim/search/ScumSearchAgent2.h b/include/sim/search/ScumSearchAgent2.h
+index ffa449b..7ab46c1 100644
+--- a/include/sim/search/ScumSearchAgent2.h
++++ b/include/sim/search/ScumSearchAgent2.h
+@@ -44,8 +44,8 @@ namespace sts::search {
+         void takeAction(GameContext &gc, GameAction a);
+         void takeAction(BattleContext &bc, Action a);
+ 
+-        void stepThroughSolution(BattleContext &bc, std::vector<search::Action> &actions);
+-        void stepThroughSearchTree(BattleContext &bc, const search::BattleScumSearcher2 &s);
++        bool stepThroughSolution(BattleContext &bc, std::vector<search::Action> &actions);
++        bool stepThroughSearchTree(BattleContext &bc, const search::BattleScumSearcher2 &s);
+ 
+         void stepOutOfCombatPolicy(GameContext &gc);
+         void cardSelectPolicy(GameContext &gc);
+diff --git a/src/combat/BattleContext.cpp b/src/combat/BattleContext.cpp
+index 965faef..c8e2d25 100644
+--- a/src/combat/BattleContext.cpp
++++ b/src/combat/BattleContext.cpp
+@@ -6,12 +6,52 @@
+ #include "game/GameContext.h"
+ #include "game/Game.h"
+ 
++#include <sstream>
++#include <stdexcept>
++
+ using namespace sts;
+ 
+ namespace sts {
+     thread_local BattleContext *g_debug_bc;
+ }
+ 
++namespace {
++
++bool isKnownPotion(Potion p) {
++    return p >= Potion::AMBROSIA && p <= Potion::WEAK_POTION;
++}
++
++std::string invalidPotionMessage(
++    const BattleContext &bc,
++    const char *operation,
++    int idx,
++    Potion p
++) {
++    std::ostringstream os;
++    os << "invalid " << operation
++       << " seed=" << bc.seed
++       << " floor=" << bc.floorNum
++       << " idx=" << idx
++       << " potion=" << static_cast<int>(p)
++       << " potion_capacity=" << bc.potionCapacity
++       << " potion_count=" << bc.potionCount;
++    return os.str();
++}
++
++Potion validatePotionSlot(const BattleContext &bc, const char *operation, int idx) {
++    if (idx < 0 || idx >= bc.potionCapacity) {
++        throw std::runtime_error(invalidPotionMessage(bc, operation, idx, Potion::INVALID));
++    }
++
++    const Potion p = bc.potions[idx];
++    if (p == Potion::INVALID || p == Potion::EMPTY_POTION_SLOT || !isKnownPotion(p)) {
++        throw std::runtime_error(invalidPotionMessage(bc, operation, idx, p));
++    }
++    return p;
++}
++
++}
++
+ 
+ // assume all bc fields have just been initialized by in class member initializers
+ void BattleContext::init(const GameContext &gc) {
+@@ -732,9 +772,19 @@ void BattleContext::executeActions() {
+                 break;
+             }
+ 
+-            std::cerr << seed << std::endl;
+-            std::cout << *this << '\n';
+-            assert(false);
++            // The original code asserts here, but assert() is compiled out in
++            // release builds, so the while(true) loop would spin forever on a
++            // corrupted state (e.g. monstersAlive < 0, or a self-perpetuating
++            // action queue). Throw a catchable error instead so the harness
++            // records a clean simulator_error rather than hanging.
++            std::ostringstream os;
++            os << "battle action loop did not terminate"
++               << " seed=" << seed
++               << " floor=" << floorNum
++               << " turn=" << turn
++               << " loopCount=" << loopCount
++               << " monstersAlive=" << monsters.monstersAlive;
++            throw std::runtime_error(os.str());
+         }
+ 
+         if (inputState != InputState::EXECUTING_ACTIONS) {
+@@ -2232,13 +2282,17 @@ void BattleContext::obtainPotion(Potion p) {
+ }
+ 
+ void BattleContext::discardPotion(int idx) {
++    validatePotionSlot(*this, "discard potion", idx);
+     potions[idx] = Potion::EMPTY_POTION_SLOT;
+     --potionCount;
+ }
+ 
+ void BattleContext::drinkPotion(int idx, int target) {
+     const bool hasBark = player.hasRelic<R::SACRED_BARK>();
+-    const Potion p = potions[idx];
++    const Potion p = validatePotionSlot(*this, "drink potion", idx);
++    if (p == Potion::FAIRY_POTION) {
++        throw std::runtime_error(invalidPotionMessage(*this, "drink potion", idx, p));
++    }
+     discardPotion(idx);
+ 
+     // todo - dont need to add to bot because always will have nothing in actionQueue?
+@@ -2429,9 +2483,7 @@ void BattleContext::drinkPotion(int idx, int target) {
+         case Potion::EMPTY_POTION_SLOT:
+         case Potion::FAIRY_POTION:
+         default:
+-            std::cerr << seed << "invalid drink potion: " << static_cast<int>(p) << std::endl;
+-            assert(false);
+-            break;
++            throw std::runtime_error(invalidPotionMessage(*this, "drink potion", idx, p));
+     }
+ 
+ }
+diff --git a/src/sim/search/Action.cpp b/src/sim/search/Action.cpp
+index 551623d..7b4e762 100644
+--- a/src/sim/search/Action.cpp
++++ b/src/sim/search/Action.cpp
+@@ -5,9 +5,32 @@
+ #include "sim/search/Action.h"
+ 
+ #include <functional>
++#include <sstream>
++#include <stdexcept>
+ 
+ using namespace sts;
+ 
++namespace {
++
++bool isKnownPotion(Potion p) {
++    return p >= Potion::AMBROSIA && p <= Potion::WEAK_POTION;
++}
++
++std::string invalidActionMessage(const BattleContext &bc, const search::Action &a) {
++    std::ostringstream os;
++    os << "invalid battle action"
++       << " seed=" << bc.seed
++       << " floor=" << bc.floorNum
++       << " input_state=" << static_cast<int>(bc.inputState)
++       << " bits=" << a.bits
++       << " type=" << static_cast<int>(a.getActionType())
++       << " source=" << a.getSourceIdx()
++       << " target=" << a.getTargetIdx();
++    return os.str();
++}
++
++}
++
+ search::Action::Action(std::uint32_t bits) : bits(bits) {}
+ search::Action::Action(search::ActionType actionType) : bits(static_cast<int>(actionType) << 29) {}
+ search::Action::Action(search::ActionType actionType, int idx1) : bits((static_cast<int>(actionType) << 29) | (idx1 & 0xFFFF)) {}
+@@ -68,12 +91,12 @@ bool isValidPotionAction(const BattleContext &bc, const search::Action &a) {
+         return false;
+     }
+ 
+-    if (a.getSourceIdx() < 0 || a.getSourceIdx() > 5) {
++    if (a.getSourceIdx() < 0 || a.getSourceIdx() >= bc.potionCapacity) {
+         return false;
+     }
+ 
+     const auto p = bc.potions[a.getSourceIdx()];
+-    if (p == Potion::INVALID || p == Potion::EMPTY_POTION_SLOT) {
++    if (p == Potion::INVALID || p == Potion::EMPTY_POTION_SLOT || !isKnownPotion(p)) {
+         return false;
+     }
+ 
+@@ -91,7 +114,7 @@ bool isValidPotionAction(const BattleContext &bc, const search::Action &a) {
+             return true;
+         }
+ 
+-        if (a.getTargetIdx() < 0) {
++        if (a.getTargetIdx() < 0 || a.getTargetIdx() >= bc.monsters.monsterCount) {
+             return false;
+         }
+ 
+@@ -419,6 +442,10 @@ void executeMultiCardSelectActionHelper(BattleContext &bc, search::Action a) {
+ }
+ 
+ void search::Action::execute(BattleContext &bc) const {
++    if (!isValidAction(bc)) {
++        throw std::runtime_error(invalidActionMessage(bc, *this));
++    }
++
+ #ifdef sts_asserts
+     if (!isValidAction(bc)) {
+         std::cerr << bc.seed << " " << static_cast<int>(getActionType()) << " " << getSourceIdx() << " " << getTargetIdx() << std::endl;
+@@ -553,6 +580,3 @@ std::vector<search::Action> search::Action::enumerateCardSelectActions(const Bat
+ 
+ 
+ 
+-
+-
+-
+diff --git a/src/sim/search/BattleScumSearcher2.cpp b/src/sim/search/BattleScumSearcher2.cpp
+index 79eccf9..d715863 100644
+--- a/src/sim/search/BattleScumSearcher2.cpp
++++ b/src/sim/search/BattleScumSearcher2.cpp
+@@ -73,7 +73,14 @@ void search::BattleScumSearcher2::step() {
+             return;
+ 
+         } else {
+-            const auto selectIdx = selectBestEdgeToSearch(curNode);
++            const auto selectIdx = selectBestValidEdgeToSearch(curNode, curState);
++            if (selectIdx == -1) {
++                // No stored edge is valid for the current state (corrupted playout
++                // branch). Drop the stale edges and re-enumerate this node as a leaf
++                // on the next loop iteration instead of executing an invalid action.
++                curNode.edges.clear();
++                continue;
++            }
+             auto &edgeTaken = curNode.edges[selectIdx];
+ 
+ //            edgeTaken.action.printDesc(std::cout, curState) << std::endl;
+@@ -144,6 +151,22 @@ int search::BattleScumSearcher2::selectBestEdgeToSearch(const search::BattleScum
+     return bestEdge;
+ }
+ 
++int search::BattleScumSearcher2::selectBestValidEdgeToSearch(const search::BattleScumSearcher2::Node &cur, const BattleContext &state) {
++    int bestEdge = -1;
++    double bestEdgeValue = 0;
++    for (int i = 0; i < cur.edges.size(); ++i) {
++        if (!cur.edges[i].action.isValidAction(state)) {
++            continue;
++        }
++        const auto value = evaluateEdge(cur, i);
++        if (bestEdge == -1 || value > bestEdgeValue) {
++            bestEdge = i;
++            bestEdgeValue = value;
++        }
++    }
++    return bestEdge;
++}
++
+ int search::BattleScumSearcher2::selectFirstActionForLeafNode(const search::BattleScumSearcher2::Node &leafNode) {
+     auto dist = std::uniform_int_distribution<int>(0, static_cast<int>(leafNode.edges.size())-1);
+     return dist(randGen);
+@@ -151,13 +174,18 @@ int search::BattleScumSearcher2::selectFirstActionForLeafNode(const search::Batt
+ 
+ void search::BattleScumSearcher2::playoutRandom(BattleContext &state, std::vector<Action> &actionStack) {
+     Node tempNode; // temp
+-    while (!isTerminalState(state)) {
++    // Hard cap on playout length. A real Act-1 battle resolves under a few hundred
++    // random actions; this bound is generous for legitimate battles but abandons a
++    // playout that cannot reach a terminal outcome (e.g. a state corrupted by
++    // upstream uninitialized-memory UB), guaranteeing the search cannot hang.
++    constexpr int maxPlayoutActions = 1000;
++    for (int i = 0; i < maxPlayoutActions && !isTerminalState(state); ++i) {
+         ++simulationIdx;
+         enumerateActionsForNode(tempNode, state);
+         if (tempNode.edges.empty()) {
+-            std::cerr << state.seed << " " << simulationIdx << std::endl;
+-            std::cerr << state.monsters.arr[0].getName() << " " << state.floorNum << " " << monsterEncounterStrings[static_cast<int>(state.encounter)] << std::endl;
+-            assert(false);
++            // No legal action enumerated for this state. With strict release
++            // builds we must not index an empty edge list; abandon the playout.
++            break;
+         }
+ 
+         auto dist = std::uniform_int_distribution<int>(0, static_cast<int>(tempNode.edges.size())-1);
+@@ -267,7 +295,13 @@ void search::BattleScumSearcher2::enumeratePotionActions(search::BattleScumSearc
+     for (int pIdx = 0; pIdx < bc.potionCapacity; ++pIdx) {
+ 
+         const auto p = bc.potions[pIdx];
+-        if (p == Potion::EMPTY_POTION_SLOT) {
++        // Skip empty slots and, defensively, any slot whose value is outside the
++        // known potion range. Deep random playouts can transiently leave a potion
++        // slot holding a non-potion value; enumerating such a slot would create a
++        // POTION action that fails strict validation at execute() time (crash) or
++        // drives a non-terminating playout (hang). See research_plan.md.
++        if (p == Potion::EMPTY_POTION_SLOT || p == Potion::INVALID
++                || p < Potion::AMBROSIA || p > Potion::WEAK_POTION) {
+             continue;
+         }
+         ++foundPotions;
+diff --git a/src/sim/search/ScumSearchAgent2.cpp b/src/sim/search/ScumSearchAgent2.cpp
+index 53aa5d2..acd5c43 100644
+--- a/src/sim/search/ScumSearchAgent2.cpp
++++ b/src/sim/search/ScumSearchAgent2.cpp
+@@ -6,6 +6,7 @@
+ 
+ #include <sim/search/ExpertKnowledge.h>
+ #include <game/Game.h>
++#include <stdexcept>
+ #include "sim/PrintHelpers.h"
+ #include "sim/search/BattleScumSearcher2.h"
+ 
+@@ -65,7 +66,20 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
+     std::vector<search::Action> bestActions;
+     int bestOutcomePlayerHp = -1;
+ 
++    // Upper bound on search-and-commit iterations for a single battle. Each
++    // iteration advances the battle by up to stepsWithSolution actions, so a real
++    // battle resolves in a few dozen iterations. This bound only fires if the
++    // battle never reaches an outcome (e.g. a state corrupted by upstream
++    // uninitialized-memory UB leaves it unresolvable), converting what would be an
++    // infinite loop into a clean, catchable error.
++    constexpr int maxBattleIterations = 500;
++    int battleIterations = 0;
++
+     while (bc.outcome == Outcome::UNDECIDED) {
++        if (++battleIterations > maxBattleIterations) {
++            throw std::runtime_error("battle did not resolve within iteration limit");
++        }
++
+         const std::int64_t simulationCount = isBossEncounter(bc.encounter) ?
+                                               (bossSimulationMultiplier * simulationCountBase) : simulationCountBase;
+ 
+@@ -82,32 +96,54 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
+ 
+         simulationCountTotal += searcher.root.simulationCount;
+ 
++        bool progressed = false;
+         if (bestOutcomePlayerHp > 0) {
+-            stepThroughSolution(bc, bestActions);
++            progressed = stepThroughSolution(bc, bestActions);
++            if (bestActions.empty()) {
++                bestOutcomePlayerHp = -1;
++            }
++            if (!progressed) {
++                bestActions.clear();
++                bestOutcomePlayerHp = -1;
++                progressed = stepThroughSearchTree(bc, searcher);
++            }
+         } else {
+-            stepThroughSearchTree(bc, searcher);
++            progressed = stepThroughSearchTree(bc, searcher);
++        }
++
++        if (!progressed) {
++            throw std::runtime_error("battle search could not make progress from current state");
+         }
+     }
+ }
+ 
+-void search::ScumSearchAgent2::stepThroughSolution(BattleContext &bc, std::vector<search::Action> &actions) {
++bool search::ScumSearchAgent2::stepThroughSolution(BattleContext &bc, std::vector<search::Action> &actions) {
++    bool progressed = false;
+     for (int i = 0; i < stepsWithSolution; ++i) {
+         if (actions.empty()) {
+             break;
+         }
+ 
+         auto &a = actions.back();
++        if (!a.isValidAction(bc)) {
++            actions.clear();
++            break;
++        }
++
+         if (printLogs) {
+             printHelper(bc, a);
+         }
+ 
+         takeAction(bc, a);
++        progressed = true;
+         actions.pop_back();
+     }
++    return progressed;
+ }
+ 
+-void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const search::BattleScumSearcher2 &s) {
++bool search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const search::BattleScumSearcher2 &s) {
+     const search::BattleScumSearcher2::Node *curNode = &s.root;
++    bool progressed = false;
+     for (int actionCount = 0; actionCount < stepsNoSolution; ++actionCount) {
+         if (bc.outcome != Outcome::UNDECIDED) {
+             break;
+@@ -117,6 +153,9 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
+         const sts::search::BattleScumSearcher2::Edge *maxEdge = nullptr;
+ 
+         for (const auto &edge : curNode->edges) {
++            if (!edge.action.isValidAction(bc)) {
++                continue;
++            }
+             if (edge.node.simulationCount > maxSimulations) {
+                 maxSimulations = edge.node.simulationCount;
+                 maxEdge = &edge;
+@@ -132,8 +171,10 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
+         }
+ 
+         takeAction(bc, maxEdge->action);
++        progressed = true;
+         curNode = &maxEdge->node;
+     }
++    return progressed;
+ }
+ 
+ void search::ScumSearchAgent2::stepRandom(GameContext &gc) {
+@@ -408,4 +449,3 @@ void search::ScumSearchAgent2::stepEventPolicy(GameContext &gc) {
+             return;
+     }
+ }
+-
