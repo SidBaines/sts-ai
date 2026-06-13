@@ -1,0 +1,283 @@
+diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
+index a9afe35..1b4a6cc 100644
+--- a/bindings/slaythespire.cpp
++++ b/bindings/slaythespire.cpp
+@@ -12,21 +12,233 @@
+ 
+ #include "sim/ConsoleSimulator.h"
+ #include "sim/search/ScumSearchAgent2.h"
++#include "sim/search/GameAction.h"
+ #include "sim/SimHelpers.h"
+ #include "sim/PrintHelpers.h"
++#include "combat/BattleContext.h"
+ #include "game/Game.h"
++#include "constants/Cards.h"
++#include "constants/Misc.h"
++#include "constants/Potions.h"
++#include "constants/Relics.h"
++#include "constants/Rooms.h"
+ 
+ #include "slaythespire.h"
+ 
+ 
+ using namespace sts;
+ 
++namespace {
++
++std::string describeGameAction(const GameContext &gc, const search::GameAction &a) {
++    std::ostringstream os;
++    os << "bits=" << a.bits << " ";
++
++    switch (gc.screenState) {
++        case ScreenState::EVENT_SCREEN: {
++            os << "event option " << a.getIdx1();
++            if (gc.curEvent == Event::NEOW && a.getIdx1() >= 0 && a.getIdx1() < 4) {
++                const auto &r = gc.info.neowRewards[a.getIdx1()];
++                os << ": " << Neow::bonusStrings[static_cast<int>(r.r)];
++                if (a.getIdx1() > 0) {
++                    os << " / " << Neow::drawbackStrings[static_cast<int>(r.d)];
++                }
++            }
++            break;
++        }
++
++        case ScreenState::REWARDS: {
++            const auto &r = gc.info.rewardsContainer;
++            switch (a.getRewardsActionType()) {
++                case search::GameAction::RewardsActionType::GOLD:
++                    os << "take gold";
++                    if (a.getIdx1() >= 0 && a.getIdx1() < r.goldRewardCount) {
++                        os << " " << r.gold[a.getIdx1()] << "g";
++                    }
++                    break;
++                case search::GameAction::RewardsActionType::CARD:
++                    if (a.getIdx1() >= 0 && a.getIdx1() < r.cardRewardCount
++                        && a.getIdx2() >= 0 && a.getIdx2() < r.cardRewards[a.getIdx1()].size()) {
++                        os << "take card " << r.cardRewards[a.getIdx1()][a.getIdx2()];
++                    } else if (a.getIdx2() == 5) {
++                        os << "skip card reward";
++                    } else {
++                        os << "card reward choice";
++                    }
++                    break;
++                case search::GameAction::RewardsActionType::RELIC:
++                    os << "take relic";
++                    if (a.getIdx1() >= 0 && a.getIdx1() < r.relicCount) {
++                        os << " " << getRelicName(r.relics[a.getIdx1()]);
++                    }
++                    break;
++                case search::GameAction::RewardsActionType::POTION:
++                    os << "take potion";
++                    if (a.getIdx1() >= 0 && a.getIdx1() < r.potionCount) {
++                        os << " " << getPotionName(r.potions[a.getIdx1()]);
++                    }
++                    break;
++                case search::GameAction::RewardsActionType::KEY:
++                    os << "take key";
++                    break;
++                case search::GameAction::RewardsActionType::CARD_REMOVE:
++                    os << "card remove";
++                    break;
++                case search::GameAction::RewardsActionType::SKIP:
++                    os << "skip rewards / proceed";
++                    break;
++            }
++            break;
++        }
++
++        case ScreenState::BOSS_RELIC_REWARDS:
++            if (a.getIdx1() >= 0 && a.getIdx1() < 3) {
++                os << "take boss relic " << getRelicName(gc.info.bossRelics[a.getIdx1()]);
++            } else {
++                os << "skip boss relic reward";
++            }
++            break;
++
++        case ScreenState::CARD_SELECT:
++            os << "select card index " << a.getIdx1();
++            if (a.getIdx1() >= 0 && a.getIdx1() < gc.info.toSelectCards.size()) {
++                os << ": " << gc.info.toSelectCards[a.getIdx1()].card;
++            }
++            break;
++
++        case ScreenState::MAP_SCREEN:
++            os << "choose map node x=" << a.getIdx1();
++            if (gc.map != nullptr) {
++                if (gc.curMapNodeY == -1) {
++                    const auto &node = gc.map->getNode(a.getIdx1(), 0);
++                    os << " room=" << roomStrings[static_cast<int>(node.room)];
++                } else if (gc.curMapNodeY == 14) {
++                    os << " advance to boss";
++                } else {
++                    const auto &node = gc.map->getNode(a.getIdx1(), gc.curMapNodeY + 1);
++                    os << " room=" << roomStrings[static_cast<int>(node.room)];
++                }
++            }
++            break;
++
++        case ScreenState::TREASURE_ROOM:
++            os << (a.getIdx1() == 0 ? "open chest" : "skip chest");
++            break;
++
++        case ScreenState::REST_ROOM:
++            switch (a.getIdx1()) {
++                case 0: os << "rest"; break;
++                case 1: os << "smith"; break;
++                case 2: os << "recall"; break;
++                case 3: os << "lift"; break;
++                case 4: os << "toke"; break;
++                case 5: os << "dig"; break;
++                case 6: os << "skip campfire"; break;
++                default: os << "campfire option " << a.getIdx1(); break;
++            }
++            break;
++
++        case ScreenState::SHOP_ROOM: {
++            const auto &s = gc.info.shop;
++            switch (a.getRewardsActionType()) {
++                case search::GameAction::RewardsActionType::CARD:
++                    os << "buy card";
++                    if (a.getIdx1() >= 0 && a.getIdx1() < 7) {
++                        os << " " << s.cards[a.getIdx1()] << " for " << s.cardPrice(a.getIdx1()) << "g";
++                    }
++                    break;
++                case search::GameAction::RewardsActionType::RELIC:
++                    os << "buy relic";
++                    if (a.getIdx1() >= 0 && a.getIdx1() < 3) {
++                        os << " " << getRelicName(s.relics[a.getIdx1()]) << " for " << s.relicPrice(a.getIdx1()) << "g";
++                    }
++                    break;
++                case search::GameAction::RewardsActionType::POTION:
++                    os << "buy potion";
++                    if (a.getIdx1() >= 0 && a.getIdx1() < 3) {
++                        os << " " << getPotionName(s.potions[a.getIdx1()]) << " for " << s.potionPrice(a.getIdx1()) << "g";
++                    }
++                    break;
++                case search::GameAction::RewardsActionType::CARD_REMOVE:
++                    os << "buy card remove for " << s.removeCost << "g";
++                    break;
++                case search::GameAction::RewardsActionType::SKIP:
++                    os << "leave shop";
++                    break;
++                default:
++                    os << "shop action";
++                    break;
++            }
++            break;
++        }
++
++        case ScreenState::BATTLE:
++            os << "battle action unavailable through GameAction";
++            break;
++
++        case ScreenState::INVALID:
++        default:
++            os << "invalid/no-op";
++            break;
++    }
++
++    return os.str();
++}
++
++std::string describeGameState(const GameContext &gc) {
++    std::ostringstream os;
++    os << "Act " << gc.act
++       << ", floor " << gc.floorNum
++       << ", screen " << static_cast<int>(gc.screenState)
++       << ", room " << roomStrings[static_cast<int>(gc.curRoom)]
++       << ", boss " << monsterEncounterStrings[static_cast<int>(gc.boss)]
++       << "\nHP: " << gc.curHp << "/" << gc.maxHp
++       << ", gold: " << gc.gold
++       << "\nDeck: " << gc.deck
++       << "\nRelics: " << gc.relics
++       << "\nPotions: ";
++
++    if (gc.potionCount == 0) {
++        os << "none";
++    } else {
++        for (int i = 0; i < gc.potionCount; ++i) {
++            if (i > 0) {
++                os << ", ";
++            }
++            os << getPotionName(gc.potions[i]);
++        }
++    }
++
++    if (gc.screenState == ScreenState::MAP_SCREEN && gc.map != nullptr) {
++        os << "\nMap:\n" << gc.map->toString(true);
++    } else if (gc.screenState == ScreenState::REWARDS) {
++        os << "\nRewards: " << gc.info.rewardsContainer.toString();
++    } else if (gc.screenState == ScreenState::CARD_SELECT) {
++        os << "\nCard select: " << gc.info.haveSelectedCards.size() << "/" << gc.info.toSelectCount;
++    }
++
++    return os.str();
++}
++
++} // namespace
++
+ PYBIND11_MODULE(slaythespire, m) {
+     m.doc() = "pybind11 example plugin"; // optional module docstring
+     m.def("play", &sts::py::play, "play Slay the Spire Console");
+     m.def("get_seed_str", &SeedHelper::getString, "gets the integral representation of seed string used in the game ui");
+     m.def("get_seed_long", &SeedHelper::getLong, "gets the seed string representation of an integral seed");
+     m.def("getNNInterface", &sts::NNInterface::getInstance, "gets the NNInterface object");
++    m.def("resolve_current_battle", [](GameContext &gc, search::ScumSearchAgent2 &agent) {
++        if (gc.screenState != ScreenState::BATTLE || gc.outcome != GameOutcome::UNDECIDED) {
++            return false;
++        }
++
++        BattleContext bc;
++        bc.init(gc);
++        agent.playoutBattle(bc);
++        bc.exitBattle(gc);
++        return true;
++    }, "resolve only the currently active battle with the built-in search agent");
+ 
+     pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
+     nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
+@@ -41,6 +253,34 @@ PYBIND11_MODULE(slaythespire, m) {
+         .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
+         .def("playout", &search::ScumSearchAgent2::playout);
+ 
++    pybind11::class_<search::GameAction> gameAction(m, "GameAction");
++    gameAction.def(pybind11::init<std::uint32_t>())
++        .def(pybind11::init<int, int>(), pybind11::arg("idx1"), pybind11::arg("idx2") = 0)
++        .def_readwrite("bits", &search::GameAction::bits)
++        .def("idx1", &search::GameAction::getIdx1)
++        .def("idx2", &search::GameAction::getIdx2)
++        .def("idx3", &search::GameAction::getIdx3)
++        .def("is_valid", &search::GameAction::isValidAction)
++        .def("execute", &search::GameAction::execute)
++        .def("describe", [](const search::GameAction &a, const GameContext &gc) {
++            return describeGameAction(gc, a);
++        })
++        .def_static("all_in_state", &search::GameAction::getAllActionsInState)
++        .def("__repr__", [](const search::GameAction &a) {
++            std::ostringstream oss;
++            oss << "<slaythespire.GameAction bits=" << a.bits << ">";
++            return oss.str();
++        });
++
++    pybind11::enum_<search::GameAction::RewardsActionType>(gameAction, "RewardsActionType")
++        .value("CARD", search::GameAction::RewardsActionType::CARD)
++        .value("GOLD", search::GameAction::RewardsActionType::GOLD)
++        .value("KEY", search::GameAction::RewardsActionType::KEY)
++        .value("POTION", search::GameAction::RewardsActionType::POTION)
++        .value("RELIC", search::GameAction::RewardsActionType::RELIC)
++        .value("CARD_REMOVE", search::GameAction::RewardsActionType::CARD_REMOVE)
++        .value("SKIP", search::GameAction::RewardsActionType::SKIP);
++
+     pybind11::class_<GameContext> gameContext(m, "GameContext");
+     gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
+         .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
+@@ -75,6 +315,9 @@ PYBIND11_MODULE(slaythespire, m) {
+             return oss.str();
+         }, "returns a string representation of the GameContext");
+ 
++    gameContext.def("legal_actions", &search::GameAction::getAllActionsInState)
++        .def("describe_state", &describeGameState);
++
+     gameContext.def_readwrite("outcome", &GameContext::outcome)
+         .def_readwrite("act", &GameContext::act)
+         .def_readwrite("floor_num", &GameContext::floorNum)

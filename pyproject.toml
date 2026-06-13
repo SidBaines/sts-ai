@@ -1,0 +1,13 @@
+[project]
+name = "slay-the-spire-ai"
+version = "0.1.0"
+description = "Local research harness for LLM policies in sts_lightspeed."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+llm = ["mlx-lm"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

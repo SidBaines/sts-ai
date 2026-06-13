@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environments
+.venv/
+venv/
+.env
+.env.*
+
+# macOS/editor noise
+.DS_Store
+.idea/
+.vscode/
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+
+# Local external checkout and compiled simulator artifacts.
+# The reproducible simulator changes live in patches/.
+external/
+
+# Generated rollout data and experiment outputs
+data/rollouts/
+data/**/*.jsonl
+outputs/
+runs/
+checkpoints/
+
+# Model/cache artifacts
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.gguf
