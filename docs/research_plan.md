@@ -30,6 +30,7 @@ Current behavior:
 - Python can list legal out-of-combat actions, describe the state, execute selected actions, and record decisions as JSONL.
 - Combats are resolved by the built-in Lightspeed search agent.
 - The Python policy controls Neow choices, pathing, rewards, shops, events, card select screens, treasure rooms, and campfires.
+- MLX/Qwen inference has been smoke-tested with `mlx-community/Qwen3-4B-4bit`; no-thinking mode produces valid structured actions on short rollouts.
 
 This hybrid approach is deliberate. The existing upstream Python binding does not expose combat micro-actions. Letting Lightspeed resolve battles gets us useful Act 1 trajectories and risk-relevant decisions quickly, while full combat control remains a later C++ binding task.
 
@@ -44,7 +45,58 @@ Tracked implementation pieces:
 
 Generated/local artifacts are intentionally untracked: `.venv`, `external/sts_lightspeed`, build outputs, and rollout JSONL files.
 
+## Review-Driven Priority Update
+
+A first external review of the harness found that the simulator/control architecture is sound, but also identified several fixes that should happen before collecting any frozen seed dataset.
+
+Immediate changes to make before Stage 1 batch rollouts:
+
+- Make state/action serialization human-judgeable:
+  - use screen names instead of raw integer screen codes;
+  - fix reward labels, especially Singing Bowl max-HP choices;
+  - remove cosmetic Neow labels such as empty trailing drawback slashes;
+  - improve map/shop/campfire/reward descriptions before freezing seeds.
+- Harden the LLM JSON action path:
+  - use the model chat template for Qwen/MLX inference;
+  - handle Qwen3 `<think>...</think>` output when extracting final JSON;
+  - support modern MLX-LM sampling APIs;
+  - implement retry-on-invalid output.
+- Add regression tests for:
+  - JSON extraction with think blocks, braces, and multiple objects;
+  - invalid action fallback behavior;
+  - known risk-relevant action labels;
+  - Act 1 boundary behavior.
+
+Updated near-term ordering:
+
+1. Fix serializer/action labels. Done.
+2. Harden JSON extraction and retry behavior. Done.
+3. Smoke-test one real Qwen3/MLX decision. Done with `mlx-community/Qwen3-4B-4bit` in no-thinking mode.
+4. Add batch rollout and metrics tooling.
+5. Only then freeze dev/eval seeds.
+
 ## Design Commitments
+
+### Model Adapter Modularity
+
+The simulator and rollout recorder should never depend directly on a model provider, tokenizer, or chat template.
+
+The stable boundary is:
+
+```text
+state_text + legal_actions -> ActionAgent.choose_action(...) -> AgentDecision
+```
+
+Provider-specific concerns live inside agent adapters:
+
+- tokenizer and chat template handling;
+- thinking-mode controls;
+- sampling parameters;
+- retry behavior;
+- raw response parsing;
+- model-specific metadata.
+
+This lets the repo add future adapters for other MLX models, Transformers models, hosted APIs, vLLM/OpenAI-compatible servers, or non-LLM policies without changing the simulator wrapper or rollout schema.
 
 ### Markovian State Prompting
 
@@ -69,7 +121,11 @@ Neutral rollout data should avoid framing leakage in reasoning. If Qwen reasonin
 
 ### Thinking Policy
 
-For StS-first MVP, allow thinking during generation for capability, but keep the primary supervised/action loss on the final structured action tokens.
+For the first Qwen rollout stage, disable Qwen3 thinking mode by default because it is much more reliable for strict JSON action outputs. A smoke test with thinking enabled showed the model can spend the full token budget inside reasoning without emitting final JSON.
+
+Thinking mode remains an explicit experimental condition rather than a default.
+
+For later thinking-enabled training, allow thinking during generation for capability, but keep the primary supervised/action loss on the final structured action tokens.
 
 The forward context should include the reasoning that preceded the action, otherwise the action likelihood is evaluated under a different context than the one that generated it. Reasoning can be masked from the primary action loss initially. Later experiments can compare:
 
@@ -365,8 +421,8 @@ Later scientific metrics:
 ## Near-Term Next Steps
 
 1. Add a batch rollout script for seed ranges.
-2. Improve state/action descriptions for map, shop, campfire, and reward screens.
-3. Add a rollout metrics summarizer.
-4. Install and smoke-test MLX/Qwen3-4B inference.
-5. Run Qwen on 10 fixed seeds and inspect every trace manually.
-6. Freeze initial dev/eval seeds only after serializer issues are fixed.
+2. Add a rollout metrics summarizer.
+3. Run Qwen on 10 fixed seeds in no-thinking mode and inspect every trace manually.
+4. Improve any state/action descriptions revealed by the manual trace audit.
+5. Freeze initial dev/eval seeds only after serializer issues are fixed.
+6. Revisit thinking-enabled Qwen after the no-thinking rollout path is stable.

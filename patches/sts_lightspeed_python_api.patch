@@ -1,9 +1,9 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..1b4a6cc 100644
+index a9afe35..262737c 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -12,21 +12,233 @@
- 
+@@ -12,21 +12,254 @@
+
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
 +#include "sim/search/GameAction.h"
@@ -24,6 +24,22 @@ index a9afe35..1b4a6cc 100644
  
 +namespace {
 +
++const char* screenStateName(ScreenState state) {
++    switch (state) {
++        case ScreenState::INVALID: return "INVALID";
++        case ScreenState::EVENT_SCREEN: return "EVENT_SCREEN";
++        case ScreenState::REWARDS: return "REWARDS";
++        case ScreenState::BOSS_RELIC_REWARDS: return "BOSS_RELIC_REWARDS";
++        case ScreenState::CARD_SELECT: return "CARD_SELECT";
++        case ScreenState::MAP_SCREEN: return "MAP_SCREEN";
++        case ScreenState::TREASURE_ROOM: return "TREASURE_ROOM";
++        case ScreenState::REST_ROOM: return "REST_ROOM";
++        case ScreenState::SHOP_ROOM: return "SHOP_ROOM";
++        case ScreenState::BATTLE: return "BATTLE";
++        default: return "UNKNOWN";
++    }
++}
++
 +std::string describeGameAction(const GameContext &gc, const search::GameAction &a) {
 +    std::ostringstream os;
 +    os << "bits=" << a.bits << " ";
@@ -34,8 +50,9 @@ index a9afe35..1b4a6cc 100644
 +            if (gc.curEvent == Event::NEOW && a.getIdx1() >= 0 && a.getIdx1() < 4) {
 +                const auto &r = gc.info.neowRewards[a.getIdx1()];
 +                os << ": " << Neow::bonusStrings[static_cast<int>(r.r)];
-+                if (a.getIdx1() > 0) {
-+                    os << " / " << Neow::drawbackStrings[static_cast<int>(r.d)];
++                const auto drawback = Neow::drawbackStrings[static_cast<int>(r.d)];
++                if (a.getIdx1() > 0 && drawback[0] != '\0') {
++                    os << " / " << drawback;
 +                }
 +            }
 +            break;
@@ -55,7 +72,11 @@ index a9afe35..1b4a6cc 100644
 +                        && a.getIdx2() >= 0 && a.getIdx2() < r.cardRewards[a.getIdx1()].size()) {
 +                        os << "take card " << r.cardRewards[a.getIdx1()][a.getIdx2()];
 +                    } else if (a.getIdx2() == 5) {
-+                        os << "skip card reward";
++                        if (gc.hasRelic(RelicId::SINGING_BOWL)) {
++                            os << "gain +2 max hp (Singing Bowl); lose card reward";
++                        } else {
++                            os << "skip card reward";
++                        }
 +                    } else {
 +                        os << "card reward choice";
 +                    }
@@ -183,7 +204,7 @@ index a9afe35..1b4a6cc 100644
 +    std::ostringstream os;
 +    os << "Act " << gc.act
 +       << ", floor " << gc.floorNum
-+       << ", screen " << static_cast<int>(gc.screenState)
++       << ", screen " << screenStateName(gc.screenState)
 +       << ", room " << roomStrings[static_cast<int>(gc.curRoom)]
 +       << ", boss " << monsterEncounterStrings[static_cast<int>(gc.boss)]
 +       << "\nHP: " << gc.curHp << "/" << gc.maxHp
@@ -236,7 +257,7 @@ index a9afe35..1b4a6cc 100644
  
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +253,34 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -41,6 +274,34 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
          .def("playout", &search::ScumSearchAgent2::playout);
  
@@ -271,7 +292,7 @@ index a9afe35..1b4a6cc 100644
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
          .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -75,6 +315,9 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +336,9 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
  

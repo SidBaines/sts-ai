@@ -52,8 +52,10 @@ The `mlx` agent is wired as an optional adapter and requires MLX-LM:
 .venv/bin/python -m pip install -e '.[llm]'
 PYTHONPATH=src .venv/bin/python scripts/run_rollout.py \
   --agent mlx \
-  --model Qwen/Qwen3-4B \
+  --model mlx-community/Qwen3-4B-4bit \
   --seed 1
 ```
+
+The default MLX agent disables Qwen3 thinking mode for the first rollout stage because it gives much more reliable structured JSON actions. Use `--thinking` for explicit reasoning-mode experiments after the no-thinking path is stable.
 
 The first implementation priority is to verify simulator throughput and action parsing before committing to full-parameter local training.

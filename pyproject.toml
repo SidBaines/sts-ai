@@ -6,7 +6,7 @@ requires-python = ">=3.9"
 dependencies = []
 
 [project.optional-dependencies]
-llm = ["mlx-lm"]
+llm = ["mlx-lm==0.29.1"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

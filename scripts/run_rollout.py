@@ -16,14 +16,24 @@ def build_agent(args: argparse.Namespace):
     if args.agent == "heuristic":
         return SimpleHeuristicAgent()
     if args.agent == "mlx":
-        return MlxQwenJsonAgent(model_id=args.model)
+        return MlxQwenJsonAgent(
+            model_id=args.model,
+            max_tokens=args.max_tokens,
+            temperature=args.temperature,
+            max_retries=args.max_retries,
+            enable_thinking=args.thinking,
+        )
     raise ValueError(f"unknown agent: {args.agent}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run one hybrid sts_lightspeed rollout.")
     parser.add_argument("--agent", choices=["first", "random", "heuristic", "mlx"], default="first")
-    parser.add_argument("--model", default="Qwen/Qwen3-4B")
+    parser.add_argument("--model", default="mlx-community/Qwen3-4B-4bit")
+    parser.add_argument("--max-tokens", type=int, default=256)
+    parser.add_argument("--temperature", type=float, default=0.2)
+    parser.add_argument("--max-retries", type=int, default=1)
+    parser.add_argument("--thinking", action="store_true")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--ascension", type=int, default=0)
     parser.add_argument("--max-decisions", type=int, default=200)
