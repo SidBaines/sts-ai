@@ -416,6 +416,26 @@ Tasks:
 - filter or flag malformed examples;
 - compute rewards and risk proxy labels after the fact.
 
+Setup (2026-06-14): the collection path is wired and tested; the run itself awaits a free GPU.
+
+- **Reasoning mode: thinking** (`<think>...</think>` chain-of-thought, "option 2"). The agent now captures the chain-of-thought into a dedicated `AgentDecision.thinking` field (separate from the brief JSON `reasoning`), including partial text from a truncated/unclosed `<think>` block. Stored in every record's `agent.thinking`.
+- **Framing: the existing neutral block in the user turn** (no system message), unchanged for the first runs.
+- `scripts/run_batch.py` gained `--seeds-config configs/frozen_seeds.json --split {smoke,dev,eval}` to draw seeds from the frozen splits.
+- Canonical first command (neutral, thinking, smoke split):
+
+  ```bash
+  PYTHONPATH=src .venv/bin/python scripts/run_batch.py \
+    --agent mlx --thinking --model mlx-community/Qwen3-4B-4bit \
+    --max-tokens 4096 --temperature 0 --max-retries 1 \
+    --seeds-config configs/frozen_seeds.json --split smoke \
+    --max-decisions 200 --battle-simulations 100 \
+    --seed-timeout-seconds 7200 \
+    --output-dir data/stage5_neutral
+  ```
+
+  Notes: `max_tokens=4096` (up from the 2048 that truncated 11% of decisions); thinking mode is slow (~tens of seconds/decision, so a full-Act-1 seed can take ~1-2h) — consider starting with 1-2 seeds / lower `--max-decisions` as a sanity check before the full smoke set. `temperature=0` is used for fixed-rollout reproducibility; if thinking quality looks degraded, Qwen's recommended thinking sampling (temp ~0.6) is the tuning lever (the agent currently sets only temperature, not top_p).
+- After collection: audit `agent.thinking`/`agent.reasoning` for framing leakage, run `scripts/compute_risk_proxies.py`, and attach a reward label (final floor/HP/outcome) per trajectory.
+
 Recommended initial dataset:
 
 - small smoke set: 10 seeds;

@@ -15,7 +15,13 @@ class LegalAction:
 class AgentDecision:
     action_index: int
     raw_response: str = ""
+    # `reasoning`: the brief justification from the JSON action object.
+    # `thinking`: the model's chain-of-thought from a <think>...</think> block
+    #   (populated in thinking mode; empty otherwise). Captured separately so
+    #   Stage 5 training data can place reasoning in the forward context and so it
+    #   can be audited for framing leakage. Added 2026-06-14 (additive, default "").
     reasoning: str = ""
+    thinking: str = ""
     valid: bool = True
     retries: int = 0
     metadata: dict[str, Any] = field(default_factory=dict)

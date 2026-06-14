@@ -6,6 +6,9 @@ CLI entry points and build tooling. See the top-level [`CLAUDE.md`](../CLAUDE.md
 
 - `build_lightspeed.sh` — clones `sts_lightspeed`, applies `patches/sts_lightspeed_python_api.patch` (only if not already applied), and builds the `slaythespire` pybind module. Run this before any rollout.
 - `run_rollout.py` — runs a single hybrid rollout from the CLI. Always invoke with `PYTHONPATH=src`.
+- `run_batch.py` — batch rollouts over a seed range/list. Seeds come from `--seeds`, `--seed-start/--seed-count`, or `--seeds-config configs/frozen_seeds.json --split {smoke,dev,eval}`. For `--agent mlx` add `--thinking` (captures `<think>` chain-of-thought into `agent.thinking`), `--max-tokens`, `--temperature`. Use `--seed-timeout-seconds` for LLM/thinking runs (per-seed subprocess + kill) — thinking mode can hang on the seed-2-class UB and is slow.
+- `summarize_rollouts.py` — JSONL rollouts → summary CSV.
+- `compute_risk_proxies.py` — JSONL rollouts → risk-event CSV + aggregate JSON (deterministic, computed from stored traces).
 
 ## Area gotchas
 

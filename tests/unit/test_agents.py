@@ -46,6 +46,31 @@ class ParseJsonActionTest(unittest.TestCase):
         self.assertTrue(decision.valid)
         self.assertEqual(decision.action_index, 0)
 
+    def test_captures_thinking_chain_of_thought(self):
+        text = (
+            "<think>\nThe second option preserves HP, which matters at low health.\n</think>\n\n"
+            '{"reasoning": "preserve hp", "action_index": 1}'
+        )
+        decision = parse_json_action(text, self.actions)
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 1)
+        self.assertEqual(decision.reasoning, "preserve hp")  # brief JSON field
+        self.assertIn("preserves HP", decision.thinking)  # full CoT captured separately
+
+    def test_captures_truncated_unclosed_thinking(self):
+        # thinking-mode generation that ran out of budget mid-<think>: no JSON,
+        # but the partial chain-of-thought must still be retained.
+        text = "<think>\nLet me weigh the options. The first action is risky because"
+        decision = parse_json_action(text, self.actions)
+        self.assertFalse(decision.valid)
+        self.assertEqual(decision.metadata["error"], "no json object")
+        self.assertIn("weigh the options", decision.thinking)
+
+    def test_no_thinking_block_leaves_thinking_empty(self):
+        decision = parse_json_action('{"reasoning": "ok", "action_index": 0}', self.actions)
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.thinking, "")
+
 
 class MlxQwenJsonAgentRetryTest(unittest.TestCase):
     def test_retries_after_invalid_json(self):

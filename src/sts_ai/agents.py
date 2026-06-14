@@ -159,11 +159,13 @@ class MlxQwenJsonAgent:
 
 
 def parse_json_action(response: str, legal_actions: list[LegalAction]) -> AgentDecision:
+    thinking = _extract_thinking(response)
     parsed = _extract_json(response)
     if parsed is None:
         return AgentDecision(
             action_index=0,
             raw_response=response,
+            thinking=thinking,
             valid=False,
             metadata={"error": "no json object"},
         )
@@ -175,6 +177,7 @@ def parse_json_action(response: str, legal_actions: list[LegalAction]) -> AgentD
             action_index=0,
             raw_response=response,
             reasoning=reasoning,
+            thinking=thinking,
             valid=False,
             metadata={"error": "invalid action_index", "parsed": parsed},
         )
@@ -183,9 +186,28 @@ def parse_json_action(response: str, legal_actions: list[LegalAction]) -> AgentD
         action_index=action_index,
         raw_response=response,
         reasoning=reasoning,
+        thinking=thinking,
         valid=True,
         metadata={"parsed": parsed, "legal_action": asdict(legal_actions[action_index])},
     )
+
+
+def _extract_thinking(text: str) -> str:
+    """Return the chain-of-thought inside a <think>...</think> block.
+
+    Captures the content of the first think block. If the block is opened but
+    never closed (a truncated thinking-mode generation), returns everything after
+    the opening tag so the partial reasoning is not lost. Returns "" when there is
+    no think block (e.g. no-thinking mode)."""
+    lower = text.lower()
+    start = lower.find("<think>")
+    if start == -1:
+        return ""
+    inner_start = start + len("<think>")
+    end = lower.find("</think>", inner_start)
+    if end == -1:
+        return text[inner_start:].strip()
+    return text[inner_start:end].strip()
 
 
 def _extract_json(text: str) -> dict | None:

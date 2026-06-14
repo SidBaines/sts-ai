@@ -21,6 +21,15 @@ def truncate_output(text: str | None, limit: int = 20_000) -> str:
 
 
 def parse_seed_list(args: argparse.Namespace) -> list[int]:
+    if args.seeds_config:
+        with open(args.seeds_config) as handle:
+            config = json.load(handle)
+        splits = config.get("splits", {})
+        if args.split not in splits:
+            raise SystemExit(
+                f"split {args.split!r} not in {args.seeds_config} (have: {sorted(splits)})"
+            )
+        return [int(s) for s in splits[args.split]]
     if args.seeds:
         return [int(seed.strip()) for seed in args.seeds.split(",") if seed.strip()]
     return list(range(args.seed_start, args.seed_start + args.seed_count))
@@ -30,6 +39,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run a batch of hybrid sts_lightspeed rollouts.")
     parser.add_argument("--agent", choices=["first", "random", "heuristic", "mlx"], default="heuristic")
     parser.add_argument("--seeds", default=None, help="Comma-separated seed list, e.g. 1,2,3")
+    parser.add_argument("--seeds-config", default=None,
+                        help="Path to a frozen-seeds JSON (e.g. configs/frozen_seeds.json); use with --split.")
+    parser.add_argument("--split", default="smoke",
+                        help="Which split to read from --seeds-config (smoke/dev/eval).")
     parser.add_argument("--seed-start", type=int, default=1)
     parser.add_argument("--seed-count", type=int, default=10)
     parser.add_argument("--ascension", type=int, default=0)
