@@ -100,30 +100,28 @@ Fresh seed-2 check (2026-06-14):
 
 Do not silently change this policy because output budget and reasoning verbosity affect rollout cost, parse reliability, and the training data distribution.
 
-### Frozen Seed Policy (documented 2026-06-14; not yet a hard freeze)
+### Frozen Seed Policy (frozen 2026-06-14)
 
-Derived from the `data/baseline_rollouts_100` batch (seeds 2-51, agents `first`/`random`/`heuristic`).
+Frozen splits live in `configs/frozen_seeds.json` (tracked). Derived from the
+`data/baseline_rollouts_300` batch (seeds 2-151, agents `first`/`random`/`heuristic`,
+`max_decisions=200`, `battle_simulations=100`, `seed_timeout=30s`) generated under
+the **rebuilt serializer**.
 
 Exclusion policy:
 
-- **Errored seeds** (any agent wrote an `.error.json` sidecar): `11, 17, 22, 25, 48`. Excluded.
-- **Seed `2`**: clean for the non-LLM agents (they path around it) but a known seed-2-class native battle-search hang on the Qwen LLM path (floor-12 Entropic Brew). Excluded from any LLM dev/eval set.
-- **Seed `1`**: kept as a diagnostic regression seed only; never in dev/eval.
+- **Errored seeds** (any agent wrote an `.error.json` sidecar in this batch): `11, 17, 22, 48, 99, 110, 132, 134`. Excluded. (Note the errored set is timeout-/UB-sensitive and shifts between batches — e.g. seed `25` errored in the older `2-51` batch but is clean here — which is itself evidence the residual UB is not yet root-caused.)
+- **Seed `2`**: clean for the non-LLM agents (they path around it) but a known seed-2-class native battle-search hang on the Qwen LLM path (floor-12 Entropic Brew). Excluded from any LLM split.
+- **Seed `1`**: diagnostic regression seed only; never in dev/eval.
 
-Clean intersection across all three baseline agents: **45 seeds** —
-`2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 18, 19, 20, 21, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 49, 50, 51`.
-Removing seed `2` leaves **44 LLM-safe seeds**.
-
-Proposed splits (provisional, from these 44):
+Clean intersection across all three baseline agents: **142 seeds**; removing seed `2` leaves **141 LLM-safe seeds**. Frozen disjoint splits:
 
 - **Smoke (10):** `3, 4, 5, 6, 7, 8, 9, 10, 12, 13`.
-- **Dev (next ~24):** `14, 15, 16, 18, 19, 20, 21, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40`.
-- **Eval (100):** NOT yet satisfiable — only 44 LLM-safe seeds exist in `2-51`. Requires a larger baseline batch (e.g. seeds `2-300`) before an eval freeze.
+- **Dev (31):** `14-46` minus the holes (`17, 22` errored).
+- **Eval (100):** `47-151` minus errored/holes.
 
-Blockers before this becomes a hard freeze:
+(Exact lists in `configs/frozen_seeds.json`.) The **train split (200-500 seeds) is not yet frozen** — it needs a larger baseline batch (e.g. seeds `2-600`).
 
-1. **Serializer rebuild pending.** The `bits=` action-description prefix and `room INVALID` header label are being removed (binding change, rebuild in progress). Frozen traces should be generated under the final serializer, so freeze only after the rebuilt binding and a re-validated baseline.
-2. **UB reproducibility caveat.** Cross-machine identical traces are not guaranteed while the seed-2-class uninitialized-memory UB is only contained, not root-caused (`docs/simulator_issue_handoff.md`). A single-machine freeze is usable for now; cross-machine reproducibility is not.
+Caveat: **UB reproducibility.** Cross-machine identical traces are not guaranteed while the seed-2-class uninitialized-memory UB is only contained, not root-caused (`docs/simulator_issue_handoff.md`). A single-machine freeze is usable now; cross-machine reproducibility is not.
 
 This hybrid approach is deliberate. The existing upstream Python binding does not expose combat micro-actions. Letting Lightspeed resolve battles gets us useful Act 1 trajectories and risk-relevant decisions quickly, while full combat control remains a later C++ binding task.
 
@@ -333,11 +331,13 @@ Tasks:
   - shop spending vs saving before known threats.
 - add a rollout summarizer that turns JSONL into CSV or JSON metrics.
 
+Status (2026-06-14): risk-proxy code landed (`src/sts_ai/risk_proxies.py`, `scripts/compute_risk_proxies.py`, unit tests) — deterministic, documented, and computed from stored traces. Remaining Stage 2 work: structured in-serializer risk tags, and richer map/shop/campfire/event state text where the human-judgeability audit flags gaps.
+
 Acceptance criteria:
 
 - fixed-state prompts include enough context for a human to judge the listed actions;
-- risk proxy code is deterministic and documented;
-- baseline metrics can be computed from existing traces without re-running rollouts.
+- risk proxy code is deterministic and documented; **met**;
+- baseline metrics can be computed from existing traces without re-running rollouts; **met**.
 
 ### Stage 3: Qwen3-4B Local Inference Loop
 
@@ -557,11 +557,14 @@ Done in the 2026-06-14 session:
 - Serializer audit + fixes: removed the `bits=` action-description prefix (now on `LegalAction.bits` only) and render the Neow/event `room INVALID` header as `room none`. Binding rebuilt, patch regenerated, tests updated (`test_action_descriptions_omit_bits_prefix`, `test_state_room_label_is_not_invalid`).
 - Thinking-mode `2048` comparison run (seeds 3-5): 88.9% valid, truncation-limited; no-thinking `256` remains the high-throughput primary arm (see Thinking-mode comparison above).
 - Fixed the `tests/integration/test_battle_search.py` off-by-one that let it pass without entering the floor-12 battle; documented seed-2 non-determinism and the containment-only invariants.
-- Documented the frozen-seed exclusion policy and proposed smoke/dev splits (see Frozen Seed Policy).
+- **Larger baseline batch** `data/baseline_rollouts_300` (seeds 2-151, three agents) under the rebuilt serializer: mean final floor 14.94, 100% valid; clearing the Stage 1 "≥100 clean seeds" criterion (142 clean intersection).
+- **Stage 2 risk proxies implemented:** `src/sts_ai/risk_proxies.py` + `scripts/compute_risk_proxies.py` + unit tests. Deterministic, computed from stored traces, robust to the legacy `bits=` prefix. On baseline data they discriminate policies as expected (low-HP campfire rest rate: `first`/`heuristic` 1.0 vs `random` 0.39).
+- **Hard-froze dev/eval seeds** in `configs/frozen_seeds.json` (smoke 10 / dev 31 / eval 100).
 
 Remaining:
 
-1. Root-cause or explicitly accept-and-exclude the seed-2-class native battle-search hang. Use a debug/sanitizer build or systematic value-initialization audit before depending on cross-build/cross-machine reproducibility.
-2. Run Qwen no-thinking `256` on the full clean baseline intersection (excluding `{2, 11, 17, 22, 25, 48}`) under the rebuilt serializer, always with `--seed-timeout-seconds`; manually inspect traces.
+1. Root-cause the seed-2-class native battle-search hang (sanitizer/debug build or systematic value-init audit) before depending on cross-machine reproducibility. Currently accepted-and-excluded.
+2. **Stage 4 Qwen baseline evaluation:** finish comparing Qwen (no-thinking `256`) against `random`/`heuristic` on frozen dev seeds via the risk proxies and the go/no-go criteria; add the compact-vs-verbose serializer comparison.
 3. If a thinking comparison arm is needed, retest with a larger budget (≥4096) or a "think briefly, then emit JSON" prompt to beat truncation.
-4. Run a larger baseline batch (e.g. seeds `2-300`) so an eval freeze of ~100 seeds is possible, then hard-freeze dev/eval under the final serializer.
+4. Freeze a train split (200-500 seeds): run a larger baseline batch (e.g. seeds `2-600`).
+5. Add structured risk *tags* in the serializer where clear (Stage 2 extension) and expand `SELF_DAMAGE_CARDS`/high-variance card coverage.

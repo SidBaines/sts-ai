@@ -9,6 +9,7 @@ Core harness package. See the top-level [`CLAUDE.md`](../../CLAUDE.md) for proje
 - `rollout.py` — drives the env+agent loop and records `DecisionRecord`s as JSONL.
 - `schemas.py` — dataclasses defining the **on-disk JSONL format**. This is the data contract consumed by future training/eval.
 - `prompting.py` — prompt assembly and the framing strings.
+- `risk_proxies.py` — deterministic risk-proxy classification/aggregation over recorded decision dicts (pure Python; no simulator). Keys off the semantic action description; tolerant of the legacy `bits=` prefix in pre-2026-06-14 traces.
 - `lightspeed_import.py` — locates and imports the locally built `slaythespire` module.
 
 ## Area gotchas
