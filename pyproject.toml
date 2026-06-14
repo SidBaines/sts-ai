@@ -7,6 +7,7 @@ dependencies = []
 
 [project.optional-dependencies]
 llm = ["mlx-lm==0.29.1"]
+viz = ["streamlit==1.40.2"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
