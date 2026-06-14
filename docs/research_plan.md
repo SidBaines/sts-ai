@@ -90,6 +90,23 @@ Thinking-mode comparison (2026-06-14):
 - Same seeds under no-thinking `256` were **100% valid (60/60), 0 retries**.
 - Takeaway: at 2048 tokens thinking mode is both slower and *less* reliable than no-thinking `256` on these states, because verbose reasoning truncates before the JSON. For a viable thinking comparison arm, either raise the budget (≥4096) or use a "think briefly, then emit JSON" prompt. This confirms no-thinking `256` as the Stage-1 high-throughput primary arm and leaves thinking mode as a still-unsettled comparison arm.
 
+Stage 4 Qwen evaluation (2026-06-14):
+
+- Dataset: `data/qwen_eval_dev10/mlx_Qwen3_4B_4bit_nothinking_256`, smoke seeds `3-13`, no-thinking `256`, `max_decisions=60`, `battle_simulations=100`. 10/10 completed, **100% valid, 0 error sidecars**.
+- Compared to `random`/`heuristic` on the same seeds (from `data/baseline_rollouts_300`) via `risk_proxies`:
+
+  | metric | qwen_256 | random | heuristic |
+  | --- | --- | --- | --- |
+  | campfire rest @ low HP | 1.00 | 0.25 | 1.00 |
+  | campfire rest @ high HP | 1.00 | 0.14 | 0.00 |
+  | Neow drawback rate | 0.30 | 0.50 | 0.00 |
+  | shop buy rate / spend | 0.70 / 1510 | 0.56 / 709 | 0.64 / 794 |
+  | mean final floor | 13.3 | 14.4 | 16.2 |
+  | mean final HP | 37.1 | 16.0 | 49.2 |
+
+- Readouts: Qwen is **clearly non-random** and HP-conservative — it rests at low HP like the heuristic and preserves much more HP than random (37 vs 16). But it **over-rests at high HP** (1.0 vs heuristic 0.0), forgoing smiths/upgrades; a clear risk-aversion signal and a good candidate behavior for the framing experiments to try to move. It spends the most in shops.
+- **Go/no-go: GO.** All Stage 4 go criteria met — valid actions reliable (100%), behavior non-random on several metrics, throughput ~2 s/decision, serializer failures not dominating. Remaining Stage 4 nicety: the compact-vs-verbose serializer comparison on matched states.
+
 Fresh seed-2 check (2026-06-14):
 
 - A current rerun of `mlx_Qwen3_4B_4bit_nothinking_256`, seed `2`, with `max_decisions=80`, `battle_simulations=100`, `temperature=0`, and `max_retries=1` again reached the old boundary: 48 decisions, then the floor-12 battle after the Entropic Brew path.
@@ -377,10 +394,12 @@ Tasks:
 
 Go/no-go criteria for training:
 
-- Qwen produces valid actions reliably;
-- behavior is non-random on at least some metrics;
-- rollout throughput is adequate for hundreds of decisions overnight;
-- state serializer failures are not dominating choices.
+- Qwen produces valid actions reliably; **met (100% on smoke seeds)**;
+- behavior is non-random on at least some metrics; **met (HP-conservative; rest@lowHP 1.0 vs random 0.25)**;
+- rollout throughput is adequate for hundreds of decisions overnight; **met (~2 s/decision)**;
+- state serializer failures are not dominating choices; **met (no errors)**.
+
+Status (2026-06-14): **GO** on the 10-seed smoke set (see "Stage 4 Qwen evaluation" under Latest Stage 1 Run Notes). Still outstanding: run on the full frozen dev set at Act-1 depth, and the compact-vs-verbose serializer comparison.
 
 If these fail, improve prompt/serializer first or add a small SFT warm start from heuristic/search trajectories.
 
@@ -560,11 +579,13 @@ Done in the 2026-06-14 session:
 - **Larger baseline batch** `data/baseline_rollouts_300` (seeds 2-151, three agents) under the rebuilt serializer: mean final floor 14.94, 100% valid; clearing the Stage 1 "≥100 clean seeds" criterion (142 clean intersection).
 - **Stage 2 risk proxies implemented:** `src/sts_ai/risk_proxies.py` + `scripts/compute_risk_proxies.py` + unit tests. Deterministic, computed from stored traces, robust to the legacy `bits=` prefix. On baseline data they discriminate policies as expected (low-HP campfire rest rate: `first`/`heuristic` 1.0 vs `random` 0.39).
 - **Hard-froze dev/eval seeds** in `configs/frozen_seeds.json` (smoke 10 / dev 31 / eval 100).
+- **Stage 4 Qwen evaluation: GO** (see Stage 4 Qwen evaluation above) — Qwen no-thinking `256` is reliable (100% valid), non-random, and HP-conservative on the smoke seeds.
 
 Remaining:
 
-1. Root-cause the seed-2-class native battle-search hang (sanitizer/debug build or systematic value-init audit) before depending on cross-machine reproducibility. Currently accepted-and-excluded.
-2. **Stage 4 Qwen baseline evaluation:** finish comparing Qwen (no-thinking `256`) against `random`/`heuristic` on frozen dev seeds via the risk proxies and the go/no-go criteria; add the compact-vs-verbose serializer comparison.
-3. If a thinking comparison arm is needed, retest with a larger budget (≥4096) or a "think briefly, then emit JSON" prompt to beat truncation.
-4. Freeze a train split (200-500 seeds): run a larger baseline batch (e.g. seeds `2-600`).
-5. Add structured risk *tags* in the serializer where clear (Stage 2 extension) and expand `SELF_DAMAGE_CARDS`/high-variance card coverage.
+1. **Stage 5 — fixed neutral rollout collection:** generate neutral-frame Qwen trajectories on the frozen dev/eval seeds at full Act-1 depth; audit reasoning for frame leakage; attach reward + risk-proxy labels. This is now the main path forward.
+2. Freeze a train split (200-500 seeds): run a larger baseline batch (e.g. seeds `2-600`).
+3. Stage 4 nicety: compact-vs-verbose serializer comparison on matched states.
+4. Root-cause the seed-2-class native battle-search hang (sanitizer/debug build or value-init audit) before depending on cross-machine reproducibility. Currently accepted-and-excluded.
+5. Stage 2 extensions: structured in-serializer risk tags; expand `SELF_DAMAGE_CARDS`/high-variance card coverage.
+6. If a thinking comparison arm is needed, retest with a larger budget (≥4096) or a "think briefly, then emit JSON" prompt to beat truncation.
