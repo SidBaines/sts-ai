@@ -542,6 +542,10 @@ Interpretation:
 
 ### Stage 10: Full Combat Control
 
+> **Reprioritized 2026-06-14 to be the immediate next step** (ahead of scaling
+> Stage 5 collection). Implementation handoff: [`NextStep.md`](../NextStep.md).
+> The stage number is kept for continuity; the ordering is not.
+
 Goal: let the LLM control every meaningful StS decision, including card play.
 
 Tasks:
@@ -603,9 +607,10 @@ Done in the 2026-06-14 session:
 
 Remaining:
 
-1. **Stage 5 — fixed neutral rollout collection:** generate neutral-frame Qwen trajectories on the frozen dev/eval seeds at full Act-1 depth; audit reasoning for frame leakage; attach reward + risk-proxy labels. This is now the main path forward.
-2. Freeze a train split (200-500 seeds): run a larger baseline batch (e.g. seeds `2-600`).
-3. Stage 4 nicety: compact-vs-verbose serializer comparison on matched states.
-4. Root-cause the seed-2-class native battle-search hang (sanitizer/debug build or value-init audit) before depending on cross-machine reproducibility. Currently accepted-and-excluded.
-5. Stage 2 extensions: structured in-serializer risk tags; expand `SELF_DAMAGE_CARDS`/high-variance card coverage.
-6. If a thinking comparison arm is needed, retest with a larger budget (≥4096) or a "think briefly, then emit JSON" prompt to beat truncation.
+1. **NEW IMMEDIATE PRIORITY — in-battle (full combat) LLM control (was Stage 10).** Reprioritized 2026-06-14: the LLM currently makes only out-of-combat decisions (battles are auto-resolved by the C++ search agent), and the research needs in-combat risk-taking. This is now the next step, ahead of scaling Stage 5 collection. **Handoff for the implementing agent: [`NextStep.md`](../NextStep.md)** (binding the combat API, combat-state serializer, combat step loop, schema changes, acceptance criteria).
+2. **Stage 5 — fixed neutral rollout collection:** generate neutral-frame Qwen trajectories on the frozen dev/eval seeds at full Act-1 depth; audit reasoning for frame leakage; attach reward + risk-proxy labels. (Was the main path; now follows combat control. Note from the first full-depth thinking run: ~6% of decisions still truncate at 4096 tokens and fall back to action 0 — handle via a targeted "out of budget, emit JSON now" re-prompt and/or higher budget before scaling.)
+3. Freeze a train split (200-500 seeds): run a larger baseline batch (e.g. seeds `2-600`).
+4. Stage 4 nicety: compact-vs-verbose serializer comparison on matched states.
+5. Root-cause the seed-2-class native battle-search hang (sanitizer/debug build or value-init audit) before depending on cross-machine reproducibility. Currently accepted-and-excluded.
+6. Stage 2 extensions: structured in-serializer risk tags; expand `SELF_DAMAGE_CARDS`/high-variance card coverage.
+7. If a thinking comparison arm is needed, retest with a larger budget (≥4096) or a "think briefly, then emit JSON" prompt to beat truncation.
