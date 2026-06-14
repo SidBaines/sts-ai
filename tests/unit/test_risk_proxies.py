@@ -57,6 +57,22 @@ class ClassifyCampfireTest(unittest.TestCase):
         ev = classify_decision(_record("REST_ROOM", "skip campfire"))
         self.assertEqual(ev.choice, "skip")
 
+    def test_enriched_campfire_labels_still_parse(self):
+        # The serializer spells out campfire effects; the leading keyword must
+        # still drive classification.
+        self.assertEqual(
+            classify_decision(_record("REST_ROOM", "smith (upgrade a card in your deck)", cur_hp=10, max_hp=80)).choice,
+            "smith",
+        )
+        self.assertEqual(
+            classify_decision(_record("REST_ROOM", "rest (heal 30% of max HP)")).choice,
+            "rest",
+        )
+        self.assertEqual(
+            classify_decision(_record("REST_ROOM", "skip campfire (proceed without resting)")).choice,
+            "skip",
+        )
+
 
 class ClassifyMapTest(unittest.TestCase):
     def test_elite_node_is_risk_seeking(self):

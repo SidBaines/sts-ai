@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..bef8abc 100644
+index a9afe35..8450ff5 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -12,21 +12,287 @@
+@@ -12,21 +12,289 @@
  
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
@@ -164,14 +164,16 @@ index a9afe35..bef8abc 100644
 +            break;
 +
 +        case ScreenState::REST_ROOM:
++            // Bare campfire labels (rest/smith/...) were misread by the LLM (e.g.
++            // it believed "smith" fetched a relic). Spell out each option's effect.
 +            switch (a.getIdx1()) {
-+                case 0: os << "rest"; break;
-+                case 1: os << "smith"; break;
-+                case 2: os << "recall"; break;
-+                case 3: os << "lift"; break;
-+                case 4: os << "toke"; break;
-+                case 5: os << "dig"; break;
-+                case 6: os << "skip campfire"; break;
++                case 0: os << "rest (heal 30% of max HP)"; break;
++                case 1: os << "smith (upgrade a card in your deck)"; break;
++                case 2: os << "recall (obtain the Ruby Key)"; break;
++                case 3: os << "lift (Girya: gain 1 permanent Strength)"; break;
++                case 4: os << "toke (Peace Pipe: remove a card from your deck)"; break;
++                case 5: os << "dig (Shovel: obtain a random relic)"; break;
++                case 6: os << "skip campfire (proceed without resting)"; break;
 +                default: os << "campfire option " << a.getIdx1(); break;
 +            }
 +            break;
@@ -290,7 +292,7 @@ index a9afe35..bef8abc 100644
  
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +307,34 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -41,6 +309,34 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
          .def("playout", &search::ScumSearchAgent2::playout);
  
@@ -325,7 +327,7 @@ index a9afe35..bef8abc 100644
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
          .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -75,6 +369,9 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +371,9 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
  
@@ -335,7 +337,7 @@ index a9afe35..bef8abc 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -836,5 +1133,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +1135,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
  
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
