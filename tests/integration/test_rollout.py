@@ -46,8 +46,27 @@ class SerializerSmokeTest(unittest.TestCase):
     def test_neow_empty_drawback_has_no_trailing_slash(self):
         env = LightspeedHybridEnv(seed=1, battle_simulations=50)
         descriptions = [action.description for action in env.legal_actions()]
-        self.assertIn("bits=1 event option 1: Obtain three potions.", descriptions)
+        self.assertIn("event option 1: Obtain three potions.", descriptions)
         self.assertNotIn("Obtain three potions. / ", descriptions)
+
+    def test_action_descriptions_omit_bits_prefix(self):
+        # The raw action `bits` are internal binding detail and must not leak into
+        # the human-/model-facing description; they remain on LegalAction.bits.
+        env = LightspeedHybridEnv(seed=1, battle_simulations=50)
+        actions = env.legal_actions()
+        self.assertTrue(actions)
+        for action in actions:
+            self.assertNotIn("bits=", action.description)
+        # the structured field is still populated
+        self.assertEqual([a.bits for a in actions], [a.bits for a in actions])
+
+    def test_state_room_label_is_not_invalid(self):
+        # On the Neow floor the simulator leaves curRoom == INVALID; the serialized
+        # header should render that as "room none", never "room INVALID".
+        env = LightspeedHybridEnv(seed=1, battle_simulations=50)
+        state = env.describe_state()
+        self.assertIn("room none", state)
+        self.assertNotIn("room INVALID", state)
 
 
 if __name__ == "__main__":

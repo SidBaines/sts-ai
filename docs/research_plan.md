@@ -82,7 +82,48 @@ Follow-up token-budget comparison:
 
 This suggests `256` tokens is a better near-term no-thinking rollout budget if we keep the current JSON schema with a `reasoning` field. A stricter short-reasoning prompt may recover some of the throughput while keeping parse reliability high.
 
+Thinking-mode comparison (2026-06-14):
+
+- Dataset: `data/qwen_thinking_2048_cmp/mlx_Qwen3_4B_4bit_thinking_2048`, seeds `3, 4, 5`, `max_decisions=12`, `battle_simulations=100`, `max_tokens=2048`, `temperature=0`, `max_retries=1`, thinking mode, `--seed-timeout-seconds=1200`.
+- Result: 36 decisions, **32 valid (88.9%)**, 9 retries; all 4 invalids were `no json object` — the model exhausted the 2048-token budget mid-`<think>` and never emitted the final JSON (the single retry also truncated).
+- Throughput: ~11.5 min wall for 36 decisions ≈ **~19 s/decision** (incl. battle resolution), vs the sub-2 s/decision no-thinking arm.
+- Same seeds under no-thinking `256` were **100% valid (60/60), 0 retries**.
+- Takeaway: at 2048 tokens thinking mode is both slower and *less* reliable than no-thinking `256` on these states, because verbose reasoning truncates before the JSON. For a viable thinking comparison arm, either raise the budget (≥4096) or use a "think briefly, then emit JSON" prompt. This confirms no-thinking `256` as the Stage-1 high-throughput primary arm and leaves thinking mode as a still-unsettled comparison arm.
+
+Fresh seed-2 check (2026-06-14):
+
+- A current rerun of `mlx_Qwen3_4B_4bit_nothinking_256`, seed `2`, with `max_decisions=80`, `battle_simulations=100`, `temperature=0`, and `max_retries=1` again reached the old boundary: 48 decisions, then the floor-12 battle after the Entropic Brew path.
+- On this build the child process pinned inside the native `slaythespire` extension rather than returning a Python-visible simulator error. The run was manually terminated and recorded under `data/qwen_rerun_100_256_current/.../seed_2.error.json`.
+- The old `tests/integration/test_battle_search.py` replay stopped on the map before entering that battle (its `max_decisions` equalled the replayed decision count, so the battle-resolving `advance_to_decision()` never ran — it passed in ~40ms without exercising the bug). It now appends the map action *and* gives the rollout headroom past it so the floor-12 battle is actually entered whenever the path reaches the map node, and runs the replay in a subprocess with a timeout, matching the operational containment strategy in `scripts/run_batch.py`.
+- The seed-2 path is non-deterministic across runs on this build (observed: >90s native hang, clean resolve, and early divergence before floor 12), so the test asserts only build-portable containment invariants (no hard crash, no garbage-potion `invalid battle action` regression), not that the battle is reached.
+- Treat seed-2-class trajectories as unresolved simulator-search failures. Do not run long Qwen batches in-process; use `--seed-timeout-seconds`, and do not freeze seed `2` into an initial dev/eval set until this native battle-search issue is root-caused or explicitly accepted as an excluded seed.
+
 Do not silently change this policy because output budget and reasoning verbosity affect rollout cost, parse reliability, and the training data distribution.
+
+### Frozen Seed Policy (documented 2026-06-14; not yet a hard freeze)
+
+Derived from the `data/baseline_rollouts_100` batch (seeds 2-51, agents `first`/`random`/`heuristic`).
+
+Exclusion policy:
+
+- **Errored seeds** (any agent wrote an `.error.json` sidecar): `11, 17, 22, 25, 48`. Excluded.
+- **Seed `2`**: clean for the non-LLM agents (they path around it) but a known seed-2-class native battle-search hang on the Qwen LLM path (floor-12 Entropic Brew). Excluded from any LLM dev/eval set.
+- **Seed `1`**: kept as a diagnostic regression seed only; never in dev/eval.
+
+Clean intersection across all three baseline agents: **45 seeds** —
+`2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 18, 19, 20, 21, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 49, 50, 51`.
+Removing seed `2` leaves **44 LLM-safe seeds**.
+
+Proposed splits (provisional, from these 44):
+
+- **Smoke (10):** `3, 4, 5, 6, 7, 8, 9, 10, 12, 13`.
+- **Dev (next ~24):** `14, 15, 16, 18, 19, 20, 21, 23, 24, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40`.
+- **Eval (100):** NOT yet satisfiable — only 44 LLM-safe seeds exist in `2-51`. Requires a larger baseline batch (e.g. seeds `2-300`) before an eval freeze.
+
+Blockers before this becomes a hard freeze:
+
+1. **Serializer rebuild pending.** The `bits=` action-description prefix and `room INVALID` header label are being removed (binding change, rebuild in progress). Frozen traces should be generated under the final serializer, so freeze only after the rebuilt binding and a re-validated baseline.
+2. **UB reproducibility caveat.** Cross-machine identical traces are not guaranteed while the seed-2-class uninitialized-memory UB is only contained, not root-caused (`docs/simulator_issue_handoff.md`). A single-machine freeze is usable for now; cross-machine reproducibility is not.
 
 This hybrid approach is deliberate. The existing upstream Python binding does not expose combat micro-actions. Letting Lightspeed resolve battles gets us useful Act 1 trajectories and risk-relevant decisions quickly, while full combat control remains a later C++ binding task.
 
@@ -220,8 +261,9 @@ Current policy:
 - reject invalid battle actions in release builds before executing them;
 - reject unknown potion enum values instead of indexing name/effect tables out of range;
 - initialize `potions` arrays in `GameContext`/`BattleContext` and guard the battle
-  search against transiently-corrupt potion slots / non-terminating playouts (see
-  `docs/simulator_issue_handoff.md` for the uninitialized-memory root cause);
+  search against transiently-corrupt potion slots / non-terminating playouts where
+  the native code returns (see `docs/simulator_issue_handoff.md` for the
+  unresolved seed-2-class native hang);
 - convert the simulator's internal `while(true)`/overflow guards from `assert(false)`
   to thrown exceptions, since asserts are compiled out in release builds and would
   otherwise hang instead of failing closed;
@@ -229,7 +271,7 @@ Current policy:
 - record batch failures and timeouts as `seed_<n>.error.json` sidecars;
 - use `--seed-timeout-seconds` for larger non-LLM baseline batches so each seed runs in a subprocess and can be killed independently.
 
-Hard C++ asserts remain useful for local debugging, but they are not the default batch mechanism because an abort tears down the whole Python interpreter. **They are also no-ops in our release builds**, so any guard that must fire in production has to throw, not assert. Python-visible exceptions plus subprocess timeouts give cleaner failure accounting.
+Hard C++ asserts remain useful for local debugging, but they are not the default batch mechanism because an abort tears down the whole Python interpreter. **They are also no-ops in our release builds**, so any guard that must fire in production has to throw, not assert. Python-visible exceptions plus subprocess timeouts give cleaner failure accounting. Some seed-2-class paths still require the subprocess timeout; they are not yet cleanly recoverable inside a single Python process.
 
 ## Roadmap
 
@@ -510,8 +552,16 @@ Later scientific metrics:
 
 ## Near-Term Next Steps
 
-1. Run baseline batch rollouts for `first`, `random`, and `heuristic`.
-2. Run Qwen no-thinking on 10 fixed seeds and inspect every trace manually.
-3. Run Qwen thinking mode with `2048` tokens on a smaller comparison seed set.
-4. Improve any state/action descriptions revealed by the manual trace audit.
-5. Freeze initial dev/eval seeds only after serializer issues are fixed.
+Done in the 2026-06-14 session:
+
+- Serializer audit + fixes: removed the `bits=` action-description prefix (now on `LegalAction.bits` only) and render the Neow/event `room INVALID` header as `room none`. Binding rebuilt, patch regenerated, tests updated (`test_action_descriptions_omit_bits_prefix`, `test_state_room_label_is_not_invalid`).
+- Thinking-mode `2048` comparison run (seeds 3-5): 88.9% valid, truncation-limited; no-thinking `256` remains the high-throughput primary arm (see Thinking-mode comparison above).
+- Fixed the `tests/integration/test_battle_search.py` off-by-one that let it pass without entering the floor-12 battle; documented seed-2 non-determinism and the containment-only invariants.
+- Documented the frozen-seed exclusion policy and proposed smoke/dev splits (see Frozen Seed Policy).
+
+Remaining:
+
+1. Root-cause or explicitly accept-and-exclude the seed-2-class native battle-search hang. Use a debug/sanitizer build or systematic value-initialization audit before depending on cross-build/cross-machine reproducibility.
+2. Run Qwen no-thinking `256` on the full clean baseline intersection (excluding `{2, 11, 17, 22, 25, 48}`) under the rebuilt serializer, always with `--seed-timeout-seconds`; manually inspect traces.
+3. If a thinking comparison arm is needed, retest with a larger budget (≥4096) or a "think briefly, then emit JSON" prompt to beat truncation.
+4. Run a larger baseline batch (e.g. seeds `2-300`) so an eval freeze of ~100 seeds is possible, then hard-freeze dev/eval under the final serializer.

@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..3f783ba 100644
+index a9afe35..bef8abc 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -12,21 +12,264 @@
+@@ -12,21 +12,287 @@
  
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
@@ -16,6 +16,8 @@ index a9afe35..3f783ba 100644
 +#include "constants/Potions.h"
 +#include "constants/Relics.h"
 +#include "constants/Rooms.h"
++
++#include <stdexcept>
  
  #include "slaythespire.h"
  
@@ -50,9 +52,20 @@ index a9afe35..3f783ba 100644
 +    return "UNKNOWN_POTION";
 +}
 +
++// Human-facing room label: the simulator leaves curRoom as INVALID/NONE on rooms
++// without a typed combat layout (e.g. the Neow floor), which reads like an error in
++// the serialized state. Render those as "none" instead.
++const char* roomLabel(Room r) {
++    if (r == Room::INVALID || r == Room::NONE) {
++        return "none";
++    }
++    return roomStrings[static_cast<int>(r)];
++}
++
 +std::string describeGameAction(const GameContext &gc, const search::GameAction &a) {
++    // NOTE: the raw action `bits` are intentionally omitted from this human-/model-
++    // facing description; they remain available structurally on LegalAction.bits.
 +    std::ostringstream os;
-+    os << "bits=" << a.bits << " ";
 +
 +    switch (gc.screenState) {
 +        case ScreenState::EVENT_SCREEN: {
@@ -215,7 +228,7 @@ index a9afe35..3f783ba 100644
 +    os << "Act " << gc.act
 +       << ", floor " << gc.floorNum
 +       << ", screen " << screenStateName(gc.screenState)
-+       << ", room " << roomStrings[static_cast<int>(gc.curRoom)]
++       << ", room " << roomLabel(gc.curRoom)
 +       << ", boss " << monsterEncounterStrings[static_cast<int>(gc.boss)]
 +       << "\nHP: " << gc.curHp << "/" << gc.maxHp
 +       << ", gold: " << gc.gold
@@ -260,14 +273,24 @@ index a9afe35..3f783ba 100644
 +
 +        BattleContext bc;
 +        bc.init(gc);
-+        agent.playoutBattle(bc);
-+        bc.exitBattle(gc);
++        try {
++            agent.playoutBattle(bc);
++            bc.exitBattle(gc);
++        } catch (const std::exception &exc) {
++            std::ostringstream os;
++            os << "battle resolution failed"
++               << " seed=" << gc.seed
++               << " floor=" << gc.floorNum
++               << " encounter=" << static_cast<int>(bc.encounter)
++               << " error=" << exc.what();
++            throw std::runtime_error(os.str());
++        }
 +        return true;
 +    }, "resolve only the currently active battle with the built-in search agent");
  
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +284,34 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -41,6 +307,34 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
          .def("playout", &search::ScumSearchAgent2::playout);
  
@@ -302,7 +325,7 @@ index a9afe35..3f783ba 100644
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
          .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -75,6 +346,9 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +369,9 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
  
@@ -312,7 +335,7 @@ index a9afe35..3f783ba 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -836,5 +1110,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +1133,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
  
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")

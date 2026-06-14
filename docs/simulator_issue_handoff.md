@@ -1,6 +1,6 @@
 # Simulator Issue Handoff
 
-## Resolution (2026-06-13)
+## Partial Resolution (updated 2026-06-14)
 
 **Root cause was misdiagnosed in the original handoff below.** It is *not* a stale
 cached MCTS edge. The real cause is **uninitialized-memory undefined behaviour** in
@@ -30,14 +30,34 @@ the upstream simulator, surfaced (not caused) by our strict validation:
 4. `BattleContext::executeActions`: **throw instead of `assert(false)`** so the
    overflow guard actually fires in release builds — converting the hang into a clean,
    catchable `simulator_error`.
+5. The Python binding now wraps battle-resolution exceptions with seed/floor/encounter
+   context before rethrowing them to Python.
 
-**Status:** the original crash is fixed; the residual UB (a build-dependent
-unresolvable battle) is now *contained* (clean error, never a crash or hang) per the
-agreed scope, not fully root-caused. Verified via a fast LLM-free replay harness
-(`scripts/`-style replay of recorded decision indices) reproducing seed 2 in seconds.
-Regression test: `tests/test_battle_search_regression.py`. A deeper root-cause hunt
-(systematic value-init of all context members, or a sanitizer build) remains a
-possible follow-up if seed-2-class trajectories prove research-critical.
+**Current status:** the original garbage-potion `invalid battle action` crash is
+fixed, but the seed-2-class trajectory is not fully contained in-process. A fresh
+2026-06-14 rerun of the Qwen no-thinking `256` seed-2 path again reached decision
+48 and then pinned inside the native `slaythespire` extension when entering the
+floor-12 battle. This confirms the residual issue is still a native
+battle-search hang on this build, not a model parsing problem.
+
+Operational containment is subprocess isolation: run long batches with
+`--seed-timeout-seconds` so a stuck native battle is killed and recorded as a
+sidecar. The regression test is now `tests/integration/test_battle_search.py`; it
+appends the map action and gives `run_rollout` headroom past it (the floor-12
+combat is resolved by the *next* `advance_to_decision()`, so `max_decisions` must
+exceed the replayed decision count or the rollout stops on the map node and never
+enters the battle), and runs the replay in a child process with a timeout.
+
+The seed-2 path is **non-deterministic across runs on this build**: observed
+outcomes include a >90s native hang in the battle (contained by the subprocess
+timeout), a clean resolve, and an early divergence that stops before floor 12 —
+the UB corrupts the out-of-combat path too, not just the battle. The test
+therefore asserts only build-portable *containment* invariants (no hard crash, no
+garbage-potion `invalid battle action` regression) and does **not** assert the
+battle is reached. A deeper root-cause hunt (systematic value-init of all context
+members, a sanitizer/debug-symbol build, or isolating battle resolution behind a
+worker process) remains necessary before relying on seed-2-class trajectories or
+cross-machine identical traces.
 
 > The original handoff below is preserved for history; its "Likely Root Cause" and
 > "Proposed Fix" sections were superseded by the findings above.
@@ -257,4 +277,3 @@ Summary:
 - Most other seeds died in late Act 1
 
 This means the LLM loop is viable. The next blocker is simulator search robustness, not model parsing.
-
