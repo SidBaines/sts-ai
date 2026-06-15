@@ -9,14 +9,26 @@ NEUTRAL_FRAME = (
 )
 
 
-def render_action_prompt(state_text: str, legal_actions: list[LegalAction], framing: str = NEUTRAL_FRAME) -> str:
+def render_action_prompt(
+    state_text: str,
+    legal_actions: list[LegalAction],
+    framing: str = NEUTRAL_FRAME,
+    induce_reasoning: bool = False,
+) -> str:
     action_lines = "\n".join(
         f"{action.index}: {action.description}" for action in legal_actions
+    )
+    reasoning_instruction = (
+        "Before the JSON, think step by step inside a single <think>...</think> "
+        "block. Put the final JSON object after the closing </think>.\n\n"
+        if induce_reasoning
+        else ""
     )
     return (
         f"{framing}\n\n"
         "Return exactly one JSON object with this schema:\n"
         '{"reasoning": "brief private reasoning", "action_index": 0}\n\n'
+        f"{reasoning_instruction}"
         f"GAME STATE\n{state_text}\n\n"
         f"LEGAL ACTIONS\n{action_lines}\n"
     )
