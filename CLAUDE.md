@@ -42,6 +42,7 @@ When you complete substantive work that changes project status or the next-step 
 - [`README.md`](README.md) — setup, build, and run commands.
 - [`src/sts_ai/CLAUDE.md`](src/sts_ai/CLAUDE.md) — harness internals and area-specific gotchas.
 - [`scripts/CLAUDE.md`](scripts/CLAUDE.md) — CLI entry points and build script.
+- [`docs/throughput_benchmarks.md`](docs/throughput_benchmarks.md) — measured per-model rollout speeds (decisions/sec, time-to-run) for planning experiments.
 
 ## Gotchas (repo-wide)
 
