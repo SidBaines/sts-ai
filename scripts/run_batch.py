@@ -10,6 +10,7 @@ import sys
 from sts_ai.agent_factory import agent_label, build_agent
 from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.rollout import run_rollout
+from sts_ai.seeding import expand_specs, rollout_stem
 
 
 def truncate_output(text: str | None, limit: int = 20_000) -> str:
@@ -33,14 +34,6 @@ def parse_seed_list(args: argparse.Namespace) -> list[int]:
     if args.seeds:
         return [int(seed.strip()) for seed in args.seeds.split(",") if seed.strip()]
     return list(range(args.seed_start, args.seed_start + args.seed_count))
-
-
-def expand_specs(seeds: list[int], rollouts_per_seed: int) -> list[tuple[int, int]]:
-    return [
-        (seed, rollout_index)
-        for seed in seeds
-        for rollout_index in range(rollouts_per_seed)
-    ]
 
 
 def main() -> None:
@@ -78,9 +71,10 @@ def main() -> None:
     args = parser.parse_args()
 
     seeds = parse_seed_list(args)
-    if args.rollouts_per_seed < 1:
-        raise SystemExit("--rollouts-per-seed must be >= 1")
-    specs = expand_specs(seeds, args.rollouts_per_seed)
+    try:
+        specs = expand_specs(seeds, args.rollouts_per_seed)
+    except ValueError as exc:
+        raise SystemExit(f"--{str(exc).replace('_', '-')}") from exc
     label = agent_label(
         args.agent,
         model=args.model,
@@ -99,15 +93,19 @@ def main() -> None:
             thinking=args.thinking,
         )
 
-    print(f"agent={label} specs={specs}")
+    print(f"agent={label} specs={len(specs)} rollouts (e.g. {specs[:4]}...)")
     for seed, rollout_index in specs:
-        output = args.output_dir / label / f"seed_{seed}_r{rollout_index}.jsonl"
+        stem = rollout_stem(seed, rollout_index)
+        output = args.output_dir / label / f"{stem}.jsonl"
+        meta_output = args.output_dir / label / f"{stem}.meta.json"
         error_output = output.with_suffix(".error.json")
-        if output.exists() and not args.overwrite:
+        if meta_output.exists() and not args.overwrite:
             print(f"skip existing: {output}")
             continue
         if output.exists():
             output.unlink()
+        if meta_output.exists():
+            meta_output.unlink()
         if error_output.exists():
             error_output.unlink()
 

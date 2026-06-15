@@ -16,6 +16,22 @@ def derive_policy_seed(world_seed: int, rollout_index: int) -> int:
     return _digest_to_seed(hashlib.sha256(payload).digest())
 
 
+def expand_specs(seeds: Iterable[int], rollouts_per_seed: int) -> list[tuple[int, int]]:
+    """Expand world seeds into (world_seed, rollout_index) rollout identities."""
+    if rollouts_per_seed < 1:
+        raise ValueError("rollouts_per_seed must be >= 1")
+    return [
+        (seed, rollout_index)
+        for seed in seeds
+        for rollout_index in range(rollouts_per_seed)
+    ]
+
+
+def rollout_stem(world_seed: int, rollout_index: int) -> str:
+    """run_rollout.py intentionally keeps its default rollout_{agent}_... prefix."""
+    return f"seed_{world_seed}_r{rollout_index}"
+
+
 # Used by the batched K-rollout path; keep seeding policy centralized here.
 def derive_batch_seed(members: Iterable[tuple[int, int, int]]) -> int:
     """Derive an order-independent seed from (world, rollout, decision) members."""

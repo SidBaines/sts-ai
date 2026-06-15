@@ -21,6 +21,7 @@ from sts_ai.agent_factory import agent_label, build_agent
 from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.parallel_rollout import run_parallel_rollouts
 from sts_ai.rollout import current_git_sha
+from sts_ai.seeding import expand_specs, rollout_stem
 
 _THINKING_MODES = {"off": [False], "on": [True], "both": [False, True]}
 
@@ -29,14 +30,6 @@ def parse_seeds(args: argparse.Namespace) -> list[int]:
     if args.seeds:
         return [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
     return list(range(args.seed_start, args.seed_start + args.seed_count))
-
-
-def expand_specs(seeds: list[int], rollouts_per_seed: int) -> list[tuple[int, int]]:
-    return [
-        (seed, rollout_index)
-        for seed in seeds
-        for rollout_index in range(rollouts_per_seed)
-    ]
 
 
 def main() -> None:
@@ -62,9 +55,10 @@ def main() -> None:
     args = parser.parse_args()
 
     seeds = parse_seeds(args)
-    if args.rollouts_per_seed < 1:
-        raise SystemExit("--rollouts-per-seed must be >= 1")
-    specs = expand_specs(seeds, args.rollouts_per_seed)
+    try:
+        specs = expand_specs(seeds, args.rollouts_per_seed)
+    except ValueError as exc:
+        raise SystemExit(f"--{str(exc).replace('_', '-')}") from exc
     models = [m.strip() for m in args.models.split(",") if m.strip()]
     modes = _THINKING_MODES[args.thinking]
     git_sha = current_git_sha()
@@ -91,10 +85,15 @@ def main() -> None:
             out_dir = args.output_dir / label
             out_dir.mkdir(parents=True, exist_ok=True)
             to_run = [
-                spec for spec in specs
-                if args.overwrite or not (out_dir / f"seed_{spec[0]}_r{spec[1]}.meta.json").exists()
+                (world_seed, rollout_index)
+                for world_seed, rollout_index in specs
+                if args.overwrite
+                or not (out_dir / f"{rollout_stem(world_seed, rollout_index)}.meta.json").exists()
             ]
-            print(f"[{label}] specs={to_run} (skipped {len(specs) - len(to_run)} existing)")
+            print(
+                f"[{label}] specs={len(to_run)} rollouts (e.g. {to_run[:4]}...) "
+                f"(skipped {len(specs) - len(to_run)} existing)"
+            )
             if not to_run:
                 continue
             run_meta = {
@@ -104,7 +103,7 @@ def main() -> None:
             }
             results = run_parallel_rollouts(
                 to_run, make_env, agent,
-                output_for=lambda ws, ri, d=out_dir: d / f"seed_{ws}_r{ri}.jsonl",
+                output_for=lambda ws, ri, d=out_dir: d / f"{rollout_stem(ws, ri)}.jsonl",
                 batch_size=args.batch_size,
                 max_decisions=args.max_decisions,
                 run_meta=run_meta,
