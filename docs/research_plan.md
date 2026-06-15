@@ -190,6 +190,13 @@ Updated near-term ordering:
 
 ## Design Commitments
 
+> RL method choices, the per-rollout-reward / Markovian-context analysis, and the
+> interplay between RL and the framing manipulation (including the
+> behaviour-selection comparison arm and its confounds) are worked through in
+> [`rl_and_framing_design.md`](rl_and_framing_design.md) (Sid × Claude design
+> discussion, 2026-06-15). The commitments below are the durable headlines; that
+> doc carries the reasoning and the open questions for Stages 6–9.
+
 ### Model Adapter Modularity
 
 The simulator and rollout recorder should never depend directly on a model provider, tokenizer, or chat template.
