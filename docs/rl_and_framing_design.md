@@ -2,7 +2,7 @@
 
 **Participants:** Sid × Claude (Opus 4.8)
 **Date:** 2026-06-15
-**Status:** Design discussion — *no code written, nothing implemented yet.* We are still pre-data-collection (see [`research_plan.md`](research_plan.md) "Project status: early development"). Everything below is a working position / recommendation to inform Stages 6–9, not a frozen decision.
+**Status:** Design discussion — the RL training arms below are *not yet implemented* (we are still pre-data-collection; see [`research_plan.md`](research_plan.md) "Project status: early development"), so treat them as working positions, not frozen decisions. **Exception:** the **seed model** in §2c was implemented on 2026-06-15 (world-seed / policy-seed separation enabling multiple rollouts per game state).
 
 This doc captures a session working through three things and how they fit together:
 
@@ -69,6 +69,32 @@ This is **not** online RL; it is offline reward-weighted learning on already-col
 ### 2b. On-policy arm — GRPO or RLOO
 
 When we generate fresh rollouts per frame and train with policy gradient, the current standard for LLMs is **GRPO** (group-relative: sample a group of `G` rollouts, advantage `= (R_i − mean)/std`, clipped update, **no value network**) or its simpler cousin **RLOO** (REINFORCE with a leave-one-out group mean as baseline). Prefer these over **PPO** specifically because they avoid a critic network — meaningful given the 48 GB Mac / Qwen3-4B constraint (and the plan's "Local Training Is a Benchmark, Not an Assumption" caution). Group over *seeds* (sample `G` rollouts of the same seed; reward = win / floor); the group mean is the baseline, which tames the sparse terminal-reward variance without a learned value head.
+
+### 2c. Seed model: world seed vs. policy seed
+
+*(Implemented 2026-06-15; the RL training arms in the rest of §2 remain unbuilt.)*
+
+Reproducibility and the on-policy arm both depend on separating two kinds of randomness that used to share a single seed:
+
+- **World seed** — fixes the game world: map, card/relic/shop/event rolls, combat shuffles, monster moves. Same world seed ⇒ same environment instance.
+- **Policy seed** — fixes the policy's stochastic sampling (LLM token sampling at temperature > 0; the random baseline's choices). It is derived deterministically from the world seed and a **rollout index**, so the policy seed follows from the pair.
+
+A rollout's identity is therefore **(world seed, rollout index)**: hold the world seed fixed and vary the rollout index to get K different — but individually reproducible — plays of the *same* game.
+
+**When to vary which:**
+
+- **Fixed-rollout / offline arm at temperature 0:** vary the world seed only. The policy is deterministic, so the rollout index is irrelevant — one play fully represents a world.
+- **On-policy RL (GRPO / RLOO groups):** fix the world seed per group and vary the rollout index across the group (0…G−1) at temperature > 0. The group is "the same game, sampled G ways," so the group-relative baseline measures *this sample vs. the others on the same world* rather than "this world was easy." This is the concrete form of the "group over seeds" baseline in §2b — and the reason temperature 0 collapses a group to zero variance (gotcha #2).
+- **Evaluation / variance reduction:** average over rollout indices at a fixed world seed; the world seed acts as a *block* that removes game-difficulty noise from a policy or framing comparison.
+- **Action propensities (Stage 8):** many policy samples at a fixed state ≈ many rollout indices sharing a world (and prefix).
+
+**Reproducibility — record both seeds, and mind the granularity:**
+
+- Re-running with the same (world seed, policy seed) reproduces a rollout. Record both on every trajectory.
+- The **serial** path (one rollout at a time) is **bit-reproducible** — identical tokens on re-run. Use it for any data we intend to freeze.
+- The **batched** path (many rollouts generated together for throughput) is **re-run-deterministic given a fixed batch size** — the same command reproduces — but it is *not* bitwise-identical to the serial path nor invariant to batch size. Batched generation pads and batches the matmul (so a sequence's logits depend on the batch shape) and the sampler RNG is shared across the batch. Practical rule: freeze the (path, batch size) for anything you will compare bitwise; otherwise treat batched output as "same distribution, reproducible per fixed config," not "same bytes as serial."
+
+**Combat randomness (hybrid mode):** when combats are resolved by the built-in search agent, that search has its own randomness that is currently *held fixed* (not varied per rollout). So K rollouts of one world seed in hybrid mode differ only in the **out-of-combat** choices — which is exactly what the OOC-policy RL arm trains, and holding combat fixed *reduces* variance on that credit assignment. Varying combat across rollouts would need deeper control and is deferred; under full-LLM-combat control the combat decisions are the policy's, so the policy seed already covers them.
 
 ### Reward design: keep it trait-neutral
 
