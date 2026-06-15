@@ -5,8 +5,6 @@ Gated with @requires_simulator (drives the real engine). See tests/CLAUDE.md."""
 from __future__ import annotations
 
 import unittest
-
-from sts_ai.schemas import AgentDecision
 from tests.integration.test_combat_control import ScriptedCombatAgent
 from tests.support import requires_simulator
 
@@ -35,7 +33,7 @@ class ParallelParityTest(unittest.TestCase):
 
         max_decisions = 40
         serial = run_rollout(_make_env(3), ScriptedBatchAgent(), max_decisions=max_decisions)
-        parallel = run_parallel_rollouts([3], _make_env, ScriptedBatchAgent(),
+        parallel = run_parallel_rollouts([(3, 0)], _make_env, ScriptedBatchAgent(),
                                          batch_size=1, max_decisions=max_decisions)[0]
 
         self.assertEqual(serial.stopped_reason, parallel.stopped_reason)
@@ -49,9 +47,10 @@ class ParallelParityTest(unittest.TestCase):
     def test_multi_seed_batch_runs(self):
         from sts_ai.parallel_rollout import run_parallel_rollouts
 
-        results = run_parallel_rollouts([3, 4], _make_env, ScriptedBatchAgent(),
+        results = run_parallel_rollouts([(3, 0), (4, 0)], _make_env, ScriptedBatchAgent(),
                                         batch_size=2, max_decisions=30)
         self.assertEqual([r.world_seed for r in results], [3, 4])
+        self.assertEqual([r.rollout_index for r in results], [0, 0])
         for r in results:
             self.assertGreater(len(r.decisions), 0)
             self.assertIsNone(r.error)

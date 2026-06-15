@@ -31,16 +31,22 @@ from sts_ai.rollout import (
     write_rollout_meta,
 )
 from sts_ai.schemas import DecisionRecord, RolloutResult
-from sts_ai.seeding import derive_policy_seed
+from sts_ai.seeding import derive_batch_seed, derive_policy_seed
 
 
 class _Slot:
     """One in-flight rollout."""
 
-    def __init__(self, seed: int, env: LightspeedHybridEnv, output_path: Optional[Path]):
-        self.seed = seed
-        # rollout_index fixed at 0 until the K-rollouts feature threads it.
-        self.policy_seed = derive_policy_seed(seed, 0)
+    def __init__(
+        self,
+        world_seed: int,
+        rollout_index: int,
+        env: LightspeedHybridEnv,
+        output_path: Optional[Path],
+    ):
+        self.world_seed = world_seed
+        self.rollout_index = rollout_index
+        self.policy_seed = derive_policy_seed(world_seed, rollout_index)
         self.env = env
         self.output_path = output_path
         self.decisions: list[DecisionRecord] = []
@@ -52,36 +58,37 @@ class _Slot:
 
 
 def run_parallel_rollouts(
-    seeds: list[int],
+    specs: list[tuple[int, int]],
     make_env: Callable[[int], LightspeedHybridEnv],
     agent: Any,
-    output_for: Callable[[int], Optional[Path]] = lambda s: None,
+    output_for: Callable[[int, int], Optional[Path]] = lambda ws, ri: None,
     batch_size: int = 8,
     max_decisions: int = 200,
     run_meta: Optional[dict[str, Any]] = None,
 ) -> list[RolloutResult]:
-    """Run `seeds` as concurrent rollouts, K (`batch_size`) at a time, batching
-    the agent's per-decision generations. Returns RolloutResults in seed order."""
-    queue = deque(seeds)
+    """Run `(world_seed, rollout_index)` specs as concurrent rollouts, K
+    (`batch_size`) at a time, batching the agent's per-decision generations.
+    Returns RolloutResults in input spec order."""
+    queue = deque(specs)
     active: list[_Slot] = []
-    results: dict[int, RolloutResult] = {}
+    results: dict[tuple[int, int], RolloutResult] = {}
 
     def finalize(slot: _Slot, stopped_reason: str, error: Optional[dict[str, Any]] = None) -> None:
         slot.stopped_reason = stopped_reason
         slot.error = error
         slot.done = True
         result = RolloutResult(
-            world_seed=slot.seed,
+            world_seed=slot.world_seed,
             decisions=slot.decisions,
             terminal_state=slot.env.summary(),
             stopped_reason=stopped_reason,
             error=error,
             policy_seed=slot.policy_seed,
-            rollout_index=0,
+            rollout_index=slot.rollout_index,
         )
         if slot.output_path is not None:
             write_rollout_meta(slot.output_path, build_rollout_meta(result, slot.env, agent, run_meta))
-        results[slot.seed] = result
+        results[(slot.world_seed, slot.rollout_index)] = result
 
     def advance(slot: _Slot) -> None:
         """Prepare the slot's next decision, or finalize it if it's finished."""
@@ -98,8 +105,14 @@ def run_parallel_rollouts(
             return
         slot.view = view
 
-    def open_slot(seed: int) -> _Slot:
-        slot = _Slot(seed, make_env(seed), output_for(seed))
+    def open_slot(spec: tuple[int, int]) -> _Slot:
+        world_seed, rollout_index = spec
+        slot = _Slot(
+            world_seed,
+            rollout_index,
+            make_env(world_seed),
+            output_for(world_seed, rollout_index),
+        )
         advance(slot)  # may finalize immediately (e.g. terminal with no decisions)
         return slot
 
@@ -111,10 +124,16 @@ def run_parallel_rollouts(
 
     refill()
     while active:
-        batch = [(slot.view["state_text"], slot.view["legal_actions"]) for slot in active]
+        active_batch = list(active)
+        members = [
+            (slot.world_seed, slot.rollout_index, slot.decision_index)
+            for slot in active_batch
+        ]
+        agent.reseed(derive_batch_seed(members))
+        batch = [(slot.view["state_text"], slot.view["legal_actions"]) for slot in active_batch]
         decisions = agent.choose_actions_batch(batch)
 
-        for slot, agent_decision in zip(active, decisions):
+        for slot, agent_decision in zip(active_batch, decisions):
             view = slot.view
             action_index = clamp_action_index(agent_decision, len(view["legal_actions"]))
             try:
@@ -123,7 +142,7 @@ def run_parallel_rollouts(
                 finalize(slot, "simulator_error", error_payload(exc, "step", slot.decision_index))
                 continue
             record = build_decision_record(
-                world_seed=slot.seed,
+                world_seed=slot.world_seed,
                 decision_index=slot.decision_index,
                 state=view["state"],
                 state_text=view["state_text"],
@@ -133,7 +152,7 @@ def run_parallel_rollouts(
                 after_state=slot.env.summary(),
                 phase=view["phase"],
                 policy_seed=slot.policy_seed,
-                rollout_index=0,
+                rollout_index=slot.rollout_index,
             )
             slot.decisions.append(record)
             if slot.output_path is not None:
@@ -144,4 +163,4 @@ def run_parallel_rollouts(
         active[:] = [slot for slot in active if not slot.done]
         refill()
 
-    return [results[seed] for seed in seeds if seed in results]
+    return [results[spec] for spec in specs if spec in results]

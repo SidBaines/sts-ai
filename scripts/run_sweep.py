@@ -31,6 +31,14 @@ def parse_seeds(args: argparse.Namespace) -> list[int]:
     return list(range(args.seed_start, args.seed_start + args.seed_count))
 
 
+def expand_specs(seeds: list[int], rollouts_per_seed: int) -> list[tuple[int, int]]:
+    return [
+        (seed, rollout_index)
+        for seed in seeds
+        for rollout_index in range(rollouts_per_seed)
+    ]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Batched multi-model rollout sweep.")
     parser.add_argument("--models", required=True, help="Comma-separated HF/mlx model ids.")
@@ -38,6 +46,7 @@ def main() -> None:
     parser.add_argument("--seeds", default=None, help="Comma-separated seed list.")
     parser.add_argument("--seed-start", type=int, default=1)
     parser.add_argument("--seed-count", type=int, default=10)
+    parser.add_argument("--rollouts-per-seed", type=int, default=1)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--max-decisions", type=int, default=200)
     parser.add_argument("--combat-control", choices=["search", "llm"], default="llm")
@@ -53,6 +62,9 @@ def main() -> None:
     args = parser.parse_args()
 
     seeds = parse_seeds(args)
+    if args.rollouts_per_seed < 1:
+        raise SystemExit("--rollouts-per-seed must be >= 1")
+    specs = expand_specs(seeds, args.rollouts_per_seed)
     models = [m.strip() for m in args.models.split(",") if m.strip()]
     modes = _THINKING_MODES[args.thinking]
     git_sha = current_git_sha()
@@ -78,9 +90,11 @@ def main() -> None:
             label = agent_label("mlx", model=model, max_tokens=args.max_tokens, thinking=thinking)
             out_dir = args.output_dir / label
             out_dir.mkdir(parents=True, exist_ok=True)
-            to_run = [s for s in seeds
-                      if args.overwrite or not (out_dir / f"seed_{s}.meta.json").exists()]
-            print(f"[{label}] seeds={to_run} (skipped {len(seeds) - len(to_run)} existing)")
+            to_run = [
+                spec for spec in specs
+                if args.overwrite or not (out_dir / f"seed_{spec[0]}_r{spec[1]}.meta.json").exists()
+            ]
+            print(f"[{label}] specs={to_run} (skipped {len(specs) - len(to_run)} existing)")
             if not to_run:
                 continue
             run_meta = {
@@ -90,7 +104,7 @@ def main() -> None:
             }
             results = run_parallel_rollouts(
                 to_run, make_env, agent,
-                output_for=lambda s, d=out_dir: d / f"seed_{s}.jsonl",
+                output_for=lambda ws, ri, d=out_dir: d / f"seed_{ws}_r{ri}.jsonl",
                 batch_size=args.batch_size,
                 max_decisions=args.max_decisions,
                 run_meta=run_meta,

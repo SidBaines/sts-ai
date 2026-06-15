@@ -35,6 +35,14 @@ def parse_seed_list(args: argparse.Namespace) -> list[int]:
     return list(range(args.seed_start, args.seed_start + args.seed_count))
 
 
+def expand_specs(seeds: list[int], rollouts_per_seed: int) -> list[tuple[int, int]]:
+    return [
+        (seed, rollout_index)
+        for seed in seeds
+        for rollout_index in range(rollouts_per_seed)
+    ]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a batch of hybrid sts_lightspeed rollouts.")
     parser.add_argument("--agent", choices=["first", "random", "heuristic", "mlx"], default="heuristic")
@@ -45,6 +53,7 @@ def main() -> None:
                         help="Which split to read from --seeds-config (smoke/dev/eval).")
     parser.add_argument("--seed-start", type=int, default=1)
     parser.add_argument("--seed-count", type=int, default=10)
+    parser.add_argument("--rollouts-per-seed", type=int, default=1)
     parser.add_argument("--ascension", type=int, default=0)
     parser.add_argument("--max-decisions", type=int, default=200)
     parser.add_argument("--battle-simulations", type=int, default=2_000)
@@ -69,6 +78,9 @@ def main() -> None:
     args = parser.parse_args()
 
     seeds = parse_seed_list(args)
+    if args.rollouts_per_seed < 1:
+        raise SystemExit("--rollouts-per-seed must be >= 1")
+    specs = expand_specs(seeds, args.rollouts_per_seed)
     label = agent_label(
         args.agent,
         model=args.model,
@@ -87,9 +99,9 @@ def main() -> None:
             thinking=args.thinking,
         )
 
-    print(f"agent={label} seeds={seeds}")
-    for seed in seeds:
-        output = args.output_dir / label / f"seed_{seed}.jsonl"
+    print(f"agent={label} specs={specs}")
+    for seed, rollout_index in specs:
+        output = args.output_dir / label / f"seed_{seed}_r{rollout_index}.jsonl"
         error_output = output.with_suffix(".error.json")
         if output.exists() and not args.overwrite:
             print(f"skip existing: {output}")
@@ -100,7 +112,7 @@ def main() -> None:
             error_output.unlink()
 
         if args.seed_timeout_seconds is not None:
-            run_seed_subprocess(args, seed, output, error_output)
+            run_seed_subprocess(args, seed, rollout_index, output, error_output)
             continue
 
         agent = shared_agent
@@ -114,11 +126,17 @@ def main() -> None:
             boss_simulation_multiplier=args.boss_simulation_multiplier,
         )
         try:
-            result = run_rollout(env, agent, max_decisions=args.max_decisions, output_path=output)
+            result = run_rollout(
+                env,
+                agent,
+                max_decisions=args.max_decisions,
+                output_path=output,
+                rollout_index=rollout_index,
+            )
         except Exception as exc:  # noqa: BLE001 - keep later seeds running after agent or harness failures.
             payload = {
                 "world_seed": seed,
-                "rollout_index": 0,
+                "rollout_index": rollout_index,
                 "stopped_reason": "batch_error",
                 "error": {
                     "type": exc.__class__.__name__,
@@ -131,7 +149,10 @@ def main() -> None:
             output.touch(exist_ok=True)
             error_output.parent.mkdir(parents=True, exist_ok=True)
             error_output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-            print(f"seed={seed} failed error={payload['error']} output={error_output}")
+            print(
+                f"seed={seed} rollout_index={rollout_index} failed "
+                f"error={payload['error']} output={error_output}"
+            )
             continue
 
         if result.error is not None:
@@ -150,12 +171,18 @@ def main() -> None:
             error_output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
         print(
-            f"seed={seed} decisions={len(result.decisions)} "
+            f"seed={seed} rollout_index={rollout_index} decisions={len(result.decisions)} "
             f"stopped={result.stopped_reason} final={result.terminal_state} output={output}"
         )
 
 
-def run_seed_subprocess(args: argparse.Namespace, seed: int, output: Path, error_output: Path) -> None:
+def run_seed_subprocess(
+    args: argparse.Namespace,
+    seed: int,
+    rollout_index: int,
+    output: Path,
+    error_output: Path,
+) -> None:
     command = [
         sys.executable,
         "scripts/run_rollout.py",
@@ -171,6 +198,8 @@ def run_seed_subprocess(args: argparse.Namespace, seed: int, output: Path, error
         str(args.max_retries),
         "--seed",
         str(seed),
+        "--rollout-index",
+        str(rollout_index),
         "--ascension",
         str(args.ascension),
         "--max-decisions",
@@ -204,7 +233,7 @@ def run_seed_subprocess(args: argparse.Namespace, seed: int, output: Path, error
     except subprocess.TimeoutExpired as exc:
         payload = {
             "world_seed": seed,
-            "rollout_index": 0,
+            "rollout_index": rollout_index,
             "stopped_reason": "timeout",
             "timeout_seconds": args.seed_timeout_seconds,
             "output": str(output),
@@ -221,13 +250,16 @@ def run_seed_subprocess(args: argparse.Namespace, seed: int, output: Path, error
         output.touch(exist_ok=True)
         error_output.parent.mkdir(parents=True, exist_ok=True)
         error_output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        print(f"seed={seed} timed_out after={args.seed_timeout_seconds}s output={output} error={error_output}")
+        print(
+            f"seed={seed} rollout_index={rollout_index} timed_out "
+            f"after={args.seed_timeout_seconds}s output={output} error={error_output}"
+        )
         return
 
     if completed.returncode != 0 and not error_output.exists():
         payload = {
             "world_seed": seed,
-            "rollout_index": 0,
+            "rollout_index": rollout_index,
             "stopped_reason": "subprocess_error",
             "returncode": completed.returncode,
             "output": str(output),
@@ -246,7 +278,10 @@ def run_seed_subprocess(args: argparse.Namespace, seed: int, output: Path, error
         error_output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     status = "failed" if error_output.exists() else "completed"
-    print(f"seed={seed} {status} returncode={completed.returncode} output={output}")
+    print(
+        f"seed={seed} rollout_index={rollout_index} {status} "
+        f"returncode={completed.returncode} output={output}"
+    )
 
 
 if __name__ == "__main__":
