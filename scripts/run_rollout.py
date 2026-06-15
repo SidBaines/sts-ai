@@ -33,6 +33,13 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--ascension", type=int, default=0)
     parser.add_argument("--max-decisions", type=int, default=200)
+    parser.add_argument(
+        "--combat-control",
+        choices=["search", "llm"],
+        default="search",
+        help="'search' (default): battles auto-resolved by the built-in C++ search agent (hybrid). "
+        "'llm': each in-combat decision is surfaced to the agent (full control).",
+    )
     parser.add_argument("--battle-simulations", type=int, default=2_000)
     parser.add_argument("--boss-simulation-multiplier", type=float, default=2.0)
     parser.add_argument("--output", type=Path, default=None)
@@ -50,6 +57,7 @@ def main() -> None:
         ascension=args.ascension,
         battle_simulations=args.battle_simulations,
         boss_simulation_multiplier=args.boss_simulation_multiplier,
+        combat_control=args.combat_control,
     )
     agent = build_agent(args)
     result = run_rollout(env, agent, max_decisions=args.max_decisions, output_path=output)

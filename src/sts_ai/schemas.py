@@ -37,6 +37,13 @@ class DecisionRecord:
     selected_action: dict[str, Any]
     agent: dict[str, Any]
     after_state: dict[str, Any]
+    # `phase`: "out_of_combat" (Python-controlled Neow/path/reward/shop/event/campfire
+    #   decisions) or "combat" (in-combat micro-decisions under full LLM control).
+    #   Distinguishes the two decision kinds for training/eval. Additive change with a
+    #   default so pre-combat traces still load (added 2026-06-14). Combat-specific
+    #   state (turn, enemy HP/intents, player block/energy) rides in `state["combat"]`,
+    #   which needs no schema change since `state` is free-form.
+    phase: str = "out_of_combat"
 
 
 @dataclass

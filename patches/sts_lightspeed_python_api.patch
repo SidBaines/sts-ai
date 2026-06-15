@@ -1,18 +1,24 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..8450ff5 100644
+index a9afe35..22ce0d4 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -12,21 +12,289 @@
+@@ -12,21 +12,528 @@
  
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
 +#include "sim/search/GameAction.h"
++#include "sim/search/Action.h"
++#include "sim/search/BattleScumSearcher2.h"
  #include "sim/SimHelpers.h"
  #include "sim/PrintHelpers.h"
 +#include "combat/BattleContext.h"
++#include "combat/CardSelectInfo.h"
++#include "combat/CardInstance.h"
  #include "game/Game.h"
 +#include "constants/Cards.h"
 +#include "constants/Misc.h"
++#include "constants/MonsterMoves.h"
++#include "constants/PlayerStatusEffects.h"
 +#include "constants/Potions.h"
 +#include "constants/Relics.h"
 +#include "constants/Rooms.h"
@@ -260,6 +266,239 @@ index a9afe35..8450ff5 100644
 +    return os.str();
 +}
 +
++// Enumerate the legal in-combat actions for the current input state. Reuses the
++// battle searcher's own enumeration so the action list shown to the agent exactly
++// matches what the engine accepts (mirrors GameAction::getAllActionsInState for
++// out-of-combat). The searcher only enumerates the PLAYER_NORMAL and CARD_SELECT
++// input states; every other state is engine-internal (the random/shuffle states
++// are resolved inside executeActions and never surface as a decision). The
++// searcher constructor copies bc once and runs no search, so this is cheap and
++// has no side effect on the passed BattleContext.
++std::vector<search::Action> enumerateBattleActions(const BattleContext &bc) {
++    // Fail closed (loudly) if the battle is awaiting a player choice that the
++    // enumerator does not handle (e.g. CHOOSE_STANCE_ACTION, SCRY, CHOOSE_*_CARDS,
++    // GAMBLE). Such states are reachable only via specific cards/potions that are
++    // out of milestone-1 scope. Without this, the empty action list would surface
++    // as a silent `no_legal_actions` rollout stop mid-combat; instead raise a clear
++    // simulator_error naming the state so the gap is visible rather than abandoned.
++    if (bc.outcome == Outcome::UNDECIDED
++            && bc.inputState != InputState::EXECUTING_ACTIONS
++            && bc.inputState != InputState::PLAYER_NORMAL
++            && bc.inputState != InputState::CARD_SELECT) {
++        throw std::runtime_error(
++            std::string("unhandled combat input state (no Python action enumeration available): inputState=")
++            + std::to_string(static_cast<int>(bc.inputState)));
++    }
++
++    search::BattleScumSearcher2 searcher(bc);
++    search::BattleScumSearcher2::Node node;
++    searcher.enumerateActionsForNode(node, bc);
++
++    std::vector<search::Action> actions;
++    actions.reserve(node.edges.size());
++    for (const auto &edge : node.edges) {
++        actions.push_back(edge.action);
++    }
++    return actions;
++}
++
++// Name the card a SINGLE_CARD_SELECT action refers to, resolving the source pile
++// from the active card-select task. Mirrors Action::enumerateCardSelectActions /
++// executeSingleCardSelectActionHelper, where the select index is the raw pile
++// index. Upstream printDesc only shows "TASK (idx)", which is not judgeable.
++std::string describeCardSelectChoice(const BattleContext &bc, const search::Action &a) {
++    const auto task = bc.cardSelectInfo.cardSelectTask;
++    const int idx = a.getSelectIdx();
++    std::ostringstream os;
++    os << "select card for " << cardSelectTaskStrings[static_cast<int>(task)];
++
++    const CardInstance *card = nullptr;
++    switch (task) {
++        case CardSelectTask::ARMAMENTS:
++        case CardSelectTask::DUAL_WIELD:
++        case CardSelectTask::EXHAUST_ONE:
++        case CardSelectTask::FORETHOUGHT:
++        case CardSelectTask::WARCRY:
++            if (idx >= 0 && idx < bc.cards.cardsInHand) {
++                card = &bc.cards.hand[idx];
++            }
++            break;
++        case CardSelectTask::HEADBUTT:
++        case CardSelectTask::HOLOGRAM:
++        case CardSelectTask::LIQUID_MEMORIES_POTION:
++            if (idx >= 0 && idx < static_cast<int>(bc.cards.discardPile.size())) {
++                card = &bc.cards.discardPile[idx];
++            }
++            break;
++        case CardSelectTask::SECRET_TECHNIQUE:
++        case CardSelectTask::SECRET_WEAPON:
++            if (idx >= 0 && idx < static_cast<int>(bc.cards.drawPile.size())) {
++                card = &bc.cards.drawPile[idx];
++            }
++            break;
++        case CardSelectTask::EXHUME:
++            if (idx >= 0 && idx < static_cast<int>(bc.cards.exhaustPile.size())) {
++                card = &bc.cards.exhaustPile[idx];
++            }
++            break;
++        default:
++            // CODEX/DISCOVERY (generated cards) and the multi-select tasks are not
++            // pile-indexed; fall back to the option index below.
++            break;
++    }
++
++    if (card != nullptr) {
++        os << ": " << card->getName();
++    } else {
++        os << " (option " << idx << ")";
++    }
++    return os.str();
++}
++
++// Human-/model-facing description of a single combat action. Mirrors the campfire
++// enrichment principle: spell out card/potion/target names rather than bare
++// indices. Card-select actions delegate to the engine's printDesc.
++std::string describeBattleAction(const BattleContext &bc, const search::Action &a) {
++    std::ostringstream os;
++    switch (a.getActionType()) {
++        case search::ActionType::CARD: {
++            const auto &c = bc.cards.hand[a.getSourceIdx()];
++            os << "play " << c.getName() << " (cost " << static_cast<int>(c.costForTurn) << ")";
++            if (c.requiresTarget()) {
++                const int target = a.getTargetIdx();
++                if (target >= 0 && target < bc.monsters.monsterCount) {
++                    os << " -> " << bc.monsters.arr[target].getName();
++                }
++            }
++            break;
++        }
++        case search::ActionType::POTION: {
++            const auto p = bc.potions[a.getSourceIdx()];
++            const int target = a.getTargetIdx();
++            // execute() treats target > 5 as a discard: the enumerator packs idx2 = -1
++            // (which decodes to 8191, not -1) for the discard / no-valid-target case.
++            // Checking `== -1` here would mislabel discards as drinks and, for a
++            // targeted potion, index monsters.arr out of bounds.
++            if (target > 5) {
++                os << "discard potion " << safePotionName(p);
++            } else {
++                os << "drink potion " << safePotionName(p);
++                if (potionRequiresTarget(p) && target >= 0 && target < bc.monsters.monsterCount) {
++                    os << " -> " << bc.monsters.arr[target].getName();
++                }
++            }
++            break;
++        }
++        case search::ActionType::END_TURN:
++            os << "end turn";
++            break;
++        case search::ActionType::SINGLE_CARD_SELECT:
++            os << describeCardSelectChoice(bc, a);
++            break;
++        case search::ActionType::MULTI_CARD_SELECT:
++        default:
++            a.printDesc(os, bc);
++            break;
++    }
++    return os.str();
++}
++
++// Human-/model-facing serialization of the combat state (mirrors describeGameState).
++std::string describeBattleState(const BattleContext &bc) {
++    std::ostringstream os;
++    os << "Battle turn " << bc.turn
++       << "\nPlayer HP: " << bc.player.curHp << "/" << bc.player.maxHp
++       << ", block: " << bc.player.block
++       << ", energy: " << bc.player.energy << "/" << static_cast<int>(bc.player.energyPerTurn);
++
++    os << "\nPlayer powers: ";
++    {
++        bool any = false;
++        auto emit = [&](const char *name, int amount) {
++            if (amount == 0) {
++                return;
++            }
++            if (any) {
++                os << ", ";
++            }
++            os << name << " " << amount;
++            any = true;
++        };
++        emit("Strength", bc.player.strength);
++        emit("Dexterity", bc.player.dexterity);
++        emit("Focus", bc.player.focus);
++        for (const auto &pair : bc.player.statusMap) {
++            // strength/dexterity/focus are stored as dedicated fields above; skip
++            // them here in case they also appear in the map, to avoid duplicates.
++            if (pair.first == PlayerStatus::STRENGTH
++                    || pair.first == PlayerStatus::DEXTERITY
++                    || pair.first == PlayerStatus::FOCUS) {
++                continue;
++            }
++            if (any) {
++                os << ", ";
++            }
++            os << playerStatusStrings[static_cast<int>(pair.first)] << " " << pair.second;
++            any = true;
++        }
++        if (!any) {
++            os << "none";
++        }
++    }
++
++    os << "\nEnemies:";
++    for (int i = 0; i < bc.monsters.monsterCount; ++i) {
++        const auto &m = bc.monsters.arr[i];
++        if (!m.isAlive()) {
++            continue;
++        }
++        os << "\n  [" << i << "] " << m.getName()
++           << " HP " << m.curHp << "/" << m.maxHp
++           << ", block " << m.block
++           << ", intent " << monsterMoveStrings[static_cast<int>(m.moveHistory[0])];
++    }
++
++    os << "\nHand:";
++    if (bc.cards.cardsInHand == 0) {
++        os << " empty";
++    } else {
++        for (int i = 0; i < bc.cards.cardsInHand; ++i) {
++            const auto &c = bc.cards.hand[i];
++            os << "\n  [" << i << "] " << c.getName()
++               << " (cost " << static_cast<int>(c.costForTurn) << ")";
++        }
++    }
++
++    os << "\nPiles: draw " << bc.cards.drawPile.size()
++       << ", discard " << bc.cards.discardPile.size()
++       << ", exhaust " << bc.cards.exhaustPile.size();
++
++    os << "\nPotions: ";
++    {
++        bool any = false;
++        for (int i = 0; i < bc.potionCapacity; ++i) {
++            const auto p = bc.potions[i];
++            if (p == Potion::EMPTY_POTION_SLOT) {
++                continue;
++            }
++            if (any) {
++                os << ", ";
++            }
++            os << safePotionName(p);
++            any = true;
++        }
++        if (!any) {
++            os << "none";
++        }
++    }
++
++    if (bc.inputState == InputState::CARD_SELECT) {
++        os << "\n(card select in progress)";
++    }
++
++    return os.str();
++}
++
 +} // namespace
 +
  PYBIND11_MODULE(slaythespire, m) {
@@ -292,7 +531,7 @@ index a9afe35..8450ff5 100644
  
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +309,34 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -41,6 +548,120 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
          .def("playout", &search::ScumSearchAgent2::playout);
  
@@ -324,10 +563,96 @@ index a9afe35..8450ff5 100644
 +        .value("CARD_REMOVE", search::GameAction::RewardsActionType::CARD_REMOVE)
 +        .value("SKIP", search::GameAction::RewardsActionType::SKIP);
 +
++    // ---- In-combat (BattleContext) bindings ----
++    // The combat micro-action; distinct from the out-of-combat search::GameAction.
++    pybind11::enum_<search::ActionType>(m, "BattleActionType")
++        .value("CARD", search::ActionType::CARD)
++        .value("POTION", search::ActionType::POTION)
++        .value("SINGLE_CARD_SELECT", search::ActionType::SINGLE_CARD_SELECT)
++        .value("MULTI_CARD_SELECT", search::ActionType::MULTI_CARD_SELECT)
++        .value("END_TURN", search::ActionType::END_TURN);
++
++    pybind11::enum_<Outcome>(m, "BattleOutcome")
++        .value("UNDECIDED", Outcome::UNDECIDED)
++        .value("PLAYER_VICTORY", Outcome::PLAYER_VICTORY)
++        .value("PLAYER_LOSS", Outcome::PLAYER_LOSS);
++
++    // Only the player-decision input states are surfaced; every other state is
++    // engine-internal (random/shuffle states are resolved inside executeActions).
++    pybind11::enum_<InputState>(m, "InputState")
++        .value("EXECUTING_ACTIONS", InputState::EXECUTING_ACTIONS)
++        .value("PLAYER_NORMAL", InputState::PLAYER_NORMAL)
++        .value("CARD_SELECT", InputState::CARD_SELECT);
++
++    pybind11::class_<search::Action> battleAction(m, "BattleAction");
++    battleAction.def(pybind11::init<std::uint32_t>())
++        .def_readwrite("bits", &search::Action::bits)
++        .def("action_type", &search::Action::getActionType)
++        .def("source_idx", &search::Action::getSourceIdx)
++        .def("target_idx", &search::Action::getTargetIdx)
++        .def("select_idx", &search::Action::getSelectIdx)
++        .def("is_valid", &search::Action::isValidAction)
++        .def("execute", &search::Action::execute, "apply the action to the BattleContext (throws on an invalid action)")
++        .def("describe", [](const search::Action &a, const BattleContext &bc) {
++            return describeBattleAction(bc, a);
++        })
++        .def("__repr__", [](const search::Action &a) {
++            std::ostringstream oss;
++            oss << "<slaythespire.BattleAction bits=" << a.bits << ">";
++            return oss.str();
++        });
++
++    pybind11::class_<BattleContext> battleContext(m, "BattleContext");
++    battleContext.def(pybind11::init<>())
++        .def("init", [](BattleContext &bc, const GameContext &gc) { bc.init(gc); },
++             "initialize the battle from the current GameContext; drains the engine to the first player decision or a decided outcome")
++        .def("exit_battle", [](BattleContext &bc, GameContext &gc) { bc.exitBattle(gc); },
++             "write battle results back to the GameContext")
++        .def("execute_actions", [](BattleContext &bc) {
++            try {
++                bc.executeActions();
++            } catch (const std::exception &exc) {
++                throw std::runtime_error(std::string("battle executeActions failed: ") + exc.what());
++            }
++        }, "drain the action/effect engine until a player decision or terminal outcome (fails closed, never hangs)")
++        .def("legal_actions", [](const BattleContext &bc) { return enumerateBattleActions(bc); },
++             "enumerate the legal combat actions for the current input state")
++        .def("describe_state", [](const BattleContext &bc) { return describeBattleState(bc); })
++        .def("enemies", [](const BattleContext &bc) {
++            pybind11::list out;
++            for (int i = 0; i < bc.monsters.monsterCount; ++i) {
++                const auto &m = bc.monsters.arr[i];
++                pybind11::dict d;
++                d["index"] = i;
++                d["name"] = std::string(m.getName());
++                d["cur_hp"] = m.curHp;
++                d["max_hp"] = m.maxHp;
++                d["block"] = m.block;
++                d["intent"] = std::string(monsterMoveStrings[static_cast<int>(m.moveHistory[0])]);
++                d["alive"] = m.isAlive();
++                out.append(d);
++            }
++            return out;
++        }, "structured per-enemy snapshot: index, name, cur_hp, max_hp, block, intent, alive")
++        .def_property_readonly("outcome", [](const BattleContext &bc) { return bc.outcome; })
++        .def_property_readonly("input_state", [](const BattleContext &bc) { return bc.inputState; })
++        .def_property_readonly("turn", [](const BattleContext &bc) { return bc.turn; })
++        .def_property_readonly("undefined_behavior_evoked", [](const BattleContext &bc) { return bc.undefinedBehaviorEvoked; })
++        .def_property_readonly("player_cur_hp", [](const BattleContext &bc) { return bc.player.curHp; })
++        .def_property_readonly("player_max_hp", [](const BattleContext &bc) { return bc.player.maxHp; })
++        .def_property_readonly("player_block", [](const BattleContext &bc) { return bc.player.block; })
++        .def_property_readonly("player_energy", [](const BattleContext &bc) { return bc.player.energy; })
++        .def("__repr__", [](const BattleContext &bc) {
++            std::ostringstream oss;
++            oss << "<slaythespire.BattleContext turn=" << bc.turn
++                << " outcome=" << static_cast<int>(bc.outcome) << ">";
++            return oss.str();
++        });
++
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
          .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -75,6 +371,9 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +696,9 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
  
@@ -337,7 +662,7 @@ index a9afe35..8450ff5 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -836,5 +1135,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +1460,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
  
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")

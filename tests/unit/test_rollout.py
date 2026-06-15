@@ -21,6 +21,9 @@ class FakeStepErrorEnv:
     def is_terminal(self):
         return False
 
+    def phase(self):
+        return "out_of_combat"
+
     def legal_actions(self):
         return [LegalAction(index=0, bits=1, description="only action")]
 
@@ -32,6 +35,49 @@ class FakeStepErrorEnv:
 
     def summary(self):
         return {"seed": self.seed, "done": False}
+
+    @staticmethod
+    def action_dict(action):
+        return {"index": action.index, "bits": action.bits, "description": action.description}
+
+
+class FakeCombatEnv:
+    """Records exactly one in-combat decision, then terminates.
+
+    Lets the rollout loop be exercised without the native simulator to confirm
+    the ``phase`` field is threaded from ``env.phase()`` into the DecisionRecord.
+    """
+
+    seed = 7
+
+    def __init__(self):
+        self._steps = 0
+
+    def advance_to_decision(self):
+        return 0
+
+    def is_terminal(self):
+        return self._steps > 0
+
+    def phase(self):
+        return "combat"
+
+    def legal_actions(self):
+        return [
+            LegalAction(index=0, bits=0, description="play Strike (cost 1) -> Cultist"),
+            LegalAction(index=1, bits=1, description="end turn"),
+        ]
+
+    def describe_state(self):
+        return "Battle turn 0\nPlayer HP: 80/80"
+
+    def step(self, action_index):
+        self._steps += 1
+        actions = self.legal_actions()
+        return actions[action_index]
+
+    def summary(self):
+        return {"seed": self.seed, "phase": self.phase(), "done": self.is_terminal()}
 
     @staticmethod
     def action_dict(action):
@@ -65,6 +111,30 @@ class RolloutSimulatorErrorTest(unittest.TestCase):
         self.assertEqual(result.error["phase"], "step")
         self.assertEqual(result.error["decision_index"], 0)
         self.assertIn("simulator exploded", result.error["message"])
+
+
+class RolloutPhaseRecordingTest(unittest.TestCase):
+    def test_combat_decision_records_combat_phase(self):
+        result = run_rollout(FakeCombatEnv(), FirstLegalAgent(), max_decisions=2)
+        self.assertEqual(len(result.decisions), 1)
+        self.assertEqual(result.decisions[0].phase, "combat")
+
+    def test_decision_record_phase_defaults_to_out_of_combat(self):
+        # Back-compat: pre-combat traces have no `phase`; the field must default so
+        # they still construct/load.
+        from sts_ai.schemas import DecisionRecord
+
+        record = DecisionRecord(
+            seed=1,
+            decision_index=0,
+            state={},
+            state_text="",
+            legal_actions=[],
+            selected_action={},
+            agent={},
+            after_state={},
+        )
+        self.assertEqual(record.phase, "out_of_combat")
 
 
 if __name__ == "__main__":

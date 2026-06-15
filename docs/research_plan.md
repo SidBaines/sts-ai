@@ -545,22 +545,27 @@ Interpretation:
 > **Reprioritized 2026-06-14 to be the immediate next step** (ahead of scaling
 > Stage 5 collection). Implementation handoff: [`NextStep.md`](../NextStep.md).
 > The stage number is kept for continuity; the ordering is not.
+>
+> **Milestone 1 + LLM wiring delivered 2026-06-14.** The LLM can now play full
+> combats through Python control (`combat_control="llm"`); hybrid remains the
+> default. Remaining follow-up: in-combat risk proxies and combat rendering in the
+> rollout viewer (deferred — see Near-Term Steps).
 
 Goal: let the LLM control every meaningful StS decision, including card play.
 
 Tasks:
 
-- expose `BattleContext` and combat `Action`s through pybind;
-- serialize combat state: hand, draw/discard/exhaust piles, enemies, intents, powers, block, energy, potions, turn counters, and legal card targets;
-- add combat action parsing and execution;
-- decide whether each card play is a separate decision or whether one turn is a macro-action;
-- update rollout schema to distinguish combat and out-of-combat decisions.
+- expose `BattleContext` and combat `Action`s through pybind; **done** (`BattleContext`, `BattleAction`, `enumerate_battle_actions`/`legal_actions`, `BattleOutcome`/`InputState` enums in the binding patch);
+- serialize combat state: hand, draw/discard/exhaust piles, enemies, intents, powers, block, energy, potions, turn counters, and legal card targets; **done** (`describeBattleState`/`describeBattleAction`);
+- add combat action parsing and execution; **done** (combat step-loop in `LightspeedHybridEnv`, `combat_control="llm"`);
+- decide whether each card play is a separate decision or whether one turn is a macro-action; **done — micro** (one `Action` per decision);
+- update rollout schema to distinguish combat and out-of-combat decisions; **done** (additive `DecisionRecord.phase`; combat-specific state in `state["combat"]`).
 
 Acceptance criteria:
 
-- LLM can complete at least one full combat through Python control;
-- legal combat actions are complete and valid;
-- hybrid and full-control modes are both supported for ablations.
+- LLM can complete at least one full combat through Python control; **met** (scripted-agent integration test resolves a battle to a terminal `Outcome` and rewards);
+- legal combat actions are complete and valid (enumerated via the engine's own searcher; `execute` throws on any illegal action); **met**;
+- hybrid and full-control modes are both supported for ablations; **met** (`combat_control` flag; hybrid regression test asserts zero combat decisions).
 
 ## Evaluation Philosophy
 
@@ -605,9 +610,13 @@ Done in the 2026-06-14 session:
 - **Hard-froze dev/eval seeds** in `configs/frozen_seeds.json` (smoke 10 / dev 31 / eval 100).
 - **Stage 4 Qwen evaluation: GO** (see Stage 4 Qwen evaluation above) — Qwen no-thinking `256` is reliable (100% valid), non-random, and HP-conservative on the smoke seeds.
 
+Also done in the 2026-06-14 session:
+
+- **In-battle (full combat) LLM control — Milestone 1 + LLM wiring (Stage 10).** Bound `BattleContext` + combat `Action` + a legal-action enumerator through the pybind patch; added `describeBattleState`/`describeBattleAction`; added the combat step-loop to `LightspeedHybridEnv` behind `combat_control="search"|"llm"` (hybrid kept as default); added the additive `DecisionRecord.phase` field and recorded it in `rollout.py`; added the `--combat-control` flag to `run_rollout.py`; unit test for phase plumbing/back-compat + subprocess-contained integration test playing a full battle to victory/rewards. Verified: `combat_control="llm"` surfaces in-combat decisions and completes battles; `"search"` is unchanged (zero combat decisions).
+
 Remaining:
 
-1. **NEW IMMEDIATE PRIORITY — in-battle (full combat) LLM control (was Stage 10).** Reprioritized 2026-06-14: the LLM currently makes only out-of-combat decisions (battles are auto-resolved by the C++ search agent), and the research needs in-combat risk-taking. This is now the next step, ahead of scaling Stage 5 collection. **Handoff for the implementing agent: [`NextStep.md`](../NextStep.md)** (binding the combat API, combat-state serializer, combat step loop, schema changes, acceptance criteria).
+1. **In-combat risk proxies + viewer rendering (Stage 10 follow-up).** Extend `risk_proxies.py` with in-combat aggression metrics (potion use, risky card plays, attacking vs blocking at low HP) keyed off the combat `phase`/`state["combat"]`, and render combat snapshots in `rollout_view.py`/`scripts/visualize_rollout.py`. Deferred from the milestone since it needs collected combat data first.
 2. **Stage 5 — fixed neutral rollout collection:** generate neutral-frame Qwen trajectories on the frozen dev/eval seeds at full Act-1 depth; audit reasoning for frame leakage; attach reward + risk-proxy labels. (Was the main path; now follows combat control. Note from the first full-depth thinking run: ~6% of decisions still truncate at 4096 tokens and fall back to action 0 — handle via a targeted "out of budget, emit JSON now" re-prompt and/or higher budget before scaling.)
 3. Freeze a train split (200-500 seeds): run a larger baseline batch (e.g. seeds `2-600`).
 4. Stage 4 nicety: compact-vs-verbose serializer comparison on matched states.

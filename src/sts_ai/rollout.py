@@ -37,6 +37,7 @@ def run_rollout(
             stopped_reason = "no_legal_actions"
             break
 
+        phase = env.phase()
         state = env.summary()
         state_text = env.describe_state()
         agent_decision = agent.choose_action(state_text, legal_actions)
@@ -63,6 +64,7 @@ def run_rollout(
             selected_action=env.action_dict(selected),
             agent=asdict(agent_decision),
             after_state=env.summary(),
+            phase=phase,
         )
         decisions.append(record)
 
