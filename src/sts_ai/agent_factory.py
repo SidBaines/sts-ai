@@ -6,7 +6,6 @@ from sts_ai.agents import FirstLegalAgent, MlxQwenJsonAgent, RandomLegalAgent, S
 def build_agent(
     agent_name: str,
     *,
-    seed: int | None = None,
     model: str = "mlx-community/Qwen3-4B-4bit",
     max_tokens: int = 4096,  # reasoning needs room to finish + emit JSON; see MlxQwenJsonAgent
     temperature: float = 0.2,

@@ -16,6 +16,7 @@ def derive_policy_seed(world_seed: int, rollout_index: int) -> int:
     return _digest_to_seed(hashlib.sha256(payload).digest())
 
 
+# Used by the batched K-rollout path; keep seeding policy centralized here.
 def derive_batch_seed(members: Iterable[tuple[int, int, int]]) -> int:
     """Derive an order-independent seed from (world, rollout, decision) members."""
     hasher = hashlib.sha256()

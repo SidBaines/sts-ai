@@ -39,6 +39,8 @@ class _Slot:
 
     def __init__(self, seed: int, env: LightspeedHybridEnv, output_path: Optional[Path]):
         self.seed = seed
+        # rollout_index fixed at 0 until the K-rollouts feature threads it.
+        self.policy_seed = derive_policy_seed(seed, 0)
         self.env = env
         self.output_path = output_path
         self.decisions: list[DecisionRecord] = []
@@ -65,7 +67,6 @@ def run_parallel_rollouts(
     results: dict[int, RolloutResult] = {}
 
     def finalize(slot: _Slot, stopped_reason: str, error: Optional[dict[str, Any]] = None) -> None:
-        policy_seed = derive_policy_seed(slot.seed, 0)
         slot.stopped_reason = stopped_reason
         slot.error = error
         slot.done = True
@@ -75,7 +76,7 @@ def run_parallel_rollouts(
             terminal_state=slot.env.summary(),
             stopped_reason=stopped_reason,
             error=error,
-            policy_seed=policy_seed,
+            policy_seed=slot.policy_seed,
             rollout_index=0,
         )
         if slot.output_path is not None:
@@ -131,7 +132,7 @@ def run_parallel_rollouts(
                 agent_decision=agent_decision,
                 after_state=slot.env.summary(),
                 phase=view["phase"],
-                policy_seed=derive_policy_seed(slot.seed, 0),
+                policy_seed=slot.policy_seed,
                 rollout_index=0,
             )
             slot.decisions.append(record)
