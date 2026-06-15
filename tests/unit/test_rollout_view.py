@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from sts_ai.rollout_view import (
+    _PLAY_RE,
     load_rollout,
     parse_state_text,
     prettify_enemy_name,
@@ -240,6 +241,26 @@ class ToCombatViewTest(unittest.TestCase):
         self.assertIsNone(cv.chosen_target_index)
         self.assertFalse(any(c.chosen for c in cv.hand))
 
+    def test_deal_annotation_does_not_break_target_or_chosen(self):
+        # The binding appends a sim-computed "(deal N)" / "(deal T = P x H)" to attack
+        # actions; _PLAY_RE must not let the target group swallow it.
+        record = _combat_record()
+        record["legal_actions"] = [
+            {"index": 0, "bits": 0, "description": "play Strike (cost 1) -> SPIKE_SLIME_M (deal 9)"},
+            {"index": 1, "bits": 1, "description": "play Defend+ (cost 1)"},
+            {"index": 2, "bits": 2, "description": "play Bash (cost 2) -> SPIKE_SLIME_M (deal 12 = 6 x2)"},
+            {"index": 3, "bits": 3, "description": "end turn"},
+        ]
+        record["selected_action"] = {"index": 0, "description": "play Strike (cost 1) -> SPIKE_SLIME_M (deal 9)"}
+        cv = to_combat_view(record)
+        self.assertEqual(cv.chosen_card_name, "Strike")
+        self.assertEqual(cv.chosen_target_index, 1)  # the alive SPIKE_SLIME_M, not "SPIKE_SLIME_M (deal 9)"
+        self.assertTrue(cv.enemies[1].targeted)
+        strike = next(c for c in cv.hand if c.name == "Strike")
+        self.assertTrue(strike.chosen and strike.playable)
+        # Bash (multi-hit annotation) still reads as playable from its legal action
+        self.assertTrue(next(c for c in cv.hand if c.name == "Bash").playable)
+
     def test_degrades_when_state_text_pieces_missing(self):
         record = _combat_record()
         record["state_text"] = "Battle turn 0\n"  # no hand/piles/energy/potions lines
@@ -251,6 +272,21 @@ class ToCombatViewTest(unittest.TestCase):
         self.assertEqual(cv.player_energy_max, cv.player_energy)
         # structured enemies still render
         self.assertEqual(len(cv.enemies), 2)
+
+
+class PlayRegexTest(unittest.TestCase):
+    def test_parses_target_and_cost_with_and_without_deal(self):
+        m = _PLAY_RE.match("play Strike (cost 1) -> Jaw Worm (deal 9)")
+        self.assertEqual((m.group(1), m.group(2), m.group(3)), ("Strike", "1", "Jaw Worm"))
+        # multi-hit annotation
+        m2 = _PLAY_RE.match("play Bash (cost 2) -> Cultist (deal 12 = 6 x2)")
+        self.assertEqual((m2.group(1), m2.group(2), m2.group(3)), ("Bash", "2", "Cultist"))
+        # no target, no deal
+        m3 = _PLAY_RE.match("play Defend (cost 1)")
+        self.assertEqual((m3.group(1), m3.group(2), m3.group(3)), ("Defend", "1", None))
+        # X-cost token still parses
+        m4 = _PLAY_RE.match("play Whirlwind (cost X)")
+        self.assertEqual((m4.group(1), m4.group(2)), ("Whirlwind", "X"))
 
 
 if __name__ == "__main__":

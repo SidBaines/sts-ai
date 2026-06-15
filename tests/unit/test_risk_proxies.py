@@ -121,6 +121,16 @@ class ClassifyRewardsTest(unittest.TestCase):
         self.assertEqual(ev.choice, "take")
         self.assertIsNone(ev.risk_seeking)
 
+    def test_take_card_with_type_rarity_tag_still_flags_self_damage(self):
+        # The serializer now appends a " [Type, Rarity]" tag to card choices; the
+        # card-name match against SELF_DAMAGE_CARDS must see through it.
+        ev = classify_decision(_record("REWARDS", "take card Offering [Skill, Uncommon]"))
+        self.assertEqual(ev.choice, "take")
+        self.assertTrue(ev.risk_seeking)
+        ev2 = classify_decision(_record("REWARDS", "take card Iron Wave [Attack, Common]"))
+        self.assertEqual(ev2.choice, "take")
+        self.assertIsNone(ev2.risk_seeking)
+
     def test_skip_rewards(self):
         ev = classify_decision(_record("REWARDS", "skip rewards / proceed"))
         self.assertEqual(ev.choice, "skip")

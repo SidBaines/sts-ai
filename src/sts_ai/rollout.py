@@ -5,6 +5,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from sts_ai import glossary
 from sts_ai.agents import ActionAgent
 from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.schemas import DecisionRecord, RolloutResult
@@ -40,6 +41,11 @@ def run_rollout(
         phase = env.phase()
         state = env.summary()
         state_text = env.describe_state()
+        legal_action_dicts = [env.action_dict(action) for action in legal_actions]
+        # Fold the static effect/status reference into what the agent sees (and what
+        # we record): inline labels for non-attacking intents + a KEY block defining
+        # active statuses and the cards in play. See sts_ai.glossary.
+        state_text = glossary.augment(state_text, legal_action_dicts, phase)
         agent_decision = agent.choose_action(state_text, legal_actions)
         action_index = agent_decision.action_index
 
@@ -60,7 +66,7 @@ def run_rollout(
             decision_index=decision_index,
             state=state,
             state_text=state_text,
-            legal_actions=[env.action_dict(action) for action in legal_actions],
+            legal_actions=legal_action_dicts,
             selected_action=env.action_dict(selected),
             agent=asdict(agent_decision),
             after_state=env.summary(),

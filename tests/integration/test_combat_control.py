@@ -133,5 +133,58 @@ class HybridControlRegressionTest(unittest.TestCase):
         self.assertTrue(all(d.phase == "out_of_combat" for d in result.decisions))
 
 
+@requires_simulator
+class EnrichedSerializationTest(unittest.TestCase):
+    """The serializers carry sim-computed numbers (intent/card damage, statuses) and
+    OOC card type/rarity. Structural assertions only (exact values are seed-/UB-
+    sensitive). Seed 3 reaches all of these within a bounded drive."""
+
+    def test_combat_and_ooc_carry_sim_computed_numbers(self):
+        from sts_ai.lightspeed import LightspeedHybridEnv
+
+        env = LightspeedHybridEnv(seed=3, battle_simulations=50, max_act=1, combat_control="llm")
+        saw_intent_keys = saw_attack_damage = saw_card_deal = saw_ooc_tag = False
+        skill_never_has_deal = True
+
+        for _ in range(400):
+            if env.is_terminal():
+                break
+            env.advance_to_decision()
+            if env.is_terminal():
+                break
+            actions = env.legal_actions()
+            if not actions:
+                break
+
+            if env.phase() == "combat":
+                enemies = list(env.bc.enemies())
+                if enemies and all({"intent_damage", "intent_hits"} <= e.keys() for e in enemies):
+                    saw_intent_keys = True
+                # An attacking enemy (intent_hits != -1) has a computed intent_damage
+                # and its serialized line carries the "(deal …)" annotation.
+                if any(e["intent_hits"] != -1 for e in enemies):
+                    saw_attack_damage = True
+                    self.assertIn("(deal ", env.describe_state())
+                for a in actions:
+                    if a.description.startswith("play ") and "(deal " in a.description:
+                        saw_card_deal = True
+                    if a.description.startswith("play Defend") and "(deal " in a.description:
+                        skill_never_has_deal = False  # a Skill must never get a damage tag
+            else:
+                for a in actions:
+                    if a.description.startswith("take card") and a.description.endswith("]"):
+                        saw_ooc_tag = True
+
+            env.step(0)
+            if saw_intent_keys and saw_attack_damage and saw_card_deal and saw_ooc_tag:
+                break
+
+        self.assertTrue(saw_intent_keys, "structured enemies() lacked intent_damage/intent_hits keys")
+        self.assertTrue(saw_card_deal, "no attack action carried a '(deal N)' annotation")
+        self.assertTrue(saw_attack_damage, "no attacking enemy surfaced computed intent damage")
+        self.assertTrue(skill_never_has_deal, "a Defend (Skill) action wrongly carried a '(deal N)' annotation")
+        self.assertTrue(saw_ooc_tag, "no out-of-combat card choice carried a '[Type, Rarity]' tag")
+
+
 if __name__ == "__main__":
     unittest.main()

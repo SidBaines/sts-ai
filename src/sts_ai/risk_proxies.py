@@ -147,6 +147,9 @@ def classify_decision(record: dict[str, Any]) -> Optional[RiskEvent]:
     if screen == "REWARDS":
         if desc.startswith("take card"):
             card = desc[len("take card"):].strip()
+            # Drop a trailing " [Attack, Common]" type/rarity tag the serializer now
+            # appends, so the card-name match against SELF_DAMAGE_CARDS still works.
+            card = re.sub(r"\s*\[[^\]]*\]$", "", card)
             return make("card_reward", "take", True if card in SELF_DAMAGE_CARDS else None)
         if desc.startswith("skip card reward") or desc.startswith("skip rewards"):
             return make("card_reward", "skip", None)

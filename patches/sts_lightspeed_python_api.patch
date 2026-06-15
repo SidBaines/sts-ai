@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..22ce0d4 100644
+index a9afe35..3032d49 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -12,21 +12,528 @@
+@@ -12,21 +12,636 @@
  
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
@@ -68,6 +68,65 @@ index a9afe35..22ce0d4 100644
 +    return roomStrings[static_cast<int>(r)];
 +}
 +
++// Number of times a single-target attack hits the chosen enemy. The engine encodes
++// this inline in BattleContext::playCard (no table), so we mirror it here — the
++// static twin of Cards::getBaseDamage. Default 1. Ironclad-scoped; keep in sync
++// with the card pool (Sword Boomerang is excluded: it targets randomly, so it never
++// reaches the targeted-attack annotation path).
++int getHitCount(CardId id, bool upgraded) {
++    switch (id) {
++        case CardId::TWIN_STRIKE: return 2;
++        case CardId::PUMMEL:      return upgraded ? 5 : 4;
++        default:                  return 1;
++    }
++}
++
++// Attacks whose real damage is NOT calculateCardDamage(base): they apply a
++// card-specific formula inline in playCard (block-based, strength-scaled, growing,
++// or hand-size-based). We skip the "(deal N)" annotation for these rather than
++// print a misleading number. Ironclad-scoped; keep in sync with the card pool.
++bool hasSpecialDamageFormula(CardId id) {
++    switch (id) {
++        case CardId::BODY_SLAM:        // damage = current block
++        case CardId::HEAVY_BLADE:      // strength counts 3x (5x upgraded)
++        case CardId::PERFECTED_STRIKE: // + per Strike-named card in deck
++        case CardId::RAMPAGE:          // grows each play (specialData)
++        case CardId::SEARING_BLOW:     // scales with times upgraded
++        case CardId::FIEND_FIRE:       // damage per card in hand
++            return true;
++        default:
++            return false;
++    }
++}
++
++// Title-case an UPPER_SNAKE-free enum string ("ATTACK" -> "Attack") for the
++// out-of-combat card type/rarity tag. Avoids <cctype>/locale.
++std::string titleCase(const char *s) {
++    std::string out;
++    bool first = true;
++    for (const char *p = s; *p != '\0'; ++p) {
++        char ch = *p;
++        if (first) {
++            if (ch >= 'a' && ch <= 'z') ch = static_cast<char>(ch - 32);
++            first = false;
++        } else if (ch >= 'A' && ch <= 'Z') {
++            ch = static_cast<char>(ch + 32);
++        }
++        out += ch;
++    }
++    return out;
++}
++
++// " [Attack, Uncommon]" for an out-of-combat Card (reward/shop/card-select). The
++// simulator has no card *text*, but type+rarity are cheap static facts that help
++// the model weigh a draft. Uses the engine's CardType/CardRarity string tables.
++std::string cardTypeRarityTag(const Card &card) {
++    std::ostringstream os;
++    os << " [" << titleCase(cardTypeStrings[static_cast<int>(card.getType())])
++       << ", " << titleCase(cardRarityStrings[static_cast<int>(card.getRarity())]) << "]";
++    return os.str();
++}
++
 +std::string describeGameAction(const GameContext &gc, const search::GameAction &a) {
 +    // NOTE: the raw action `bits` are intentionally omitted from this human-/model-
 +    // facing description; they remain available structurally on LegalAction.bits.
@@ -99,7 +158,8 @@ index a9afe35..22ce0d4 100644
 +                case search::GameAction::RewardsActionType::CARD:
 +                    if (a.getIdx1() >= 0 && a.getIdx1() < r.cardRewardCount
 +                        && a.getIdx2() >= 0 && a.getIdx2() < r.cardRewards[a.getIdx1()].size()) {
-+                        os << "take card " << r.cardRewards[a.getIdx1()][a.getIdx2()];
++                        const auto &card = r.cardRewards[a.getIdx1()][a.getIdx2()];
++                        os << "take card " << card << cardTypeRarityTag(card);
 +                    } else if (a.getIdx2() == 5) {
 +                        if (gc.hasRelic(RelicId::SINGING_BOWL)) {
 +                            os << "gain +2 max hp (Singing Bowl); lose card reward";
@@ -146,7 +206,8 @@ index a9afe35..22ce0d4 100644
 +        case ScreenState::CARD_SELECT:
 +            os << "select card index " << a.getIdx1();
 +            if (a.getIdx1() >= 0 && a.getIdx1() < gc.info.toSelectCards.size()) {
-+                os << ": " << gc.info.toSelectCards[a.getIdx1()].card;
++                const auto &card = gc.info.toSelectCards[a.getIdx1()].card;
++                os << ": " << card << cardTypeRarityTag(card);
 +            }
 +            break;
 +
@@ -190,7 +251,8 @@ index a9afe35..22ce0d4 100644
 +                case search::GameAction::RewardsActionType::CARD:
 +                    os << "buy card";
 +                    if (a.getIdx1() >= 0 && a.getIdx1() < 7) {
-+                        os << " " << s.cards[a.getIdx1()] << " for " << s.cardPrice(a.getIdx1()) << "g";
++                        const auto &card = s.cards[a.getIdx1()];
++                        os << " " << card << cardTypeRarityTag(card) << " for " << s.cardPrice(a.getIdx1()) << "g";
 +                    }
 +                    break;
 +                case search::GameAction::RewardsActionType::RELIC:
@@ -364,10 +426,34 @@ index a9afe35..22ce0d4 100644
 +        case search::ActionType::CARD: {
 +            const auto &c = bc.cards.hand[a.getSourceIdx()];
 +            os << "play " << c.getName() << " (cost " << static_cast<int>(c.costForTurn) << ")";
++            int dealTarget = -1;
 +            if (c.requiresTarget()) {
 +                const int target = a.getTargetIdx();
 +                if (target >= 0 && target < bc.monsters.monsterCount) {
 +                    os << " -> " << bc.monsters.arr[target].getName();
++                    dealTarget = target;
++                }
++            }
++            // Sim-computed attack damage (target-correct, pre-block, multi-hit aware).
++            // Only for plain ATTACK cards with a base-damage table entry; X-cost and
++            // special-formula cards are skipped (not mis-reported). Format mirrors the
++            // enemy intent line. If this trailing "(deal ...)" format changes, update
++            // _PLAY_RE in src/sts_ai/rollout_view.py, which parses this description.
++            if (dealTarget >= 0
++                    && c.getType() == CardType::ATTACK
++                    && !c.isXCost()
++                    && !hasSpecialDamageFormula(c.getId())) {
++                const int base = getBaseDamage(c.getId(), c.isUpgraded());
++                if (base >= 0) {
++                    const int per = bc.calculateCardDamage(c, dealTarget, base);
++                    const int hits = getHitCount(c.getId(), c.isUpgraded());
++                    os << " (deal ";
++                    if (hits > 1) {
++                        os << (per * hits) << " = " << per << " x" << hits;
++                    } else {
++                        os << per;
++                    }
++                    os << ")";
 +                }
 +            }
 +            break;
@@ -456,6 +542,28 @@ index a9afe35..22ce0d4 100644
 +           << " HP " << m.curHp << "/" << m.maxHp
 +           << ", block " << m.block
 +           << ", intent " << monsterMoveStrings[static_cast<int>(m.moveHistory[0])];
++        // Sim-computed incoming damage (pre-block, after strength/vulnerable/weak).
++        // Gated on isAttacking(); getMoveBaseDamage has a {0,0} default so this is
++        // safe for every move. Multi-hit shows "total = per x hits".
++        if (m.isAttacking()) {
++            const auto di = m.getMoveBaseDamage(bc);
++            const int per = m.calculateDamageToPlayer(bc, di.damage);
++            os << " (deal ";
++            if (di.attackCount > 1) {
++                os << (per * di.attackCount) << " = " << per << " x" << di.attackCount;
++            } else {
++                os << per;
++            }
++            os << ")";
++        }
++        // Non-zero enemy statuses the player cares about (negatives shown too).
++        {
++            auto emitES = [&](const char *nm, int amt) { if (amt != 0) os << ", " << nm << " " << amt; };
++            emitES("Strength", m.strength);
++            emitES("Vulnerable", m.vulnerable);
++            emitES("Weak", m.weak);
++            emitES("Poison", static_cast<int>(m.poison));
++        }
 +    }
 +
 +    os << "\nHand:";
@@ -531,7 +639,7 @@ index a9afe35..22ce0d4 100644
  
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +548,120 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -41,6 +656,136 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
          .def("playout", &search::ScumSearchAgent2::playout);
  
@@ -630,10 +738,26 @@ index a9afe35..22ce0d4 100644
 +                d["block"] = m.block;
 +                d["intent"] = std::string(monsterMoveStrings[static_cast<int>(m.moveHistory[0])]);
 +                d["alive"] = m.isAlive();
++                // Sim-computed intent damage (per-hit, pre-block). intent_hits == -1
++                // marks a non-attacking intent (distinct from a real 0-damage hit).
++                if (m.isAttacking()) {
++                    const auto di = m.getMoveBaseDamage(bc);
++                    d["intent_damage"] = m.calculateDamageToPlayer(bc, di.damage);
++                    d["intent_hits"] = di.attackCount;
++                } else {
++                    d["intent_damage"] = 0;
++                    d["intent_hits"] = -1;
++                }
++                d["strength"] = m.strength;
++                d["vulnerable"] = m.vulnerable;
++                d["weak"] = m.weak;
++                d["poison"] = static_cast<int>(m.poison);
 +                out.append(d);
 +            }
 +            return out;
-+        }, "structured per-enemy snapshot: index, name, cur_hp, max_hp, block, intent, alive")
++        }, "structured per-enemy snapshot: index, name, cur_hp, max_hp, block, intent, "
++           "alive, intent_damage (per-hit, pre-block), intent_hits (-1 if not attacking), "
++           "strength, vulnerable, weak, poison")
 +        .def_property_readonly("outcome", [](const BattleContext &bc) { return bc.outcome; })
 +        .def_property_readonly("input_state", [](const BattleContext &bc) { return bc.inputState; })
 +        .def_property_readonly("turn", [](const BattleContext &bc) { return bc.turn; })
@@ -652,7 +776,7 @@ index a9afe35..22ce0d4 100644
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
          .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -75,6 +696,9 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +820,9 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
  
@@ -662,7 +786,7 @@ index a9afe35..22ce0d4 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -836,5 +1460,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +1584,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
  
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")

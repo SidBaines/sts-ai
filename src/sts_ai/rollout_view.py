@@ -156,8 +156,14 @@ def parse_state_text(state_text: str) -> dict[str, Any]:
 _SIZE_SUFFIXES = {"S", "M", "L"}
 # "[i] Name (cost C)" hand line; cost token is non-greedy so "X" / "-1" survive.
 _HAND_RE = re.compile(r"^\[(\d+)\]\s+(.*?)\s+\(cost\s+(\S+?)\)\s*$")
-# "play Name (cost C)" prefix of a combat action; optional " -> Target" tail.
-_PLAY_RE = re.compile(r"^play\s+(.*?)\s+\(cost\s+(\S+?)\)(?:\s*->\s*(.*?))?\s*$")
+# "play Name (cost C)" prefix of a combat action; optional " -> Target" tail and an
+# optional trailing sim-computed damage annotation ("(deal 9)" / "(deal 10 = 5 x2)")
+# which the binding appends to attack actions — the target group must not swallow it.
+_PLAY_RE = re.compile(
+    r"^play\s+(.*?)\s+\(cost\s+(\S+?)\)"
+    r"(?:\s*->\s*(.*?))?"
+    r"(?:\s*\(deal\s+[^)]*\))?\s*$"
+)
 _PILES_RE = re.compile(r"Piles:\s*draw\s+(\d+),\s*discard\s+(\d+),\s*exhaust\s+(\d+)")
 _ENERGY_RE = re.compile(r"energy:\s*(\d+)\s*/\s*(\d+)")
 
