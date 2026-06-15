@@ -24,7 +24,7 @@ class ScriptedBatchAgent(ScriptedCombatAgent):
 def _make_env(seed: int):
     from sts_ai.lightspeed import LightspeedHybridEnv
 
-    return LightspeedHybridEnv(seed=seed, battle_simulations=50, max_act=1, combat_control="llm")
+    return LightspeedHybridEnv(world_seed=seed, battle_simulations=50, max_act=1, combat_control="llm")
 
 
 @requires_simulator
@@ -51,7 +51,7 @@ class ParallelParityTest(unittest.TestCase):
 
         results = run_parallel_rollouts([3, 4], _make_env, ScriptedBatchAgent(),
                                         batch_size=2, max_decisions=30)
-        self.assertEqual([r.seed for r in results], [3, 4])
+        self.assertEqual([r.world_seed for r in results], [3, 4])
         for r in results:
             self.assertGreater(len(r.decisions), 0)
             self.assertIsNone(r.error)

@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-# On-disk format version. Bumped when the kept-data contract changes. v1 is the
-# first version we intend to keep/train on (adds affordances, per-decision
-# timing/tokens, and the per-rollout RolloutMeta sidecar).
-SCHEMA_VERSION = 1
+# On-disk format version. Bumped when the kept-data contract changes. v1 was the
+# first kept-data version; v2 is a breaking rename from `seed` to `world_seed`
+# plus explicit `policy_seed` / `rollout_index` identity fields.
+SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
@@ -42,7 +42,7 @@ class AgentDecision:
 
 @dataclass
 class DecisionRecord:
-    seed: int
+    world_seed: int
     decision_index: int
     state: dict[str, Any]
     state_text: str
@@ -62,15 +62,19 @@ class DecisionRecord:
     # sts_ai.affordances; lets evals ask "could it have full-blocked / taken lethal"
     # without re-parsing state_text. Additive; does not change what the model sees.
     affordances: dict[str, Any] = field(default_factory=dict)
+    policy_seed: int | None = None
+    rollout_index: int = 0
 
 
 @dataclass
 class RolloutResult:
-    seed: int
+    world_seed: int
     decisions: list[DecisionRecord]
     terminal_state: dict[str, Any]
     stopped_reason: str
     error: dict[str, Any] | None = None
+    policy_seed: int | None = None
+    rollout_index: int = 0
 
 
 @dataclass
@@ -81,8 +85,8 @@ class RolloutMeta:
     Captures what the decision stream cannot: the run's identity (model, config,
     and especially the **framing** — the study's independent variable, recorded
     nowhere else), the final outcome, and rollout-level aggregates for eval/RL.
-    All fields additive; this is the first kept-data version (SCHEMA_VERSION)."""
-    seed: int
+    v2 is a breaking kept-data version (SCHEMA_VERSION)."""
+    world_seed: int
     schema_version: int = SCHEMA_VERSION
     # Provenance / run identity
     agent: str = ""
@@ -113,3 +117,5 @@ class RolloutMeta:
     # Per-decision player HP after each action (combat: player_cur_hp; else cur_hp).
     hp_trajectory: list[int] = field(default_factory=list)
     extra: dict[str, Any] = field(default_factory=dict)
+    policy_seed: int | None = None
+    rollout_index: int = 0

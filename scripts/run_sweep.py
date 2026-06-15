@@ -59,7 +59,7 @@ def main() -> None:
 
     def make_env(seed: int) -> LightspeedHybridEnv:
         return LightspeedHybridEnv(
-            seed=seed,
+            world_seed=seed,
             combat_control=args.combat_control,
             battle_simulations=args.battle_simulations,
             max_act=args.max_act,

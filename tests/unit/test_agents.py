@@ -1,6 +1,6 @@
 import unittest
 
-from sts_ai.agents import MlxQwenJsonAgent, parse_json_action
+from sts_ai.agents import MlxQwenJsonAgent, RandomLegalAgent, parse_json_action
 from sts_ai.schemas import LegalAction
 
 
@@ -70,6 +70,27 @@ class ParseJsonActionTest(unittest.TestCase):
         decision = parse_json_action('{"reasoning": "ok", "action_index": 0}', self.actions)
         self.assertTrue(decision.valid)
         self.assertEqual(decision.thinking, "")
+
+
+class RandomLegalAgentSeedTest(unittest.TestCase):
+    def setUp(self):
+        self.actions = [
+            LegalAction(index=0, bits=1, description="first"),
+            LegalAction(index=1, bits=2, description="second"),
+            LegalAction(index=2, bits=4, description="third"),
+        ]
+
+    def test_reseed_resets_random_sequence(self):
+        agent = RandomLegalAgent()
+        agent.reseed(12345)
+        seq_a = [agent.choose_action("state", self.actions).action_index for _ in range(8)]
+        agent.reseed(12345)
+        seq_b = [agent.choose_action("state", self.actions).action_index for _ in range(8)]
+        agent.reseed(67890)
+        seq_c = [agent.choose_action("state", self.actions).action_index for _ in range(8)]
+
+        self.assertEqual(seq_a, seq_b)
+        self.assertNotEqual(seq_a, seq_c)
 
 
 class MlxQwenJsonAgentRetryTest(unittest.TestCase):

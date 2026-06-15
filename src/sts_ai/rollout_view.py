@@ -77,7 +77,7 @@ class CombatView:
 @dataclass
 class DecisionView:
     decision_index: int
-    seed: int
+    world_seed: int
     # headline state (from the `state` dict, which is authoritative)
     act: int
     floor: int
@@ -342,7 +342,7 @@ def to_view(record: dict[str, Any]) -> DecisionView:
 
     return DecisionView(
         decision_index=record.get("decision_index", -1),
-        seed=record.get("seed", state.get("seed", -1)),
+        world_seed=record.get("world_seed", state.get("world_seed", -1)),
         act=state.get("act", -1),
         floor=state.get("floor", -1),
         screen=screen,
@@ -380,8 +380,8 @@ class RolloutView:
         return self.decisions[0].boss if self.decisions else "?"
 
     @property
-    def seed(self) -> int:
-        return self.decisions[0].seed if self.decisions else -1
+    def world_seed(self) -> int:
+        return self.decisions[0].world_seed if self.decisions else -1
 
 
 def load_rollout(path: str | Path) -> RolloutView:

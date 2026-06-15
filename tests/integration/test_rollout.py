@@ -16,6 +16,9 @@ from tests.support import requires_simulator
 class BadIndexAgent:
     name = "bad"
 
+    def reseed(self, policy_seed):
+        return None
+
     def choose_action(self, state_text, legal_actions):
         return AgentDecision(action_index=999, raw_response="bad index")
 
@@ -23,7 +26,7 @@ class BadIndexAgent:
 @requires_simulator
 class RolloutFallbackTest(unittest.TestCase):
     def test_out_of_range_action_records_requested_and_executed_actions(self):
-        env = LightspeedHybridEnv(seed=1, battle_simulations=50)
+        env = LightspeedHybridEnv(world_seed=1, battle_simulations=50)
         result = run_rollout(env, BadIndexAgent(), max_decisions=1)
         self.assertEqual(len(result.decisions), 1)
 
@@ -40,11 +43,11 @@ class RolloutFallbackTest(unittest.TestCase):
 @requires_simulator
 class SerializerSmokeTest(unittest.TestCase):
     def test_state_uses_screen_name(self):
-        env = LightspeedHybridEnv(seed=1, battle_simulations=50)
+        env = LightspeedHybridEnv(world_seed=1, battle_simulations=50)
         self.assertIn("screen EVENT_SCREEN", env.describe_state())
 
     def test_neow_empty_drawback_has_no_trailing_slash(self):
-        env = LightspeedHybridEnv(seed=1, battle_simulations=50)
+        env = LightspeedHybridEnv(world_seed=1, battle_simulations=50)
         descriptions = [action.description for action in env.legal_actions()]
         self.assertIn("event option 1: Obtain three potions.", descriptions)
         self.assertNotIn("Obtain three potions. / ", descriptions)
@@ -52,7 +55,7 @@ class SerializerSmokeTest(unittest.TestCase):
     def test_action_descriptions_omit_bits_prefix(self):
         # The raw action `bits` are internal binding detail and must not leak into
         # the human-/model-facing description; they remain on LegalAction.bits.
-        env = LightspeedHybridEnv(seed=1, battle_simulations=50)
+        env = LightspeedHybridEnv(world_seed=1, battle_simulations=50)
         actions = env.legal_actions()
         self.assertTrue(actions)
         for action in actions:
@@ -63,7 +66,7 @@ class SerializerSmokeTest(unittest.TestCase):
     def test_state_room_label_is_not_invalid(self):
         # On the Neow floor the simulator leaves curRoom == INVALID; the serialized
         # header should render that as "room none", never "room INVALID".
-        env = LightspeedHybridEnv(seed=1, battle_simulations=50)
+        env = LightspeedHybridEnv(world_seed=1, battle_simulations=50)
         state = env.describe_state()
         self.assertIn("room none", state)
         self.assertNotIn("room INVALID", state)

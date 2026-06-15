@@ -31,6 +31,7 @@ from sts_ai.rollout import (
     write_rollout_meta,
 )
 from sts_ai.schemas import DecisionRecord, RolloutResult
+from sts_ai.seeding import derive_policy_seed
 
 
 class _Slot:
@@ -64,15 +65,18 @@ def run_parallel_rollouts(
     results: dict[int, RolloutResult] = {}
 
     def finalize(slot: _Slot, stopped_reason: str, error: Optional[dict[str, Any]] = None) -> None:
+        policy_seed = derive_policy_seed(slot.seed, 0)
         slot.stopped_reason = stopped_reason
         slot.error = error
         slot.done = True
         result = RolloutResult(
-            seed=slot.seed,
+            world_seed=slot.seed,
             decisions=slot.decisions,
             terminal_state=slot.env.summary(),
             stopped_reason=stopped_reason,
             error=error,
+            policy_seed=policy_seed,
+            rollout_index=0,
         )
         if slot.output_path is not None:
             write_rollout_meta(slot.output_path, build_rollout_meta(result, slot.env, agent, run_meta))
@@ -118,7 +122,7 @@ def run_parallel_rollouts(
                 finalize(slot, "simulator_error", error_payload(exc, "step", slot.decision_index))
                 continue
             record = build_decision_record(
-                seed=slot.seed,
+                world_seed=slot.seed,
                 decision_index=slot.decision_index,
                 state=view["state"],
                 state_text=view["state_text"],
@@ -127,6 +131,8 @@ def run_parallel_rollouts(
                 agent_decision=agent_decision,
                 after_state=slot.env.summary(),
                 phase=view["phase"],
+                policy_seed=derive_policy_seed(slot.seed, 0),
+                rollout_index=0,
             )
             slot.decisions.append(record)
             if slot.output_path is not None:

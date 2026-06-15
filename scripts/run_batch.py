@@ -105,10 +105,10 @@ def main() -> None:
 
         agent = shared_agent
         if agent is None:
-            agent = build_agent(args.agent, seed=seed)
+            agent = build_agent(args.agent)
 
         env = LightspeedHybridEnv(
-            seed=seed,
+            world_seed=seed,
             ascension=args.ascension,
             battle_simulations=args.battle_simulations,
             boss_simulation_multiplier=args.boss_simulation_multiplier,
@@ -117,7 +117,8 @@ def main() -> None:
             result = run_rollout(env, agent, max_decisions=args.max_decisions, output_path=output)
         except Exception as exc:  # noqa: BLE001 - keep later seeds running after agent or harness failures.
             payload = {
-                "seed": seed,
+                "world_seed": seed,
+                "rollout_index": 0,
                 "stopped_reason": "batch_error",
                 "error": {
                     "type": exc.__class__.__name__,
@@ -135,7 +136,9 @@ def main() -> None:
 
         if result.error is not None:
             payload = {
-                "seed": seed,
+                "world_seed": seed,
+                "rollout_index": result.rollout_index,
+                "policy_seed": result.policy_seed,
                 "stopped_reason": result.stopped_reason,
                 "terminal_state": result.terminal_state,
                 "decisions": len(result.decisions),
@@ -200,7 +203,8 @@ def run_seed_subprocess(args: argparse.Namespace, seed: int, output: Path, error
         )
     except subprocess.TimeoutExpired as exc:
         payload = {
-            "seed": seed,
+            "world_seed": seed,
+            "rollout_index": 0,
             "stopped_reason": "timeout",
             "timeout_seconds": args.seed_timeout_seconds,
             "output": str(output),
@@ -222,7 +226,8 @@ def run_seed_subprocess(args: argparse.Namespace, seed: int, output: Path, error
 
     if completed.returncode != 0 and not error_output.exists():
         payload = {
-            "seed": seed,
+            "world_seed": seed,
+            "rollout_index": 0,
             "stopped_reason": "subprocess_error",
             "returncode": completed.returncode,
             "output": str(output),

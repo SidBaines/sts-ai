@@ -13,7 +13,6 @@ from sts_ai.rollout import run_rollout
 def build_agent(args: argparse.Namespace):
     return make_agent(
         args.agent,
-        seed=args.seed,
         model=args.model,
         max_tokens=args.max_tokens,
         temperature=args.temperature,
@@ -33,7 +32,9 @@ def main() -> None:
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--max-retries", type=int, default=1)
     parser.add_argument("--thinking", action="store_true")
-    parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--seed", type=int, default=1, help="World seed for the game simulation.")
+    parser.add_argument("--rollout-index", type=int, default=0)
+    parser.add_argument("--policy-seed", type=int, default=None)
     parser.add_argument("--ascension", type=int, default=0)
     parser.add_argument("--max-decisions", type=int, default=200)
     parser.add_argument(
@@ -51,19 +52,26 @@ def main() -> None:
 
     output = args.output
     if output is None:
-        output = Path("data") / "rollouts" / f"rollout_{args.agent}_{args.seed}.jsonl"
+        output = Path("data") / "rollouts" / f"rollout_{args.agent}_{args.seed}_r{args.rollout_index}.jsonl"
     if output.exists():
         output.unlink()
 
     env = LightspeedHybridEnv(
-        seed=args.seed,
+        world_seed=args.seed,
         ascension=args.ascension,
         battle_simulations=args.battle_simulations,
         boss_simulation_multiplier=args.boss_simulation_multiplier,
         combat_control=args.combat_control,
     )
     agent = build_agent(args)
-    result = run_rollout(env, agent, max_decisions=args.max_decisions, output_path=output)
+    result = run_rollout(
+        env,
+        agent,
+        max_decisions=args.max_decisions,
+        output_path=output,
+        rollout_index=args.rollout_index,
+        policy_seed=args.policy_seed,
+    )
 
     print(f"wrote: {output}")
     print(f"stopped_reason: {result.stopped_reason}")
@@ -73,7 +81,9 @@ def main() -> None:
         print(f"error: {result.error}")
         if args.error_output is not None:
             payload = {
-                "seed": args.seed,
+                "world_seed": args.seed,
+                "rollout_index": args.rollout_index,
+                "policy_seed": result.policy_seed,
                 "stopped_reason": result.stopped_reason,
                 "terminal_state": result.terminal_state,
                 "decisions": len(result.decisions),

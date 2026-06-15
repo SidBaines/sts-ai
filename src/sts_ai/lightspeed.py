@@ -12,7 +12,7 @@ class LightspeedHybridEnv:
 
     def __init__(
         self,
-        seed: int,
+        world_seed: int,
         ascension: int = 0,
         battle_simulations: int = 2_000,
         boss_simulation_multiplier: float = 2.0,
@@ -23,7 +23,7 @@ class LightspeedHybridEnv:
         if combat_control not in ("search", "llm"):
             raise ValueError(f"combat_control must be 'search' or 'llm', got {combat_control!r}")
         self.sts = import_lightspeed(build_dir)
-        self.seed = seed
+        self.world_seed = world_seed
         self.ascension = ascension
         self.max_act = max_act
         # "search": battles auto-resolved by the built-in C++ search agent (hybrid).
@@ -38,7 +38,7 @@ class LightspeedHybridEnv:
         # lost before the after-state is recorded; latch it here so `summary()`
         # surfaces it for the rest of the run.
         self._undefined_behavior_evoked = False
-        self.gc = self.sts.GameContext(self.sts.CharacterClass.IRONCLAD, seed, ascension)
+        self.gc = self.sts.GameContext(self.sts.CharacterClass.IRONCLAD, world_seed, ascension)
         self.battle_agent = self.sts.Agent()
         self.battle_agent.simulation_count_base = battle_simulations
         self.battle_agent.boss_simulation_multiplier = boss_simulation_multiplier
@@ -135,7 +135,7 @@ class LightspeedHybridEnv:
 
     def summary(self) -> dict[str, Any]:
         data: dict[str, Any] = {
-            "seed": self.seed,
+            "world_seed": self.world_seed,
             "ascension": self.ascension,
             "act": int(self.gc.act),
             "floor": int(self.gc.floor_num),

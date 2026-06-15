@@ -27,7 +27,7 @@ STATE_TEXT = (
 
 def _record() -> dict:
     return {
-        "seed": 3,
+        "world_seed": 3,
         "decision_index": 7,
         "state": {
             "act": 1,
@@ -107,7 +107,7 @@ class LoadRolloutTest(unittest.TestCase):
             (Path(d) / "seed_3.error.json").write_text(json.dumps({"message": "boom"}))
             rollout = load_rollout(path)
             self.assertEqual(len(rollout.decisions), 1)
-            self.assertEqual(rollout.seed, 3)
+            self.assertEqual(rollout.world_seed, 3)
             self.assertEqual(rollout.boss, "The Guardian")
             self.assertEqual(rollout.error["message"], "boom")
 
@@ -134,7 +134,7 @@ COMBAT_STATE_TEXT = (
 
 def _combat_record() -> dict:
     return {
-        "seed": 3,
+        "world_seed": 3,
         "decision_index": 12,
         "phase": "combat",
         "state": {

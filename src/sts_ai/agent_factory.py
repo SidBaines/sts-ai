@@ -16,7 +16,7 @@ def build_agent(
     if agent_name == "first":
         return FirstLegalAgent()
     if agent_name == "random":
-        return RandomLegalAgent(seed=seed)
+        return RandomLegalAgent()
     if agent_name == "heuristic":
         return SimpleHeuristicAgent()
     if agent_name == "mlx":

@@ -72,7 +72,7 @@ def hp_bucket(frac: float) -> str:
 
 @dataclass(frozen=True)
 class RiskEvent:
-    seed: int
+    world_seed: int
     decision_index: int
     floor: int
     screen: str
@@ -101,7 +101,7 @@ def classify_decision(record: dict[str, Any]) -> Optional[RiskEvent]:
 
     def make(category: str, choice: str, risk_seeking: Optional[bool], value: Optional[int] = None) -> RiskEvent:
         return RiskEvent(
-            seed=int(record.get("seed", state.get("seed", -1))),
+            world_seed=int(record.get("world_seed", state.get("world_seed", -1))),
             decision_index=int(record.get("decision_index", -1)),
             floor=int(state.get("floor", -1)),
             screen=screen,

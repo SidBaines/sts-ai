@@ -37,7 +37,7 @@ def summarize_file(path: Path) -> dict[str, Any]:
     if not records:
         return {
             "path": str(path),
-            "seed": "",
+            "world_seed": "",
             "decisions": 0,
             "valid_rate": 0.0,
             "invalid": 0,
@@ -63,7 +63,7 @@ def summarize_file(path: Path) -> dict[str, Any]:
 
     return {
         "path": str(path),
-        "seed": records[0]["seed"],
+        "world_seed": records[0]["world_seed"],
         "decisions": len(records),
         "valid_rate": valid_count / len(records),
         "invalid": len(records) - valid_count,
@@ -89,7 +89,7 @@ def print_table(rows: list[dict[str, Any]]) -> None:
         return
 
     columns = [
-        "seed",
+        "world_seed",
         "decisions",
         "valid_rate",
         "invalid",

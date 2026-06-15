@@ -34,6 +34,9 @@ class ScriptedCombatAgent:
 
     name = "scripted-combat"
 
+    def reseed(self, policy_seed):
+        return None
+
     def choose_action(self, state_text, legal_actions):
         descs = [a.description for a in legal_actions]
         for i, d in enumerate(descs):
@@ -55,7 +58,7 @@ class CombatControlTest(unittest.TestCase):
             from sts_ai.lightspeed import LightspeedHybridEnv
             from sts_ai.rollout import run_rollout
 
-            env = LightspeedHybridEnv(seed=3, battle_simulations=50, max_act=1, combat_control="llm")
+            env = LightspeedHybridEnv(world_seed=3, battle_simulations=50, max_act=1, combat_control="llm")
             result = run_rollout(env, ScriptedCombatAgent(), max_decisions=400)
 
             phases = [d.phase for d in result.decisions]
@@ -127,7 +130,7 @@ class HybridControlRegressionTest(unittest.TestCase):
         from sts_ai.lightspeed import LightspeedHybridEnv
         from sts_ai.rollout import run_rollout
 
-        env = LightspeedHybridEnv(seed=3, battle_simulations=50, max_act=1)
+        env = LightspeedHybridEnv(world_seed=3, battle_simulations=50, max_act=1)
         self.assertEqual(env.combat_control, "search")
         result = run_rollout(env, ScriptedCombatAgent(), max_decisions=400)
         self.assertTrue(all(d.phase == "out_of_combat" for d in result.decisions))
@@ -142,7 +145,7 @@ class EnrichedSerializationTest(unittest.TestCase):
     def test_combat_and_ooc_carry_sim_computed_numbers(self):
         from sts_ai.lightspeed import LightspeedHybridEnv
 
-        env = LightspeedHybridEnv(seed=3, battle_simulations=50, max_act=1, combat_control="llm")
+        env = LightspeedHybridEnv(world_seed=3, battle_simulations=50, max_act=1, combat_control="llm")
         saw_intent_keys = saw_attack_damage = saw_card_deal = saw_ooc_tag = False
         skill_never_has_deal = True
 

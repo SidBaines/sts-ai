@@ -48,6 +48,9 @@ class ScriptedReplayAgent:
         self.indices = indices
         self.pos = 0
 
+    def reseed(self, policy_seed):
+        return None
+
     def choose_action(self, state_text, legal_actions):
         idx = self.indices[self.pos] if self.pos < len(self.indices) else 0
         self.pos += 1
@@ -91,7 +94,7 @@ class BattleSearchRegressionTest(unittest.TestCase):
             # The recorded replay stops on the map before the failing combat. Add the
             # only legal map action so the child process enters the floor-12 battle.
             indices = SEED_2_DECISION_INDICES + [0]
-            env = LightspeedHybridEnv(seed=2, battle_simulations=100, max_act=1)
+            env = LightspeedHybridEnv(world_seed=2, battle_simulations=100, max_act=1)
             # +3 headroom so advance_to_decision() resolves the floor-12 battle
             # (and a couple of post-battle decisions) rather than stopping on the map.
             result = run_rollout(env, ScriptedReplayAgent(indices), max_decisions=len(indices) + 3)

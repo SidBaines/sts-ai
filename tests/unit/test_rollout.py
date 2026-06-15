@@ -4,16 +4,17 @@ These exercise rollout/env logic via fakes or ``object.__new__`` so the fast
 suite runs on any checkout. Tests that drive the real simulator live in
 ``tests/integration``.
 """
+import random
 import unittest
 
 from sts_ai.agents import FirstLegalAgent
 from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.rollout import run_rollout
-from sts_ai.schemas import LegalAction
+from sts_ai.schemas import AgentDecision, LegalAction
 
 
 class FakeStepErrorEnv:
-    seed = 123
+    world_seed = 123
 
     def advance_to_decision(self):
         return 0
@@ -34,7 +35,7 @@ class FakeStepErrorEnv:
         raise RuntimeError("simulator exploded")
 
     def summary(self):
-        return {"seed": self.seed, "done": False}
+        return {"world_seed": self.world_seed, "done": False}
 
     @staticmethod
     def action_dict(action):
@@ -48,7 +49,7 @@ class FakeCombatEnv:
     the ``phase`` field is threaded from ``env.phase()`` into the DecisionRecord.
     """
 
-    seed = 7
+    world_seed = 7
 
     def __init__(self):
         self._steps = 0
@@ -77,7 +78,7 @@ class FakeCombatEnv:
         return actions[action_index]
 
     def summary(self):
-        return {"seed": self.seed, "phase": self.phase(), "done": self.is_terminal()}
+        return {"world_seed": self.world_seed, "phase": self.phase(), "done": self.is_terminal()}
 
     @staticmethod
     def action_dict(action):
@@ -125,7 +126,7 @@ class RolloutPhaseRecordingTest(unittest.TestCase):
         from sts_ai.schemas import DecisionRecord
 
         record = DecisionRecord(
-            seed=1,
+            world_seed=1,
             decision_index=0,
             state={},
             state_text="",
@@ -135,6 +136,82 @@ class RolloutPhaseRecordingTest(unittest.TestCase):
             after_state={},
         )
         self.assertEqual(record.phase, "out_of_combat")
+
+
+class FakeRandomEnv:
+    world_seed = 42
+
+    def __init__(self, decisions: int = 12):
+        self._decisions = decisions
+        self._steps = 0
+
+    def advance_to_decision(self):
+        return 0
+
+    def is_terminal(self):
+        return self._steps >= self._decisions
+
+    def phase(self):
+        return "out_of_combat"
+
+    def legal_actions(self):
+        return [
+            LegalAction(index=i, bits=i, description=f"action {i}")
+            for i in range(5)
+        ]
+
+    def describe_state(self):
+        return f"fake decision {self._steps}"
+
+    def step(self, action_index):
+        self._steps += 1
+        return self.legal_actions()[action_index]
+
+    def summary(self):
+        return {"world_seed": self.world_seed, "step": self._steps, "done": self.is_terminal()}
+
+    @staticmethod
+    def action_dict(action):
+        return {"index": action.index, "bits": action.bits, "description": action.description}
+
+
+class StubStochasticAgent:
+    name = "stub-stochastic"
+
+    def __init__(self):
+        self.rng = random.Random()
+        self.reseed_calls: list[int] = []
+
+    def reseed(self, policy_seed: int) -> None:
+        self.reseed_calls.append(policy_seed)
+        self.rng = random.Random(policy_seed)
+
+    def choose_action(self, state_text, legal_actions):
+        return AgentDecision(
+            action_index=self.rng.randrange(len(legal_actions)),
+            raw_response="stub stochastic",
+        )
+
+
+class RolloutPolicySeedTest(unittest.TestCase):
+    def test_stochastic_agent_reseeded_by_world_seed_and_rollout_index(self):
+        agent_a = StubStochasticAgent()
+        result_a = run_rollout(FakeRandomEnv(), agent_a, max_decisions=20, rollout_index=0)
+        agent_b = StubStochasticAgent()
+        result_b = run_rollout(FakeRandomEnv(), agent_b, max_decisions=20, rollout_index=0)
+        agent_c = StubStochasticAgent()
+        result_c = run_rollout(FakeRandomEnv(), agent_c, max_decisions=20, rollout_index=1)
+
+        seq_a = [d.selected_action["index"] for d in result_a.decisions]
+        seq_b = [d.selected_action["index"] for d in result_b.decisions]
+        seq_c = [d.selected_action["index"] for d in result_c.decisions]
+
+        self.assertEqual(seq_a, seq_b)
+        self.assertNotEqual(seq_a, seq_c)
+        self.assertEqual(len(agent_a.reseed_calls), 1)
+        self.assertEqual(result_a.policy_seed, agent_a.reseed_calls[0])
+        self.assertEqual(result_a.rollout_index, 0)
+        self.assertEqual(result_c.rollout_index, 1)
 
 
 if __name__ == "__main__":

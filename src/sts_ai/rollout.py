@@ -11,6 +11,7 @@ from sts_ai import affordances, glossary
 from sts_ai.agents import ActionAgent
 from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.schemas import DecisionRecord, RolloutMeta, RolloutResult
+from sts_ai.seeding import derive_policy_seed
 
 
 def current_git_sha() -> str | None:
@@ -26,7 +27,7 @@ def current_git_sha() -> str | None:
 
 def build_decision_record(
     *,
-    seed: int,
+    world_seed: int,
     decision_index: int,
     state: dict[str, Any],
     state_text: str,
@@ -35,11 +36,13 @@ def build_decision_record(
     agent_decision: Any,
     after_state: dict[str, Any],
     phase: str,
+    policy_seed: int | None,
+    rollout_index: int,
 ) -> DecisionRecord:
     """Build one DecisionRecord (incl. computed affordances). Shared by the serial
     loop here and the parallel orchestrator so both emit identical records."""
     return DecisionRecord(
-        seed=seed,
+        world_seed=world_seed,
         decision_index=decision_index,
         state=state,
         state_text=state_text,
@@ -49,6 +52,8 @@ def build_decision_record(
         after_state=after_state,
         phase=phase,
         affordances=affordances.compute(state, state_text, legal_action_dicts, phase),
+        policy_seed=policy_seed,
+        rollout_index=rollout_index,
     )
 
 
@@ -92,7 +97,14 @@ def run_rollout(
     max_decisions: int = 200,
     output_path: str | Path | None = None,
     run_meta: dict[str, Any] | None = None,
+    rollout_index: int = 0,
+    policy_seed: int | None = None,
 ) -> RolloutResult:
+    world_seed = env.world_seed
+    if policy_seed is None:
+        policy_seed = derive_policy_seed(world_seed, rollout_index)
+    agent.reseed(policy_seed)
+
     decisions: list[DecisionRecord] = []
     stopped_reason = "terminal"
     error: dict[str, Any] | None = None
@@ -120,7 +132,7 @@ def run_rollout(
             break
 
         record = build_decision_record(
-            seed=env.seed,
+            world_seed=world_seed,
             decision_index=decision_index,
             state=view["state"],
             state_text=view["state_text"],
@@ -129,6 +141,8 @@ def run_rollout(
             agent_decision=agent_decision,
             after_state=env.summary(),
             phase=view["phase"],
+            policy_seed=policy_seed,
+            rollout_index=rollout_index,
         )
         decisions.append(record)
 
@@ -138,11 +152,13 @@ def run_rollout(
         stopped_reason = "max_decisions"
 
     result = RolloutResult(
-        seed=env.seed,
+        world_seed=world_seed,
         decisions=decisions,
         terminal_state=env.summary(),
         stopped_reason=stopped_reason,
         error=error,
+        policy_seed=policy_seed,
+        rollout_index=rollout_index,
     )
     if output_path is not None:
         meta = build_rollout_meta(result, env, agent, run_meta)
@@ -180,7 +196,7 @@ def build_rollout_meta(
             n_invalid += 1
 
     return RolloutMeta(
-        seed=result.seed,
+        world_seed=result.world_seed,
         agent=getattr(agent, "name", str(run_meta.get("agent", ""))),
         model_id=cfg.get("model_id", run_meta.get("model_id")),
         framing=cfg.get("framing", run_meta.get("framing")),
@@ -207,6 +223,8 @@ def build_rollout_meta(
         n_invalid=n_invalid,
         hp_trajectory=hp_trajectory,
         extra=dict(run_meta.get("extra", {})),
+        policy_seed=result.policy_seed,
+        rollout_index=result.rollout_index,
     )
 
 

@@ -14,9 +14,17 @@ from sts_ai.risk_proxies import (
 )
 
 
-def _record(screen: str, desc: str, cur_hp: int = 80, max_hp: int = 80, floor: int = 5, seed: int = 1, idx: int = 0) -> dict:
+def _record(
+    screen: str,
+    desc: str,
+    cur_hp: int = 80,
+    max_hp: int = 80,
+    floor: int = 5,
+    world_seed: int = 1,
+    idx: int = 0,
+) -> dict:
     return {
-        "seed": seed,
+        "world_seed": world_seed,
         "decision_index": idx,
         "state": {
             "screen_state": f"ScreenState.{screen}",
@@ -38,7 +46,8 @@ class HpBucketTest(unittest.TestCase):
 
 class ClassifyCampfireTest(unittest.TestCase):
     def test_smith_at_low_hp_is_risk_seeking(self):
-        ev = classify_decision(_record("REST_ROOM", "smith", cur_hp=10, max_hp=80))
+        ev = classify_decision(_record("REST_ROOM", "smith", cur_hp=10, max_hp=80, world_seed=12))
+        self.assertEqual(ev.world_seed, 12)
         self.assertEqual(ev.category, "campfire")
         self.assertEqual(ev.choice, "smith")
         self.assertEqual(ev.hp_bucket, "low")

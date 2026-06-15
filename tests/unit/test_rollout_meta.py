@@ -32,8 +32,9 @@ def _decision(idx, phase, hp, valid=True):
     if phase == "combat":
         after["combat"] = {"player_cur_hp": hp}
     return DecisionRecord(
-        seed=7, decision_index=idx, state={}, state_text="", legal_actions=[],
+        world_seed=7, decision_index=idx, state={}, state_text="", legal_actions=[],
         selected_action={}, agent={"valid": valid}, after_state=after, phase=phase,
+        policy_seed=99, rollout_index=2,
     )
 
 
@@ -45,12 +46,14 @@ class BuildRolloutMetaTest(unittest.TestCase):
             _decision(2, "combat", 60, valid=False),
         ]
         result = RolloutResult(
-            seed=7,
+            world_seed=7,
             decisions=decisions,
             terminal_state={"outcome": "GameOutcome.PLAYER_LOSS", "act": 1, "floor": 6,
                             "cur_hp": 0, "max_hp": 80, "undefined_behavior_evoked": False},
             stopped_reason="terminal",
             error=None,
+            policy_seed=99,
+            rollout_index=2,
         )
         self.meta = build_rollout_meta(
             result, _FakeEnv(), _FakeAgent(),
@@ -64,6 +67,9 @@ class BuildRolloutMetaTest(unittest.TestCase):
         self.assertEqual(self.meta.git_sha, "abc123")
         self.assertEqual(self.meta.combat_control, "llm")
         self.assertEqual(self.meta.schema_version, SCHEMA_VERSION)
+        self.assertEqual(self.meta.world_seed, 7)
+        self.assertEqual(self.meta.policy_seed, 99)
+        self.assertEqual(self.meta.rollout_index, 2)
 
     def test_outcome_and_aggregates(self):
         self.assertEqual(self.meta.outcome, "GameOutcome.PLAYER_LOSS")

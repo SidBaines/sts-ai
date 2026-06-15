@@ -283,7 +283,7 @@ def main() -> None:
 
     ss.idx = max(0, min(ss.idx, n - 1))
 
-    st.sidebar.caption(f"seed {rollout.seed} · {n} decisions · boss {rollout.boss}")
+    st.sidebar.caption(f"world_seed {rollout.world_seed} · {n} decisions · boss {rollout.boss}")
 
     def step(delta: int) -> None:
         ss.playing = False

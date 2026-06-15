@@ -14,12 +14,18 @@ from sts_ai.schemas import AgentDecision, LegalAction
 class ActionAgent(Protocol):
     name: str
 
+    def reseed(self, policy_seed: int) -> None:
+        ...
+
     def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
         ...
 
 
 class FirstLegalAgent:
     name = "first"
+
+    def reseed(self, policy_seed: int) -> None:
+        return None
 
     def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
         return AgentDecision(action_index=0, raw_response="first legal action")
@@ -31,6 +37,9 @@ class RandomLegalAgent:
     def __init__(self, seed: int | None = None) -> None:
         self.rng = random.Random(seed)
 
+    def reseed(self, policy_seed: int) -> None:
+        self.rng = random.Random(policy_seed)
+
     def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
         return AgentDecision(
             action_index=self.rng.randrange(len(legal_actions)),
@@ -40,6 +49,9 @@ class RandomLegalAgent:
 
 class SimpleHeuristicAgent:
     name = "heuristic"
+
+    def reseed(self, policy_seed: int) -> None:
+        return None
 
     def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
         descriptions = [a.description.lower() for a in legal_actions]
@@ -118,6 +130,11 @@ class MlxQwenJsonAgent:
         self._generate = generate
         self._batch_generate = batch_generate
         self._sampler = make_sampler(temp=temperature) if make_sampler is not None else None
+
+    def reseed(self, policy_seed: int) -> None:
+        import mlx.core as mx
+
+        mx.random.seed(policy_seed)
 
     @property
     def config(self) -> dict:
