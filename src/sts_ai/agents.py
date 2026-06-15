@@ -249,6 +249,234 @@ class MlxQwenJsonAgent:
             )
 
 
+class VllmJsonAgent:
+    """vLLM-backed CUDA agent that emits a JSON action.
+
+    IMPORTANT: keep `max_tokens` large (default 4096). Reasoning models can be
+    truncated mid-thought by a small cap, leaving no closing JSON for
+    `parse_json_action`; the invalid decision then falls back to action 0 and
+    can degenerate into an "always first legal action" policy. This is safe for
+    no-thinking models because generation stops at EOS before the cap.
+    """
+
+    name = "vllm"
+
+    def __init__(
+        self,
+        model_id: str,
+        framing: str = NEUTRAL_FRAME,
+        max_tokens: int = 4096,
+        temperature: float = 0.2,
+        max_retries: int = 1,
+        enable_thinking: bool = False,
+        dtype: str = "float16",
+        gpu_memory_utilization: float = 0.90,
+        seed: int = 0,
+    ) -> None:
+        try:
+            from vllm import LLM, SamplingParams
+        except ImportError as exc:
+            raise RuntimeError(
+                "vLLM is not installed. Install with `.venv/bin/python -m pip install -e '.[vllm]'`."
+            ) from exc
+
+        self.model_id = model_id
+        self.framing = framing
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.max_retries = max_retries
+        self.enable_thinking = enable_thinking
+        self.dtype = dtype
+        self.gpu_memory_utilization = gpu_memory_utilization
+        self._seed = seed
+
+        self.llm = LLM(
+            model=model_id,
+            dtype=dtype,
+            gpu_memory_utilization=gpu_memory_utilization,
+            trust_remote_code=True,
+        )
+        self.tokenizer = self.llm.get_tokenizer()
+        self._SamplingParams = SamplingParams
+        self._native_thinking = self._probe_native_thinking()
+
+    def reseed(self, policy_seed: int) -> None:
+        self._seed = policy_seed
+
+    @property
+    def config(self) -> dict:
+        """Run provenance for the per-rollout meta record (see RolloutMeta)."""
+        return {
+            "model_id": self.model_id,
+            "framing": self.framing,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "thinking": self.enable_thinking,
+            "reasoning_mode": self.reasoning_mode,
+            "max_retries": self.max_retries,
+            "backend": "vllm",
+            "dtype": self.dtype,
+            "gpu_memory_utilization": self.gpu_memory_utilization,
+        }
+
+    @property
+    def reasoning_mode(self) -> str:
+        if not self.enable_thinking:
+            return "none"
+        if self._native_thinking:
+            return "native"
+        return "prompted"
+
+    def _probe_native_thinking(self) -> bool:
+        messages = [{"role": "user", "content": "ping"}]
+        try:
+            with_thinking = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=True,
+            )
+            without_thinking = self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=False,
+            )
+        except TypeError:
+            return False
+        return with_thinking != without_thinking
+
+    def _apply_chat_template(self, prompt: str) -> str:
+        messages = [{"role": "user", "content": prompt}]
+        try:
+            return self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=(self.reasoning_mode == "native"),
+            )
+        except TypeError:
+            return self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+
+    def _base_prompt(self, state_text: str, legal_actions: list[LegalAction]) -> str:
+        return render_action_prompt(
+            state_text,
+            legal_actions,
+            self.framing,
+            induce_reasoning=(self.reasoning_mode == "prompted"),
+        )
+
+    def _render_prompt(self, state_text: str, legal_actions: list[LegalAction]) -> str:
+        prompt = self._base_prompt(state_text, legal_actions)
+        return self._apply_chat_template(prompt)
+
+    def _generate(self, prompts: list[str]) -> list[dict] | None:
+        try:
+            params = self._SamplingParams(
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                seed=self._seed,
+            )
+            outputs = self.llm.generate(prompts, params)
+            return [
+                {
+                    "text": output.outputs[0].text,
+                    "prompt_tokens": len(output.prompt_token_ids),
+                    "completion_tokens": len(output.outputs[0].token_ids),
+                }
+                for output in outputs
+            ]
+        except Exception:  # noqa: BLE001 - generation failures should not kill a rollout sweep
+            return None
+
+    def _count_tokens(self, text: str) -> int:
+        if not text:
+            return 0
+        try:
+            return len(self.tokenizer.encode(text))
+        except Exception:  # noqa: BLE001 - token counting must never break a rollout
+            return 0
+
+    def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
+        base_prompt = self._base_prompt(state_text, legal_actions)
+        last_decision: AgentDecision | None = None
+        start = time.perf_counter()
+
+        for attempt in range(self.max_retries + 1):
+            prompt = base_prompt
+            if attempt > 0:
+                prompt += (
+                    "\n\nYour previous response was invalid. Return only one JSON object "
+                    "with a legal integer action_index from the listed actions."
+                )
+
+            chat_prompt = self._apply_chat_template(prompt)
+            results = self._generate([chat_prompt])
+
+            if results is None:
+                decision = AgentDecision(
+                    action_index=0,
+                    raw_response="",
+                    valid=False,
+                    metadata={"error": "vllm generation failed"},
+                )
+            else:
+                result = results[0]
+                decision = parse_json_action(result["text"], legal_actions)
+                decision.prompt_tokens = result["prompt_tokens"]
+                decision.completion_tokens = result["completion_tokens"]
+                decision.thinking_tokens = self._count_tokens(decision.thinking)
+
+            decision.retries = attempt
+            last_decision = decision
+            if decision.valid:
+                break
+
+        assert last_decision is not None
+        last_decision.latency_s = round(time.perf_counter() - start, 4)
+        return last_decision
+
+    def choose_actions_batch(self, items: list[tuple[str, list[LegalAction]]]) -> list[AgentDecision]:
+        """Decide for K independent rollouts in one vLLM generation call."""
+        if not items:
+            return []
+
+        prompts = [self._render_prompt(state_text, legal_actions) for state_text, legal_actions in items]
+        start = time.perf_counter()
+        results = self._generate(prompts)
+        per_item_latency = round((time.perf_counter() - start) / len(items), 4)
+
+        if results is None:
+            return [
+                AgentDecision(
+                    action_index=0,
+                    raw_response="",
+                    valid=False,
+                    latency_s=per_item_latency,
+                    metadata={"error": "vllm generation failed"},
+                )
+                for _ in items
+            ]
+
+        # vLLM returns outputs in input order, so positional zip preserves item alignment.
+        assert len(results) == len(prompts)
+
+        decisions: list[AgentDecision] = []
+        for (_, legal_actions), result in zip(items, results):
+            decision = parse_json_action(result["text"], legal_actions)
+            decision.retries = 0
+            decision.prompt_tokens = result["prompt_tokens"]
+            decision.completion_tokens = result["completion_tokens"]
+            decision.thinking_tokens = self._count_tokens(decision.thinking)
+            decision.latency_s = per_item_latency
+            decisions.append(decision)
+        return decisions
+
+
 def parse_json_action(response: str, legal_actions: list[LegalAction]) -> AgentDecision:
     thinking = _extract_thinking(response)
     parsed = _extract_json(response)

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import gc
 from pathlib import Path
 
 from sts_ai.agent_factory import agent_label, build_agent
@@ -35,6 +36,7 @@ def parse_seeds(args: argparse.Namespace) -> list[int]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Batched multi-model rollout sweep.")
     parser.add_argument("--models", required=True, help="Comma-separated HF/mlx model ids.")
+    parser.add_argument("--backend", choices=["mlx", "vllm"], default="mlx")
     parser.add_argument("--thinking", choices=list(_THINKING_MODES), default="off")
     parser.add_argument("--seeds", default=None, help="Comma-separated seed list.")
     parser.add_argument("--seed-start", type=int, default=1)
@@ -60,6 +62,8 @@ def main() -> None:
     except ValueError as exc:
         raise SystemExit(f"--{str(exc).replace('_', '-')}") from exc
     models = [m.strip() for m in args.models.split(",") if m.strip()]
+    if args.backend == "vllm" and len(models) > 1:
+        print("WARNING: each vLLM model loads fresh in-process and vLLM does not free GPU memory between loads; the robust path is one model per process, e.g. invoke run_sweep once per model.")
     modes = _THINKING_MODES[args.thinking]
     git_sha = current_git_sha()
 
@@ -74,14 +78,14 @@ def main() -> None:
     for model in models:
         # One load per model id; both thinking modes reuse the same weights.
         try:
-            agent = build_agent("mlx", model=model, max_tokens=args.max_tokens,
+            agent = build_agent(args.backend, model=model, max_tokens=args.max_tokens,
                                 temperature=args.temperature, thinking=modes[0])
         except Exception as exc:  # noqa: BLE001 - skip a model that won't load, keep the sweep going
             print(f"[{model}] FAILED to load ({exc.__class__.__name__}: {exc}); skipping")
             continue
         for thinking in modes:
             agent.enable_thinking = thinking
-            label = agent_label("mlx", model=model, max_tokens=args.max_tokens, thinking=thinking)
+            label = agent_label(args.backend, model=model, max_tokens=args.max_tokens, thinking=thinking)
             out_dir = args.output_dir / label
             out_dir.mkdir(parents=True, exist_ok=True)
             to_run = [
@@ -110,6 +114,15 @@ def main() -> None:
             )
             wins = sum(1 for r in results if "VICTORY" in str(r.terminal_state.get("outcome", "")))
             print(f"[{label}] done: {len(results)} rollouts, {wins} wins")
+        if args.backend == "vllm":
+            del agent
+            gc.collect()
+            try:
+                import torch
+
+                torch.cuda.empty_cache()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":

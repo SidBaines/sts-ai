@@ -1,0 +1,7 @@
+# Ordered smallest to largest so partial overnight completion yields cheaper arms first.
+# Each model is run for both reasoning-off and reasoning-on arms by run_sweep_on_pod.sh.
+Qwen/Qwen3-0.6B
+google/gemma-3-1b-it
+Qwen/Qwen3-1.7B
+Qwen/Qwen3-4B
+google/gemma-3-4b-it

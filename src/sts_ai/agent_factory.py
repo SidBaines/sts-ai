@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sts_ai.agents import FirstLegalAgent, MlxQwenJsonAgent, RandomLegalAgent, SimpleHeuristicAgent
+from sts_ai.agents import FirstLegalAgent, MlxQwenJsonAgent, RandomLegalAgent, SimpleHeuristicAgent, VllmJsonAgent
 
 
 def build_agent(
@@ -26,6 +26,14 @@ def build_agent(
             max_retries=max_retries,
             enable_thinking=thinking,
         )
+    if agent_name == "vllm":
+        return VllmJsonAgent(
+            model_id=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            max_retries=max_retries,
+            enable_thinking=thinking,
+        )
     raise ValueError(f"unknown agent: {agent_name}")
 
 
@@ -36,9 +44,9 @@ def agent_label(
     max_tokens: int = 4096,  # reasoning needs room to finish + emit JSON; see MlxQwenJsonAgent
     thinking: bool = False,
 ) -> str:
-    if agent_name != "mlx":
+    if agent_name not in {"mlx", "vllm"}:
         return agent_name
 
     model_slug = model.rsplit("/", 1)[-1].replace(".", "_").replace("-", "_")
     mode = "thinking" if thinking else "nothinking"
-    return f"mlx_{model_slug}_{mode}_{max_tokens}"
+    return f"{agent_name}_{model_slug}_{mode}_{max_tokens}"

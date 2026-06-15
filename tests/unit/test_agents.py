@@ -1,6 +1,7 @@
 import unittest
 
-from sts_ai.agents import MlxQwenJsonAgent, RandomLegalAgent, parse_json_action
+from sts_ai.agents import MlxQwenJsonAgent, RandomLegalAgent, VllmJsonAgent, parse_json_action
+from sts_ai.prompting import NEUTRAL_FRAME
 from sts_ai.schemas import LegalAction
 
 
@@ -111,6 +112,167 @@ class MlxQwenJsonAgentRetryTest(unittest.TestCase):
         self.assertEqual(decision.reasoning, "fixed")
         self.assertEqual(decision.retries, 1)
         self.assertGreaterEqual(decision.latency_s, 0.0)  # timing populated
+
+
+class VllmJsonAgentTest(unittest.TestCase):
+    def setUp(self):
+        self.actions = [
+            LegalAction(index=0, bits=1, description="first"),
+            LegalAction(index=1, bits=2, description="second"),
+        ]
+
+    def test_reasoning_mode_resolution(self):
+        agent = object.__new__(VllmJsonAgent)
+
+        agent.enable_thinking = False
+        agent._native_thinking = False
+        self.assertEqual(agent.reasoning_mode, "none")
+
+        agent.enable_thinking = True
+        agent._native_thinking = True
+        self.assertEqual(agent.reasoning_mode, "native")
+
+        agent.enable_thinking = True
+        agent._native_thinking = False
+        self.assertEqual(agent.reasoning_mode, "prompted")
+
+    def test_probe_native_thinking_detects_changed_template(self):
+        class ThinkingTokenizer:
+            def apply_chat_template(self, messages, tokenize, add_generation_prompt, enable_thinking):
+                return "thinking" if enable_thinking else "plain"
+
+        agent = object.__new__(VllmJsonAgent)
+        agent.tokenizer = ThinkingTokenizer()
+
+        self.assertTrue(agent._probe_native_thinking())
+
+    def test_probe_native_thinking_rejects_ignored_kwarg(self):
+        class ConstantTokenizer:
+            def apply_chat_template(self, messages, tokenize, add_generation_prompt, enable_thinking):
+                return "constant"
+
+        agent = object.__new__(VllmJsonAgent)
+        agent.tokenizer = ConstantTokenizer()
+
+        self.assertFalse(agent._probe_native_thinking())
+
+    def test_probe_native_thinking_rejects_unsupported_kwarg(self):
+        class NoThinkingKwargTokenizer:
+            def apply_chat_template(self, messages, tokenize, add_generation_prompt):
+                return "constant"
+
+        agent = object.__new__(VllmJsonAgent)
+        agent.tokenizer = NoThinkingKwargTokenizer()
+
+        self.assertFalse(agent._probe_native_thinking())
+
+    def test_render_prompt_adds_prompted_thinking_instruction(self):
+        agent = object.__new__(VllmJsonAgent)
+        agent.framing = NEUTRAL_FRAME
+        agent._apply_chat_template = lambda prompt: prompt
+
+        agent.enable_thinking = True
+        agent._native_thinking = False
+        prompt = agent._render_prompt("state", self.actions)
+        self.assertIn("<think>...</think>", prompt)
+
+        agent.enable_thinking = False
+        agent._native_thinking = False
+        prompt = agent._render_prompt("state", self.actions)
+        self.assertNotIn("<think>...</think>", prompt)
+
+    def test_choose_actions_batch_fails_soft_when_generate_raises(self):
+        class FakeSamplingParams:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+        class RaisingLlm:
+            def __init__(self):
+                self.calls = []
+
+            def generate(self, prompts, params):
+                self.calls.append((prompts, params.kwargs))
+                raise RuntimeError("boom")
+
+        agent = object.__new__(VllmJsonAgent)
+        agent._render_prompt = lambda state_text, legal_actions: f"prompt: {state_text}"
+        agent._SamplingParams = FakeSamplingParams
+        agent._seed = 123
+        agent.temperature = 0.2
+        agent.max_tokens = 4096
+        agent.llm = RaisingLlm()
+
+        self.assertIsNone(agent._generate(["probe prompt"]))
+        self.assertEqual(agent.llm.calls[0][0], ["probe prompt"])
+        self.assertEqual(agent.llm.calls[0][1]["seed"], 123)
+
+        decisions = agent.choose_actions_batch([("state 1", self.actions), ("state 2", self.actions)])
+
+        self.assertEqual(len(decisions), 2)
+        for decision in decisions:
+            self.assertFalse(decision.valid)
+            self.assertEqual(decision.action_index, 0)
+            self.assertEqual(decision.metadata["error"], "vllm generation failed")
+            self.assertGreaterEqual(decision.latency_s, 0.0)
+
+    def test_choose_actions_batch_parses_results_and_sets_token_counts(self):
+        agent = object.__new__(VllmJsonAgent)
+        agent._render_prompt = lambda state_text, legal_actions: f"prompt: {state_text}"
+        agent._count_tokens = lambda text: len(text.split()) if text else 0
+        agent._generate = lambda prompts: [
+            {
+                "text": '{"reasoning": "first ok", "action_index": 0}',
+                "prompt_tokens": 11,
+                "completion_tokens": 7,
+            },
+            {
+                "text": '<think>short thought</think>\n{"reasoning": "second ok", "action_index": 1}',
+                "prompt_tokens": 13,
+                "completion_tokens": 9,
+            },
+        ]
+
+        decisions = agent.choose_actions_batch([("state 1", self.actions), ("state 2", self.actions)])
+
+        self.assertEqual(len(decisions), 2)
+        self.assertTrue(decisions[0].valid)
+        self.assertEqual(decisions[0].action_index, 0)
+        self.assertEqual(decisions[0].prompt_tokens, 11)
+        self.assertEqual(decisions[0].completion_tokens, 7)
+        self.assertEqual(decisions[0].thinking_tokens, 0)
+        self.assertTrue(decisions[1].valid)
+        self.assertEqual(decisions[1].action_index, 1)
+        self.assertEqual(decisions[1].prompt_tokens, 13)
+        self.assertEqual(decisions[1].completion_tokens, 9)
+        self.assertEqual(decisions[1].thinking_tokens, 2)
+        self.assertEqual(decisions[1].retries, 0)
+        self.assertGreaterEqual(decisions[1].latency_s, 0.0)
+
+    def test_choose_action_retries_after_invalid_json(self):
+        agent = object.__new__(VllmJsonAgent)
+        agent.framing = NEUTRAL_FRAME
+        agent.max_retries = 1
+        agent.enable_thinking = False
+        agent._native_thinking = False
+        agent._apply_chat_template = lambda prompt: prompt
+        agent._count_tokens = lambda text: 0
+        responses = iter(
+            [
+                [{"text": "not json", "prompt_tokens": 3, "completion_tokens": 2}],
+                [{"text": '{"reasoning": "fixed", "action_index": 0}', "prompt_tokens": 5, "completion_tokens": 4}],
+            ]
+        )
+        agent._generate = lambda prompts: next(responses)
+
+        decision = agent.choose_action("state", self.actions)
+
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 0)
+        self.assertEqual(decision.reasoning, "fixed")
+        self.assertEqual(decision.prompt_tokens, 5)
+        self.assertEqual(decision.completion_tokens, 4)
+        self.assertEqual(decision.retries, 1)
+        self.assertGreaterEqual(decision.latency_s, 0.0)
 
 
 if __name__ == "__main__":
