@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import random
 import re
+import time
 from dataclasses import asdict
 from typing import Protocol
 
@@ -68,13 +69,24 @@ class SimpleHeuristicAgent:
 
 
 class MlxQwenJsonAgent:
+    """Local MLX agent that emits a JSON action.
+
+    IMPORTANT — `max_tokens` must be large (default 4096). Reasoning models need
+    room to finish thinking AND still emit the closing JSON: a small cap (e.g.
+    256) truncates mid-thought, so `parse_json_action` finds no JSON, the decision
+    is marked invalid, and the loop silently falls back to action 0 — i.e. the
+    "policy" degenerates to "always the first legal action". This is harmless to
+    raise for no-thinking models (generation stops at EOS ~60-90 tokens, well
+    under the cap), so a high default costs nothing there and saves the reasoning
+    runs. See scripts/CLAUDE.md and the invalid-rate/token telemetry in evals."""
+
     name = "mlx"
 
     def __init__(
         self,
         model_id: str = "mlx-community/Qwen3-4B-4bit",
         framing: str = NEUTRAL_FRAME,
-        max_tokens: int = 256,
+        max_tokens: int = 4096,
         temperature: float = 0.2,
         max_retries: int = 1,
         enable_thinking: bool = False,
@@ -97,13 +109,40 @@ class MlxQwenJsonAgent:
         self.temperature = temperature
         self.max_retries = max_retries
         self.enable_thinking = enable_thinking
+        try:
+            from mlx_lm import batch_generate
+        except (ImportError, ModuleNotFoundError):
+            batch_generate = None
+
         self.model, self.tokenizer = load(model_id)
         self._generate = generate
+        self._batch_generate = batch_generate
         self._sampler = make_sampler(temp=temperature) if make_sampler is not None else None
+
+    @property
+    def config(self) -> dict:
+        """Run provenance for the per-rollout meta record (see RolloutMeta)."""
+        return {
+            "model_id": self.model_id,
+            "framing": self.framing,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "thinking": self.enable_thinking,
+            "max_retries": self.max_retries,
+        }
+
+    def _count_tokens(self, text: str) -> int:
+        if not text:
+            return 0
+        try:
+            return len(self.tokenizer.encode(text))
+        except Exception:  # noqa: BLE001 - token counting must never break a rollout
+            return 0
 
     def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
         base_prompt = render_action_prompt(state_text, legal_actions, self.framing)
         last_decision: AgentDecision | None = None
+        start = time.perf_counter()
 
         for attempt in range(self.max_retries + 1):
             prompt = base_prompt
@@ -113,18 +152,22 @@ class MlxQwenJsonAgent:
                     "with a legal integer action_index from the listed actions."
                 )
 
-            response = self._generate_text(prompt)
+            chat_prompt = self._apply_chat_template(prompt)
+            response = self._generate_chat(chat_prompt)
             decision = parse_json_action(response, legal_actions)
             decision.retries = attempt
+            decision.prompt_tokens = self._count_tokens(chat_prompt)
+            decision.completion_tokens = self._count_tokens(response)
+            decision.thinking_tokens = self._count_tokens(decision.thinking)
             last_decision = decision
             if decision.valid:
-                return decision
+                break
 
         assert last_decision is not None
+        last_decision.latency_s = round(time.perf_counter() - start, 4)
         return last_decision
 
-    def _generate_text(self, prompt: str) -> str:
-        chat_prompt = self._apply_chat_template(prompt)
+    def _generate_chat(self, chat_prompt: str) -> str:
         kwargs = {
             "prompt": chat_prompt,
             "max_tokens": self.max_tokens,
@@ -140,6 +183,37 @@ class MlxQwenJsonAgent:
                 raise
             kwargs["temp"] = self.temperature
             return self._generate(self.model, self.tokenizer, **kwargs)
+
+    def choose_actions_batch(self, items: list[tuple[str, list[LegalAction]]]) -> list[AgentDecision]:
+        """Decide for K independent rollouts in one batched generation call (the
+        cross-rollout throughput lever; see parallel_rollout). v1 does no per-item
+        retry — invalid JSON falls back to index 0 like the single path. `latency_s`
+        is the batch wall-time amortized across items (token counts are exact)."""
+        if not items:
+            return []
+        if self._batch_generate is None:  # older mlx-lm: degrade to serial
+            return [self.choose_action(st, la) for st, la in items]
+
+        prompts = [self._apply_chat_template(render_action_prompt(st, la, self.framing)) for st, la in items]
+        prompt_ids = [self.tokenizer.encode(p) for p in prompts]
+        kwargs: dict = {"max_tokens": self.max_tokens}
+        if self._sampler is not None:
+            kwargs["sampler"] = self._sampler  # batch_generate defaults to greedy otherwise
+
+        start = time.perf_counter()
+        response = self._batch_generate(self.model, self.tokenizer, prompt_ids, **kwargs)
+        per_item_latency = round((time.perf_counter() - start) / len(items), 4)
+
+        decisions: list[AgentDecision] = []
+        for (_, legal_actions), prompt, text in zip(items, prompts, response.texts):
+            decision = parse_json_action(text, legal_actions)
+            decision.retries = 0
+            decision.prompt_tokens = self._count_tokens(prompt)
+            decision.completion_tokens = self._count_tokens(text)
+            decision.thinking_tokens = self._count_tokens(decision.thinking)
+            decision.latency_s = per_item_latency
+            decisions.append(decision)
+        return decisions
 
     def _apply_chat_template(self, prompt: str) -> str:
         messages = [{"role": "user", "content": prompt}]

@@ -59,7 +59,10 @@ def main() -> None:
     )
 
     parser.add_argument("--model", default="mlx-community/Qwen3-4B-4bit")
-    parser.add_argument("--max-tokens", type=int, default=256)
+    parser.add_argument("--max-tokens", type=int, default=4096,
+                        help="Generation cap. Must be large for reasoning/thinking models — a small "
+                        "cap (e.g. 256) truncates mid-thought so no JSON is emitted and the agent "
+                        "falls back to action 0. Harmless for no-thinking (stops at EOS first).")
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--max-retries", type=int, default=1)
     parser.add_argument("--thinking", action="store_true")

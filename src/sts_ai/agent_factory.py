@@ -8,7 +8,7 @@ def build_agent(
     *,
     seed: int | None = None,
     model: str = "mlx-community/Qwen3-4B-4bit",
-    max_tokens: int = 256,
+    max_tokens: int = 4096,  # reasoning needs room to finish + emit JSON; see MlxQwenJsonAgent
     temperature: float = 0.2,
     max_retries: int = 1,
     thinking: bool = False,
@@ -34,7 +34,7 @@ def agent_label(
     agent_name: str,
     *,
     model: str = "mlx-community/Qwen3-4B-4bit",
-    max_tokens: int = 256,
+    max_tokens: int = 4096,  # reasoning needs room to finish + emit JSON; see MlxQwenJsonAgent
     thinking: bool = False,
 ) -> str:
     if agent_name != "mlx":

@@ -92,10 +92,12 @@ PYTHONPATH=src .venv/bin/python scripts/run_rollout.py \
 
 The default MLX agent disables Qwen3 thinking mode for the first rollout stage because it gives much more reliable structured JSON actions. Use `--thinking` for explicit reasoning-mode experiments after the no-thinking path is stable.
 
+> **`--max-tokens` must be large for any reasoning/thinking run (default is 4096).** A small cap (e.g. 256) truncates the model mid-thought, so it never emits the closing JSON — the decision is marked invalid and the agent **silently falls back to action 0** (the policy degenerates to "always the first legal action"). Raising the cap is free for no-thinking models (generation stops at EOS, ~60–90 tokens). The eval report's `invalid_rate` / `completion_tokens` columns surface this immediately.
+
 Current working policy:
 
 - no-thinking mode for high-throughput Qwen baseline rollouts;
-- thinking mode with `--max-tokens 2048 --thinking` for a smaller comparison arm.
+- thinking mode (`--thinking`) for a smaller comparison arm — keep the large `--max-tokens` so reasoning can finish *and* emit JSON.
 
 The first implementation priority is to verify simulator throughput and action parsing before committing to full-parameter local training.
 

@@ -78,18 +78,18 @@ class MlxQwenJsonAgentRetryTest(unittest.TestCase):
         agent = object.__new__(MlxQwenJsonAgent)
         agent.framing = "neutral"
         agent.max_retries = 1
+        # Stub the tokenizer-backed seams so this stays a pure unit test (no mlx).
+        agent._apply_chat_template = lambda prompt: prompt
+        agent._count_tokens = lambda text: 0
         responses = iter(["not json", '{"reasoning": "fixed", "action_index": 0}'])
-
-        def fake_generate(prompt):
-            return next(responses)
-
-        agent._generate_text = fake_generate
+        agent._generate_chat = lambda chat_prompt: next(responses)
 
         decision = agent.choose_action("state", actions)
         self.assertTrue(decision.valid)
         self.assertEqual(decision.action_index, 0)
         self.assertEqual(decision.reasoning, "fixed")
         self.assertEqual(decision.retries, 1)
+        self.assertGreaterEqual(decision.latency_s, 0.0)  # timing populated
 
 
 if __name__ == "__main__":

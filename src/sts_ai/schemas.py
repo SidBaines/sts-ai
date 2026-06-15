@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+# On-disk format version. Bumped when the kept-data contract changes. v1 is the
+# first version we intend to keep/train on (adds affordances, per-decision
+# timing/tokens, and the per-rollout RolloutMeta sidecar).
+SCHEMA_VERSION = 1
+
 
 @dataclass(frozen=True)
 class LegalAction:
@@ -24,6 +29,14 @@ class AgentDecision:
     thinking: str = ""
     valid: bool = True
     retries: int = 0
+    # Per-decision generation telemetry (additive; defaults keep old traces valid).
+    # `latency_s` is wall-time for this decision's generation (batch-amortized in
+    # parallel mode — see parallel_rollout); token counts are the model-independent
+    # signal for "how much did it reason" (thinking_tokens) and total cost.
+    latency_s: float = 0.0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    thinking_tokens: int = 0
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -44,6 +57,11 @@ class DecisionRecord:
     #   state (turn, enemy HP/intents, player block/energy) rides in `state["combat"]`,
     #   which needs no schema change since `state` is free-form.
     phase: str = "out_of_combat"
+    # Eval-support: structured, sim-grounded summary of what the agent *could* have
+    # done this decision (combat only; {} out of combat). Computed in pure Python by
+    # sts_ai.affordances; lets evals ask "could it have full-blocked / taken lethal"
+    # without re-parsing state_text. Additive; does not change what the model sees.
+    affordances: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -53,3 +71,45 @@ class RolloutResult:
     terminal_state: dict[str, Any]
     stopped_reason: str
     error: dict[str, Any] | None = None
+
+
+@dataclass
+class RolloutMeta:
+    """One-per-rollout summary + provenance, written as a `<output>.meta.json`
+    sidecar (not in the decision JSONL, so existing loaders are untouched).
+
+    Captures what the decision stream cannot: the run's identity (model, config,
+    and especially the **framing** — the study's independent variable, recorded
+    nowhere else), the final outcome, and rollout-level aggregates for eval/RL.
+    All fields additive; this is the first kept-data version (SCHEMA_VERSION)."""
+    seed: int
+    schema_version: int = SCHEMA_VERSION
+    # Provenance / run identity
+    agent: str = ""
+    model_id: str | None = None
+    framing: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
+    thinking: bool | None = None
+    max_retries: int | None = None
+    ascension: int = 0
+    combat_control: str = ""
+    battle_simulations: int | None = None
+    git_sha: str | None = None
+    timestamp: str = ""
+    # Outcome / aggregates
+    outcome: str = ""
+    stopped_reason: str = ""
+    error: dict[str, Any] | None = None
+    undefined_behavior_evoked: bool = False
+    final_act: int = 0
+    final_floor: int = 0
+    final_hp: int = 0
+    max_hp: int = 0
+    n_decisions: int = 0
+    n_combat: int = 0
+    n_out_of_combat: int = 0
+    n_invalid: int = 0
+    # Per-decision player HP after each action (combat: player_cur_hp; else cur_hp).
+    hp_trajectory: list[int] = field(default_factory=list)
+    extra: dict[str, Any] = field(default_factory=dict)
