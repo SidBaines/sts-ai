@@ -32,6 +32,7 @@ Current behavior:
 - The Python policy controls Neow choices, pathing, rewards, shops, events, card select screens, treasure rooms, and campfires.
 - MLX/Qwen inference has been smoke-tested with `mlx-community/Qwen3-4B-4bit`; no-thinking mode produces valid structured actions on short rollouts.
 - Simulator error handling is now strict: invalid battle actions and unknown potion values raise errors, batch rollouts write `.error.json` sidecars, and optional per-seed subprocess timeouts keep slow or faulty seeds isolated.
+- **(2026-06-15)** Optional **full LLM combat control** (`combat_control="llm"`) with sim-computed combat info + an effect/status glossary shown to the model; an **eval harness** (per-rollout meta with framing/provenance, `affordances`, per-decision timing/tokens); a **batched multi-rollout orchestrator** + `run_sweep.py`/`compare_models.py`. See the 2026-06-15 block under Near-Term Next Steps. Hybrid (search-resolved combat) remains the default.
 
 ### Latest Stage 1 Run Notes
 
@@ -555,8 +556,10 @@ Interpretation:
 >
 > **Milestone 1 + LLM wiring delivered 2026-06-14.** The LLM can now play full
 > combats through Python control (`combat_control="llm"`); hybrid remains the
-> default. Remaining follow-up: in-combat risk proxies and combat rendering in the
-> rollout viewer (deferred — see Near-Term Steps).
+> default. **2026-06-15:** the combat **board is rendered** in the rollout viewer,
+> and the model is now shown **sim-computed combat info** (intent/card damage,
+> statuses) + an effect/status **glossary**. Remaining follow-up: in-combat risk
+> proxies (see Near-Term Steps).
 
 Goal: let the LLM control every meaningful StS decision, including card play.
 
@@ -604,6 +607,9 @@ Later scientific metrics:
 - StS risk is messy and partly subjective; risk proxies must be treated as imperfect.
 - Fixed-rollout action training is not exactly on-policy RL. It controls data and reward while deliberately allowing frame-conditioned gradients.
 - Qwen3-4B local full-parameter training may be slower or tighter than expected; the repo should benchmark rather than assume.
+- **Affordance block math (`src/sts_ai/affordances.py`) is best-effort for 3 cards.** Exact for vanilla block cards (Defend, Shrug It Off, …) incl. Dexterity/Frail, but approximate for Iron Wave (engine double-applies `calculateCardBlock`), Entrench (doubles *current* Block; play-order dependent), and Second Wind (OMITTED — Block scales with hand composition) — so `full_block_possible` can under-count in the rare hands holding them. A dry-run (clone/play/read Block delta) would make it exact.
+- **Batched rollouts (`parallel_rollout`) left-pad**, so per-decision token outputs can differ bit-for-bit from the serial single-prompt path — pin the batch size for any frozen-seed dataset.
+- **`agent.thinking_tokens` counts only the `<think>` span**, so it under-reports reasoning for models that reason without `<think>` tags (e.g. DeepSeek-R1-Distill); use `completion_tokens` as the reasoning-length proxy there.
 
 ## Near-Term Next Steps
 
@@ -621,12 +627,22 @@ Also done in the 2026-06-14 session:
 
 - **In-battle (full combat) LLM control — Milestone 1 + LLM wiring (Stage 10).** Bound `BattleContext` + combat `Action` + a legal-action enumerator through the pybind patch; added `describeBattleState`/`describeBattleAction`; added the combat step-loop to `LightspeedHybridEnv` behind `combat_control="search"|"llm"` (hybrid kept as default); added the additive `DecisionRecord.phase` field and recorded it in `rollout.py`; added the `--combat-control` flag to `run_rollout.py`; unit test for phase plumbing/back-compat + subprocess-contained integration test playing a full battle to victory/rewards. Verified: `combat_control="llm"` surfaces in-combat decisions and completes battles; `"search"` is unchanged (zero combat decisions).
 
-Remaining:
+Done in the 2026-06-15 session:
 
-1. **In-combat risk proxies + viewer rendering (Stage 10 follow-up).** Extend `risk_proxies.py` with in-combat aggression metrics (potion use, risky card plays, attacking vs blocking at low HP) keyed off the combat `phase`/`state["combat"]`, and render combat snapshots in `rollout_view.py`/`scripts/visualize_rollout.py`. Deferred from the milestone since it needs collected combat data first.
-2. **Stage 5 — fixed neutral rollout collection:** generate neutral-frame Qwen trajectories on the frozen dev/eval seeds at full Act-1 depth; audit reasoning for frame leakage; attach reward + risk-proxy labels. (Was the main path; now follows combat control. Note from the first full-depth thinking run: ~6% of decisions still truncate at 4096 tokens and fall back to action 0 — handle via a targeted "out of budget, emit JSON now" re-prompt and/or higher budget before scaling.)
-3. Freeze a train split (200-500 seeds): run a larger baseline batch (e.g. seeds `2-600`).
-4. Stage 4 nicety: compact-vs-verbose serializer comparison on matched states.
-5. Root-cause the seed-2-class native battle-search hang (sanitizer/debug build or value-init audit) before depending on cross-machine reproducibility. Currently accepted-and-excluded.
-6. Stage 2 extensions: structured in-serializer risk tags; expand `SELF_DAMAGE_CARDS`/high-variance card coverage.
-7. If a thinking comparison arm is needed, retest with a larger budget (≥4096) or a "think briefly, then emit JSON" prompt to beat truncation.
+- **Combat info shown to the model + an effect/status glossary.** Binding-side sim-computed enrichment: enemy intent damage (pre-block, multi-hit aware) + statuses, target-correct card attack damage (`(deal N)`), out-of-combat card type/rarity tags. Plus pure-Python `src/sts_ai/glossary.py` folding a static effect/status reference into `state_text` at rollout time (inline `(no attack)` labels on non-attacking intents + a `-- KEY --` block defining cards-in-play and active statuses with duration semantics). Measured: hallucinated defense (blocking a non-attacking intent) dropped ~21%→7% on Qwen3-4B llm-combat seeds. The combat **board is now rendered** in the viewer.
+- **Eval-grade logging (`SCHEMA_VERSION=1`, first kept-data version; all additive).** Per-rollout `*.meta.json` sidecar (outcome/stopped_reason/UB/HP-trajectory + model/config/**framing**/git provenance — framing was previously recorded nowhere); per-decision `latency_s` + prompt/completion/thinking token counts; `DecisionRecord.affordances` (`full_block_possible`, `single_target_lethal_available`, …; pure Python, no rebuild).
+- **Cross-rollout batched throughput.** `src/sts_ai/parallel_rollout.py` runs K independent rollouts in lockstep, batching via `mlx_lm.batch_generate` (trace-identical to serial under a deterministic agent). `scripts/run_sweep.py` (models × {thinking,no-think} × seeds) + `scripts/compare_models.py` (per-model report). Per-model speeds: [`docs/throughput_benchmarks.md`](throughput_benchmarks.md).
+- **First multi-model baseline sweep** (no-thinking, seeds 3/4/5/7): **Qwen3-4B strongest** (≈act-1 boss) > Qwen3-1.7B ≈ Llama-3.2-3B; nobody wins (RL headroom). Directional only (n=4).
+- **`max_tokens` default 256→4096** (agents/factory/all run scripts) + prominent docs — a small cap truncates reasoning mid-thought → no JSON → silent action-0 fallback (confirmed degenerate in the sweep's thinking/R1 arms). Harmless for no-think (stops at EOS).
+- **RL & framing design discussion** captured in [`rl_and_framing_design.md`](rl_and_framing_design.md).
+
+Remaining (re-ordered 2026-06-15):
+
+1. **Reasoning rerun at `max_tokens=4096`.** Rerun the thinking + R1 sweep arms (the 256 run was degenerate: ~100% invalid, action-0 fallback) for the real thinking-vs-no-thinking comparison. Note a prior full-depth thinking run still truncated ~6% at 4096 — handle stragglers with an "out of budget, emit JSON now" re-prompt and/or higher budget.
+2. **Robust baseline (more seeds).** The model sweep is only 4 seeds (directional). Run the frozen dev/eval splits via `run_sweep.py` before any model/RL decision rests on it.
+3. **Stage 5 — fixed neutral rollout collection** at full Act-1 depth on the frozen splits; audit reasoning for frame leakage; attach reward + risk-proxy labels. The eval harness (meta/affordances/timing) and the 4096 default are now in place.
+4. **RL scoping → implementation** per [`rl_and_framing_design.md`](rl_and_framing_design.md) (offline filtered-BC/RWR first, then GRPO/RLOO; trait-neutral reward). Needs the GPU path — local training remains a benchmark, not an assumption.
+5. **In-combat risk proxies (Stage 10 follow-up).** Combat *board* is rendered now; still pending: extend `risk_proxies.py` with in-combat aggression metrics keyed off `phase`/`state["combat"]` and the new `affordances`.
+6. Freeze a train split (200-500 seeds): larger baseline batch (e.g. seeds `2-600`).
+7. Root-cause the seed-2-class native battle-search hang before depending on cross-machine reproducibility (accepted-and-excluded).
+8. Stage 2 extensions (structured in-serializer risk tags; expand self-damage/high-variance card coverage) + Stage 4 nicety (compact-vs-verbose serializer comparison).

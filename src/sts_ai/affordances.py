@@ -12,6 +12,20 @@ x3/4 if Frail); card block bases are a curated Ironclad table (the engine has no
 block table — values from the playCard switch). Best-effort and defensive: any
 parse gap degrades to a smaller/empty dict rather than raising, so a rollout is
 never broken by an affordance bug. Out of combat returns `{}`.
+
+KNOWN LIMITATIONS (block affordances). Exact for vanilla block cards (Defend,
+Shrug It Off, Ghostly Armor, Sentinel, Power Through, ...) including Dexterity and
+Frail, but approximate for three Ironclad cards — so `max_block_available` /
+`full_block_possible` can be slightly off (errs toward UNDER-counting) in the rare
+hands holding them:
+  - Iron Wave: this engine applies calculateCardBlock TWICE (Dexterity counted
+    twice); hard-coded here, so a fragile special case if the engine changes.
+  - Entrench: doubles *current* Block — value is state- and play-order-dependent,
+    which the additive knapsack can't model (approximated as "adds current Block").
+  - Second Wind: Block = base x (non-Attack cards in hand) — hand-composition
+    dependent, so it is OMITTED entirely (contributes 0).
+A fully exact fix would dry-run the card (clone BattleContext, play it, read the
+Block delta). Also tracked in docs/research_plan.md "Known Limitations".
 """
 from __future__ import annotations
 
