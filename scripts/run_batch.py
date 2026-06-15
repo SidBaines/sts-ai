@@ -38,7 +38,7 @@ def parse_seed_list(args: argparse.Namespace) -> list[int]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a batch of hybrid sts_lightspeed rollouts.")
-    parser.add_argument("--agent", choices=["first", "random", "heuristic", "mlx"], default="heuristic")
+    parser.add_argument("--agent", choices=["first", "random", "heuristic", "mlx", "vllm"], default="heuristic")
     parser.add_argument("--seeds", default=None, help="Comma-separated seed list, e.g. 1,2,3")
     parser.add_argument("--seeds-config", default=None,
                         help="Path to a frozen-seeds JSON (e.g. configs/frozen_seeds.json); use with --split.")
@@ -83,7 +83,7 @@ def main() -> None:
     )
 
     shared_agent = None
-    if args.agent == "mlx" and args.seed_timeout_seconds is None:
+    if args.agent in {"mlx", "vllm"} and args.seed_timeout_seconds is None:
         shared_agent = build_agent(
             args.agent,
             model=args.model,

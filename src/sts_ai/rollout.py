@@ -178,6 +178,9 @@ def build_rollout_meta(
     run_meta = run_meta or {}
     cfg = getattr(agent, "config", {}) or {}
     term = result.terminal_state or {}
+    extra = dict(run_meta.get("extra", {}))
+    if cfg:
+        extra["agent_config"] = dict(cfg)
 
     hp_trajectory: list[int] = []
     n_combat = n_out_of_combat = n_invalid = 0
@@ -222,7 +225,7 @@ def build_rollout_meta(
         n_out_of_combat=n_out_of_combat,
         n_invalid=n_invalid,
         hp_trajectory=hp_trajectory,
-        extra=dict(run_meta.get("extra", {})),
+        extra=extra,
         policy_seed=result.policy_seed,
         rollout_index=result.rollout_index,
     )

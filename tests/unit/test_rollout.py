@@ -9,8 +9,8 @@ import unittest
 
 from sts_ai.agents import FirstLegalAgent
 from sts_ai.lightspeed import LightspeedHybridEnv
-from sts_ai.rollout import run_rollout
-from sts_ai.schemas import AgentDecision, LegalAction
+from sts_ai.rollout import build_rollout_meta, run_rollout
+from sts_ai.schemas import AgentDecision, LegalAction, RolloutResult
 
 
 class FakeStepErrorEnv:
@@ -191,6 +191,39 @@ class StubStochasticAgent:
             action_index=self.rng.randrange(len(legal_actions)),
             raw_response="stub stochastic",
         )
+
+
+class StubConfiguredAgent:
+    name = "vllm"
+
+    @property
+    def config(self):
+        return {
+            "backend": "vllm",
+            "reasoning_mode": "prompted",
+            "model_id": "x",
+        }
+
+
+class RolloutMetaProvenanceTest(unittest.TestCase):
+    def test_agent_config_is_preserved_in_extra_alongside_run_extra(self):
+        result = RolloutResult(
+            world_seed=99,
+            decisions=[],
+            terminal_state={},
+            stopped_reason="terminal",
+        )
+
+        meta = build_rollout_meta(
+            result,
+            FakeRandomEnv(),
+            StubConfiguredAgent(),
+            run_meta={"extra": {"experiment": "unit"}},
+        )
+
+        self.assertEqual(meta.extra["experiment"], "unit")
+        self.assertEqual(meta.extra["agent_config"]["reasoning_mode"], "prompted")
+        self.assertEqual(meta.extra["agent_config"]["backend"], "vllm")
 
 
 class RolloutPolicySeedTest(unittest.TestCase):

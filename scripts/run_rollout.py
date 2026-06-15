@@ -23,7 +23,7 @@ def build_agent(args: argparse.Namespace):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run one hybrid sts_lightspeed rollout.")
-    parser.add_argument("--agent", choices=["first", "random", "heuristic", "mlx"], default="first")
+    parser.add_argument("--agent", choices=["first", "random", "heuristic", "mlx", "vllm"], default="first")
     parser.add_argument("--model", default="mlx-community/Qwen3-4B-4bit")
     parser.add_argument("--max-tokens", type=int, default=4096,
                         help="Generation cap. Must be large for reasoning/thinking models — a small "
