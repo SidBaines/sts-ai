@@ -1,0 +1,13 @@
+# All 9 models for a single-pod run, ordered smallest -> largest so partial
+# overnight completion still yields the cheaper arms first. Each model runs both
+# reasoning-off and reasoning-on arms (Qwen3 = native <think>; Gemma/Llama =
+# prompted reasoning). Used by run_sweep_on_pod.sh.
+Qwen/Qwen3-0.6B
+meta-llama/Llama-3.2-1B-Instruct
+google/gemma-3-1b-it
+Qwen/Qwen3-1.7B
+google/gemma-3-4b-it
+Qwen/Qwen3-4B
+meta-llama/Llama-3.1-8B-Instruct
+Qwen/Qwen3-8B
+google/gemma-3-12b-it

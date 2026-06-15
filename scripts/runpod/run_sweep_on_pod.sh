@@ -26,6 +26,10 @@ fi
 MODELS_ARG="$1"
 OUT_DIR="${2:-data/rollouts/a40_sweep}"
 SEEDS="${3:-3,4,5,6,7,8}"
+# Concurrent rollouts per arm (the throughput lever). Capped in practice by the
+# number of seeds, so raising it only helps when SEEDS is large. Override via env.
+BATCH_SIZE="${BATCH_SIZE:-8}"
+MAX_DECISIONS="${MAX_DECISIONS:-200}"
 
 ORIGINAL_CWD="$(pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -86,6 +90,7 @@ printf 'Repo:        %s\n' "$REPO_DIR"
 printf 'Models file: %s\n' "$MODELS_FILE"
 printf 'Output dir:  %s\n' "$OUT_DIR"
 printf 'Seeds:       %s\n' "$SEEDS"
+printf 'Batch size:  %s   Max decisions: %s\n' "$BATCH_SIZE" "$MAX_DECISIONS"
 printf 'Models:      %s\n' "${models[*]}"
 
 successes=()
@@ -113,8 +118,8 @@ for model in "${models[@]}"; do
     --max-tokens 4096
     --temperature 0
     --battle-simulations 50
-    --max-decisions 200
-    --batch-size 8
+    --max-decisions "$MAX_DECISIONS"
+    --batch-size "$BATCH_SIZE"
     --seeds "$SEEDS"
     --output-dir "$OUT_DIR"
   )

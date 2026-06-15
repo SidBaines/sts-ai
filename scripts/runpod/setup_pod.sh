@@ -51,7 +51,7 @@ PY
 }
 
 need_apt=0
-for cmd in git cmake g++ make python3; do
+for cmd in git cmake g++ make python3 rsync; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     need_apt=1
   fi
@@ -77,7 +77,8 @@ if (( need_apt )); then
     cmake \
     build-essential \
     python3-dev \
-    python3-venv
+    python3-venv \
+    rsync
 else
   log "Build dependencies already available; skipping apt-get"
 fi
