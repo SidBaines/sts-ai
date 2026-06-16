@@ -25,7 +25,7 @@ class ScriptedStreamingAgent(ScriptedCombatAgent):
     def __init__(self):
         self.pending = {}
 
-    def stream_submit(self, request_id, state_text, legal_actions, seed):
+    def stream_submit(self, request_id, state_text, legal_actions, seed, retry=False):
         self.pending[request_id] = (state_text, legal_actions)
 
     def stream_poll(self):

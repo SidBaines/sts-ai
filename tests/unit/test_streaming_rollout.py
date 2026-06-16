@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from typing import Callable
 
+from sts_ai.agents import parse_json_action
 from sts_ai.schemas import AgentDecision, LegalAction, RolloutResult
 from sts_ai.seeding import derive_batch_seed, derive_policy_seed
 from sts_ai.streaming_rollout import run_streaming_rollouts
@@ -28,6 +29,7 @@ class FakeStreamingAgent:
         state_text: str,
         legal_actions: list[LegalAction],
         seed: int,
+        retry: bool = False,
     ) -> None:
         self.pending[request_id] = {"legal_actions": legal_actions, "seed": seed}
         self.seen_seeds[request_id] = seed
@@ -77,6 +79,57 @@ class FakeStreamingAgent:
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
         )
+
+
+class RetryStreamingAgent:
+    name = "retry-fake"
+
+    def __init__(self, invalid_attempts: int) -> None:
+        self.invalid_attempts = invalid_attempts
+        self.pending: dict[str, tuple[list[LegalAction], int]] = {}
+        self.submits: list[tuple[str, bool]] = []
+
+    def stream_submit(
+        self,
+        request_id: str,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        seed: int,
+        retry: bool = False,
+    ) -> None:
+        attempt = int(request_id.rsplit(":a", 1)[1])
+        self.pending[request_id] = (legal_actions, attempt)
+        self.submits.append((request_id, retry))
+
+    def stream_poll(self) -> list[tuple[str, dict]]:
+        if not self.pending:
+            return []
+        rid = next(iter(self.pending))
+        _, attempt = self.pending.pop(rid)
+        valid = attempt >= self.invalid_attempts
+        text = '{"action_index": 0}' if valid else "garbage (no json)"
+        return [
+            (
+                rid,
+                {
+                    "text": text,
+                    "prompt_tokens": 1,
+                    "completion_tokens": 1,
+                },
+            )
+        ]
+
+    def build_decision_from_text(
+        self,
+        text: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        legal_actions: list[LegalAction],
+    ) -> AgentDecision:
+        return parse_json_action(text, legal_actions)
+
+    def stream_has_unfinished(self) -> bool:
+        return bool(self.pending)
 
 
 def _make_env_with_decisions(decisions: int) -> Callable[[int], FakeParallelEnv]:
@@ -174,7 +227,7 @@ class StreamingRolloutSpecTest(unittest.TestCase):
             _action_sequences(fifo_results),
         )
         self.assertEqual(
-            lifo_agent.seen_seeds["7:1:2"],
+            lifo_agent.seen_seeds["7:1:2:a0"],
             derive_batch_seed([(7, 1, 2)]),
         )
 
@@ -247,6 +300,71 @@ class StreamingRolloutSpecTest(unittest.TestCase):
         self.assertEqual(by_spec[(99, 0)].error["phase"], "step")
         self.assertEqual(by_spec[(1, 0)].stopped_reason, "terminal")
         self.assertEqual(len(by_spec[(1, 0)].decisions), 4)
+
+    def test_retry_succeeds_before_exhaustion(self) -> None:
+        agent = RetryStreamingAgent(invalid_attempts=2)
+
+        results = run_streaming_rollouts(
+            [(7, 0)],
+            _make_env_with_decisions(3),
+            agent,
+            concurrency=1,
+            max_decisions=200,
+            max_retries=3,
+        )
+
+        self.assertEqual(results[0].stopped_reason, "terminal")
+        self.assertTrue(all(decision.agent["valid"] for decision in results[0].decisions))
+        self.assertEqual(results[0].decisions[0].agent["retries"], 2)
+        first_decision_flags = [
+            retry
+            for request_id, retry in agent.submits
+            if request_id.startswith("7:0:0:")
+        ]
+        self.assertEqual(first_decision_flags, [False, True, True])
+
+    def test_retries_exhausted_falls_back(self) -> None:
+        agent = RetryStreamingAgent(invalid_attempts=99)
+
+        results = run_streaming_rollouts(
+            [(7, 0)],
+            _make_env_with_decisions(2),
+            agent,
+            concurrency=1,
+            max_decisions=200,
+            max_retries=2,
+        )
+
+        first_decision = results[0].decisions[0]
+        self.assertEqual(results[0].stopped_reason, "terminal")
+        self.assertEqual(first_decision.agent["retries"], 2)
+        self.assertFalse(first_decision.agent["valid"])
+        self.assertEqual(first_decision.agent["action_index"], 0)
+        first_decision_submits = [
+            request_id
+            for request_id, _ in agent.submits
+            if request_id.startswith("7:0:0:")
+        ]
+        self.assertEqual(len(first_decision_submits), 3)
+
+    def test_max_retries_zero_no_retry(self) -> None:
+        agent = RetryStreamingAgent(invalid_attempts=99)
+
+        results = run_streaming_rollouts(
+            [(7, 0)],
+            _make_env_with_decisions(3),
+            agent,
+            concurrency=1,
+            max_decisions=200,
+            max_retries=0,
+        )
+
+        first_decision = results[0].decisions[0]
+        self.assertEqual(first_decision.agent["retries"], 0)
+        self.assertFalse(first_decision.agent["valid"])
+        self.assertEqual(len(agent.submits), len(results[0].decisions))
+        self.assertTrue(all(request_id.endswith(":a0") for request_id, _ in agent.submits))
+        self.assertTrue(all(not retry for _, retry in agent.submits))
 
 
 if __name__ == "__main__":

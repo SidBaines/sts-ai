@@ -41,16 +41,24 @@ def run_streaming_rollouts(
     output_for: Callable[[int, int], Optional[Path]] = lambda ws, ri: None,
     concurrency: int = 48,
     max_decisions: int = 200,
+    max_retries: int | None = None,
     run_meta: Optional[dict[str, Any]] = None,
 ) -> list[RolloutResult]:
-    """Run rollout specs through a continuous-batching generation backend."""
+    """Run rollout specs through a continuous-batching generation backend.
+
+    Invalid responses get per-rollout retries as new non-blocking requests;
+    after retry exhaustion, the decision falls back to action 0.
+    """
+    if max_retries is None:
+        max_retries = getattr(agent, "max_retries", 1)
+
     queue = deque(specs)
     results: dict[tuple[int, int], RolloutResult] = {}
     # in_flight owns termination/slot mapping; stream_has_unfinished() is for async backends.
     in_flight: dict[str, _Slot] = {}
 
     def request_id(slot: _Slot) -> str:
-        return f"{slot.world_seed}:{slot.rollout_index}:{slot.decision_index}"
+        return f"{slot.world_seed}:{slot.rollout_index}:{slot.decision_index}:a{slot.attempt}"
 
     def submit(slot: _Slot) -> None:
         rid = request_id(slot)
@@ -62,6 +70,7 @@ def run_streaming_rollouts(
             slot.view["state_text"],
             slot.view["legal_actions"],
             seed,
+            retry=slot.attempt > 0,
         )
         in_flight[rid] = slot
 
@@ -101,6 +110,11 @@ def run_streaming_rollouts(
                 output["completion_tokens"],
                 view["legal_actions"],
             )
+            if not decision.valid and slot.attempt < max_retries:
+                slot.attempt += 1
+                submit(slot)
+                continue
+            decision.retries = slot.attempt
             action_index = clamp_action_index(decision, len(view["legal_actions"]))
             try:
                 selected = slot.env.step(action_index)
@@ -139,6 +153,7 @@ def run_streaming_rollouts(
                 run_meta=run_meta,
             )
             if not slot.done:
+                slot.attempt = 0
                 submit(slot)
         fill()
 

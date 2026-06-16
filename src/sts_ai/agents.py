@@ -22,7 +22,14 @@ class ActionAgent(Protocol):
 
 
 class GenerationBackend(Protocol):
-    def stream_submit(self, request_id: str, state_text: str, legal_actions: list[LegalAction], seed: int) -> None:
+    def stream_submit(
+        self,
+        request_id: str,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        seed: int,
+        retry: bool = False,
+    ) -> None:
         ...
 
     def stream_poll(self) -> list[tuple[str, dict]]:
@@ -421,8 +428,21 @@ class VllmJsonAgent:
         except Exception:  # noqa: BLE001 - generation failures should not kill a rollout sweep
             return None
 
-    def stream_submit(self, request_id: str, state_text: str, legal_actions: list[LegalAction], seed: int) -> None:
-        prompt = self._render_prompt(state_text, legal_actions)
+    def stream_submit(
+        self,
+        request_id: str,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        seed: int,
+        retry: bool = False,
+    ) -> None:
+        base = self._base_prompt(state_text, legal_actions)
+        if retry:
+            base += (
+                "\n\nYour previous response was invalid. Return only one JSON object "
+                "with a legal integer action_index from the listed actions."
+            )
+        prompt = self._apply_chat_template(base)
         params = self._SamplingParams(temperature=self.temperature, max_tokens=self.max_tokens, seed=seed)
         # NOTE: vLLM's low-level LLMEngine.add_request signature is version-sensitive.
         # Verified target API: add_request(request_id, prompt, params). Keep this call

@@ -59,6 +59,9 @@ def main() -> None:
                         help="Generation cap. Must be large for reasoning/thinking models — a small "
                         "cap (e.g. 256) truncates mid-thought so no JSON is emitted and the agent "
                         "falls back to action 0. Harmless for no-thinking (stops at EOS first).")
+    parser.add_argument("--max-retries", type=int, default=1,
+                        help="Invalid-response retries. The vLLM streaming path resubmits the "
+                        "decision and falls back to action 0 after exhaustion.")
     parser.add_argument("--output-dir", type=Path, default=Path("data") / "rollouts" / "sweep")
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
@@ -90,6 +93,7 @@ def main() -> None:
                 model=model,
                 max_tokens=args.max_tokens,
                 temperature=args.temperature,
+                max_retries=args.max_retries,
                 thinking=modes[0],
                 enable_prefix_caching=args.enable_prefix_caching,
             )

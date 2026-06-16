@@ -55,6 +55,7 @@ class _Slot:
         self.stopped_reason = "terminal"
         self.error: Optional[dict[str, Any]] = None
         self.done = False
+        self.attempt = 0
 
 
 def finalize_slot(
