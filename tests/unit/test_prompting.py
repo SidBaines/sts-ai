@@ -21,7 +21,7 @@ class RenderActionPromptTest(unittest.TestCase):
             induce_reasoning=True,
         )
 
-        self.assertIn("think briefly", prompt)
+        self.assertIn("think step by step", prompt)
         self.assertIn("<think>...</think>", prompt)
         self.assertIn("</think>", prompt)
         self.assertIn("Do not use markdown fences", prompt)

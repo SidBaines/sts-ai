@@ -20,7 +20,7 @@ def render_action_prompt(
     )
     valid_indices = ", ".join(str(action.index) for action in legal_actions)
     reasoning_instruction = (
-        "Before the JSON, think briefly inside exactly one <think>...</think> "
+        "Before the JSON, think step by step inside a single <think>...</think> "
         "block. Put the final JSON object after the closing </think>. Do not use "
         "markdown fences.\n\n"
         if induce_reasoning
