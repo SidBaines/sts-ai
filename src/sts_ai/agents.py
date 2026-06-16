@@ -301,7 +301,10 @@ class VllmJsonAgent:
         max_retries: int = 1,
         enable_thinking: bool = False,
         enable_prefix_caching: bool = True,
-        dtype: str = "float16",
+        # "auto" lets vLLM use each model's native dtype (bf16 for Qwen3/Gemma3/
+        # Llama-3). Do NOT hardcode float16: Gemma3 rejects it ("does not support
+        # float16, numerical instability — use bfloat16 or float32").
+        dtype: str = "auto",
         gpu_memory_utilization: float = 0.90,
         seed: int = 0,
     ) -> None:
