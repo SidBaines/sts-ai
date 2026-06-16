@@ -359,6 +359,16 @@ Tasks:
 
 Status (2026-06-14): risk-proxy code landed (`src/sts_ai/risk_proxies.py`, `scripts/compute_risk_proxies.py`, unit tests) — deterministic, documented, and computed from stored traces. Remaining Stage 2 work: structured in-serializer risk tags, and richer map/shop/campfire/event state text where the human-judgeability audit flags gaps.
 
+Status (2026-06-16): **prompt-comprehension hardening pass** landed, from an independent audit of rendered prompts + a scan of ~74k recorded decisions. All changes are strategy-neutral (comprehension only; no objective/risk language, which stays the framing variable). Fixes:
+- **Enemy intents** now spell out their effect (`glossary.INTENT_DB`, source-grounded): the misleading `(no attack)` became e.g. `(no damage; applies 1 Weak to you)`, and attacks show riders (`(also: adds 1 Slimed card …)`).
+- **0-energy / nothing-playable trap** (11k combat states; the dominant `agent_invalid`/out-of-range cause now that invalid output stops a rollout) gets an explicit "you cannot play any card right now" note.
+- **Duplicate combat actions** (36% of combat decisions) are de-duplicated in `lightspeed` (combat-only; display→raw index map in `_action_views`/`step`), after the binding disambiguates same-named targets (`-> NAME [enemy i]`).
+- **Player stats labelled** `Your HP:` (was misread as the boss's HP) and the act boss relabelled `end-of-act boss`.
+- **Card-select purpose** surfaced out of combat (`cardSelectPurpose` reads `gc.info.selectScreenType`): "Choose a card to REMOVE/UPGRADE/TRANSFORM/…".
+- **Relic + potion effect text** added to the KEY (`glossary.RELIC_DB`/`POTION_DB`; potions complete, relics a confident curated subset, long tail skipped).
+- **Incoming attack damage** aggregated into a combat note (the model sums intents poorly).
+Note: combat trace shape/reproducibility intentionally changed (deduped action list + new state text); out-of-combat action indexing is unchanged. Deferred (P2, optional, would touch the reasoning contract): system/user prompt split + mechanics primer, de-anchoring the example `action_index`, and a structured/preview map representation (the ASCII map remains hard for the model to parse).
+
 Acceptance criteria:
 
 - fixed-state prompts include enough context for a human to judge the listed actions;

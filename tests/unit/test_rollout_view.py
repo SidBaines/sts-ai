@@ -261,6 +261,29 @@ class ToCombatViewTest(unittest.TestCase):
         # Bash (multi-hit annotation) still reads as playable from its legal action
         self.assertTrue(next(c for c in cv.hand if c.name == "Bash").playable)
 
+    def test_enemy_index_suffix_resolves_exact_target(self):
+        # Two same-named living enemies -> the binding disambiguates with " [enemy i]".
+        # The index is authoritative; the view must target the named slot exactly.
+        record = _combat_record()
+        record["state"]["combat"]["enemies"] = [
+            {"index": 0, "name": "FUNGI_BEAST", "cur_hp": 12, "max_hp": 28,
+             "block": 0, "intent": "FUNGI_BEAST_BITE", "alive": True},
+            {"index": 1, "name": "FUNGI_BEAST", "cur_hp": 6, "max_hp": 28,
+             "block": 0, "intent": "FUNGI_BEAST_BITE", "alive": True},
+        ]
+        record["legal_actions"] = [
+            {"index": 0, "bits": 0, "description": "play Strike (cost 1) -> FUNGI_BEAST [enemy 0] (deal 6)"},
+            {"index": 1, "bits": 1, "description": "play Strike (cost 1) -> FUNGI_BEAST [enemy 1] (deal 6)"},
+            {"index": 2, "bits": 2, "description": "end turn"},
+        ]
+        record["selected_action"] = {
+            "index": 1, "description": "play Strike (cost 1) -> FUNGI_BEAST [enemy 1] (deal 6)"}
+        cv = to_combat_view(record)
+        self.assertEqual(cv.chosen_card_name, "Strike")
+        self.assertEqual(cv.chosen_target_index, 1)
+        self.assertTrue(cv.enemies[1].targeted)
+        self.assertFalse(cv.enemies[0].targeted)
+
     def test_degrades_when_state_text_pieces_missing(self):
         record = _combat_record()
         record["state_text"] = "Battle turn 0\n"  # no hand/piles/energy/potions lines

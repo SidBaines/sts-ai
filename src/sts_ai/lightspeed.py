@@ -103,13 +103,39 @@ class LightspeedHybridEnv:
             return list(self.bc.legal_actions())
         return list(self.gc.legal_actions())
 
-    def legal_actions(self) -> list[LegalAction]:
-        actions = self.raw_actions()
+    def _action_views(self) -> tuple[list[Any], list[LegalAction], list[int]]:
+        """Build the display action list and a map back to raw-action indices.
+
+        In combat, collapse actions whose descriptions are byte-identical: two
+        copies of the same card played from different hand slots (or otherwise
+        equivalent actions) produce the same description and the same resulting
+        state, so listing both only inflates and confuses the menu (~36% of combat
+        decisions had a duplicate). The chosen display index maps to the FIRST raw
+        action carrying that description. This is safe because same-named enemy
+        targets are disambiguated in the action text (``-> NAME [enemy i]``), so an
+        identical description really does mean an interchangeable action.
+
+        Out of combat the list stays 1:1 (indices and order unchanged), so the
+        out-of-combat trace shape and reproducibility are untouched.
+        """
+        raw = self.raw_actions()
         ctx = self._action_context()
-        return [
-            LegalAction(index=i, bits=int(action.bits), description=action.describe(ctx))
-            for i, action in enumerate(actions)
-        ]
+        dedup = self.bc is not None  # combat only
+        display: list[LegalAction] = []
+        display_to_raw: list[int] = []
+        seen: set[str] = set()
+        for i, action in enumerate(raw):
+            description = action.describe(ctx)
+            if dedup and description in seen:
+                continue
+            seen.add(description)
+            display.append(LegalAction(index=len(display), bits=int(action.bits), description=description))
+            display_to_raw.append(i)
+        return raw, display, display_to_raw
+
+    def legal_actions(self) -> list[LegalAction]:
+        _, display, _ = self._action_views()
+        return display
 
     def describe_state(self) -> str:
         if self.bc is not None:
@@ -117,19 +143,17 @@ class LightspeedHybridEnv:
         return str(self.gc.describe_state())
 
     def step(self, action_index: int) -> LegalAction:
-        actions = self.raw_actions()
-        if action_index < 0 or action_index >= len(actions):
-            raise IndexError(f"action_index {action_index} outside legal range 0..{len(actions) - 1}")
+        # Resolve against the same display list the agent saw (deduped in combat),
+        # then map the chosen display index back to the underlying raw action.
+        raw, display, display_to_raw = self._action_views()
+        if action_index < 0 or action_index >= len(display):
+            raise IndexError(f"action_index {action_index} outside legal range 0..{len(display) - 1}")
 
         # Capture the action context (gc or bc) before executing, since executing a
         # combat action and advancing may end the battle and clear self.bc.
         ctx = self._action_context()
-        selected = LegalAction(
-            index=action_index,
-            bits=int(actions[action_index].bits),
-            description=actions[action_index].describe(ctx),
-        )
-        actions[action_index].execute(ctx)
+        selected = display[action_index]
+        raw[display_to_raw[action_index]].execute(ctx)
         self.advance_to_decision()
         return selected
 

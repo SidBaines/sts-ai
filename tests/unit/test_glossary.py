@@ -55,14 +55,62 @@ class AugmentCombatTest(unittest.TestCase):
     def setUp(self):
         self.out = augment(COMBAT_TEXT, [], "combat")
 
-    def test_non_attacking_intent_labelled(self):
-        self.assertIn("intent CULTIST_INCANTATION (no attack)", self.out)
+    def test_non_attacking_intent_labelled_with_effect(self):
+        # A known non-attacking move now spells out its effect (not bare "no attack").
+        self.assertIn("intent CULTIST_INCANTATION (no damage; buffs itself with Ritual", self.out)
+        self.assertNotIn("CULTIST_INCANTATION (no attack)", self.out)
 
-    def test_attacking_intent_not_labelled(self):
-        # the attacking enemy keeps its (deal …) and gets no "(no attack)"
+    def test_intent_effect_statuses_added_to_key(self):
+        # Ritual is referenced only by the Cultist's intent (not on the board), but
+        # is still defined in the KEY so the model knows what it portends.
+        key = self.out[self.out.index("-- KEY"):]
+        self.assertIn("Ritual:", key)
+
+    def test_attacking_intent_keeps_damage_and_no_no_attack(self):
+        # the pure-attack enemy keeps its (deal …) and gets no "(no attack)"/"(also:"
         self.assertIn("intent JAW_WORM_CHOMP (deal 11)", self.out)
         jaw_line = next(l for l in self.out.splitlines() if "JAW_WORM_CHOMP" in l)
         self.assertNotIn("(no attack)", jaw_line)
+        self.assertNotIn("(also:", jaw_line)
+
+    def test_unknown_nonattack_falls_back_to_no_attack(self):
+        out = augment(
+            "Enemies:\n  [0] FOE HP 5/5, block 0, intent FOE_GLARE\n"
+            "Hand: empty\nPiles: draw 1, discard 0, exhaust 0\nPotions: none\n",
+            [], "combat",
+        )
+        self.assertIn("intent FOE_GLARE (no attack)", out)
+
+    def test_attack_rider_appended(self):
+        text = (
+            "Enemies:\n  [0] SPIKE_SLIME_M HP 28/28, block 0, intent SPIKE_SLIME_M_FLAME_TACKLE (deal 8)\n"
+            "Hand: empty\nPiles: draw 5, discard 0, exhaust 0\nPotions: none\n"
+        )
+        out = augment(text, [], "combat")
+        self.assertIn("(deal 8) (also: adds 1 Slimed card to your discard pile)", out)
+
+    def test_incoming_damage_note_sums_intents(self):
+        # Jaw Worm deals 11; Cultist deals 0 -> total 11.
+        self.assertIn("Incoming attack damage this turn: 11 (before your Block)", self.out)
+
+    def test_cant_play_note_for_zero_energy_trap(self):
+        text = (
+            "Battle turn 0\nPlayer HP: 80/80, block: 5, energy: 0/3\nPlayer powers: none\n"
+            "Enemies:\n  [0] JAW_WORM HP 25/42, block 0, intent JAW_WORM_CHOMP (deal 11)\n"
+            "Hand:\n  [0] Strike (cost 1)\n  [1] Strike (cost 1)\n"
+            "Piles: draw 5, discard 0, exhaust 0\nPotions: none\n"
+        )
+        out = augment(text, [{"index": 0, "description": "end turn"}], "combat")
+        self.assertIn("You cannot play any card right now", out)
+
+    def test_no_cant_play_note_when_a_play_action_exists(self):
+        out = augment(
+            COMBAT_TEXT,
+            [{"index": 0, "description": "play Strike (cost 1) -> CULTIST (deal 6)"},
+             {"index": 1, "description": "end turn"}],
+            "combat",
+        )
+        self.assertNotIn("You cannot play any card right now", out)
 
     def test_key_block_defines_active_statuses(self):
         key = self.out[self.out.index("-- KEY"):]
@@ -89,6 +137,46 @@ class AugmentCombatTest(unittest.TestCase):
         self.assertIn("intent FOE_GLARE (no attack)", out)
         self.assertNotIn("Bogusbuff", out[out.index("-- KEY"):] if "-- KEY" in out else "")
         self.assertNotIn("Mysterycard:", out)
+
+
+class RelicPotionKeyTest(unittest.TestCase):
+    def test_ooc_key_defines_relics_and_potions(self):
+        state_text = (
+            "Act 1, floor 8, screen SHOP_ROOM, room SHOP, end-of-act boss The Guardian\n"
+            "Your HP: 34/80, gold: 290\n"
+            "Deck: (10): {Strike,}\n"
+            "Relics: {Burning Blood:0,Mercury Hourglass:0,}\n"
+            "Potions: Fire Potion, Energy Potion\n"
+        )
+        out = augment(state_text, [], "out_of_combat")
+        key = out[out.index("-- KEY"):]
+        self.assertIn("Burning Blood: At the end of combat, heal 6 HP.", key)
+        self.assertIn("Mercury Hourglass:", key)
+        self.assertIn("Fire Potion: Deal 20 damage", key)
+        self.assertIn("Energy Potion: Gain 2 energy.", key)
+
+    def test_unknown_relic_is_skipped(self):
+        state_text = (
+            "Act 1, floor 1, screen MAP_SCREEN, room none, end-of-act boss The Guardian\n"
+            "Your HP: 80/80, gold: 99\n"
+            "Relics: {Totally Made Up Relic:0,}\n"
+            "Potions: none\n"
+        )
+        out = augment(state_text, [], "out_of_combat")
+        # The unknown relic is skipped, so no KEY definition block is produced
+        # (the name still appears in the input Relics: line, which is fine).
+        self.assertNotIn("-- KEY", out)
+
+    def test_combat_key_defines_potions(self):
+        combat_text = (
+            "Battle turn 1\nPlayer HP: 50/80, block: 0, energy: 3/3\nPlayer powers: none\n"
+            "Enemies:\n  [0] JAW_WORM HP 40/44, block 0, intent JAW_WORM_CHOMP (deal 11)\n"
+            "Hand:\n  [0] Strike (cost 1)\nPiles: draw 3, discard 0, exhaust 0\n"
+            "Potions: Fire Potion\n"
+        )
+        out = augment(combat_text, [], "combat")
+        key = out[out.index("-- KEY"):]
+        self.assertIn("Fire Potion: Deal 20 damage", key)
 
 
 class AugmentOocTest(unittest.TestCase):
@@ -131,6 +219,40 @@ class RegressionTest(unittest.TestCase):
         }
         cv = to_view(record).combat
         self.assertEqual([c.name for c in cv.hand], ["Strike", "Bash", "Defend+"])
+
+    def test_combat_notes_do_not_break_combat_view_parsing(self):
+        # The incoming-damage and can't-play notes are appended after Potions; the
+        # combat-board parser (rollout_view) must still read hand + enemies cleanly.
+        combat_text = (
+            "Battle turn 0\nPlayer HP: 80/80, block: 5, energy: 0/3\nPlayer powers: none\n"
+            "Enemies:\n  [0] JAW_WORM HP 25/42, block 0, intent JAW_WORM_CHOMP (deal 11)\n"
+            "Hand:\n  [0] Strike (cost 1)\n  [1] Strike (cost 1)\n"
+            "Piles: draw 5, discard 0, exhaust 0\nPotions: none\n"
+        )
+        actions = [{"index": 0, "description": "end turn"}]
+        record = {
+            "phase": "combat",
+            "state": {
+                "screen_state": "ScreenState.BATTLE",
+                "combat": {
+                    "turn": 0, "player_cur_hp": 80, "player_max_hp": 80,
+                    "player_block": 5, "player_energy": 0,
+                    "enemies": [
+                        {"index": 0, "name": "JAW_WORM", "cur_hp": 25, "max_hp": 42,
+                         "block": 0, "intent": "JAW_WORM_CHOMP", "alive": True},
+                    ],
+                },
+            },
+            "state_text": augment(combat_text, actions, "combat"),
+            "legal_actions": actions,
+            "selected_action": {"index": 0, "description": "end turn"},
+            "agent": {"action_index": 0},
+            "after_state": {},
+        }
+        cv = to_view(record).combat
+        self.assertEqual([c.name for c in cv.hand], ["Strike", "Strike"])
+        self.assertEqual([e.name for e in cv.enemies], ["JAW_WORM"])
+        self.assertTrue(cv.chosen_is_end_turn)
 
 
 class CoverageTest(unittest.TestCase):

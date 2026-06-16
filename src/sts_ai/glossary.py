@@ -236,6 +236,232 @@ CARD_DB: dict[str, str] = {
 
 
 # ---------------------------------------------------------------------------
+# Enemy intent reference. The serializer prints `intent <MOVE>` using the raw
+# engine move id (e.g. ACID_SLIME_S_LICK) and appends `(deal N)` for attacks, but
+# nothing tells the model what a *non-attacking* move does or what an attack's
+# rider applies. Without it the model reads `..._LICK (no attack)` as harmless
+# when it actually debuffs the player. Keys are the exact monsterMoveStrings; the
+# value is the NON-damage clause only (damage is already shown inline). Phrased
+# "<n> <Status>" (number before the status name) so it does not trip
+# `_scan_status_names` (which matches "<Status> <n>"); referenced status names are
+# folded into the KEY by a word-scan. Pure attacks with no rider are omitted (the
+# `(deal N)` already says everything). Grounded in MonsterMoves.h /
+# MonsterSpecific.cpp (Act 1 enemy + boss pool; base/Ascension-0 amounts).
+# ---------------------------------------------------------------------------
+INTENT_DB: dict[str, str] = {
+    # Cultist
+    "CULTIST_INCANTATION": "buffs itself with Ritual (it gains Strength at the end of each of its turns)",
+    # Jaw Worm
+    "JAW_WORM_BELLOW": "buffs itself: gains Strength and Block",
+    "JAW_WORM_THRASH": "gains 5 Block",
+    # Louse
+    "RED_LOUSE_GROW": "buffs itself: gains Strength",
+    "GREEN_LOUSE_GROW": "buffs itself: gains Strength",
+    "GREEN_LOUSE_SPIT_WEB": "applies 2 Weak to you",
+    # Acid Slime
+    "ACID_SLIME_S_LICK": "applies 1 Weak to you",
+    "ACID_SLIME_M_LICK": "applies 1 Weak to you",
+    "ACID_SLIME_L_LICK": "applies 2 Weak to you",
+    "ACID_SLIME_M_CORROSIVE_SPIT": "adds 1 Slimed card to your discard pile",
+    "ACID_SLIME_L_CORROSIVE_SPIT": "adds 2 Slimed cards to your discard pile",
+    "ACID_SLIME_L_SPLIT": "splits into two Medium Acid Slimes",
+    # Spike Slime
+    "SPIKE_SLIME_M_LICK": "applies 1 Frail to you",
+    "SPIKE_SLIME_L_LICK": "applies 2 Frail to you",
+    "SPIKE_SLIME_M_FLAME_TACKLE": "adds 1 Slimed card to your discard pile",
+    "SPIKE_SLIME_L_FLAME_TACKLE": "adds 2 Slimed cards to your discard pile",
+    "SPIKE_SLIME_L_SPLIT": "splits into two Medium Spike Slimes",
+    # Fungi Beast
+    "FUNGI_BEAST_GROW": "buffs itself: gains Strength",
+    # Looter
+    "LOOTER_MUG": "steals gold from you",
+    "LOOTER_LUNGE": "steals gold from you",
+    "LOOTER_SMOKE_BOMB": "gains 6 Block, then prepares to escape",
+    "LOOTER_ESCAPE": "escapes from combat (leaves with any stolen gold)",
+    # Slavers
+    "RED_SLAVER_SCRAPE": "applies 1 Vulnerable to you",
+    "RED_SLAVER_ENTANGLE": "applies Entangled to you (you cannot play Attacks next turn)",
+    "BLUE_SLAVER_RAKE": "applies 1 Weak to you",
+    # Gremlins
+    "FAT_GREMLIN_SMASH": "applies 1 Weak to you",
+    "SHIELD_GREMLIN_PROTECT": "grants Block to another enemy",
+    "GREMLIN_NOB_BELLOW": "buffs itself with Enrage (it gains Strength whenever you play a Skill)",
+    "GREMLIN_WIZARD_CHARGING": "charging up; after 3 charges it casts a large attack",
+    # Lagavulin
+    "LAGAVULIN_SIPHON_SOUL": "reduces your Strength and Dexterity by 1 each",
+    "LAGAVULIN_SLEEP": "asleep; does nothing this turn",
+    # Sentry
+    "SENTRY_BOLT": "adds 2 Dazed cards to your discard pile",
+    # The Guardian
+    "THE_GUARDIAN_CHARGING_UP": "gains 9 Block, then prepares a heavy attack",
+    "THE_GUARDIAN_VENT_STEAM": "applies 2 Weak and 2 Vulnerable to you",
+    "THE_GUARDIAN_DEFENSIVE_MODE": "enters Defensive Mode: gains Sharp Hide (deals damage back when you attack it)",
+    "THE_GUARDIAN_TWIN_SLAM": "ends Defensive Mode (removes Sharp Hide)",
+    # Hexaghost
+    "HEXAGHOST_ACTIVATE": "activating; next turn it attacks 6 times for damage based on your current HP",
+    "HEXAGHOST_SEAR": "adds 1 Burn card to your discard pile",
+    "HEXAGHOST_INFLAME": "buffs itself: gains 12 Block and 2 Strength",
+    # Slime Boss
+    "SLIME_BOSS_GOOP_SPRAY": "adds 3 Slimed cards to your discard pile",
+    "SLIME_BOSS_PREPARING": "preparing; next turn it slams you for heavy damage",
+    "SLIME_BOSS_SPLIT": "splits into a Spike Slime (L) and an Acid Slime (L)",
+}
+
+
+def intent_effect(move: str) -> Optional[str]:
+    """Non-damage effect clause for an enemy move id, or None if unknown / a pure
+    attack (whose damage is already shown inline as `(deal N)`)."""
+    return INTENT_DB.get(move)
+
+
+# ---------------------------------------------------------------------------
+# Potion reference. Keyed by the serializer display name (safePotionName, as it
+# appears on the `Potions:` line). Effects grounded in BattleContext.cpp
+# drinkPotion(); the simulator carries no potion text otherwise. Base amounts
+# (Sacred Bark doubles many of these — not reflected here).
+# ---------------------------------------------------------------------------
+POTION_DB: dict[str, str] = {
+    "Block Potion": "Gain 12 Block.",
+    "Swift Potion": "Draw 3 cards.",
+    "Speed Potion": "Gain 5 Dexterity this turn (lost at end of turn).",
+    "Colorless Potion": "Choose 1 of 3 Colorless cards to add to your hand (costs 0 this turn).",
+    "Attack Potion": "Choose 1 of 3 Attack cards to add to your hand (costs 0 this turn).",
+    "Energy Potion": "Gain 2 energy.",
+    "Strength Potion": "Gain 2 Strength.",
+    "Power Potion": "Choose 1 of 3 Power cards to add to your hand (costs 0 this turn).",
+    "Regen Potion": "Gain 5 Regen (heal a decreasing amount at the end of each turn).",
+    "Flex Potion": "Gain 5 Strength this turn (lost at end of turn).",
+    "Fear Potion": "Apply 3 Vulnerable to an enemy.",
+    "Explosive Potion": "Deal 10 damage to ALL enemies.",
+    "Dexterity Potion": "Gain 2 Dexterity.",
+    "Blessing Of The Forge": "Upgrade every card in your hand for this combat.",
+    "Elixir Potion": "Exhaust any number of cards from your hand.",
+    "Blood Potion": "Heal 20% of your max HP.",
+    "Weak Potion": "Apply 3 Weak to an enemy.",
+    "Fire Potion": "Deal 20 damage to an enemy.",
+    "Liquid Bronze": "Gain 3 Thorns.",
+    "Ancient Potion": "Gain 1 Artifact (negates the next debuff applied to you).",
+    "Fairy Potion": "If you would die this combat, instead heal to 30% of max HP (used automatically).",
+    "Essence Of Steel": "Gain 4 Plated Armor.",
+    "Skill Potion": "Choose 1 of 3 Skill cards to add to your hand (costs 0 this turn).",
+    "Cultist Potion": "Gain 1 Ritual (gain Strength at the end of each of your turns).",
+    "Liquid Memories": "Return a card from your discard pile to your hand; it costs 0 this turn.",
+    "Distilled Chaos": "Play the top 3 cards of your draw pile.",
+    "Fruit Juice": "Permanently gain 5 max HP.",
+    "Duplication Potion": "This turn, the next card you play is played twice.",
+    "Heart Of Iron": "Gain 6 Metallicize (gain that much Block at the end of each turn).",
+    "Gamblers Brew": "Discard any number of cards, then draw that many.",
+    "Entropic Brew": "Fill all your empty potion slots with random potions.",
+    "Snecko Oil": "Draw 5 cards; randomize the cost of every card in your hand this combat.",
+    "Smoke Bomb": "Escape from a non-boss combat (ends it with no rewards).",
+}
+
+
+# ---------------------------------------------------------------------------
+# Relic reference. Keyed by the serializer display name (getRelicName, as it
+# appears on the `Relics:` line, sans the trailing internal `:N` counter). The
+# simulator carries no relic text, so this is hand-authored from the well-known
+# Ironclad-pool/common relic effects; relics not listed here are skipped (their
+# effect is simply not surfaced) rather than risk an inaccurate description.
+# ---------------------------------------------------------------------------
+RELIC_DB: dict[str, str] = {
+    "Burning Blood": "At the end of combat, heal 6 HP.",
+    "Akabeko": "Your first Attack each combat deals 8 additional damage.",
+    "Anchor": "At the start of combat, gain 10 Block.",
+    "Ancient Tea Set": "When you enter combat from a rest site, start with 2 extra energy.",
+    "Art Of War": "If you play no Attacks during a turn, gain 1 extra energy next turn.",
+    "Bag Of Marbles": "At the start of combat, apply 1 Vulnerable to ALL enemies.",
+    "Bag Of Preparation": "At the start of combat, draw 2 extra cards.",
+    "Blood Vial": "At the start of combat, heal 2 HP.",
+    "Bronze Scales": "At the start of combat, gain 3 Thorns.",
+    "Centennial Puzzle": "The first time you lose HP each combat, draw 3 cards.",
+    "Happy Flower": "Every 3 turns, gain 1 energy.",
+    "Lantern": "At the start of combat, gain 1 energy.",
+    "Maw Bank": "Climbing a floor grants 12 gold (stops after you spend at a shop).",
+    "Meal Ticket": "Whenever you enter a shop, heal 15 HP.",
+    "Nunchaku": "Every 10th Attack you play grants 1 energy.",
+    "Oddly Smooth Stone": "At the start of combat, gain 1 Dexterity.",
+    "Orichalcum": "At the end of your turn, if you have no Block, gain 6 Block.",
+    "Pen Nib": "Every 10th Attack you play deals double damage.",
+    "Preserved Insect": "Enemies in Elite rooms start with 25% less HP.",
+    "Red Skull": "While your HP is at or below 50%, gain 3 Strength.",
+    "Self Forming Clay": "Whenever you lose HP in combat, gain 3 Block next turn.",
+    "Smiling Mask": "The shop card-removal service always costs 50 gold.",
+    "Strawberry": "Raises your max HP by 7 (on pickup).",
+    "The Boot": "When you would deal 4 or less unblocked attack damage, deal 5 instead.",
+    "Vajra": "At the start of combat, gain 1 Strength.",
+    "War Paint": "On pickup, upgrade 2 random Skills.",
+    "Whetstone": "On pickup, upgrade 2 random Attacks.",
+    "Meat On The Bone": "At the end of combat, if your HP is at or below 50%, heal 12 HP.",
+    "Letter Opener": "Every 3rd Skill you play deals 5 damage to ALL enemies.",
+    "Mercury Hourglass": "At the start of combat, deal 3 damage to ALL enemies.",
+    "Ink Bottle": "Every 10th card you play, draw 1 card.",
+    "Kunai": "Every 3rd Attack you play in a turn grants 1 Dexterity.",
+    "Shuriken": "Every 3rd Attack you play in a turn grants 1 Strength.",
+    "Toxic Egg": "Skills you add to your deck are obtained already upgraded.",
+    "Frozen Egg": "Powers you add to your deck are obtained already upgraded.",
+    "Molten Egg": "Attacks you add to your deck are obtained already upgraded.",
+    "Bird Faced Urn": "Whenever you play a Power, heal 2 HP.",
+    "Calipers": "At the start of your turn, lose only 15 Block instead of all of it.",
+    "Champion Belt": "Whenever you apply Vulnerable to an enemy, also apply 1 Weak.",
+    "Dead Branch": "Whenever you Exhaust a card, add a random card to your hand.",
+    "Du Vu Doll": "At combat start, gain 1 Strength for each Curse in your deck.",
+    "Magic Flower": "Healing during combat is 50% more effective.",
+    "Singing Bowl": "You may skip a card reward to gain +2 max HP instead.",
+    "Neows Lament": "For your first 3 combats, enemies start at 1 HP.",
+    "Golden Idol": "Enemies drop 25% more gold.",
+    "Ceramic Fish": "Whenever you add a card to your deck, gain 9 gold.",
+    "Tiny Chest": "Every 4th ? (unknown) room becomes a Treasure room.",
+    "Matryoshka": "The next 2 non-boss chests you open contain an extra relic.",
+    "Dream Catcher": "When you rest at a campfire, also add a card to your deck.",
+    "Eternal Feather": "On entering a rest site, heal 3 HP for every 5 cards in your deck.",
+    "Frozen Eye": "While in combat, you can see the order of your draw pile.",
+    "Gremlin Horn": "Whenever an enemy dies, gain 1 energy and draw 1 card.",
+    "Horn Cleat": "At the start of your 2nd turn each combat, gain 14 Block.",
+    "Question Card": "Card reward screens offer 1 extra card to choose from.",
+    "Sundial": "Every 3rd time you shuffle your draw pile, gain 2 energy.",
+    "Omamori": "Negates the next 2 Curses you would add to your deck.",
+    "Pear": "Raises your max HP by 10 (on pickup).",
+    "Mango": "Raises your max HP by 14 (on pickup).",
+    "Regal Pillow": "Resting at a campfire heals an extra 15 HP.",
+    "Shovel": "At a campfire, you may dig instead of resting to gain a random relic.",
+    "Toy Ornithopter": "Whenever you drink a potion, heal 5 HP.",
+    "Strike Dummy": "Cards with 'Strike' in their name deal 3 additional damage.",
+    "Tungsten Rod": "Whenever you would lose HP, lose 1 less.",
+    "Ice Cream": "Energy is conserved between turns (unused energy carries over).",
+    "Pocketwatch": "If you play 3 or fewer cards in a turn, draw 3 extra cards next turn.",
+    "Coffee Dripper": "Gain 1 extra energy each combat, but you can no longer rest at campfires.",
+    "Fusion Hammer": "Gain 1 extra energy each combat, but you can no longer upgrade at campfires.",
+    "Sozu": "Gain 1 extra energy each combat, but you can no longer obtain potions.",
+    "Runic Dome": "Gain 1 extra energy each combat, but you can no longer see enemy intents.",
+    "Runic Pyramid": "You no longer discard your hand at the end of your turn.",
+    "Runic Cube": "Whenever you lose HP, draw 1 card.",
+    "Cursed Key": "Gain 1 extra energy each combat, but non-boss chests also add a Curse.",
+    "Slavers Collar": "In Elite and Boss combats, gain 1 extra energy each turn.",
+    "Mark Of Pain": "Gain 1 extra energy each combat, but 2 Wounds start shuffled into your draw pile.",
+    "Velvet Choker": "Gain 1 extra energy each combat, but you cannot play more than 6 cards per turn.",
+    "Busted Crown": "Gain 1 extra energy each combat, but card rewards offer 2 fewer cards.",
+    "Bottled Flame": "On pickup, an Attack starts every combat already in your hand.",
+    "Bottled Lightning": "On pickup, a Skill starts every combat already in your hand.",
+    "Bottled Tornado": "On pickup, a Power starts every combat already in your hand.",
+    "Sacred Bark": "Doubles the effect of your potions.",
+    "Black Star": "Elites drop an extra relic.",
+    "Empty Cage": "On pickup, remove 2 cards from your deck.",
+    "Juzu Bracelet": "Normal-combat ? (unknown) rooms become non-combat events.",
+}
+
+
+def relic_definition(name: str) -> Optional[str]:
+    desc = RELIC_DB.get(name)
+    return f"{name}: {desc}" if desc else None
+
+
+def potion_definition(name: str) -> Optional[str]:
+    desc = POTION_DB.get(name)
+    return f"{name}: {desc}" if desc else None
+
+
+# ---------------------------------------------------------------------------
 # Augmentation
 # ---------------------------------------------------------------------------
 _KEY_HEADER = "\n\n-- KEY (effects/statuses; numbers are shown next to each above) --"
@@ -257,16 +483,37 @@ def _scan_status_names(line: str) -> set[str]:
     return found
 
 
-def _label_non_attack(line: str) -> str:
-    """Append ' (no attack)' after the intent move on a non-attacking enemy line
-    (one with no '(deal' damage annotation)."""
-    if "(deal" in line:
-        return line
+def _status_names_in_text(text: str) -> set[str]:
+    """STATUS_DB names appearing as whole words in free text (e.g. an intent
+    effect clause), so the statuses an intent will apply get defined in the KEY
+    even though they are not yet on the board."""
+    found = set()
+    for name in STATUS_DB:
+        if re.search(rf"(?<![A-Za-z]){re.escape(name)}(?![A-Za-z])", text):
+            found.add(name)
+    return found
+
+
+def _label_intent(line: str) -> tuple[str, set[str]]:
+    """Annotate an enemy intent with its non-damage effect, and report the
+    statuses that effect references (for the KEY).
+
+    Attacks (a line carrying `(deal N)`) keep that damage and get a trailing
+    `(also: …)` only when the move has a rider. Non-attacks get `(no damage; …)`
+    from INTENT_DB, falling back to the prior `(no attack)` for unknown moves."""
     match = _INTENT_RE.search(line)
     if not match:
-        return line
+        return line, set()
+    move = match.group(1)
+    effect = intent_effect(move)
+    refs = _status_names_in_text(effect) if effect else set()
+    if "(deal" in line:  # attacking move: damage already shown inline
+        if effect:
+            return f"{line} (also: {effect})", refs
+        return line, refs
     cut = match.end(1)
-    return f"{line[:cut]} (no attack){line[cut:]}"
+    label = f"no damage; {effect}" if effect else "no attack"
+    return f"{line[:cut]} ({label}){line[cut:]}", refs
 
 
 def _hand_card_names(state_text: str) -> list[str]:
@@ -320,7 +567,88 @@ def _ooc_card_names(legal_actions: list[dict]) -> list[str]:
     return names
 
 
-def _build_key(status_names: set[str], card_names: list[str]) -> str:
+_DEAL_RE = re.compile(r"\(deal\s+(\d+)")
+
+
+def _has_enemies(state_text: str) -> bool:
+    return any(_ENEMY_LINE_RE.match(line) for line in state_text.split("\n"))
+
+
+def _incoming_damage(state_text: str) -> int:
+    """Sum the per-enemy attack totals from the inline `(deal N …)` annotations.
+    Each `(deal N)` / `(deal N = p x h)` leads with the enemy's pre-block total, so
+    the first number per enemy line is what to add."""
+    total = 0
+    for line in state_text.split("\n"):
+        if _ENEMY_LINE_RE.match(line):
+            match = _DEAL_RE.search(line)
+            if match:
+                total += int(match.group(1))
+    return total
+
+
+def _combat_notes(state_text: str, legal_actions: list[dict]) -> str:
+    """Derived, sim-grounded combat notes appended after the board: the aggregated
+    incoming damage (the model sums intents poorly) and an explicit can't-play
+    warning for the 0-energy / nothing-playable trap (where the only legal action
+    is `end turn`, yet the hand is still listed and is misread as playable)."""
+    notes: list[str] = []
+    if _has_enemies(state_text):
+        notes.append(f"Incoming attack damage this turn: {_incoming_damage(state_text)} (before your Block)")
+    has_play = any(str(a.get("description", "")).strip().startswith("play ") for a in legal_actions)
+    if legal_actions and not has_play and _hand_card_names(state_text):
+        notes.append(
+            "You cannot play any card right now (not enough energy, or no card in hand is "
+            "currently playable). Choose only from the LEGAL ACTIONS listed below."
+        )
+    return ("\n" + "\n".join(notes)) if notes else ""
+
+
+_RELIC_LINE_RE = re.compile(r"^Relics:\s*\{(.*)\}\s*$")
+
+
+def _relic_names(state_text: str) -> list[str]:
+    """Distinct relic names from the `Relics: {Name:0,Name2:1,}` line, dropping the
+    trailing internal `:N` counter (which is not player-meaningful)."""
+    names: list[str] = []
+    for line in state_text.splitlines():
+        match = _RELIC_LINE_RE.match(line.strip())
+        if not match:
+            continue
+        for token in match.group(1).split(","):
+            token = token.strip()
+            if not token:
+                continue
+            name = token.rsplit(":", 1)[0].strip() if ":" in token else token
+            if name and name not in names:
+                names.append(name)
+    return names
+
+
+def _potion_names(state_text: str) -> list[str]:
+    """Distinct real potion names from the `Potions: a, b` line (skips `none` and
+    the EMPTY_POTION_SLOT placeholder)."""
+    names: list[str] = []
+    for line in state_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("Potions:"):
+            body = stripped[len("Potions:"):].strip()
+            if not body or body.lower() == "none":
+                return names
+            for token in body.split(","):
+                name = token.strip()
+                if name and name != "EMPTY_POTION_SLOT" and name not in names:
+                    names.append(name)
+            return names
+    return names
+
+
+def _build_key(
+    status_names: set[str],
+    card_names: list[str],
+    relic_names: list[str] = (),
+    potion_names: list[str] = (),
+) -> str:
     lines: list[str] = []
     for name in sorted(status_names):
         definition = status_definition(name)
@@ -328,6 +656,14 @@ def _build_key(status_names: set[str], card_names: list[str]) -> str:
             lines.append(f"  {definition}")
     for name in card_names:
         definition = _card_definition(name)
+        if definition:
+            lines.append(f"  {definition}")
+    for name in relic_names:
+        definition = relic_definition(name)
+        if definition:
+            lines.append(f"  {definition}")
+    for name in potion_names:
+        definition = potion_definition(name)
         if definition:
             lines.append(f"  {definition}")
     if not lines:
@@ -346,11 +682,22 @@ def augment(state_text: str, legal_actions: list[dict], phase: str) -> str:
         out_lines: list[str] = []
         for line in state_text.split("\n"):
             if _ENEMY_LINE_RE.match(line):
-                line = _label_non_attack(line)
+                # Scan the raw line for the enemy's *current* statuses before adding
+                # any effect text, so the appended intent clause can't pollute it.
                 statuses |= _scan_status_names(line)
+                line, refs = _label_intent(line)
+                statuses |= refs
             elif line.startswith("Player powers:"):
                 statuses |= _scan_status_names(line)
             out_lines.append(line)
         body = "\n".join(out_lines)
-        return body + _build_key(statuses, _hand_card_names(state_text))
-    return state_text + _build_key(set(), _ooc_card_names(legal_actions))
+        notes = _combat_notes(state_text, legal_actions)
+        key = _build_key(statuses, _hand_card_names(state_text), potion_names=_potion_names(state_text))
+        return body + notes + key
+    key = _build_key(
+        set(),
+        _ooc_card_names(legal_actions),
+        relic_names=_relic_names(state_text),
+        potion_names=_potion_names(state_text),
+    )
+    return state_text + key

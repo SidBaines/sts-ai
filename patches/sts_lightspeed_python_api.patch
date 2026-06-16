@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..3032d49 100644
+index a9afe35..b623b7b 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -12,21 +12,636 @@
+@@ -12,21 +12,679 @@
  
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
@@ -293,14 +293,40 @@ index a9afe35..3032d49 100644
 +    return os.str();
 +}
 +
++// Human-/model-facing reason the out-of-combat CARD_SELECT screen is open, so the
++// choice is judgeable: the bare "Card select: 0/1" never said whether the picked
++// card is removed, upgraded, transformed, etc. Mirrors CardSelectScreenType.
++const char *cardSelectPurpose(CardSelectScreenType type) {
++    switch (type) {
++        case CardSelectScreenType::TRANSFORM:
++            return "Choose a card to TRANSFORM (replace it with a random different card)";
++        case CardSelectScreenType::TRANSFORM_UPGRADE:
++            return "Choose a card to TRANSFORM and then UPGRADE";
++        case CardSelectScreenType::UPGRADE:
++            return "Choose a card to UPGRADE";
++        case CardSelectScreenType::REMOVE:
++            return "Choose a card to REMOVE from your deck";
++        case CardSelectScreenType::DUPLICATE:
++            return "Choose a card to DUPLICATE (add another copy to your deck)";
++        case CardSelectScreenType::OBTAIN:
++            return "Choose a card to OBTAIN (add it to your deck)";
++        case CardSelectScreenType::BOTTLE:
++            return "Choose a card to BOTTLE (it will start every combat already in your hand)";
++        case CardSelectScreenType::BONFIRE_SPIRITS:
++            return "Choose a card to SACRIFICE in the Bonfire (it is removed from your deck)";
++        default:
++            return "Choose a card";
++    }
++}
++
 +std::string describeGameState(const GameContext &gc) {
 +    std::ostringstream os;
 +    os << "Act " << gc.act
 +       << ", floor " << gc.floorNum
 +       << ", screen " << screenStateName(gc.screenState)
 +       << ", room " << roomLabel(gc.curRoom)
-+       << ", boss " << monsterEncounterStrings[static_cast<int>(gc.boss)]
-+       << "\nHP: " << gc.curHp << "/" << gc.maxHp
++       << ", end-of-act boss " << monsterEncounterStrings[static_cast<int>(gc.boss)]
++       << "\nYour HP: " << gc.curHp << "/" << gc.maxHp
 +       << ", gold: " << gc.gold
 +       << "\nDeck: " << gc.deck
 +       << "\nRelics: " << gc.relics
@@ -322,7 +348,8 @@ index a9afe35..3032d49 100644
 +    } else if (gc.screenState == ScreenState::REWARDS) {
 +        os << "\nRewards: " << gc.info.rewardsContainer.toString();
 +    } else if (gc.screenState == ScreenState::CARD_SELECT) {
-+        os << "\nCard select: " << gc.info.haveSelectedCards.size() << "/" << gc.info.toSelectCount;
++        os << "\n" << cardSelectPurpose(gc.info.selectScreenType)
++           << " (chosen " << gc.info.haveSelectedCards.size() << " of " << gc.info.toSelectCount << ").";
 +    }
 +
 +    return os.str();
@@ -431,6 +458,22 @@ index a9afe35..3032d49 100644
 +                const int target = a.getTargetIdx();
 +                if (target >= 0 && target < bc.monsters.monsterCount) {
 +                    os << " -> " << bc.monsters.arr[target].getName();
++                    // Disambiguate when another LIVING enemy shares this name (e.g. 3
++                    // Sentries, split slimes): append the enemy slot index [i] so the
++                    // model can target a specific one and identical-name targets are no
++                    // longer rendered identically. Format " [enemy i]"; the Python
++                    // de-dup and rollout_view/_PLAY_RE parsing tolerate this suffix.
++                    const std::string targetName = bc.monsters.arr[target].getName();
++                    int sameNameAlive = 0;
++                    for (int mi = 0; mi < bc.monsters.monsterCount; ++mi) {
++                        if (bc.monsters.arr[mi].isAlive()
++                                && std::string(bc.monsters.arr[mi].getName()) == targetName) {
++                            ++sameNameAlive;
++                        }
++                    }
++                    if (sameNameAlive > 1) {
++                        os << " [enemy " << target << "]";
++                    }
 +                    dealTarget = target;
 +                }
 +            }
@@ -639,7 +682,7 @@ index a9afe35..3032d49 100644
  
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +656,136 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -41,6 +699,136 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
          .def("playout", &search::ScumSearchAgent2::playout);
  
@@ -776,7 +819,7 @@ index a9afe35..3032d49 100644
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
          .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -75,6 +820,9 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +863,9 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
  
@@ -786,7 +829,7 @@ index a9afe35..3032d49 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -836,5 +1584,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +1627,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
  
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")

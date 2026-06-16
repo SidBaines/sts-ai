@@ -182,6 +182,9 @@ def compute(state: dict[str, Any], state_text: str, legal_actions: list[dict[str
         dmg = int(deal)
         max_single = max(max_single, dmg)
         target = (match.group(3) or "").strip()
+        # The binding appends " [enemy i]" to disambiguate same-named targets; drop it
+        # so the name still matches enemy_hp_by_name (keyed by name).
+        target = re.sub(r"\s*\[enemy \d+\]$", "", target)
         if target and target in enemy_hp_by_name and dmg >= enemy_hp_by_name[target]:
             lethal = True
 

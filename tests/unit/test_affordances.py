@@ -37,6 +37,29 @@ class ComputeTest(unittest.TestCase):
     def test_out_of_combat_is_empty(self):
         self.assertEqual(compute({}, "Act 1 ...", [], "out_of_combat"), {})
 
+    def test_lethal_detection_tolerates_enemy_index_suffix(self):
+        # Two same-named enemies -> the binding appends " [enemy i]"; affordances must
+        # still match the name (after stripping the suffix) to spot an available lethal.
+        enemies = [
+            {"name": "FUNGI_BEAST", "cur_hp": 6, "max_hp": 28, "block": 0, "alive": True,
+             "intent_damage": 0, "intent_hits": -1},
+            {"name": "FUNGI_BEAST", "cur_hp": 6, "max_hp": 28, "block": 0, "alive": True,
+             "intent_damage": 0, "intent_hits": -1},
+        ]
+        state = {"combat": {"player_energy": 3, "player_block": 0, "enemies": enemies}}
+        state_text = (
+            "Battle turn 1\nPlayer HP: 50/80, block: 0, energy: 3/3\nPlayer powers: none\n"
+            "Enemies:\n  [0] FUNGI_BEAST HP 6/28, block 0, intent X\n"
+            "  [1] FUNGI_BEAST HP 6/28, block 0, intent X\n"
+            "Hand:\n  [0] Strike (cost 1)\nPiles: draw 1, discard 0, exhaust 0\nPotions: none\n"
+        )
+        actions = [
+            {"index": 0, "description": "play Strike (cost 1) -> FUNGI_BEAST [enemy 1] (deal 6)"},
+            {"index": 1, "description": "end turn"},
+        ]
+        aff = compute(state, state_text, actions, "combat")
+        self.assertTrue(aff["single_target_lethal_available"])
+
     def test_incoming_and_full_block(self):
         enemies = [{"name": "FOE", "cur_hp": 40, "block": 0, "alive": True,
                     "intent_damage": 4, "intent_hits": 2}]  # incoming 8

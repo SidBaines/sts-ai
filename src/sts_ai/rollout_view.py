@@ -167,6 +167,9 @@ _PLAY_RE = re.compile(
 )
 _PILES_RE = re.compile(r"Piles:\s*draw\s+(\d+),\s*discard\s+(\d+),\s*exhaust\s+(\d+)")
 _ENERGY_RE = re.compile(r"energy:\s*(\d+)\s*/\s*(\d+)")
+# Trailing " [enemy i]" the binding appends to a play action's target to
+# disambiguate same-named enemies (e.g. two Fungi Beasts).
+_ENEMY_IDX_RE = re.compile(r"\s*\[enemy (\d+)\]$")
 
 
 def prettify_enemy_name(raw: str) -> str:
@@ -243,6 +246,7 @@ def to_combat_view(record: dict[str, Any]) -> Optional[CombatView]:
     chosen_card_name = ""
     chosen_cost = None
     chosen_target_raw = None
+    chosen_target_idx_hint: Optional[int] = None
     chosen_is_end_turn = False
     sel_desc = str(record.get("selected_action", {}).get("description", "")).strip()
     sel_match = _PLAY_RE.match(sel_desc)
@@ -250,12 +254,21 @@ def to_combat_view(record: dict[str, Any]) -> Optional[CombatView]:
         chosen_card_name = sel_match.group(1)
         chosen_cost = sel_match.group(2)
         chosen_target_raw = (sel_match.group(3) or "").strip() or None
+        if chosen_target_raw:
+            # The binding appends " [enemy i]" to disambiguate same-named targets;
+            # the index is authoritative, so prefer it and strip it from the name.
+            hint = _ENEMY_IDX_RE.search(chosen_target_raw)
+            if hint:
+                chosen_target_idx_hint = int(hint.group(1))
+                chosen_target_raw = chosen_target_raw[: hint.start()].strip() or None
     elif sel_desc.lower().startswith("end turn"):
         chosen_is_end_turn = True
 
     enemies_raw = combat.get("enemies", []) or []
     chosen_target_index: Optional[int] = None
-    if chosen_target_raw:
+    if chosen_target_idx_hint is not None:
+        chosen_target_index = chosen_target_idx_hint
+    elif chosen_target_raw:
         matches = [e for e in enemies_raw if e.get("name") == chosen_target_raw]
         alive = [e for e in matches if e.get("alive", True)]
         pick = alive or matches
