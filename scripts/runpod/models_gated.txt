@@ -1,0 +1,10 @@
+# Gated models (HF license-gated) that failed the first A40 run because vLLM/
+# transformers need HF_TOKEN as an ENV VAR (the cached token file is not enough).
+# Re-run on H100 with HF_TOKEN exported. Gemma family then Llama family, each
+# smallest->largest. Each runs both reasoning-off and reasoning-on arms
+# (Gemma/Llama have no native thinking toggle, so reasoning-on is prompted).
+google/gemma-3-1b-it
+google/gemma-3-4b-it
+google/gemma-3-12b-it
+meta-llama/Llama-3.2-1B-Instruct
+meta-llama/Llama-3.1-8B-Instruct
