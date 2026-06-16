@@ -15,6 +15,18 @@ multi-model sweep (`scripts/run_sweep.py` → `scripts/compare_models.py`).
   (so effective concurrency K=4, capped by the 4 seeds), `--battle-simulations 50`,
   `--max-tokens 256`.
 
+## vLLM / CUDA path
+
+The vLLM backend now uses streaming continuous batching (`run_streaming_rollouts`)
+instead of lockstep rounds. The throughput knob is `--concurrency`; effective
+concurrency is `min(concurrency, number of rollout specs)`, so a pod run needs
+enough seeds/rollout indices to keep the GPU busy. Prefix caching is enabled by
+default for vLLM.
+
+The MLX numbers below are unchanged because MLX still uses `parallel_rollout`
+with `--batch-size`. vLLM thinking-mode benchmarks need to be (re)measured on the
+pod; do not infer CUDA numbers from the local MLX table.
+
 ## Results — valid (no-thinking) arms
 
 Each arm = 4 rollouts (Ironclad act 1, seeds 3/4/5/7).

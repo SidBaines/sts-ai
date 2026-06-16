@@ -1,8 +1,8 @@
-"""Shared test helpers.
+"""Shared test helpers and optional-dependency gates.
 
 The fast unit tier (``tests/unit``) is pure Python and must run without the
 native simulator. The integration tier (``tests/integration``) exercises the
-built ``sts_lightspeed`` module and is gated with :func:`requires_simulator`.
+built ``sts_lightspeed`` module and optional GPU backends via explicit gates.
 """
 from __future__ import annotations
 
@@ -40,3 +40,26 @@ def requires_simulator(test_item):
     if _REQUIRE or simulator_available():
         return test_item
     return unittest.skip(_SKIP_REASON)(test_item)
+
+
+def vllm_available() -> bool:
+    """True if the optional ``vllm`` package can be imported."""
+    try:
+        import vllm  # noqa: F401
+    except Exception:
+        return False
+    return True
+
+
+_REQUIRE_VLLM = os.environ.get("STS_REQUIRE_VLLM") == "1"
+_VLLM_SKIP_REASON = (
+    "vLLM is not installed (CUDA-only); install with `.[vllm]`. "
+    "Set STS_REQUIRE_VLLM=1 to fail instead of skip."
+)
+
+
+def requires_vllm(test_item):
+    """Gate a test method or ``TestCase`` on the optional vLLM backend."""
+    if _REQUIRE_VLLM or vllm_available():
+        return test_item
+    return unittest.skip(_VLLM_SKIP_REASON)(test_item)

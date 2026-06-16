@@ -10,7 +10,8 @@ Two tiers. See the top-level [`CLAUDE.md`](../CLAUDE.md) for project rules.
 - `integration/` — **drives the real built `sts_lightspeed` module.** Each
   `TestCase`/method that constructs `LightspeedHybridEnv` (or otherwise needs the
   binary) is decorated with `@requires_simulator` from [`support.py`](support.py).
-- `support.py` — shared helpers (`simulator_available`, `requires_simulator`).
+- `support.py` — shared helpers (`simulator_available`/`requires_simulator`,
+  `vllm_available`/`requires_vllm`).
 
 ## Running
 
