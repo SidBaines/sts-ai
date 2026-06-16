@@ -32,7 +32,9 @@ LOCAL_DIR="${3%/}"
 INTERVAL_SECONDS="${4:-600}"
 
 timestamp() {
-  date -Is
+  # Portable ISO-ish timestamp: `date -Is` is GNU-only and errors on macOS/BSD,
+  # and sync_back.sh runs locally (often a Mac).
+  date '+%Y-%m-%dT%H:%M:%S'
 }
 
 ssh_host="$SSH_TARGET"
