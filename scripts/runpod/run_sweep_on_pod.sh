@@ -9,7 +9,8 @@ Runs one model per scripts/run_sweep.py process, sequentially, on the current GP
 
 Defaults:
   out-dir: data/rollouts/a40_sweep
-  seeds:   3,4,5,6,7,8
+  seeds:   3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+  concurrency: 48 (override with CONCURRENCY=...)
 USAGE
 }
 
@@ -25,10 +26,10 @@ fi
 
 MODELS_ARG="$1"
 OUT_DIR="${2:-data/rollouts/a40_sweep}"
-SEEDS="${3:-3,4,5,6,7,8}"
-# Concurrent rollouts per arm (the throughput lever). Capped in practice by the
-# number of seeds, so raising it only helps when SEEDS is large. Override via env.
-BATCH_SIZE="${BATCH_SIZE:-8}"
+SEEDS="${3:-3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18}"
+# In-flight rollout cap for vLLM streaming continuous batching. Effective
+# concurrency is min(CONCURRENCY, seeds per arm), so keep SEEDS large enough.
+CONCURRENCY="${CONCURRENCY:-48}"
 MAX_DECISIONS="${MAX_DECISIONS:-200}"
 
 ORIGINAL_CWD="$(pwd)"
@@ -90,7 +91,7 @@ printf 'Repo:        %s\n' "$REPO_DIR"
 printf 'Models file: %s\n' "$MODELS_FILE"
 printf 'Output dir:  %s\n' "$OUT_DIR"
 printf 'Seeds:       %s\n' "$SEEDS"
-printf 'Batch size:  %s   Max decisions: %s\n' "$BATCH_SIZE" "$MAX_DECISIONS"
+printf 'Concurrency: %s   Max decisions: %s\n' "$CONCURRENCY" "$MAX_DECISIONS"
 printf 'Models:      %s\n' "${models[*]}"
 
 successes=()
@@ -119,7 +120,7 @@ for model in "${models[@]}"; do
     --temperature 0
     --battle-simulations 50
     --max-decisions "$MAX_DECISIONS"
-    --batch-size "$BATCH_SIZE"
+    --concurrency "$CONCURRENCY"
     --seeds "$SEEDS"
     --output-dir "$OUT_DIR"
   )

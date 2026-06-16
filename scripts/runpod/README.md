@@ -71,6 +71,11 @@ nohup bash scripts/runpod/run_sweep_on_pod.sh scripts/runpod/models_pod_b.txt da
 
 The wrapper runs one model per `scripts/run_sweep.py` process. That is deliberate: vLLM does not reliably free GPU memory between in-process model loads. Each process still runs both thinking modes with `--thinking both`, so one model load is reused across the reasoning-off and reasoning-on arms for that model.
 
+The vLLM path uses streaming continuous batching. `CONCURRENCY` defaults to `48`
+and caps in-flight rollouts; effective concurrency is
+`min(CONCURRENCY, number of seeds per arm)`, so use enough seeds to keep the GPU
+busy. Prefix caching is enabled by default.
+
 ## 5. Sync Results Locally
 
 Run one sync loop per pod from your dev machine, in separate terminals:

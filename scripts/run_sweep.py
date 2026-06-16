@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""Batched multi-model rollout sweep.
+"""Multi-model rollout sweep.
 
-Runs models x {thinking on/off} x seeds through the cross-rollout batched
-orchestrator (sts_ai.parallel_rollout), writing per-rollout JSONL + meta sidecars
-under <output-dir>/<agent_label>/. One model load is reused across both thinking
-modes (thinking is a per-call chat-template toggle).
+Runs models x {thinking on/off} x seeds through the backend-appropriate rollout
+orchestrator, writing per-rollout JSONL + meta sidecars under
+<output-dir>/<agent_label>/. One model load is reused across both thinking modes
+(thinking is a per-call chat-template toggle).
 
 Example:
     PYTHONPATH=src .venv/bin/python scripts/run_sweep.py \
@@ -23,6 +23,7 @@ from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.parallel_rollout import run_parallel_rollouts
 from sts_ai.rollout import current_git_sha
 from sts_ai.seeding import expand_specs, rollout_stem
+from sts_ai.streaming_rollout import run_streaming_rollouts
 
 _THINKING_MODES = {"off": [False], "on": [True], "both": [False, True]}
 
@@ -34,7 +35,7 @@ def parse_seeds(args: argparse.Namespace) -> list[int]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Batched multi-model rollout sweep.")
+    parser = argparse.ArgumentParser(description="Multi-model rollout sweep.")
     parser.add_argument("--models", required=True, help="Comma-separated HF/mlx model ids.")
     parser.add_argument("--backend", choices=["mlx", "vllm"], default="mlx")
     parser.add_argument("--thinking", choices=list(_THINKING_MODES), default="off")
@@ -43,6 +44,12 @@ def main() -> None:
     parser.add_argument("--seed-count", type=int, default=10)
     parser.add_argument("--rollouts-per-seed", type=int, default=1)
     parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--concurrency", type=int, default=48,
+                        help="vLLM continuous-batching in-flight cap. Effective concurrency is "
+                        "min(concurrency, number of specs), so raise seeds/rollouts to use it.")
+    parser.add_argument("--enable-prefix-caching", action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help="Enable vLLM prefix caching. vLLM-only and numerically transparent.")
     parser.add_argument("--max-decisions", type=int, default=200)
     parser.add_argument("--combat-control", choices=["search", "llm"], default="llm")
     parser.add_argument("--battle-simulations", type=int, default=50)
@@ -78,8 +85,14 @@ def main() -> None:
     for model in models:
         # One load per model id; both thinking modes reuse the same weights.
         try:
-            agent = build_agent(args.backend, model=model, max_tokens=args.max_tokens,
-                                temperature=args.temperature, thinking=modes[0])
+            agent = build_agent(
+                args.backend,
+                model=model,
+                max_tokens=args.max_tokens,
+                temperature=args.temperature,
+                thinking=modes[0],
+                enable_prefix_caching=args.enable_prefix_caching,
+            )
         except Exception as exc:  # noqa: BLE001 - skip a model that won't load, keep the sweep going
             print(f"[{model}] FAILED to load ({exc.__class__.__name__}: {exc}); skipping")
             continue
@@ -104,14 +117,27 @@ def main() -> None:
                 "git_sha": git_sha,
                 "battle_simulations": args.battle_simulations,
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "extra": {
+                    "orchestrator": "streaming" if args.backend == "vllm" else "parallel",
+                    "concurrency": args.concurrency if args.backend == "vllm" else args.batch_size,
+                },
             }
-            results = run_parallel_rollouts(
-                to_run, make_env, agent,
-                output_for=lambda ws, ri, d=out_dir: d / f"{rollout_stem(ws, ri)}.jsonl",
-                batch_size=args.batch_size,
-                max_decisions=args.max_decisions,
-                run_meta=run_meta,
-            )
+            if args.backend == "vllm":
+                results = run_streaming_rollouts(
+                    to_run, make_env, agent,
+                    output_for=lambda ws, ri, d=out_dir: d / f"{rollout_stem(ws, ri)}.jsonl",
+                    concurrency=args.concurrency,
+                    max_decisions=args.max_decisions,
+                    run_meta=run_meta,
+                )
+            else:
+                results = run_parallel_rollouts(
+                    to_run, make_env, agent,
+                    output_for=lambda ws, ri, d=out_dir: d / f"{rollout_stem(ws, ri)}.jsonl",
+                    batch_size=args.batch_size,
+                    max_decisions=args.max_decisions,
+                    run_meta=run_meta,
+                )
             wins = sum(1 for r in results if "VICTORY" in str(r.terminal_state.get("outcome", "")))
             print(f"[{label}] done: {len(results)} rollouts, {wins} wins")
         if args.backend == "vllm":
