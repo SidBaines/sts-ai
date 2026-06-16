@@ -57,6 +57,74 @@ class _Slot:
         self.done = False
 
 
+def finalize_slot(
+    slot: _Slot,
+    *,
+    results: dict[tuple[int, int], RolloutResult],
+    agent: Any,
+    run_meta: Optional[dict[str, Any]],
+    stopped_reason: str,
+    error: Optional[dict[str, Any]] = None,
+) -> None:
+    slot.stopped_reason = stopped_reason
+    slot.error = error
+    slot.done = True
+    result = RolloutResult(
+        world_seed=slot.world_seed,
+        decisions=slot.decisions,
+        terminal_state=slot.env.summary(),
+        stopped_reason=stopped_reason,
+        error=error,
+        policy_seed=slot.policy_seed,
+        rollout_index=slot.rollout_index,
+    )
+    if slot.output_path is not None:
+        write_rollout_meta(slot.output_path, build_rollout_meta(result, slot.env, agent, run_meta))
+    results[(slot.world_seed, slot.rollout_index)] = result
+
+
+def advance_slot(
+    slot: _Slot,
+    *,
+    max_decisions: int,
+    results: dict[tuple[int, int], RolloutResult],
+    agent: Any,
+    run_meta: Optional[dict[str, Any]],
+) -> None:
+    """Prepare the slot's next decision, or finalize it if it's finished."""
+    if slot.decision_index >= max_decisions:
+        finalize_slot(
+            slot,
+            results=results,
+            agent=agent,
+            run_meta=run_meta,
+            stopped_reason="max_decisions",
+        )
+        return
+    try:
+        status, view = prepare_decision(slot.env)
+    except Exception as exc:  # noqa: BLE001 - preserve simulator failures in metadata
+        finalize_slot(
+            slot,
+            results=results,
+            agent=agent,
+            run_meta=run_meta,
+            stopped_reason="simulator_error",
+            error=error_payload(exc, "advance_to_decision", slot.decision_index),
+        )
+        return
+    if status != "ok":
+        finalize_slot(
+            slot,
+            results=results,
+            agent=agent,
+            run_meta=run_meta,
+            stopped_reason=status,
+        )
+        return
+    slot.view = view
+
+
 def run_parallel_rollouts(
     specs: list[tuple[int, int]],
     make_env: Callable[[int], LightspeedHybridEnv],
@@ -73,38 +141,6 @@ def run_parallel_rollouts(
     active: list[_Slot] = []
     results: dict[tuple[int, int], RolloutResult] = {}
 
-    def finalize(slot: _Slot, stopped_reason: str, error: Optional[dict[str, Any]] = None) -> None:
-        slot.stopped_reason = stopped_reason
-        slot.error = error
-        slot.done = True
-        result = RolloutResult(
-            world_seed=slot.world_seed,
-            decisions=slot.decisions,
-            terminal_state=slot.env.summary(),
-            stopped_reason=stopped_reason,
-            error=error,
-            policy_seed=slot.policy_seed,
-            rollout_index=slot.rollout_index,
-        )
-        if slot.output_path is not None:
-            write_rollout_meta(slot.output_path, build_rollout_meta(result, slot.env, agent, run_meta))
-        results[(slot.world_seed, slot.rollout_index)] = result
-
-    def advance(slot: _Slot) -> None:
-        """Prepare the slot's next decision, or finalize it if it's finished."""
-        if slot.decision_index >= max_decisions:
-            finalize(slot, "max_decisions")
-            return
-        try:
-            status, view = prepare_decision(slot.env)
-        except Exception as exc:  # noqa: BLE001 - preserve simulator failures in metadata
-            finalize(slot, "simulator_error", error_payload(exc, "advance_to_decision", slot.decision_index))
-            return
-        if status != "ok":
-            finalize(slot, status)
-            return
-        slot.view = view
-
     def open_slot(spec: tuple[int, int]) -> _Slot:
         world_seed, rollout_index = spec
         slot = _Slot(
@@ -113,7 +149,13 @@ def run_parallel_rollouts(
             make_env(world_seed),
             output_for(world_seed, rollout_index),
         )
-        advance(slot)  # may finalize immediately (e.g. terminal with no decisions)
+        advance_slot(
+            slot,
+            max_decisions=max_decisions,
+            results=results,
+            agent=agent,
+            run_meta=run_meta,
+        )  # may finalize immediately (e.g. terminal with no decisions)
         return slot
 
     def refill() -> None:
@@ -139,7 +181,14 @@ def run_parallel_rollouts(
             try:
                 selected = slot.env.step(action_index)
             except Exception as exc:  # noqa: BLE001
-                finalize(slot, "simulator_error", error_payload(exc, "step", slot.decision_index))
+                finalize_slot(
+                    slot,
+                    results=results,
+                    agent=agent,
+                    run_meta=run_meta,
+                    stopped_reason="simulator_error",
+                    error=error_payload(exc, "step", slot.decision_index),
+                )
                 continue
             record = build_decision_record(
                 world_seed=slot.world_seed,
@@ -158,7 +207,13 @@ def run_parallel_rollouts(
             if slot.output_path is not None:
                 append_jsonl(slot.output_path, asdict(record))
             slot.decision_index += 1
-            advance(slot)  # prepare next decision or finalize
+            advance_slot(
+                slot,
+                max_decisions=max_decisions,
+                results=results,
+                agent=agent,
+                run_meta=run_meta,
+            )  # prepare next decision or finalize
 
         active[:] = [slot for slot in active if not slot.done]
         refill()
