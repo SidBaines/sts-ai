@@ -175,7 +175,12 @@ def render_combat_board(cv: CombatView) -> None:
 
 
 def render_actions_and_reasoning(dv: DecisionView) -> None:
-    validity = "✅ valid" if dv.valid else "⚠️ invalid (fell back to 0)"
+    if dv.valid:
+        validity = "✅ valid"
+    elif dv.action_executed:
+        validity = "⚠️ invalid (legacy fallback executed)"
+    else:
+        validity = "⚠️ invalid (rollout stopped)"
     retries = f" · {dv.retries} retr" if dv.retries else ""
     st.markdown(f"**Legal actions** · {validity}{retries}")
     for a in dv.actions:

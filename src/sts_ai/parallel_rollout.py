@@ -133,11 +133,15 @@ def run_parallel_rollouts(
     output_for: Callable[[int, int], Optional[Path]] = lambda ws, ri: None,
     batch_size: int = 8,
     max_decisions: int = 200,
+    max_retries: int | None = None,
     run_meta: Optional[dict[str, Any]] = None,
 ) -> list[RolloutResult]:
     """Run `(world_seed, rollout_index)` specs as concurrent rollouts, K
     (`batch_size`) at a time, batching the agent's per-decision generations.
     Returns RolloutResults in input spec order."""
+    if max_retries is None:
+        max_retries = getattr(agent, "max_retries", 1)
+
     queue = deque(specs)
     active: list[_Slot] = []
     results: dict[tuple[int, int], RolloutResult] = {}
@@ -174,11 +178,46 @@ def run_parallel_rollouts(
         ]
         agent.reseed(derive_batch_seed(members))
         batch = [(slot.view["state_text"], slot.view["legal_actions"]) for slot in active_batch]
-        decisions = agent.choose_actions_batch(batch)
+        retry_flags = [slot.attempt > 0 for slot in active_batch]
+        try:
+            decisions = agent.choose_actions_batch(batch, retry_flags=retry_flags)
+        except TypeError:
+            decisions = agent.choose_actions_batch(batch)
 
         for slot, agent_decision in zip(active_batch, decisions):
             view = slot.view
+            agent_decision.retries = slot.attempt
             action_index = clamp_action_index(agent_decision, len(view["legal_actions"]))
+            if not agent_decision.valid and slot.attempt < max_retries:
+                slot.attempt += 1
+                continue
+            if not agent_decision.valid:
+                agent_decision.retries = slot.attempt
+                record = build_decision_record(
+                    world_seed=slot.world_seed,
+                    decision_index=slot.decision_index,
+                    state=view["state"],
+                    state_text=view["state_text"],
+                    legal_action_dicts=view["legal_action_dicts"],
+                    selected_action_dict={},
+                    agent_decision=agent_decision,
+                    after_state=slot.env.summary(),
+                    phase=view["phase"],
+                    policy_seed=slot.policy_seed,
+                    rollout_index=slot.rollout_index,
+                    action_executed=False,
+                )
+                slot.decisions.append(record)
+                if slot.output_path is not None:
+                    append_jsonl(slot.output_path, asdict(record))
+                finalize_slot(
+                    slot,
+                    results=results,
+                    agent=agent,
+                    run_meta=run_meta,
+                    stopped_reason="agent_invalid",
+                )
+                continue
             try:
                 selected = slot.env.step(action_index)
             except Exception as exc:  # noqa: BLE001
@@ -215,6 +254,8 @@ def run_parallel_rollouts(
                 agent=agent,
                 run_meta=run_meta,
             )  # prepare next decision or finalize
+            if not slot.done:
+                slot.attempt = 0
 
         active[:] = [slot for slot in active if not slot.done]
         refill()

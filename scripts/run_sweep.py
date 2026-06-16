@@ -58,10 +58,11 @@ def main() -> None:
     parser.add_argument("--max-tokens", type=int, default=4096,
                         help="Generation cap. Must be large for reasoning/thinking models — a small "
                         "cap (e.g. 256) truncates mid-thought so no JSON is emitted and the agent "
-                        "falls back to action 0. Harmless for no-thinking (stops at EOS first).")
+                        "stops with agent_invalid after retries. Harmless for no-thinking "
+                        "(stops at EOS first).")
     parser.add_argument("--max-retries", type=int, default=1,
                         help="Invalid-response retries. The vLLM streaming path resubmits the "
-                        "decision and falls back to action 0 after exhaustion.")
+                        "decision and stops the rollout with agent_invalid after exhaustion.")
     parser.add_argument("--output-dir", type=Path, default=Path("data") / "rollouts" / "sweep")
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
@@ -140,6 +141,7 @@ def main() -> None:
                     output_for=lambda ws, ri, d=out_dir: d / f"{rollout_stem(ws, ri)}.jsonl",
                     batch_size=args.batch_size,
                     max_decisions=args.max_decisions,
+                    max_retries=args.max_retries,
                     run_meta=run_meta,
                 )
             wins = sum(1 for r in results if "VICTORY" in str(r.terminal_state.get("outcome", "")))

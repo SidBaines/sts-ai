@@ -47,7 +47,8 @@ def run_streaming_rollouts(
     """Run rollout specs through a continuous-batching generation backend.
 
     Invalid responses get per-rollout retries as new non-blocking requests;
-    after retry exhaustion, the decision falls back to action 0.
+    after retry exhaustion, the invalid response is recorded and the rollout
+    stops with `agent_invalid` before any fallback action is executed.
     """
     if max_retries is None:
         max_retries = getattr(agent, "max_retries", 1)
@@ -119,6 +120,32 @@ def run_streaming_rollouts(
                 continue
             decision.retries = slot.attempt
             action_index = clamp_action_index(decision, len(view["legal_actions"]))
+            if not decision.valid:
+                record = build_decision_record(
+                    world_seed=slot.world_seed,
+                    decision_index=slot.decision_index,
+                    state=view["state"],
+                    state_text=view["state_text"],
+                    legal_action_dicts=view["legal_action_dicts"],
+                    selected_action_dict={},
+                    agent_decision=decision,
+                    after_state=slot.env.summary(),
+                    phase=view["phase"],
+                    policy_seed=slot.policy_seed,
+                    rollout_index=slot.rollout_index,
+                    action_executed=False,
+                )
+                slot.decisions.append(record)
+                if slot.output_path is not None:
+                    append_jsonl(slot.output_path, asdict(record))
+                finalize_slot(
+                    slot,
+                    results=results,
+                    agent=agent,
+                    run_meta=run_meta,
+                    stopped_reason="agent_invalid",
+                )
+                continue
             try:
                 selected = slot.env.step(action_index)
             except Exception as exc:  # noqa: BLE001 - preserve simulator failures in metadata

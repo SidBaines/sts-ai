@@ -38,6 +38,7 @@ def build_decision_record(
     phase: str,
     policy_seed: int | None,
     rollout_index: int,
+    action_executed: bool = True,
 ) -> DecisionRecord:
     """Build one DecisionRecord (incl. computed affordances). Shared by the serial
     loop here and the parallel orchestrator so both emit identical records."""
@@ -54,6 +55,7 @@ def build_decision_record(
         affordances=affordances.compute(state, state_text, legal_action_dicts, phase),
         policy_seed=policy_seed,
         rollout_index=rollout_index,
+        action_executed=action_executed,
     )
 
 
@@ -82,11 +84,11 @@ def prepare_decision(env: LightspeedHybridEnv) -> tuple[str, dict[str, Any] | No
 
 
 def clamp_action_index(agent_decision: Any, n_actions: int) -> int:
-    """Clamp an out-of-range action to 0 and mark the decision invalid."""
+    """Mark out-of-range actions invalid; returned index is never executed if invalid."""
     idx = agent_decision.action_index
     if idx < 0 or idx >= n_actions:
         agent_decision.valid = False
-        agent_decision.metadata["fallback_reason"] = "agent returned out-of-range action"
+        agent_decision.metadata["invalid_reason"] = "agent returned out-of-range action"
         return 0
     return idx
 
@@ -123,6 +125,26 @@ def run_rollout(
 
         agent_decision = agent.choose_action(view["state_text"], view["legal_actions"])
         action_index = clamp_action_index(agent_decision, len(view["legal_actions"]))
+        if not agent_decision.valid:
+            record = build_decision_record(
+                world_seed=world_seed,
+                decision_index=decision_index,
+                state=view["state"],
+                state_text=view["state_text"],
+                legal_action_dicts=view["legal_action_dicts"],
+                selected_action_dict={},
+                agent_decision=agent_decision,
+                after_state=env.summary(),
+                phase=view["phase"],
+                policy_seed=policy_seed,
+                rollout_index=rollout_index,
+                action_executed=False,
+            )
+            decisions.append(record)
+            if output_path is not None:
+                append_jsonl(output_path, asdict(record))
+            stopped_reason = "agent_invalid"
+            break
 
         try:
             selected = env.step(action_index)

@@ -6,7 +6,7 @@ from typing import Any
 # On-disk format version. Bumped when the kept-data contract changes. v1 was the
 # first kept-data version; v2 is a breaking rename from `seed` to `world_seed`
 # plus explicit `policy_seed` / `rollout_index` identity fields.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -64,6 +64,9 @@ class DecisionRecord:
     affordances: dict[str, Any] = field(default_factory=dict)
     policy_seed: int | None = None
     rollout_index: int = 0
+    # False only for terminal agent-invalid records: the model response is kept
+    # for audit, but no simulator action was executed from it.
+    action_executed: bool = True
 
 
 @dataclass

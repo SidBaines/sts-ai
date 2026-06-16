@@ -81,6 +81,8 @@ def summarize_label(label_dir: Path) -> dict[str, Any]:
             agg["completion_tokens"].append(ag.get("completion_tokens", 0))
             agg["thinking_tokens"].append(ag.get("thinking_tokens", 0))
             agg["latency_s"].append(ag.get("latency_s", 0.0))
+            if not rec.get("action_executed", True):
+                continue
             if rec.get("phase") != "combat":
                 continue
             agg["combat_decisions"] += 1

@@ -36,6 +36,29 @@ class ParseJsonActionTest(unittest.TestCase):
         self.assertTrue(decision.valid)
         self.assertEqual(decision.action_index, 1)
         self.assertEqual(decision.reasoning, "final")
+        self.assertTrue(decision.metadata["thinking_closed"])
+        start, end = decision.metadata["json_span"]
+        self.assertEqual(text[start:end], '{"reasoning": "final", "action_index": 1}')
+
+    def test_unclosed_think_with_final_json_does_not_pollute_thinking(self):
+        text = (
+            "<think>Prefer the second action because it is stronger.\n"
+            '{"reasoning": "final", "action_index": 1}'
+        )
+        decision = parse_json_action(text, self.actions)
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 1)
+        self.assertIn("Prefer the second", decision.thinking)
+        self.assertNotIn('"action_index"', decision.thinking)
+        self.assertFalse(decision.metadata["thinking_closed"])
+        self.assertTrue(decision.metadata["json_inside_unclosed_think"])
+
+    def test_stray_closing_think_is_flagged_but_json_parses(self):
+        text = '{"reasoning": "ok", "action_index": 0}\n</think>'
+        decision = parse_json_action(text, self.actions)
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 0)
+        self.assertTrue(decision.metadata["stray_think_close"])
 
     def test_extracts_last_balanced_json_object(self):
         text = '{"debug": true}\nfinal answer: {"reasoning": "choose second", "action_index": 1}'
@@ -67,7 +90,19 @@ class ParseJsonActionTest(unittest.TestCase):
         decision = parse_json_action(text, self.actions)
         self.assertFalse(decision.valid)
         self.assertEqual(decision.metadata["error"], "no json object")
+        self.assertTrue(decision.metadata["thinking_truncated"])
         self.assertIn("weigh the options", decision.thinking)
+
+    def test_classifies_max_token_no_json_as_truncated_before_json(self):
+        decision = parse_json_action(
+            "<think>still thinking",
+            self.actions,
+            completion_tokens=256,
+            max_tokens=256,
+        )
+        self.assertFalse(decision.valid)
+        self.assertEqual(decision.metadata["error"], "truncated_before_json")
+        self.assertEqual(decision.metadata["parse_error"], "truncated_before_json")
 
     def test_no_thinking_block_leaves_thinking_empty(self):
         decision = parse_json_action('{"reasoning": "ok", "action_index": 0}', self.actions)

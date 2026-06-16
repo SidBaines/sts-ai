@@ -23,10 +23,24 @@ def load_error(path: Path) -> dict[str, Any] | None:
         return json.load(handle)
 
 
+def load_meta(path: Path) -> dict[str, Any] | None:
+    meta_path = path.with_suffix(".meta.json")
+    if not meta_path.exists():
+        return None
+    with meta_path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
 def summarize_file(path: Path) -> dict[str, Any]:
     records = load_records(path)
     error = load_error(path)
-    stopped_reason = error["stopped_reason"] if error is not None else "ok"
+    meta = load_meta(path)
+    stopped_reason = (
+        error["stopped_reason"]
+        if error is not None
+        else str(meta.get("stopped_reason", "ok")) if meta is not None
+        else "ok"
+    )
     error_type = ""
     error_message = ""
     if error is not None:
@@ -41,6 +55,7 @@ def summarize_file(path: Path) -> dict[str, Any]:
             "decisions": 0,
             "valid_rate": 0.0,
             "invalid": 0,
+            "unexecuted": 0,
             "total_retries": 0,
             "avg_retries": 0.0,
             "final_act": "",
@@ -67,6 +82,7 @@ def summarize_file(path: Path) -> dict[str, Any]:
         "decisions": len(records),
         "valid_rate": valid_count / len(records),
         "invalid": len(records) - valid_count,
+        "unexecuted": sum(1 for record in records if not record.get("action_executed", True)),
         "total_retries": sum(retries),
         "avg_retries": mean(retries) if retries else 0.0,
         "final_act": final["act"],
@@ -93,6 +109,7 @@ def print_table(rows: list[dict[str, Any]]) -> None:
         "decisions",
         "valid_rate",
         "invalid",
+        "unexecuted",
         "total_retries",
         "stopped_reason",
         "error_type",

@@ -102,7 +102,7 @@ The reward is sparse (win/lose at the end of a hundreds-of-decisions episode), s
 
 ### Harness-specific gotchas (apply to both arms)
 
-1. **Invalid → action 0 is a trap.** `parse_json_action` and `run_rollout` both fall back to `action_index=0` with `valid=False`, but the garbage text still *executes* as action 0 and rides the trajectory reward. Naively training on `(prompt, raw_response, R)` would reinforce malformed generations. Standard fix: give invalid decisions a **format penalty** (negative reward) or mask them — the `valid` flag is already recorded.
+1. **Invalid outputs terminate cleanly.** `parse_json_action` still returns `action_index=0, valid=False` as a structured placeholder, but rollout generation records the invalid response and stops with `agent_invalid` before executing a fallback action. Naively training on invalid terminal records should still be masked or assigned a format penalty, but malformed generations no longer ride a fallback trajectory reward.
 2. **`temperature=0` kills on-policy RL.** Fixed-rollout config uses temp 0 for reproducibility, but then every rollout of a seed is identical → GRPO/RLOO group advantages are all zero. The on-policy arm **must** sample at temp > 0. (Different configs for different arms.)
 3. **Hybrid combat confounds credit assignment.** In `combat_control="search"`, the reward partly reflects the *search agent's* competence, and a strong searcher "masks consequences of bad pathing/reward choices" (plan, Known Limitations) — exactly on the risk-relevant out-of-combat decisions. `combat_control="llm"` makes the whole trajectory the LLM's actions (cleaner credit) but episodes are much longer/slower and combat competence becomes a prerequisite. **Recommendation: start RL on the hybrid, out-of-combat action space** — pathing / campfire / reward / shop *are* the risk-relevant decisions of interest — before paying for full-combat RL.
 4. **Where the gradient lands (reasoning vs. action) is a science decision, not just a knob.** The plan already contemplates action-only vs. full-trajectory loss. Framing plausibly acts *through reasoning style*, so masking the `<think>` / `reasoning` tokens may blunt the mechanism we're studying. Default to letting the gradient flow through reasoning too, but keep it a logged, switchable flag.
@@ -207,7 +207,7 @@ The contrast between "trait installed by data selection" and "trait nudged by fr
 - **What's recorded per decision:** `schemas.DecisionRecord` (`state_text`, `legal_actions`, `selected_action`, `agent`, `phase`), written in `rollout.run_rollout`.
 - **Framing not in `state_text`:** `rollout.py` records the glossary-augmented `state_text`; the framing is prepended later inside `render_action_prompt`.
 - **Per-trajectory reward available:** `lightspeed.LightspeedHybridEnv.summary()` → `outcome / floor / cur_hp / max_hp / gold`.
-- **Invalid → action 0 fallback:** `agents.parse_json_action` (returns `action_index=0, valid=False`) and `rollout.run_rollout` (clamps out-of-range to 0).
+- **Invalid output handling:** `agents.parse_json_action` returns `action_index=0, valid=False` as a placeholder; rollout code records the invalid response and terminates with `agent_invalid` without executing it.
 - **temp=0 for fixed rollouts:** Stage 5 canonical command in `research_plan.md`.
 - **Hybrid vs. full combat:** `combat_control` in `lightspeed.py`; `src/sts_ai/CLAUDE.md` "In-combat (full-control) mode."
 - **Per-decision risk labels:** `risk_proxies.classify_decision` / `RiskEvent.risk_seeking`.

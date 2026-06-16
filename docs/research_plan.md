@@ -173,7 +173,7 @@ Immediate changes to make before Stage 1 batch rollouts:
   - implement retry-on-invalid output.
 - Add regression tests for:
   - JSON extraction with think blocks, braces, and multiple objects;
-  - invalid action fallback behavior;
+  - invalid action stop behavior;
   - known risk-relevant action labels;
   - Act 1 boundary behavior.
 
@@ -634,7 +634,7 @@ Done in the 2026-06-15 session:
 - **Eval-grade logging (`SCHEMA_VERSION=1`, first kept-data version; all additive).** Per-rollout `*.meta.json` sidecar (outcome/stopped_reason/UB/HP-trajectory + model/config/**framing**/git provenance — framing was previously recorded nowhere); per-decision `latency_s` + prompt/completion/thinking token counts; `DecisionRecord.affordances` (`full_block_possible`, `single_target_lethal_available`, …; pure Python, no rebuild).
 - **Cross-rollout batched throughput.** `src/sts_ai/parallel_rollout.py` runs K independent rollouts in lockstep, batching via `mlx_lm.batch_generate` (trace-identical to serial under a deterministic agent). `scripts/run_sweep.py` (models × {thinking,no-think} × seeds) + `scripts/compare_models.py` (per-model report). Per-model speeds: [`docs/throughput_benchmarks.md`](throughput_benchmarks.md).
 - **First multi-model baseline sweep** (no-thinking, seeds 3/4/5/7): **Qwen3-4B strongest** (≈act-1 boss) > Qwen3-1.7B ≈ Llama-3.2-3B; nobody wins (RL headroom). Directional only (n=4).
-- **`max_tokens` default 256→4096** (agents/factory/all run scripts) + prominent docs — a small cap truncates reasoning mid-thought → no JSON → silent action-0 fallback (confirmed degenerate in the sweep's thinking/R1 arms). Harmless for no-think (stops at EOS).
+- **`max_tokens` default 256→4096** (agents/factory/all run scripts) + prominent docs — a small cap truncates reasoning mid-thought → no JSON → `agent_invalid` after retries in current traces. The old fallback policy produced degenerate thinking/R1 sweep arms. Harmless for no-think (stops at EOS).
 - **RL & framing design discussion** captured in [`rl_and_framing_design.md`](rl_and_framing_design.md).
 - **World-seed / policy-seed separation (⚠ BREAKING: `SCHEMA_VERSION` 1→2).** A rollout is identified by `(world_seed, rollout_index)` with `policy_seed = derive_policy_seed(world_seed, rollout_index)` (new pure `src/sts_ai/seeding.py`, also `derive_batch_seed`/`expand_specs`/`rollout_stem`). Agents gained `reseed(policy_seed)` (MLX → `mx.random.seed`, gating-probe-verified reproducible; random → reseeded RNG; deterministic agents no-op); `run_rollout` reseeds once per rollout. **On-disk break:** field `seed` → `world_seed` and `policy_seed`/`rollout_index` added to `DecisionRecord`/`RolloutResult`/`RolloutMeta`; pre-v2 `data/` traces do not load/compare unchanged (intentional, pre-data-collection). `run_sweep.py`/`run_batch.py` gained `--rollouts-per-seed K` (files `seed_{world}_r{idx}.jsonl`); the batched orchestrator keys on `(world_seed, rollout_index)` and reseeds per batch. **Reproducibility:** serial path is bit-reproducible per `(world_seed, policy_seed)`; batched path is re-run-deterministic given a fixed `batch_size` (not bitwise-equal to serial). Implemented via codex-driven-development (Codex builder + Claude spec/quality review); 105 tests pass. Deferred: seeding the C++ combat-search RNG (hybrid combat is held fixed across same-world rollouts). When-to-use guide: [`rl_and_framing_design.md`](rl_and_framing_design.md) §2c.
 
@@ -644,7 +644,7 @@ Done in the 2026-06-16 session:
 
 Remaining (re-ordered 2026-06-15):
 
-1. **Reasoning rerun at `max_tokens=4096`.** Rerun the thinking + R1 sweep arms (the 256 run was degenerate: ~100% invalid, action-0 fallback) for the real thinking-vs-no-thinking comparison. Note a prior full-depth thinking run still truncated ~6% at 4096 — handle stragglers with an "out of budget, emit JSON now" re-prompt and/or higher budget.
+1. **Reasoning rerun at `max_tokens=4096`.** Rerun the thinking + R1 sweep arms (the 256 run was degenerate under the old fallback policy: ~100% invalid, action-0 fallback) for the real thinking-vs-no-thinking comparison. Note a prior full-depth thinking run still truncated ~6% at 4096 — handle stragglers with an "out of budget, emit JSON now" re-prompt and/or higher budget.
 2. **Robust baseline (more seeds).** The model sweep is only 4 seeds (directional). Run the frozen dev/eval splits via `run_sweep.py` before any model/RL decision rests on it.
 3. **Stage 5 — fixed neutral rollout collection** at full Act-1 depth on the frozen splits; audit reasoning for frame leakage; attach reward + risk-proxy labels. The eval harness (meta/affordances/timing) and the 4096 default are now in place.
 4. **RL scoping → implementation** per [`rl_and_framing_design.md`](rl_and_framing_design.md) (offline filtered-BC/RWR first, then GRPO/RLOO; trait-neutral reward). The seed/multi-rollout infra for GRPO/RLOO groups (K reproducible rollouts per world seed at temp>0) is now in place (§2c). Needs the GPU path — local training remains a benchmark, not an assumption.

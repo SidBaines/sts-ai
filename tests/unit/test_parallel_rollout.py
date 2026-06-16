@@ -94,6 +94,38 @@ class ReseededBatchAgent:
         return decisions
 
 
+class RetryBatchAgent:
+    name = "retry-batch"
+    max_retries = 1
+
+    def __init__(self, always_invalid: bool = False) -> None:
+        self.always_invalid = always_invalid
+        self.retry_flags_seen: list[list[bool]] = []
+
+    def reseed(self, policy_seed: int) -> None:
+        return None
+
+    def choose_actions_batch(
+        self,
+        items: list[tuple[str, list[LegalAction]]],
+        retry_flags: list[bool] | None = None,
+    ) -> list[AgentDecision]:
+        flags = retry_flags or [False] * len(items)
+        self.retry_flags_seen.append(list(flags))
+        decisions: list[AgentDecision] = []
+        for retry in flags:
+            valid = retry and not self.always_invalid
+            decisions.append(
+                AgentDecision(
+                    action_index=0,
+                    raw_response="ok" if valid else "bad",
+                    valid=valid,
+                    metadata={} if valid else {"error": "no json object"},
+                )
+            )
+        return decisions
+
+
 def _make_env(world_seed: int) -> FakeParallelEnv:
     return FakeParallelEnv(world_seed=world_seed)
 
@@ -161,6 +193,42 @@ class ParallelRolloutSpecTest(unittest.TestCase):
                 self.assertEqual(len(records), 1)
                 self.assertEqual(records[0]["world_seed"], world_seed)
                 self.assertEqual(records[0]["rollout_index"], rollout_index)
+                self.assertTrue(records[0]["action_executed"])
+
+    def test_batched_retry_succeeds_before_exhaustion(self) -> None:
+        agent = RetryBatchAgent()
+        results = run_parallel_rollouts(
+            [(7, 0)],
+            lambda ws: FakeParallelEnv(world_seed=ws, decisions=2),
+            agent,
+            batch_size=1,
+            max_decisions=4,
+            max_retries=1,
+        )
+
+        self.assertEqual(results[0].stopped_reason, "terminal")
+        self.assertEqual([d.agent["retries"] for d in results[0].decisions], [1, 1])
+        self.assertTrue(all(d.action_executed for d in results[0].decisions))
+        self.assertEqual(agent.retry_flags_seen[:2], [[False], [True]])
+
+    def test_batched_retry_exhaustion_records_invalid_and_stops(self) -> None:
+        agent = RetryBatchAgent(always_invalid=True)
+        results = run_parallel_rollouts(
+            [(7, 0)],
+            lambda ws: FakeParallelEnv(world_seed=ws, decisions=2),
+            agent,
+            batch_size=1,
+            max_decisions=4,
+            max_retries=1,
+        )
+
+        self.assertEqual(results[0].stopped_reason, "agent_invalid")
+        self.assertEqual(len(results[0].decisions), 1)
+        record = results[0].decisions[0]
+        self.assertEqual(record.agent["retries"], 1)
+        self.assertFalse(record.agent["valid"])
+        self.assertFalse(record.action_executed)
+        self.assertEqual(record.selected_action, {})
 
 
 if __name__ == "__main__":

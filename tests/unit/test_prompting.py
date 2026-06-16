@@ -21,14 +21,17 @@ class RenderActionPromptTest(unittest.TestCase):
             induce_reasoning=True,
         )
 
-        self.assertIn("think step by step", prompt)
+        self.assertIn("think briefly", prompt)
         self.assertIn("<think>...</think>", prompt)
         self.assertIn("</think>", prompt)
+        self.assertIn("Do not use markdown fences", prompt)
         self.assertIn("Return exactly one JSON object with this schema:", prompt)
         self.assertIn(
             '{"reasoning": "brief private reasoning", "action_index": 0}',
             prompt,
         )
+        self.assertIn("Valid action_index values are: 0, 1.", prompt)
+        self.assertIn("do not use hand, enemy, deck, or map indices", prompt)
         self.assertIn("LEGAL ACTIONS\n0: play Strike -> Jaw Worm\n1: end turn\n", prompt)
 
     def test_default_matches_explicit_false(self):

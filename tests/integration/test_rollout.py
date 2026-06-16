@@ -24,18 +24,20 @@ class BadIndexAgent:
 
 
 @requires_simulator
-class RolloutFallbackTest(unittest.TestCase):
-    def test_out_of_range_action_records_requested_and_executed_actions(self):
+class RolloutAgentInvalidTest(unittest.TestCase):
+    def test_out_of_range_action_records_invalid_and_stops_without_execution(self):
         env = LightspeedHybridEnv(world_seed=1, battle_simulations=50)
         result = run_rollout(env, BadIndexAgent(), max_decisions=1)
+        self.assertEqual(result.stopped_reason, "agent_invalid")
         self.assertEqual(len(result.decisions), 1)
 
         record = result.decisions[0]
         self.assertEqual(record.agent["action_index"], 999)
         self.assertFalse(record.agent["valid"])
-        self.assertEqual(record.selected_action["index"], 0)
+        self.assertFalse(record.action_executed)
+        self.assertEqual(record.selected_action, {})
         self.assertEqual(
-            record.agent["metadata"]["fallback_reason"],
+            record.agent["metadata"]["invalid_reason"],
             "agent returned out-of-range action",
         )
 

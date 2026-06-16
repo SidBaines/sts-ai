@@ -250,6 +250,7 @@ class StreamingRolloutSpecTest(unittest.TestCase):
             "affordances",
             "policy_seed",
             "rollout_index",
+            "action_executed",
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -327,7 +328,7 @@ class StreamingRolloutSpecTest(unittest.TestCase):
         ]
         self.assertEqual(first_decision_flags, [False, True, True])
 
-    def test_retries_exhausted_falls_back(self) -> None:
+    def test_retries_exhausted_records_invalid_and_stops(self) -> None:
         agent = RetryStreamingAgent(invalid_attempts=99)
 
         results = run_streaming_rollouts(
@@ -340,10 +341,13 @@ class StreamingRolloutSpecTest(unittest.TestCase):
         )
 
         first_decision = results[0].decisions[0]
-        self.assertEqual(results[0].stopped_reason, "terminal")
+        self.assertEqual(results[0].stopped_reason, "agent_invalid")
+        self.assertEqual(len(results[0].decisions), 1)
         self.assertEqual(first_decision.agent["retries"], 2)
         self.assertFalse(first_decision.agent["valid"])
         self.assertEqual(first_decision.agent["action_index"], 0)
+        self.assertFalse(first_decision.action_executed)
+        self.assertEqual(first_decision.selected_action, {})
         first_decision_submits = [
             request_id
             for request_id, _ in agent.submits
@@ -364,9 +368,10 @@ class StreamingRolloutSpecTest(unittest.TestCase):
         )
 
         first_decision = results[0].decisions[0]
+        self.assertEqual(results[0].stopped_reason, "agent_invalid")
         self.assertEqual(first_decision.agent["retries"], 0)
         self.assertFalse(first_decision.agent["valid"])
-        self.assertEqual(len(agent.submits), len(results[0].decisions))
+        self.assertEqual(len(agent.submits), 1)
         self.assertTrue(all(request_id.endswith(":a0") for request_id, _ in agent.submits))
         self.assertTrue(all(not retry for _, retry in agent.submits))
 

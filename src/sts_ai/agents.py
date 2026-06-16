@@ -113,8 +113,8 @@ class MlxQwenJsonAgent:
     IMPORTANT — `max_tokens` must be large (default 4096). Reasoning models need
     room to finish thinking AND still emit the closing JSON: a small cap (e.g.
     256) truncates mid-thought, so `parse_json_action` finds no JSON, the decision
-    is marked invalid, and the loop silently falls back to action 0 — i.e. the
-    "policy" degenerates to "always the first legal action". This is harmless to
+    is marked invalid, and the rollout stops with `agent_invalid` after retries.
+    This is harmless to
     raise for no-thinking models (generation stops at EOS ~60-90 tokens, well
     under the cap), so a high default costs nothing there and saves the reasoning
     runs. See scripts/CLAUDE.md and the invalid-rate/token telemetry in evals."""
@@ -193,15 +193,22 @@ class MlxQwenJsonAgent:
             if attempt > 0:
                 prompt += (
                     "\n\nYour previous response was invalid. Return only one JSON object "
-                    "with a legal integer action_index from the listed actions."
+                    "with a legal integer action_index from the listed actions. Do not include "
+                    "a <think> block, markdown fence, or any other text."
                 )
 
             chat_prompt = self._apply_chat_template(prompt)
             response = self._generate_chat(chat_prompt)
-            decision = parse_json_action(response, legal_actions)
+            completion_tokens = self._count_tokens(response)
+            decision = parse_json_action(
+                response,
+                legal_actions,
+                completion_tokens=completion_tokens,
+                max_tokens=getattr(self, "max_tokens", None),
+            )
             decision.retries = attempt
             decision.prompt_tokens = self._count_tokens(chat_prompt)
-            decision.completion_tokens = self._count_tokens(response)
+            decision.completion_tokens = completion_tokens
             decision.thinking_tokens = self._count_tokens(decision.thinking)
             last_decision = decision
             if decision.valid:
@@ -228,17 +235,32 @@ class MlxQwenJsonAgent:
             kwargs["temp"] = self.temperature
             return self._generate(self.model, self.tokenizer, **kwargs)
 
-    def choose_actions_batch(self, items: list[tuple[str, list[LegalAction]]]) -> list[AgentDecision]:
+    def choose_actions_batch(
+        self,
+        items: list[tuple[str, list[LegalAction]]],
+        retry_flags: list[bool] | None = None,
+    ) -> list[AgentDecision]:
         """Decide for K independent rollouts in one batched generation call (the
-        cross-rollout throughput lever; see parallel_rollout). v1 does no per-item
-        retry — invalid JSON falls back to index 0 like the single path. `latency_s`
-        is the batch wall-time amortized across items (token counts are exact)."""
+        cross-rollout throughput lever; see parallel_rollout). `retry_flags`
+        selects the JSON-only repair prompt per item. `latency_s` is the batch
+        wall-time amortized across items (token counts are exact)."""
         if not items:
             return []
         if self._batch_generate is None:  # older mlx-lm: degrade to serial
             return [self.choose_action(st, la) for st, la in items]
 
-        prompts = [self._apply_chat_template(render_action_prompt(st, la, self.framing)) for st, la in items]
+        if retry_flags is None:
+            retry_flags = [False] * len(items)
+        prompts = []
+        for (state_text, legal_actions), retry in zip(items, retry_flags):
+            prompt = render_action_prompt(state_text, legal_actions, self.framing)
+            if retry:
+                prompt += (
+                    "\n\nYour previous response was invalid. Return only one JSON object "
+                    "with a legal integer action_index from the listed actions. Do not include "
+                    "a <think> block, markdown fence, or any other text."
+                )
+            prompts.append(self._apply_chat_template(prompt))
         prompt_ids = [self.tokenizer.encode(p) for p in prompts]
         kwargs: dict = {"max_tokens": self.max_tokens}
         if self._sampler is not None:
@@ -250,10 +272,16 @@ class MlxQwenJsonAgent:
 
         decisions: list[AgentDecision] = []
         for (_, legal_actions), prompt, text in zip(items, prompts, response.texts):
-            decision = parse_json_action(text, legal_actions)
+            completion_tokens = self._count_tokens(text)
+            decision = parse_json_action(
+                text,
+                legal_actions,
+                completion_tokens=completion_tokens,
+                max_tokens=getattr(self, "max_tokens", None),
+            )
             decision.retries = 0
             decision.prompt_tokens = self._count_tokens(prompt)
-            decision.completion_tokens = self._count_tokens(text)
+            decision.completion_tokens = completion_tokens
             decision.thinking_tokens = self._count_tokens(decision.thinking)
             decision.latency_s = per_item_latency
             decisions.append(decision)
@@ -281,9 +309,9 @@ class VllmJsonAgent:
 
     IMPORTANT: keep `max_tokens` large (default 4096). Reasoning models can be
     truncated mid-thought by a small cap, leaving no closing JSON for
-    `parse_json_action`; the invalid decision then falls back to action 0 and
-    can degenerate into an "always first legal action" policy. This is safe for
-    no-thinking models because generation stops at EOS before the cap.
+    `parse_json_action`; after retry exhaustion the rollout stops with
+    `agent_invalid`. This is safe for no-thinking models because generation stops
+    at EOS before the cap.
 
     Streaming primitives below drive vLLM continuous batching for
     `streaming_rollout.run_streaming_rollouts`; per-request seeds keep sampling
@@ -443,7 +471,8 @@ class VllmJsonAgent:
         if retry:
             base += (
                 "\n\nYour previous response was invalid. Return only one JSON object "
-                "with a legal integer action_index from the listed actions."
+                "with a legal integer action_index from the listed actions. Do not include "
+                "a <think> block, markdown fence, or any other text."
             )
         prompt = self._apply_chat_template(base)
         params = self._SamplingParams(temperature=self.temperature, max_tokens=self.max_tokens, seed=seed)
@@ -498,7 +527,12 @@ class VllmJsonAgent:
         completion_tokens: int,
         legal_actions: list[LegalAction],
     ) -> AgentDecision:
-        decision = parse_json_action(text, legal_actions)
+        decision = parse_json_action(
+            text,
+            legal_actions,
+            completion_tokens=completion_tokens,
+            max_tokens=getattr(self, "max_tokens", None),
+        )
         decision.retries = 0
         decision.prompt_tokens = prompt_tokens
         decision.completion_tokens = completion_tokens
@@ -515,7 +549,8 @@ class VllmJsonAgent:
             if attempt > 0:
                 prompt += (
                     "\n\nYour previous response was invalid. Return only one JSON object "
-                    "with a legal integer action_index from the listed actions."
+                    "with a legal integer action_index from the listed actions. Do not include "
+                    "a <think> block, markdown fence, or any other text."
                 )
 
             chat_prompt = self._apply_chat_template(prompt)
@@ -530,7 +565,12 @@ class VllmJsonAgent:
                 )
             else:
                 result = results[0]
-                decision = parse_json_action(result["text"], legal_actions)
+                decision = parse_json_action(
+                    result["text"],
+                    legal_actions,
+                    completion_tokens=result["completion_tokens"],
+                    max_tokens=getattr(self, "max_tokens", None),
+                )
                 decision.prompt_tokens = result["prompt_tokens"]
                 decision.completion_tokens = result["completion_tokens"]
                 decision.thinking_tokens = self._count_tokens(decision.thinking)
@@ -544,12 +584,29 @@ class VllmJsonAgent:
         last_decision.latency_s = round(time.perf_counter() - start, 4)
         return last_decision
 
-    def choose_actions_batch(self, items: list[tuple[str, list[LegalAction]]]) -> list[AgentDecision]:
+    def choose_actions_batch(
+        self,
+        items: list[tuple[str, list[LegalAction]]],
+        retry_flags: list[bool] | None = None,
+    ) -> list[AgentDecision]:
         """Decide for K independent rollouts in one vLLM generation call."""
         if not items:
             return []
 
-        prompts = [self._render_prompt(state_text, legal_actions) for state_text, legal_actions in items]
+        if retry_flags is None:
+            retry_flags = [False] * len(items)
+        prompts = []
+        for (state_text, legal_actions), retry in zip(items, retry_flags):
+            if retry:
+                base = render_action_prompt(state_text, legal_actions, self.framing)
+                base += (
+                    "\n\nYour previous response was invalid. Return only one JSON object "
+                    "with a legal integer action_index from the listed actions. Do not include "
+                    "a <think> block, markdown fence, or any other text."
+                )
+                prompts.append(self._apply_chat_template(base))
+            else:
+                prompts.append(self._render_prompt(state_text, legal_actions))
         start = time.perf_counter()
         results = self._generate(prompts)
         per_item_latency = round((time.perf_counter() - start) / len(items), 4)
@@ -582,76 +639,112 @@ class VllmJsonAgent:
         return decisions
 
 
-def parse_json_action(response: str, legal_actions: list[LegalAction]) -> AgentDecision:
-    thinking = _extract_thinking(response)
-    parsed = _extract_json(response)
+def parse_json_action(
+    response: str,
+    legal_actions: list[LegalAction],
+    *,
+    completion_tokens: int | None = None,
+    max_tokens: int | None = None,
+) -> AgentDecision:
+    extracted = _extract_json_with_span(response)
+    parsed = extracted[0] if extracted is not None else None
+    json_span = extracted[1] if extracted is not None else None
+    thinking, thinking_meta = _extract_thinking_with_metadata(response, json_span)
+    base_metadata: dict[str, object] = dict(thinking_meta)
+    if json_span is not None:
+        base_metadata["json_span"] = [json_span[0], json_span[1]]
+
     if parsed is None:
+        error = "no json object"
+        if completion_tokens is not None and max_tokens is not None and completion_tokens >= max_tokens:
+            error = "truncated_before_json"
+        base_metadata["error"] = error
+        base_metadata["parse_error"] = error
         return AgentDecision(
             action_index=0,
             raw_response=response,
             thinking=thinking,
             valid=False,
-            metadata={"error": "no json object"},
+            metadata=base_metadata,
         )
 
     action_index = parsed.get("action_index")
     reasoning = str(parsed.get("reasoning", ""))
     if not isinstance(action_index, int) or action_index < 0 or action_index >= len(legal_actions):
+        base_metadata["error"] = "invalid action_index"
+        base_metadata["parse_error"] = "invalid action_index"
+        base_metadata["parsed"] = parsed
         return AgentDecision(
             action_index=0,
             raw_response=response,
             reasoning=reasoning,
             thinking=thinking,
             valid=False,
-            metadata={"error": "invalid action_index", "parsed": parsed},
+            metadata=base_metadata,
         )
 
+    base_metadata["parsed"] = parsed
+    base_metadata["legal_action"] = asdict(legal_actions[action_index])
     return AgentDecision(
         action_index=action_index,
         raw_response=response,
         reasoning=reasoning,
         thinking=thinking,
         valid=True,
-        metadata={"parsed": parsed, "legal_action": asdict(legal_actions[action_index])},
+        metadata=base_metadata,
     )
 
 
-def _extract_thinking(text: str) -> str:
-    """Return the chain-of-thought inside a <think>...</think> block.
+def _extract_thinking_with_metadata(
+    text: str,
+    json_span: tuple[int, int] | None,
+) -> tuple[str, dict[str, bool]]:
+    """Return the first think span plus parser-quality metadata.
 
-    Captures the content of the first think block. If the block is opened but
-    never closed (a truncated thinking-mode generation), returns everything after
-    the opening tag so the partial reasoning is not lost. Returns "" when there is
-    no think block (e.g. no-thinking mode)."""
+    If a think block is opened but never closed before the final JSON, stop the
+    thinking text at the JSON start so the action payload is not stored as CoT.
+    If there is no JSON, keep the partial text after <think> for truncation
+    audits.
+    """
     lower = text.lower()
+    json_start = json_span[0] if json_span is not None else None
     start = lower.find("<think>")
+    close_any = lower.find("</think>")
+    metadata = {
+        "thinking_closed": False,
+        "thinking_truncated": False,
+        "stray_think_close": start == -1 and close_any != -1,
+        "json_inside_unclosed_think": False,
+    }
     if start == -1:
-        return ""
+        return "", metadata
     inner_start = start + len("<think>")
     end = lower.find("</think>", inner_start)
-    if end == -1:
-        return text[inner_start:].strip()
-    return text[inner_start:end].strip()
+    if end != -1 and (json_start is None or end <= json_start):
+        metadata["thinking_closed"] = True
+        return text[inner_start:end].strip(), metadata
+
+    if json_start is not None and json_start > inner_start:
+        metadata["json_inside_unclosed_think"] = True
+        return text[inner_start:json_start].strip(), metadata
+
+    metadata["thinking_truncated"] = True
+    return text[inner_start:].strip(), metadata
 
 
-def _extract_json(text: str) -> dict | None:
-    for candidate_text in (text, _strip_thinking(text)):
-        parsed = _parse_json_dict(candidate_text)
+def _extract_json_with_span(text: str) -> tuple[dict, tuple[int, int]] | None:
+    stripped = text.strip()
+    offset = len(text) - len(text.lstrip())
+    parsed = _parse_json_dict(stripped)
+    if parsed is not None:
+        return parsed, (offset, offset + len(stripped))
+
+    for candidate, span in reversed(_balanced_json_candidates(text)):
+        parsed = _parse_json_dict(candidate)
         if parsed is not None:
-            return parsed
-
-        for candidate in reversed(_balanced_json_candidates(candidate_text)):
-            parsed = _parse_json_dict(candidate)
-            if parsed is not None:
-                return parsed
+            return parsed, span
 
     return None
-
-
-def _strip_thinking(text: str) -> str:
-    if "</think>" in text:
-        text = text.rsplit("</think>", 1)[-1]
-    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE)
 
 
 def _parse_json_dict(text: str) -> dict | None:
@@ -662,8 +755,8 @@ def _parse_json_dict(text: str) -> dict | None:
     return value if isinstance(value, dict) else None
 
 
-def _balanced_json_candidates(text: str) -> list[str]:
-    candidates: list[str] = []
+def _balanced_json_candidates(text: str) -> list[tuple[str, tuple[int, int]]]:
+    candidates: list[tuple[str, tuple[int, int]]] = []
     start: int | None = None
     depth = 0
     in_string = False
@@ -688,7 +781,7 @@ def _balanced_json_candidates(text: str) -> list[str]:
         elif char == "}" and depth > 0:
             depth -= 1
             if depth == 0 and start is not None:
-                candidates.append(text[start : idx + 1])
+                candidates.append((text[start : idx + 1], (start, idx + 1)))
                 start = None
 
     return candidates

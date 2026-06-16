@@ -100,6 +100,7 @@ class DecisionView:
     valid: bool
     retries: int
     raw_response: str
+    action_executed: bool
     # consequence
     hp_after: Optional[int]
     floor_after: Optional[int]
@@ -326,8 +327,9 @@ def to_view(record: dict[str, Any]) -> DecisionView:
     selected = record.get("selected_action", {})
     after = record.get("after_state", {})
     parsed = parse_state_text(record.get("state_text", ""))
+    action_executed = bool(record.get("action_executed", True))
 
-    chosen_index = selected.get("index", agent.get("action_index", -1))
+    chosen_index = selected.get("index", agent.get("action_index", -1)) if action_executed else -1
     actions = [
         ActionView(
             index=a.get("index", i),
@@ -362,6 +364,7 @@ def to_view(record: dict[str, Any]) -> DecisionView:
         valid=bool(agent.get("valid", True)),
         retries=int(agent.get("retries", 0)),
         raw_response=str(agent.get("raw_response", "")),
+        action_executed=action_executed,
         hp_after=after.get("cur_hp"),
         floor_after=after.get("floor"),
         state_text=record.get("state_text", ""),

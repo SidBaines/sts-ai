@@ -42,6 +42,35 @@ class FakeStepErrorEnv:
         return {"index": action.index, "bits": action.bits, "description": action.description}
 
 
+class FakeInvalidEnv(FakeStepErrorEnv):
+    world_seed = 321
+
+    def __init__(self):
+        self.step_calls = 0
+
+    def step(self, action_index):
+        self.step_calls += 1
+        return self.legal_actions()[action_index]
+
+    def summary(self):
+        return {"world_seed": self.world_seed, "done": False, "cur_hp": 80}
+
+
+class InvalidAgent:
+    name = "invalid"
+
+    def reseed(self, policy_seed: int) -> None:
+        return None
+
+    def choose_action(self, state_text, legal_actions):
+        return AgentDecision(
+            action_index=0,
+            raw_response="not json",
+            valid=False,
+            metadata={"error": "no json object"},
+        )
+
+
 class FakeCombatEnv:
     """Records exactly one in-combat decision, then terminates.
 
@@ -112,6 +141,20 @@ class RolloutSimulatorErrorTest(unittest.TestCase):
         self.assertEqual(result.error["phase"], "step")
         self.assertEqual(result.error["decision_index"], 0)
         self.assertIn("simulator exploded", result.error["message"])
+
+    def test_invalid_agent_decision_records_and_stops_without_step(self):
+        env = FakeInvalidEnv()
+        result = run_rollout(env, InvalidAgent(), max_decisions=3)
+
+        self.assertEqual(result.stopped_reason, "agent_invalid")
+        self.assertIsNone(result.error)
+        self.assertEqual(env.step_calls, 0)
+        self.assertEqual(len(result.decisions), 1)
+        record = result.decisions[0]
+        self.assertFalse(record.agent["valid"])
+        self.assertFalse(record.action_executed)
+        self.assertEqual(record.selected_action, {})
+        self.assertEqual(record.after_state["cur_hp"], 80)
 
 
 class RolloutPhaseRecordingTest(unittest.TestCase):

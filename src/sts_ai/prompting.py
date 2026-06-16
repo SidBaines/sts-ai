@@ -18,9 +18,11 @@ def render_action_prompt(
     action_lines = "\n".join(
         f"{action.index}: {action.description}" for action in legal_actions
     )
+    valid_indices = ", ".join(str(action.index) for action in legal_actions)
     reasoning_instruction = (
-        "Before the JSON, think step by step inside a single <think>...</think> "
-        "block. Put the final JSON object after the closing </think>.\n\n"
+        "Before the JSON, think briefly inside exactly one <think>...</think> "
+        "block. Put the final JSON object after the closing </think>. Do not use "
+        "markdown fences.\n\n"
         if induce_reasoning
         else ""
     )
@@ -28,6 +30,8 @@ def render_action_prompt(
         f"{framing}\n\n"
         "Return exactly one JSON object with this schema:\n"
         '{"reasoning": "brief private reasoning", "action_index": 0}\n\n'
+        f"Valid action_index values are: {valid_indices}. Use only these LEGAL ACTIONS indices; "
+        "do not use hand, enemy, deck, or map indices as action_index.\n\n"
         f"{reasoning_instruction}"
         f"GAME STATE\n{state_text}\n\n"
         f"LEGAL ACTIONS\n{action_lines}\n"

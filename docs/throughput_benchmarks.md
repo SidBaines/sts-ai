@@ -59,7 +59,7 @@ throughput investigation, and grows with longer generations.
 The Qwen3-1.7B-think, Qwen3-4B-think, and DeepSeek-R1-Distill-1.5B arms ran but
 are **excluded** because at `--max-tokens 256` they were **100% invalid**: the
 model spends the whole budget reasoning, never emits the closing JSON, and the
-loop falls back to action 0 (degenerate "always first action"). Their timings
+old rollout loop fell back to action 0 (degenerate "always first action"). Their timings
 (e.g. Qwen3-4B-think ~2.5 s/dec, ~256 completion tokens every step = the cap) only
 measure truncated reasoning, not real decisions.
 
