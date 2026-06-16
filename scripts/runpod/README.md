@@ -103,3 +103,10 @@ cleanup-pod.sh <pod-id>
 The sweep is `9 models x {reasoning-off, reasoning-on} = 18 arms`.
 
 For Qwen3, reasoning-on uses the native `<think>` toggle. For Gemma and Llama, reasoning-on uses prompted reasoning. Each rollout records the active mode in its `.meta.json` under `extra.agent_config.reasoning_mode`.
+
+## Gotchas (learned bringing up the first A40 pod, 2026-06-16)
+
+- **vLLM version must be new enough for the models.** vLLM 0.6.6 (the original pin) only knows `Qwen2`/`Gemma2`; it errors `architectures ['Qwen3ForCausalLM'] are not supported` on Qwen3 and Gemma3. Use **vLLM ≥ 0.23** (the pinned `[vllm]` extra) — it pulls a CUDA-13 torch (2.11) that needs a recent driver (the A40 hosts ship CUDA 13.0, fine).
+- **flashinfer JIT-compiles kernels at runtime and needs `ninja`.** Without it, engine init dies with `FileNotFoundError: 'ninja'`. `setup_pod.sh` now installs `ninja-build`; the first model load also pays a one-time kernel-compile cost (cached afterwards).
+- **The simulator build needs a Python-3.11-compatible pybind11.** Upstream pins pybind11 v2.7.1 which fails to compile against CPython 3.11 (`PyFrameObject` is opaque). `build_lightspeed.sh` now bumps the submodule to v2.13.6 after `submodule update`.
+- The RunPod image has **no `rsync`** by default (needed for repo transfer and `sync_back.sh`); `setup_pod.sh` installs it.

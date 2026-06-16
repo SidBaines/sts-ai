@@ -7,7 +7,7 @@ dependencies = []
 
 [project.optional-dependencies]
 llm = ["mlx-lm==0.29.1"]
-vllm = ["vllm==0.6.6"]
+vllm = ["vllm==0.23.0"]
 viz = ["streamlit==1.40.2"]
 
 [tool.pytest.ini_options]
