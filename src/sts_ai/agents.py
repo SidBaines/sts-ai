@@ -21,6 +21,26 @@ class ActionAgent(Protocol):
         ...
 
 
+class GenerationBackend(Protocol):
+    def stream_submit(self, request_id: str, state_text: str, legal_actions: list[LegalAction], seed: int) -> None:
+        ...
+
+    def stream_poll(self) -> list[tuple[str, dict]]:
+        ...
+
+    def stream_has_unfinished(self) -> bool:
+        ...
+
+    def build_decision_from_text(
+        self,
+        text: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        legal_actions: list[LegalAction],
+    ) -> AgentDecision:
+        ...
+
+
 class FirstLegalAgent:
     name = "first"
 
@@ -257,6 +277,10 @@ class VllmJsonAgent:
     `parse_json_action`; the invalid decision then falls back to action 0 and
     can degenerate into an "always first legal action" policy. This is safe for
     no-thinking models because generation stops at EOS before the cap.
+
+    Streaming primitives below drive vLLM continuous batching for
+    `streaming_rollout.run_streaming_rollouts`; per-request seeds keep sampling
+    independent of batch composition.
     """
 
     name = "vllm"
@@ -269,6 +293,7 @@ class VllmJsonAgent:
         temperature: float = 0.2,
         max_retries: int = 1,
         enable_thinking: bool = False,
+        enable_prefix_caching: bool = True,
         dtype: str = "float16",
         gpu_memory_utilization: float = 0.90,
         seed: int = 0,
@@ -286,6 +311,7 @@ class VllmJsonAgent:
         self.temperature = temperature
         self.max_retries = max_retries
         self.enable_thinking = enable_thinking
+        self.enable_prefix_caching = enable_prefix_caching
         self.dtype = dtype
         self.gpu_memory_utilization = gpu_memory_utilization
         self._seed = seed
@@ -294,6 +320,7 @@ class VllmJsonAgent:
             model=model_id,
             dtype=dtype,
             gpu_memory_utilization=gpu_memory_utilization,
+            enable_prefix_caching=enable_prefix_caching,
             trust_remote_code=True,
         )
         self.tokenizer = self.llm.get_tokenizer()
@@ -312,6 +339,7 @@ class VllmJsonAgent:
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "thinking": self.enable_thinking,
+            "enable_prefix_caching": self.enable_prefix_caching,
             "reasoning_mode": self.reasoning_mode,
             "max_retries": self.max_retries,
             "backend": "vllm",
@@ -393,6 +421,33 @@ class VllmJsonAgent:
         except Exception:  # noqa: BLE001 - generation failures should not kill a rollout sweep
             return None
 
+    def stream_submit(self, request_id: str, state_text: str, legal_actions: list[LegalAction], seed: int) -> None:
+        prompt = self._render_prompt(state_text, legal_actions)
+        params = self._SamplingParams(temperature=self.temperature, max_tokens=self.max_tokens, seed=seed)
+        # NOTE: vLLM's low-level LLMEngine.add_request signature is version-sensitive.
+        # Verified target API: add_request(request_id, prompt, params). Keep this call
+        # isolated here so a vLLM version bump is a one-line change.
+        self.llm.llm_engine.add_request(request_id, prompt, params)
+
+    def stream_poll(self) -> list[tuple[str, dict]]:
+        finished: list[tuple[str, dict]] = []
+        for output in self.llm.llm_engine.step():
+            if output.finished:
+                finished.append(
+                    (
+                        output.request_id,
+                        {
+                            "text": output.outputs[0].text,
+                            "prompt_tokens": len(output.prompt_token_ids),
+                            "completion_tokens": len(output.outputs[0].token_ids),
+                        },
+                    )
+                )
+        return finished
+
+    def stream_has_unfinished(self) -> bool:
+        return self.llm.llm_engine.has_unfinished_requests()
+
     def _count_tokens(self, text: str) -> int:
         if not text:
             return 0
@@ -400,6 +455,20 @@ class VllmJsonAgent:
             return len(self.tokenizer.encode(text))
         except Exception:  # noqa: BLE001 - token counting must never break a rollout
             return 0
+
+    def build_decision_from_text(
+        self,
+        text: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        legal_actions: list[LegalAction],
+    ) -> AgentDecision:
+        decision = parse_json_action(text, legal_actions)
+        decision.retries = 0
+        decision.prompt_tokens = prompt_tokens
+        decision.completion_tokens = completion_tokens
+        decision.thinking_tokens = self._count_tokens(decision.thinking)
+        return decision
 
     def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
         base_prompt = self._base_prompt(state_text, legal_actions)
@@ -467,11 +536,12 @@ class VllmJsonAgent:
 
         decisions: list[AgentDecision] = []
         for (_, legal_actions), result in zip(items, results):
-            decision = parse_json_action(result["text"], legal_actions)
-            decision.retries = 0
-            decision.prompt_tokens = result["prompt_tokens"]
-            decision.completion_tokens = result["completion_tokens"]
-            decision.thinking_tokens = self._count_tokens(decision.thinking)
+            decision = self.build_decision_from_text(
+                result["text"],
+                result["prompt_tokens"],
+                result["completion_tokens"],
+                legal_actions,
+            )
             decision.latency_s = per_item_latency
             decisions.append(decision)
         return decisions

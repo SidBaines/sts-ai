@@ -248,6 +248,29 @@ class VllmJsonAgentTest(unittest.TestCase):
         self.assertEqual(decisions[1].retries, 0)
         self.assertGreaterEqual(decisions[1].latency_s, 0.0)
 
+    def test_build_decision_from_text_sets_token_counts_and_falls_back_on_invalid_text(self):
+        agent = object.__new__(VllmJsonAgent)
+        agent._count_tokens = lambda text: len(text.split()) if text else 0
+
+        decision = agent.build_decision_from_text(
+            '<think>short thought</think>\n{"reasoning": "second ok", "action_index": 1}',
+            13,
+            9,
+            self.actions,
+        )
+
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 1)
+        self.assertEqual(decision.prompt_tokens, 13)
+        self.assertEqual(decision.completion_tokens, 9)
+        self.assertEqual(decision.retries, 0)
+        self.assertEqual(decision.thinking_tokens, 2)
+
+        invalid_decision = agent.build_decision_from_text("not json", 3, 2, self.actions)
+
+        self.assertFalse(invalid_decision.valid)
+        self.assertEqual(invalid_decision.action_index, 0)
+
     def test_choose_action_retries_after_invalid_json(self):
         agent = object.__new__(VllmJsonAgent)
         agent.framing = NEUTRAL_FRAME

@@ -11,6 +11,7 @@ def build_agent(
     temperature: float = 0.2,
     max_retries: int = 1,
     thinking: bool = False,
+    enable_prefix_caching: bool = True,
 ):
     if agent_name == "first":
         return FirstLegalAgent()
@@ -33,6 +34,7 @@ def build_agent(
             temperature=temperature,
             max_retries=max_retries,
             enable_thinking=thinking,
+            enable_prefix_caching=enable_prefix_caching,
         )
     raise ValueError(f"unknown agent: {agent_name}")
 
