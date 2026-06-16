@@ -447,6 +447,11 @@ class VllmJsonAgent:
             )
         prompt = self._apply_chat_template(base)
         params = self._SamplingParams(temperature=self.temperature, max_tokens=self.max_tokens, seed=seed)
+        # Record submit time so stream_poll can report this request's submit->finish
+        # wall-time. hasattr guard keeps object.__new__ test instances working.
+        if not hasattr(self, "_submit_ts"):
+            self._submit_ts = {}
+        self._submit_ts[request_id] = time.perf_counter()
         # NOTE: vLLM's low-level LLMEngine.add_request signature is version-sensitive.
         # Verified target API: add_request(request_id, prompt, params). Keep this call
         # isolated here so a vLLM version bump is a one-line change.
@@ -454,8 +459,14 @@ class VllmJsonAgent:
 
     def stream_poll(self) -> list[tuple[str, dict]]:
         finished: list[tuple[str, dict]] = []
+        submit_ts = getattr(self, "_submit_ts", {})
+        now = time.perf_counter()
         for output in self.llm.llm_engine.step():
             if output.finished:
+                started = submit_ts.pop(output.request_id, None)
+                # submit->finish wall-time for this request: in continuous batching this
+                # is the per-decision latency (queue wait + decode). 0.0 if unrecorded.
+                latency_s = round(now - started, 4) if started is not None else 0.0
                 finished.append(
                     (
                         output.request_id,
@@ -463,6 +474,7 @@ class VllmJsonAgent:
                             "text": output.outputs[0].text,
                             "prompt_tokens": len(output.prompt_token_ids),
                             "completion_tokens": len(output.outputs[0].token_ids),
+                            "latency_s": latency_s,
                         },
                     )
                 )

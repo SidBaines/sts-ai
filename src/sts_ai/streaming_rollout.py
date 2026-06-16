@@ -110,6 +110,9 @@ def run_streaming_rollouts(
                 output["completion_tokens"],
                 view["legal_actions"],
             )
+            # Per-decision wall-time from the backend (submit->finish). Set here, like
+            # decision.retries below, so build_decision_from_text's signature is unchanged.
+            decision.latency_s = output.get("latency_s", 0.0)
             if not decision.valid and slot.attempt < max_retries:
                 slot.attempt += 1
                 submit(slot)

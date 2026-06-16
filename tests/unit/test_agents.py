@@ -1,3 +1,5 @@
+import time
+import types
 import unittest
 
 from sts_ai.agents import MlxQwenJsonAgent, RandomLegalAgent, VllmJsonAgent, parse_json_action
@@ -296,6 +298,31 @@ class VllmJsonAgentTest(unittest.TestCase):
         self.assertEqual(decision.completion_tokens, 4)
         self.assertEqual(decision.retries, 1)
         self.assertGreaterEqual(decision.latency_s, 0.0)
+
+    def test_stream_poll_reports_submit_to_finish_latency(self):
+        # Streaming path: stream_submit records submit time; stream_poll reports the
+        # request's submit->finish wall-time (the per-decision latency) in its output.
+        agent = object.__new__(VllmJsonAgent)
+        agent._submit_ts = {"7:0:0:a0": time.perf_counter() - 0.02}
+        finished = types.SimpleNamespace(
+            finished=True,
+            request_id="7:0:0:a0",
+            prompt_token_ids=[1, 2, 3],
+            outputs=[types.SimpleNamespace(text='{"action_index": 0}', token_ids=[1, 2])],
+        )
+        agent.llm = types.SimpleNamespace(
+            llm_engine=types.SimpleNamespace(step=lambda: [finished])
+        )
+
+        polled = agent.stream_poll()
+
+        self.assertEqual(len(polled), 1)
+        rid, payload = polled[0]
+        self.assertEqual(rid, "7:0:0:a0")
+        self.assertGreaterEqual(payload["latency_s"], 0.02)
+        self.assertEqual(payload["prompt_tokens"], 3)
+        self.assertEqual(payload["completion_tokens"], 2)
+        self.assertNotIn("7:0:0:a0", agent._submit_ts)  # consumed
 
 
 if __name__ == "__main__":

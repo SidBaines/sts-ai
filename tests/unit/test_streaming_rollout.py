@@ -59,6 +59,7 @@ class FakeStreamingAgent:
                     "text": str(action_index),
                     "prompt_tokens": 5,
                     "completion_tokens": 3,
+                    "latency_s": 0.123,
                 },
             )
         ]
@@ -169,6 +170,9 @@ class StreamingRolloutSpecTest(unittest.TestCase):
             self.assertEqual(result.rollout_index, rollout_index)
             self.assertEqual(len(result.decisions), 3)
             self.assertEqual(result.stopped_reason, "terminal")
+            # latency_s from the backend's poll output is wired onto each record.
+            for decision in result.decisions:
+                self.assertEqual(decision.agent["latency_s"], 0.123)
 
     def test_completes_with_intermittent_empty_polls(self) -> None:
         specs = [(7, 0), (7, 1), (8, 0)]
