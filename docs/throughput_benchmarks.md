@@ -45,6 +45,7 @@ thinking-off and a thinking-on arm (Gemma 3 = *prompted* `<think>` reasoning; Ge
 | gemma-4-12B-it · no-think | 16 | 2485 | 155 | 309 | **8.1** | 1.54 | 100 | 0 | 0% |
 | gemma-4-12B-it · think    | 16 | 47† | 3 | — | — | 27.8 | 1910 | 1871 | 34%† |
 | gemma-4-12B-it · think (16k)| 16 | 45† | 3 | — | — | 107 | 6698 | 6655 | 36%† |
+| gemma-4-12B-it · think (t=1.0)| 14‡ | — | — | — | — | — | — | — | 86%† |
 
 - `wall` = max over the 16 concurrent rollouts of that rollout's summed per-decision
   `latency_s` (≈ arm wall-clock at effective concurrency 16; excludes one-time model
@@ -65,16 +66,21 @@ thinking-off and a thinking-on arm (Gemma 3 = *prompted* `<think>` reasoning; Ge
   "gemma_thought"`), so re-runs record `think_tok` correctly; see `src/sts_ai/CLAUDE.md`
   (the `agents.py` reasoning-mode note). The Gemma-4-12B *thinking* arm (measured after the
   fix) shows this working: `think_tok` ~1871 captured (`reasoning_format=gemma_thought`).
-- **† Gemma-4-12B *thinking* is degenerate — a greedy-decoding repetition loop, NOT a
-  budget problem.** At `temperature 0` the 12B's native reasoning falls into a verbatim
-  repetition loop on some decisions (observed: it repeats one sentence — *"Boss relics are
-  things like 'Snecko Eye' (no, that's a common)."* — until truncation), so it never emits
-  the closing JSON → `truncated_before_json` → `agent_invalid` → **all 16 rollouts abort at
-  floor 0**. **Raising the cap does not help** — 4096 → 16384 just loops longer (mean
-  `think_tok` 1871 → 6655; every truncating decision hits the cap; floor still 0). The fix is
-  `temperature > 0` and/or a repetition/frequency penalty (Gemma is typically run at temp
-  ~1.0); a bigger budget is not it. dec/s/wall for both think rows are meaningless. E4B-think
-  and Gemma-3-think did **not** loop at temp 0, so this is specific to Gemma-4-12B here.
+- **† Gemma-4-12B *thinking* is degenerate, and the root cause is the non-parseable MAP —
+  not the token budget, and not (mainly) greedy decoding.** Every truncation occurs on a
+  `MAP_SCREEN` decision: the 12B spends its whole reasoning budget trying to decode the ASCII
+  map, loops re-examining coordinates/rows, never emits the closing JSON →
+  `truncated_before_json` → `agent_invalid` → the rollout dies (usually at floor 0, sometimes
+  at a later map screen). Things that **don't** fix it: a bigger cap (4096 → 16384 just loops
+  longer: mean `think_tok` 1871 → 6655, all truncating decisions hit the cap); and sampling —
+  `temp 1.0 / top_p 0.95 / top_k 64` only *blunts* the verbatim looping (a few rollouts escape)
+  but **86% (12/14) still truncate on the map** and die. E4B-think and Gemma-3-think don't loop
+  because they reason *briefly* on the map and fall back to a default instead of trying to fully
+  parse it; the larger 12B over-deliberates the ambiguous input and gets trapped. **The fix is a
+  parseable map representation — see [`map_representation_handoff.md`](map_representation_handoff.md).**
+  dec/s/wall for all three think rows are meaningless.
+- **‡** the `t=1.0` run lost 2 of 16 rollouts to a premature pod teardown (the poller hit its
+  time cap, not run completion); the 14 that finished are conclusive (86% map-truncation).
 
 Reproduce on a pod (needs a CUDA-13.0-driver H100 for the cu130 `vllm==0.23.0`):
 
