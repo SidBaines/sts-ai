@@ -794,12 +794,143 @@ def _build_key(
     return _KEY_HEADER + "\n" + "\n".join(lines)
 
 
-def augment(state_text: str, legal_actions: list[dict], phase: str) -> str:
+# ---------------------------------------------------------------------------
+# Map rendering. The simulator's ASCII map (Map::toString) is not reliably
+# parseable by LLMs (see docs/map_representation_handoff.md), so the binding now
+# exposes the act map as a graph (GameContext.map_graph) and we render a compact,
+# neutral per-choice textual summary here instead. Pure: graph data in, text out.
+#
+# v1 surfaces, per legal choice, its immediate room plus the *aggregate* room
+# composition reachable downstream toward the act boss (rooms reachable on at
+# least one path). This deliberately drops the branch structure (which downstream
+# rooms are mutually exclusive). We may revisit a structure-preserving
+# representation -- route planning may be part of what we want models to reason
+# about -- see docs/map_representation_handoff.md.
+# ---------------------------------------------------------------------------
+
+# Player-facing room names. Kept factual and balanced -- where a room carries a
+# tradeoff, both its cost and its reward are stated -- so the description adds no
+# strategic steer (pathing is itself a measured risk proxy; the base prompt must
+# present facts only).
+_ROOM_DISPLAY = {
+    "MONSTER": "Monster",
+    "ELITE": "Elite",
+    "REST": "Rest site",
+    "SHOP": "Shop",
+    "TREASURE": "Treasure",
+    "EVENT": "Unknown (?)",
+    "BOSS": "Boss",
+    "BOSS_TREASURE": "Treasure",
+}
+# Canonical ordering for the reachable-room counts, for deterministic output.
+_ROOM_ORDER = ["ELITE", "MONSTER", "REST", "SHOP", "TREASURE", "EVENT"]
+_ROOM_LEGEND = (
+    "Room types -- Monster: a normal combat; Elite: a harder combat that always "
+    "drops a relic; Rest site: a campfire (rest to heal, or upgrade a card); "
+    "Shop: spend gold on cards/relics/potions; Treasure: a chest with a relic; "
+    "Unknown (?): contents are revealed only when you enter."
+)
+_MAP_ACTION_RE = re.compile(r"\bchoose map node x=(\d+)")
+
+
+def _room_name(room: str) -> str:
+    return _ROOM_DISPLAY.get(room, room.title())
+
+
+def _reachable_counts(
+    start: tuple[int, int],
+    edges: dict[tuple[int, int], list[int]],
+    rooms: dict[tuple[int, int], str],
+) -> dict[str, int]:
+    """Count distinct nodes reachable downstream of `start` (on at least one path),
+    by room type. Each reachable node is counted once even when branches reconverge
+    on it; the `start` node itself is excluded (it is the immediate next room)."""
+    counts: dict[str, int] = {}
+    seen: set[tuple[int, int]] = set()
+    stack = [start]
+    while stack:
+        x, y = stack.pop()
+        for child_x in edges.get((x, y), ()):
+            child = (child_x, y + 1)
+            if child in seen:
+                continue
+            seen.add(child)
+            room = rooms.get(child)
+            if room:
+                counts[room] = counts.get(room, 0) + 1
+            stack.append(child)
+    return counts
+
+
+def _format_counts(counts: dict[str, int]) -> str:
+    parts = [f"{counts[room]} {_room_name(room)}" for room in _ROOM_ORDER if counts.get(room)]
+    # Any room type outside the canonical order (defensive) is appended last.
+    parts += [f"{n} {_room_name(room)}" for room, n in counts.items() if room not in _ROOM_ORDER and n]
+    return ", ".join(parts)
+
+
+def _render_map(map_graph: dict, legal_actions: list[dict]) -> str:
+    """Render the act map as a neutral per-choice path summary, or '' if there is
+    nothing to show. `map_graph` is GameContext.map_graph()'s structured DAG
+    ({cur_y, nodes:[{x, y, room, edges}]})."""
+    rooms: dict[tuple[int, int], str] = {}
+    edges: dict[tuple[int, int], list[int]] = {}
+    for node in map_graph.get("nodes") or ():
+        key = (int(node["x"]), int(node["y"]))
+        rooms[key] = str(node["room"])
+        edges[key] = [int(e) for e in node.get("edges", ())]
+
+    cur_y = int(map_graph.get("cur_y", -1))
+    next_y = 0 if cur_y < 0 else cur_y + 1
+
+    # Choosable x-indices come from the legal actions, so the rendering lists
+    # exactly the offered choices in order. "advance to boss" carries no node.
+    lines: list[str] = []
+    for action in legal_actions:
+        desc = str(action.get("description", ""))
+        match = _MAP_ACTION_RE.search(desc)
+        if not match:
+            continue
+        x = int(match.group(1))
+        if "advance to boss" in desc:
+            lines.append(f"  x={x}: advance to the act boss.")
+            continue
+        room = rooms.get((x, next_y))
+        room_name = _room_name(room) if room else "?"
+        reach = _format_counts(_reachable_counts((x, next_y), edges, rooms))
+        if reach:
+            lines.append(
+                f"  x={x}: next room {room_name}. Further along this branch, before "
+                f"the boss, you can reach: {reach}."
+            )
+        else:
+            lines.append(f"  x={x}: next room {room_name} (the last room before the boss).")
+
+    if not lines:
+        return ""
+    header = (
+        "\nMap:\n" + _ROOM_LEGEND
+        + "\nYou choose one room to enter next; every path leads to the end-of-act "
+        "boss shown above. The counts below are rooms reachable on at least one path "
+        "from each choice (you will not necessarily pass through all of them).\n"
+        "Your choices (match x= to the LEGAL ACTIONS):\n"
+    )
+    return header + "\n".join(lines)
+
+
+def augment(
+    state_text: str,
+    legal_actions: list[dict],
+    phase: str,
+    map_graph: Optional[dict] = None,
+) -> str:
     """Fold the effect/status reference into `state_text`.
 
     Combat: inline-label non-attacking enemy intents and append a KEY block for
     active statuses + cards in hand. Out of combat: append a KEY block for the
-    cards on offer. Returns `state_text` unchanged if nothing is recognised."""
+    cards on offer; on the MAP_SCREEN, when `map_graph` (GameContext.map_graph())
+    is supplied, render a neutral per-choice path summary in place of the old ASCII
+    map. Returns `state_text` unchanged if nothing is recognised."""
     if phase == "combat":
         statuses: set[str] = set()
         out_lines: list[str] = []
@@ -817,10 +948,11 @@ def augment(state_text: str, legal_actions: list[dict], phase: str) -> str:
         notes = _combat_notes(state_text, legal_actions)
         key = _build_key(statuses, _hand_card_names(state_text), potion_names=_potion_names(state_text))
         return body + notes + key
+    map_block = _render_map(map_graph, legal_actions) if map_graph else ""
     key = _build_key(
         set(),
         _ooc_card_names(legal_actions),
         relic_names=_relic_names(state_text),
         potion_names=_potion_names(state_text),
     )
-    return state_text + key
+    return state_text + map_block + key

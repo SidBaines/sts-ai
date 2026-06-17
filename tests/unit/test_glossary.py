@@ -341,5 +341,88 @@ class CoverageTest(unittest.TestCase):
         self.assertEqual(missing_statuses, [], f"statuses missing from STATUS_DB: {missing_statuses}")
 
 
+class MapRenderTest(unittest.TestCase):
+    """The act map is rendered from the structured graph (GameContext.map_graph),
+    not the old ASCII grid: a neutral per-choice summary of the immediate room and
+    the room composition reachable downstream toward the boss."""
+
+    STATE = (
+        "Act 1, floor 0, screen MAP_SCREEN, room none, end-of-act boss The Guardian\n"
+        "Your HP: 80/80, gold: 99\n"
+        "Relics: {Burning Blood:0,}\nPotions: none\n"
+    )
+
+    # Two first-row Monster choices: x=0's branch leads to an Elite then a Rest;
+    # x=1's branch leads to a Monster then a Shop. (cur_y=-1 -> choose row 0.)
+    GRAPH = {
+        "cur_y": -1,
+        "nodes": [
+            {"x": 0, "y": 0, "room": "MONSTER", "edges": [0]},
+            {"x": 1, "y": 0, "room": "MONSTER", "edges": [1]},
+            {"x": 0, "y": 1, "room": "ELITE", "edges": [0]},
+            {"x": 1, "y": 1, "room": "MONSTER", "edges": [1]},
+            {"x": 0, "y": 2, "room": "REST", "edges": []},
+            {"x": 1, "y": 2, "room": "SHOP", "edges": []},
+        ],
+    }
+    ACTIONS = [
+        {"index": 0, "description": "choose map node x=0 room=MONSTER"},
+        {"index": 1, "description": "choose map node x=1 room=MONSTER"},
+    ]
+
+    def _render(self):
+        return augment(self.STATE, self.ACTIONS, "out_of_combat", map_graph=self.GRAPH)
+
+    def test_renders_legend_and_choices(self):
+        out = self._render()
+        self.assertIn("\nMap:\n", out)
+        self.assertIn("Room types --", out)
+        self.assertIn("Your choices (match x= to the LEGAL ACTIONS):", out)
+
+    def test_per_choice_reachable_composition_differs(self):
+        out = self._render()
+        x0 = next(ln for ln in out.splitlines() if ln.startswith("  x=0:"))
+        x1 = next(ln for ln in out.splitlines() if ln.startswith("  x=1:"))
+        # Immediate room shown, downstream composition reachable on each branch.
+        self.assertIn("next room Monster", x0)
+        self.assertIn("1 Elite", x0)
+        self.assertIn("1 Rest site", x0)
+        self.assertNotIn("Shop", x0)
+        self.assertIn("1 Shop", x1)
+        self.assertNotIn("Elite", x1)
+
+    def test_choices_listed_in_action_order(self):
+        out = self._render()
+        self.assertLess(out.index("  x=0:"), out.index("  x=1:"))
+
+    def test_no_ascii_grid(self):
+        # The unparseable ASCII grid (toString) is gone: no row-numbered grid lines.
+        out = self._render()
+        self.assertNotIn(" room=", out[out.index("\nMap:\n"):])  # action tags stay in LEGAL ACTIONS only
+        self.assertNotRegex(out, r"\n\s*\d+\s+[MERST?$]\s+[MERST?$]")  # e.g. "14   R  R"
+
+    def test_neutral_tone(self):
+        banned = re.compile(r"\b(dangerous|risky|prioriti[sz]e|recommend|should|worth it|play it safe|avoid)\b", re.I)
+        out = self._render()
+        self.assertIsNone(banned.search(out), out)
+
+    def test_advance_to_boss(self):
+        actions = [{"index": 0, "description": "choose map node x=0 advance to boss"}]
+        out = augment(self.STATE, actions, "out_of_combat", map_graph={"cur_y": 14, "nodes": []})
+        self.assertIn("x=0: advance to the act boss.", out)
+
+    def test_last_room_before_boss(self):
+        graph = {"cur_y": 13, "nodes": [{"x": 0, "y": 14, "room": "REST", "edges": []}]}
+        actions = [{"index": 0, "description": "choose map node x=0 room=REST"}]
+        out = augment(self.STATE, actions, "out_of_combat", map_graph=graph)
+        self.assertIn("x=0: next room Rest site (the last room before the boss).", out)
+
+    def test_no_map_block_without_graph(self):
+        # Backward compatible: omitting map_graph leaves the OOC text untouched.
+        out = augment(self.STATE, self.ACTIONS, "out_of_combat")
+        self.assertNotIn("Your choices (match x=", out)
+        self.assertNotIn("\nMap:\n", out)
+
+
 if __name__ == "__main__":
     unittest.main()

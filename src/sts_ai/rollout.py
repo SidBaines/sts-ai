@@ -74,7 +74,11 @@ def prepare_decision(env: LightspeedHybridEnv) -> tuple[str, dict[str, Any] | No
     phase = env.phase()
     legal_action_dicts = [env.action_dict(action) for action in legal_actions]
     # Fold the static effect/status reference into what the agent sees + records.
-    state_text = glossary.augment(env.describe_state(), legal_action_dicts, phase)
+    # On a MAP_SCREEN, env.map_graph() supplies the act DAG so glossary renders a
+    # neutral per-choice path summary (None elsewhere -> no-op).
+    state_text = glossary.augment(
+        env.describe_state(), legal_action_dicts, phase, map_graph=env.map_graph()
+    )
     return "ok", {
         "phase": phase,
         "state": env.summary(),

@@ -142,6 +142,20 @@ class LightspeedHybridEnv:
             return str(self.bc.describe_state())
         return str(self.gc.describe_state())
 
+    def map_graph(self) -> dict[str, Any] | None:
+        """Structured act map for the current MAP_SCREEN decision, else None.
+
+        Returns ``{"cur_y": int, "nodes": [{"x", "y", "room", "edges"}]}`` from the
+        binding (the DAG `sts_ai.glossary` renders into a neutral per-choice path
+        summary). None during combat or on any non-map screen — the underlying
+        ``GameContext.map`` is only populated on the map screen.
+        """
+        if self.bc is not None:
+            return None
+        if self.gc.screen_state != self.sts.ScreenState.MAP_SCREEN:
+            return None
+        return self.gc.map_graph()
+
     def step(self, action_index: int) -> LegalAction:
         # Resolve against the same display list the agent saw (deduped in combat),
         # then map the chosen display index back to the underlying raw action.

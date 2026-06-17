@@ -220,3 +220,23 @@ while not env.is_terminal():
 ## 8. Scope reminder
 
 This document defines **the problem** and points you at the code, data, and constraints. **Designing the better map representation is your task** — there is intentionally no proposed solution here, so you're free to pick the best approach (richer action labels, a structured per-choice path summary, a graph/edge-list rendering, replacing or augmenting the ASCII, exposing the map graph through the binding, doing it in `glossary.py`, etc.). Just keep it factual/neutral, parseable, and validate against §7.
+
+---
+
+## 9. Resolution (2026-06-17) — what was built
+
+**Approach: hybrid (binding exposes the graph; Python renders).** The ASCII grid is gone and is replaced by a compact, neutral, per-choice textual summary.
+
+- **Binding (`patches/sts_lightspeed_python_api.patch`):**
+  - `describeGameState` **no longer dumps `gc.map->toString(true)`** — the `Map:` ASCII block is removed from `state_text`.
+  - New getter `GameContext.map_graph()` returns the act DAG as structured data: `{"cur_y": int, "nodes": [{"x", "y", "room", "edges"}]}` (`edges` = child x-indices in row `y+1`; existing nodes only). `cur_y` is the current row (`-1` before the first row, `14` when only the boss remains).
+- **Env (`lightspeed.py`):** `LightspeedHybridEnv.map_graph()` returns that dict on a `MAP_SCREEN`, else `None`.
+- **Render (`glossary.py`):** `augment(..., map_graph=...)` (threaded from `rollout.prepare_decision`) renders, per legal choice, its **immediate room** + the **room composition reachable downstream toward the boss**, plus a one-line room-type **legend**. The `choose map node x=… room=…` action labels are **unchanged** (so `risk_proxies` still parses `room=TYPE`); the map block is keyed by the same `x=`.
+
+**Design choice — per-choice *aggregate reachable* composition (v1).** We deliberately surface only the multiset of room types reachable on *at least one* path from each choice; we do **not** preserve branch structure (which downstream rooms are mutually exclusive) or full path enumeration (combinatorial → would re-trigger the verbose-reasoner loop). This was an explicit, accepted v1 decision and **may be revisited** — route planning (e.g. "can I get the elite *and* the campfire on one route?") could be part of what we want models to reason about, and a forced-vs-optional / structure-preserving rendering would capture it.
+
+**Known limitation to weigh on revisit:** Act-1 maps **reconverge heavily near the bottom**, so from floor 0 nearly the *entire* map is reachable from every starting node — the aggregate counts are large and barely discriminate the early choices (e.g. 3 vs 4 vs 3 elites). The representation discriminates well **mid-act** once branches diverge, and correctly reflects that floor-0 choices are roughly equivalent for downstream exposure, but if early-game pathing signal matters, prefer a near-term/forced-path metric over whole-subtree reachability.
+
+**Validation done (local):** unit tests (`tests/unit/test_glossary.py::MapRenderTest`) + integration tests (`tests/integration/test_rollout.py::MapRepresentationTest`) + full suite green; a `--agent random` smoke rollout records the new block on every map decision. **Still gated:** the gemma-4-12B-it-thinking GPU rerun (§7) — run it on a CUDA H100 to confirm the `MAP_SCREEN` `truncated_before_json` failures vanish before treating the loop as fixed.
+
+**Trace-shape change (pre-data-freeze, called out):** `state_text` on map screens changed (ASCII removed, structured block added). Action descriptions are unchanged, so `risk_proxies` is unaffected.

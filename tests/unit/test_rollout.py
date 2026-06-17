@@ -32,6 +32,9 @@ class FakeStepErrorEnv:
     def describe_state(self):
         return "fake state"
 
+    def map_graph(self):
+        return None
+
     def step(self, action_index):
         raise RuntimeError("simulator exploded")
 
@@ -101,6 +104,9 @@ class FakeCombatEnv:
 
     def describe_state(self):
         return "Battle turn 0\nPlayer HP: 80/80"
+
+    def map_graph(self):
+        return None
 
     def step(self, action_index):
         self._steps += 1
@@ -210,6 +216,9 @@ class FakeRandomEnv:
 
     def describe_state(self):
         return f"fake decision {self._steps}"
+
+    def map_graph(self):
+        return None
 
     def step(self, action_index):
         self._steps += 1

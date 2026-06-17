@@ -74,5 +74,61 @@ class SerializerSmokeTest(unittest.TestCase):
         self.assertNotIn("room INVALID", state)
 
 
+@requires_simulator
+class MapRepresentationTest(unittest.TestCase):
+    """The binding exposes the act map as a graph and describeGameState no longer
+    dumps the unparseable ASCII grid; glossary renders a per-choice summary."""
+
+    def _advance_to_map_screen(self, env, limit=60):
+        for _ in range(limit):
+            if env.is_terminal():
+                return False
+            env.advance_to_decision()
+            if "MAP_SCREEN" in env.summary().get("screen_state", ""):
+                return True
+            env.step(0)
+        return False
+
+    def test_map_graph_shape_and_no_ascii_in_describe_state(self):
+        from sts_ai import glossary
+
+        env = LightspeedHybridEnv(world_seed=3, battle_simulations=50, max_act=1)
+        self.assertTrue(self._advance_to_map_screen(env), "no MAP_SCREEN reached")
+
+        # describeGameState must not carry the old ASCII map any more.
+        self.assertNotIn("\nMap:\n", env.describe_state())
+
+        graph = env.map_graph()
+        self.assertIsNotNone(graph)
+        self.assertIn("cur_y", graph)
+        self.assertTrue(graph["nodes"], "map graph has no nodes")
+        for node in graph["nodes"]:
+            self.assertEqual(set(node), {"x", "y", "room", "edges"})
+            self.assertTrue(0 <= node["x"] < 7 and 0 <= node["y"] < 15)
+            for child_x in node["edges"]:
+                self.assertTrue(0 <= child_x < 7)
+
+        # Off the map screen, map_graph() is None (only populated on MAP_SCREEN).
+        la = env.legal_actions()
+        lad = [env.action_dict(a) for a in la]
+        rendered = glossary.augment(env.describe_state(), lad, env.phase(), map_graph=graph)
+        self.assertIn("\nMap:\n", rendered)
+        self.assertIn("Your choices (match x= to the LEGAL ACTIONS):", rendered)
+        # Every offered map choice's x= appears in the rendered summary.
+        import re
+
+        for desc in (a["description"] for a in lad):
+            m = re.search(r"choose map node x=(\d+)", desc)
+            if m:
+                self.assertIn(f"x={m.group(1)}:", rendered)
+
+    def test_map_graph_none_off_map_screen(self):
+        # Neow floor (EVENT_SCREEN) is not a map screen.
+        env = LightspeedHybridEnv(world_seed=1, battle_simulations=50)
+        env.advance_to_decision()
+        self.assertNotIn("MAP_SCREEN", env.summary().get("screen_state", ""))
+        self.assertIsNone(env.map_graph())
+
+
 if __name__ == "__main__":
     unittest.main()

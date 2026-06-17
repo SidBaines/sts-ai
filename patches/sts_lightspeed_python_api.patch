@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..b623b7b 100644
+index a9afe35..3297545 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -12,21 +12,679 @@
+@@ -12,21 +12,682 @@
  
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
@@ -343,9 +343,12 @@ index a9afe35..b623b7b 100644
 +        }
 +    }
 +
-+    if (gc.screenState == ScreenState::MAP_SCREEN && gc.map != nullptr) {
-+        os << "\nMap:\n" << gc.map->toString(true);
-+    } else if (gc.screenState == ScreenState::REWARDS) {
++    // The MAP_SCREEN map is intentionally NOT dumped here. The old ASCII grid
++    // (gc.map->toString) was not reliably parseable by LLM agents; the map is now
++    // exposed structurally via GameContext::map_graph() and rendered as a neutral
++    // per-choice textual summary in Python (sts_ai.glossary._render_map). See
++    // docs/map_representation_handoff.md.
++    if (gc.screenState == ScreenState::REWARDS) {
 +        os << "\nRewards: " << gc.info.rewardsContainer.toString();
 +    } else if (gc.screenState == ScreenState::CARD_SELECT) {
 +        os << "\n" << cardSelectPurpose(gc.info.selectScreenType)
@@ -682,7 +685,7 @@ index a9afe35..b623b7b 100644
  
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +699,136 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -41,6 +702,136 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
          .def("playout", &search::ScumSearchAgent2::playout);
  
@@ -819,17 +822,51 @@ index a9afe35..b623b7b 100644
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
          .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -75,6 +863,9 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +866,43 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
  
 +    gameContext.def("legal_actions", &search::GameAction::getAllActionsInState)
-+        .def("describe_state", &describeGameState);
++        .def("describe_state", &describeGameState)
++        .def("map_graph", [](const GameContext &gc) {
++            // Structured act map for the MAP_SCREEN. Python (sts_ai.glossary) walks
++            // this DAG to render a neutral per-choice path summary, replacing the
++            // unparseable ASCII grid. cur_y is the current row (-1 before the first
++            // row is chosen, 14 when only the boss remains); each node lists the
++            // x-indices of its children in the next row (y+1). Only existing nodes
++            // (room != NONE/INVALID) are returned.
++            pybind11::dict result;
++            result["cur_y"] = gc.curMapNodeY;
++            pybind11::list nodes;
++            if (gc.map != nullptr) {
++                for (int y = 0; y < 15; ++y) {
++                    for (int x = 0; x < 7; ++x) {
++                        const auto &n = gc.map->getNode(x, y);
++                        if (n.room == Room::NONE || n.room == Room::INVALID) {
++                            continue;
++                        }
++                        pybind11::dict d;
++                        d["x"] = x;
++                        d["y"] = y;
++                        d["room"] = std::string(roomStrings[static_cast<int>(n.room)]);
++                        pybind11::list edges;
++                        for (int e = 0; e < n.edgeCount; ++e) {
++                            edges.append(n.edges[e]);
++                        }
++                        d["edges"] = edges;
++                        nodes.append(d);
++                    }
++                }
++            }
++            result["nodes"] = nodes;
++            return result;
++        }, "structured act map: {cur_y, nodes:[{x, y, room, edges (child x-indices "
++           "in row y+1)}]}; existing nodes only. Empty nodes list when not on a map.");
 +
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -836,5 +1627,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +1664,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
  
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")

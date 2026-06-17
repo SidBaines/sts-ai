@@ -37,6 +37,9 @@ class FakeParallelEnv:
     def describe_state(self) -> str:
         return f"seed={self.world_seed} step={self.steps}"
 
+    def map_graph(self) -> None:
+        return None
+
     def step(self, action_index: int) -> LegalAction:
         action = self.legal_actions()[action_index]
         self.steps += 1
