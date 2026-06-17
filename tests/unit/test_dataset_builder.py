@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from sts_ai.train.dataset_builder import build_dataset, discover_rollouts
+from sts_ai.train.sft_format import chat_template_probe_hash
 
 
 FRAMING = "Test framing: choose the strongest legal action."
@@ -218,6 +219,37 @@ class BuildDatasetTest(unittest.TestCase):
             self.assertFalse(manifest["induce_reasoning"])
             self.assertIn("filter_report", manifest)
             self.assertIn("skipped_record_counts", manifest)
+
+    def test_chat_template_hash_contract_uses_manifest_enable_thinking(self):
+        tokenizer = FakeTokenizer()
+        self.assertNotEqual(
+            chat_template_probe_hash(tokenizer, enable_thinking=False),
+            chat_template_probe_hash(tokenizer, enable_thinking=True),
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_rollout(
+                root,
+                _meta(world_seed=8, outcome="GameOutcome.VICTORY", final_act=2, final_floor=50),
+                [_record(world_seed=8, decision_index=0)],
+            )
+
+            _examples, manifest = build_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=tokenizer,
+                tokenizer_id="fake-tokenizer",
+                min_positives=1,
+            )
+
+            self.assertEqual(
+                chat_template_probe_hash(
+                    tokenizer,
+                    enable_thinking=manifest["enable_thinking"],
+                ),
+                manifest["chat_template_hash"],
+            )
 
 
 class BuildDatasetGuardTest(unittest.TestCase):

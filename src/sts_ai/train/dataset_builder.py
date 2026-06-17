@@ -1,14 +1,13 @@
 """Offline SFT dataset construction from recorded rollout traces."""
 from __future__ import annotations
 
-import hashlib
 import json
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
 from sts_ai.train.reward import label_trajectories
-from sts_ai.train.sft_format import build_example
+from sts_ai.train.sft_format import build_example, chat_template_probe_hash
 
 __all__ = ["discover_rollouts", "build_dataset"]
 
@@ -63,21 +62,7 @@ def _one_value(values: list[Any], *, name: str) -> Any:
 
 
 def _chat_template_hash(tokenizer: Any, *, enable_thinking: bool) -> str:
-    messages = [{"role": "user", "content": "__sts_probe__"}]
-    try:
-        probe = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-            enable_thinking=enable_thinking,
-        )
-    except TypeError:
-        probe = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-        )
-    return hashlib.sha256(probe.encode()).hexdigest()[:16]
+    return chat_template_probe_hash(tokenizer, enable_thinking=enable_thinking)
 
 
 def _skip_reason(record: dict[str, Any], drop_phases: tuple[str, ...]) -> str | None:

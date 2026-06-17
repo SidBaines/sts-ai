@@ -1,29 +1,14 @@
 """Thin CUDA/TRL LoRA trainer wrapper."""
 from __future__ import annotations
 
-import hashlib
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
+from sts_ai.train.sft_format import chat_template_probe_hash
+
 __all__ = ["train"]
-
-
-def _chat_template_hash(tokenizer: Any) -> str:
-    messages = [{"role": "user", "content": "__sts_probe__"}]
-    try:
-        probe = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-        )
-    except TypeError:
-        probe = tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-        )
-    return hashlib.sha256(probe.encode()).hexdigest()[:16]
 
 
 def _check_manifest(manifest_path: Path, *, tokenizer: Any, base_model: str) -> None:
@@ -31,7 +16,11 @@ def _check_manifest(manifest_path: Path, *, tokenizer: Any, base_model: str) -> 
 
     expected_hash = manifest.get("chat_template_hash")
     if expected_hash:
-        actual_hash = _chat_template_hash(tokenizer)
+        enable_thinking = bool(manifest.get("enable_thinking", False))
+        actual_hash = chat_template_probe_hash(
+            tokenizer,
+            enable_thinking=enable_thinking,
+        )
         if actual_hash != expected_hash:
             raise ValueError(
                 "dataset chat_template_hash does not match base model tokenizer: "
@@ -65,12 +54,11 @@ def train(
     try:
         from datasets import load_dataset
         from peft import LoraConfig
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        from transformers import AutoTokenizer
         from trl import SFTConfig, SFTTrainer
     except ImportError as exc:
         raise RuntimeError("install .[train-cuda]") from exc
 
-    _ = AutoModelForCausalLM
     dataset_path = Path(dataset_path)
     out_adapter_dir = Path(out_adapter_dir)
     out_adapter_dir.mkdir(parents=True, exist_ok=True)

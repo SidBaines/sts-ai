@@ -7,12 +7,14 @@ completion-only loss mask explicit and testable.
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 
 from sts_ai.prompting import render_action_prompt
 from sts_ai.schemas import LegalAction
 
 __all__ = [
+    "chat_template_probe_hash",
     "reconstruct_prompt",
     "completion_text",
     "build_example",
@@ -29,6 +31,33 @@ def _legal_actions_from_record(record: dict) -> list[LegalAction]:
         )
         for action in record["legal_actions"]
     ]
+
+
+def chat_template_probe_hash(
+    tokenizer,
+    *,
+    enable_thinking: bool,
+    probe: str = "__sts_probe__",
+) -> str:
+    """Stable short hash of the model's chat template applied to a probe message.
+    Used by the dataset builder (producer) and the trainers (consumer) so the
+    skew guard compares like-for-like. MUST be the single definition of this hash.
+    """
+    messages = [{"role": "user", "content": probe}]
+    try:
+        rendered = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=enable_thinking,
+        )
+    except TypeError:
+        rendered = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+    return hashlib.sha256(rendered.encode()).hexdigest()[:16]
 
 
 def reconstruct_prompt(
