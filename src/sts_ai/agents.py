@@ -698,38 +698,88 @@ def parse_json_action(
 def _extract_thinking_with_metadata(
     text: str,
     json_span: tuple[int, int] | None,
-) -> tuple[str, dict[str, bool]]:
-    """Return the first think span plus parser-quality metadata.
+) -> tuple[str, dict[str, object]]:
+    """Return the model's chain-of-thought plus parser-quality metadata.
 
-    If a think block is opened but never closed before the final JSON, stop the
-    thinking text at the JSON start so the action payload is not stored as CoT.
-    If there is no JSON, keep the partial text after <think> for truncation
-    audits.
+    Handles two reasoning formats: the ``<think>…</think>`` block (Qwen3 native and
+    the prompted-reasoning path), and **Gemma-4's native ``thought`` channel** (see
+    ``_extract_gemma_thought``). If a block is opened but never closed before the
+    final JSON, the thinking text is bounded at the JSON start so the action payload
+    is not stored as CoT; with no JSON, the partial text is kept for truncation audits.
     """
     lower = text.lower()
     json_start = json_span[0] if json_span is not None else None
-    start = lower.find("<think>")
-    close_any = lower.find("</think>")
-    metadata = {
+    metadata: dict[str, object] = {
         "thinking_closed": False,
         "thinking_truncated": False,
-        "stray_think_close": start == -1 and close_any != -1,
+        "stray_think_close": False,
         "json_inside_unclosed_think": False,
     }
-    if start == -1:
-        return "", metadata
-    inner_start = start + len("<think>")
-    end = lower.find("</think>", inner_start)
-    if end != -1 and (json_start is None or end <= json_start):
-        metadata["thinking_closed"] = True
-        return text[inner_start:end].strip(), metadata
 
-    if json_start is not None and json_start > inner_start:
-        metadata["json_inside_unclosed_think"] = True
-        return text[inner_start:json_start].strip(), metadata
+    # --- <think>…</think> (Qwen3 native + prompted reasoning) ---
+    start = lower.find("<think>")
+    metadata["stray_think_close"] = start == -1 and lower.find("</think>") != -1
+    if start != -1:
+        inner_start = start + len("<think>")
+        end = lower.find("</think>", inner_start)
+        if end != -1 and (json_start is None or end <= json_start):
+            metadata["thinking_closed"] = True
+            return text[inner_start:end].strip(), metadata
+        if json_start is not None and json_start > inner_start:
+            metadata["json_inside_unclosed_think"] = True
+            return text[inner_start:json_start].strip(), metadata
+        metadata["thinking_truncated"] = True
+        return text[inner_start:].strip(), metadata
 
-    metadata["thinking_truncated"] = True
-    return text[inner_start:].strip(), metadata
+    # --- Gemma-4 native `thought` channel ---
+    thinking, gemma_meta = _extract_gemma_thought(text, json_start)
+    if thinking is not None:
+        metadata.update(gemma_meta)
+        return thinking, metadata
+
+    return "", metadata
+
+
+def _strip_answer_fence(text: str) -> str:
+    """Trim a trailing markdown code-fence opener (```` ```json ````) that precedes
+    the JSON answer, so it is not stored as part of the captured reasoning."""
+    return re.sub(r"`{3,}(?:json)?\s*$", "", text.strip(), flags=re.IGNORECASE).strip()
+
+
+def _extract_gemma_thought(
+    text: str,
+    json_start: int | None,
+) -> tuple[str | None, dict[str, object]]:
+    """Capture Gemma-4 native reasoning.
+
+    Gemma-4 wraps chain-of-thought in a ``<|channel>thought\\n … <channel|>`` block.
+    vLLM's default ``skip_special_tokens=True`` drops the ``<|channel>`` markers, so
+    the completion we receive simply *starts with* the ``thought`` role label
+    followed by the reasoning and then the JSON answer (the stripped form we observe
+    on the H100). This handles both: bound the reasoning at the channel close if it
+    survived, else at the JSON answer start. Returns ``(None, {})`` when the text is
+    not a Gemma-thought completion, so callers fall through to "no thinking".
+    """
+    lower = text.lower()
+    open_idx = lower.find("<|channel>")
+    if open_idx != -1:  # special tokens preserved (skip_special_tokens=False)
+        label = lower.find("thought", open_idx)
+        body_start = (label + len("thought")) if (label != -1 and label - open_idx <= 12) else open_idx + len("<|channel>")
+    elif lower.lstrip().startswith("thought"):  # stripped form (the default)
+        body_start = (len(text) - len(text.lstrip())) + len("thought")
+    else:
+        return None, {}
+
+    meta: dict[str, object] = {"reasoning_format": "gemma_thought", "thinking_closed": False, "thinking_truncated": False}
+    for close in ("<channel|>", "</channel>", "<|channel|>"):
+        c = lower.find(close, body_start)
+        if c != -1 and (json_start is None or c <= json_start):
+            meta["thinking_closed"] = True
+            return _strip_answer_fence(text[body_start:c]), meta
+    if json_start is not None and json_start > body_start:
+        return _strip_answer_fence(text[body_start:json_start]), meta
+    meta["thinking_truncated"] = True
+    return _strip_answer_fence(text[body_start:]), meta
 
 
 def _extract_json_with_span(text: str) -> tuple[dict, tuple[int, int]] | None:

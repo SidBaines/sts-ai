@@ -1,4 +1,4 @@
-# Rollout throughput benchmarks (local MLX)
+# Rollout throughput benchmarks (local MLX + vLLM/H100)
 
 Measured numbers to help **plan experiments** (how long will N rollouts of model X
 take, which model to pick for a given budget). Generated from the 2026-06-15
@@ -24,8 +24,52 @@ enough seeds/rollout indices to keep the GPU busy. Prefix caching is enabled by
 default for vLLM.
 
 The MLX numbers below are unchanged because MLX still uses `parallel_rollout`
-with `--batch-size`. vLLM thinking-mode benchmarks need to be (re)measured on the
-pod; do not infer CUDA numbers from the local MLX table.
+with `--batch-size`. vLLM thinking-mode numbers are measured in the next section
+(Gemma 3 & 4 on H100); do not infer CUDA numbers from the local MLX table.
+
+## Results — vLLM on H100 (Gemma 3 & 4)
+
+Measured 2026-06-16 on a RunPod **H100 SXM 80GB** (vLLM 0.23.0, torch cu130 /
+CUDA 13.0). Config: `--combat-control llm`, **16 seeds**, `--concurrency 48`
+(effective **16** = #seeds, so the GPU is *under-saturated*), `--max-decisions 200`,
+`--max-tokens 4096`, `--temperature 0`, `--battle-simulations 50`. Each model ran a
+thinking-off and a thinking-on arm (Gemma 3 = *prompted* `<think>` reasoning; Gemma 4
+= *native* thinking).
+
+| Model · arm | rollouts | decisions | dec/roll | wall (s) | **dec/s** | s/dec | compl_tok | think_tok | invalid |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| gemma-4-E4B-it · no-think | 16 | 2496 | 156 | 224 | **11.2** | 1.00 | 153 | 0 | 0% |
+| gemma-4-E4B-it · think    | 16 | 2425 | 152 | 1103 | **2.2** | 5.16 | 828 | 0\* | 0% |
+| gemma-3-12b-it · no-think | 16 | 2617 | 164 | 237 | **11.0** | 1.15 | 87 | 0 | 0% |
+| gemma-3-12b-it · think    | 16 | 2828 | 177 | 568 | **5.0** | 2.68 | 212 | 168 | 0% |
+
+- `wall` = max over the 16 concurrent rollouts of that rollout's summed per-decision
+  `latency_s` (≈ arm wall-clock at effective concurrency 16; excludes one-time model
+  load). `dec/s` = decisions ÷ wall; `s/dec` = avg per-decision turnaround under load.
+- **0% invalid everywhere** — `--max-tokens 4096` is ample for these models (no
+  truncated-before-JSON failures, even when thinking).
+- **Thinking cost:** Gemma-3-12B ≈ 2.2× slower (5.0 vs 11.0 dec/s); Gemma-4-E4B ≈ 5×
+  slower (2.2 vs 11.2) because it reasons far longer (~828 vs 153 completion tokens).
+  Both no-think arms ≈ 11 dec/s.
+- **Under-saturation:** only 16 rollouts were in flight (concurrency cap 48), so these
+  dec/s are a **lower bound** — more seeds/rollout-indices raise them.
+- **\* Gemma-4 `think_tok=0` is a capture gap, not "no reasoning":** Gemma-4 emits its
+  native reasoning under a `thought` channel (the completion starts with `thought\n…`),
+  not `<think>…</think>`, so the harness's `<think>` parser records 0 thinking tokens
+  and the reasoning stays mixed into `raw_response`/`completion`. The final JSON still
+  parses (hence 0% invalid). **This run predates the parser fix** — `parse_json_action`
+  now captures Gemma-4's `thought` channel (tagging `metadata.reasoning_format =
+  "gemma_thought"`), so re-runs record `think_tok` correctly; see `src/sts_ai/CLAUDE.md`
+  (the `agents.py` reasoning-mode note).
+
+Reproduce on a pod (needs a CUDA-13.0-driver H100 for the cu130 `vllm==0.23.0`):
+
+```bash
+# one model per process (vLLM doesn't reliably free GPU mem between in-process loads)
+printf 'google/gemma-4-E4B-it\ngoogle/gemma-3-12b-it\n' > scripts/runpod/models_gemma.txt
+HF_TOKEN=<token> bash scripts/runpod/run_sweep_on_pod.sh scripts/runpod/models_gemma.txt data/rollouts/gemma_bench
+PYTHONPATH=src .venv/bin/python scripts/compare_models.py data/rollouts/gemma_bench
+```
 
 ## Results — valid (no-thinking) arms
 

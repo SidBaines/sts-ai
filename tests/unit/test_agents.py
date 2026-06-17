@@ -60,6 +60,44 @@ class ParseJsonActionTest(unittest.TestCase):
         self.assertEqual(decision.action_index, 0)
         self.assertTrue(decision.metadata["stray_think_close"])
 
+    def test_gemma_thought_stripped_form_captured(self):
+        # Gemma-4 native thinking with the <|channel> tokens stripped (vLLM default):
+        # the completion starts at the `thought` role label, then reasoning, then the
+        # fenced JSON answer.
+        text = (
+            "thought\nThe second action is stronger here.\n"
+            'I will pick it.```json\n{"reasoning": "final", "action_index": 1}\n```'
+        )
+        decision = parse_json_action(text, self.actions)
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 1)
+        self.assertEqual(decision.metadata.get("reasoning_format"), "gemma_thought")
+        self.assertIn("second action is stronger", decision.thinking)
+        self.assertNotIn('"action_index"', decision.thinking)  # JSON not stored as CoT
+        self.assertNotIn("```", decision.thinking)             # trailing answer fence trimmed
+
+    def test_gemma_thought_channel_tokens_captured(self):
+        # skip_special_tokens=False: the channel markers survive and bound the thought.
+        text = (
+            "<|channel>thought\nReasoning body here.<channel|>"
+            '{"reasoning": "final", "action_index": 0}'
+        )
+        decision = parse_json_action(text, self.actions)
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 0)
+        self.assertEqual(decision.metadata.get("reasoning_format"), "gemma_thought")
+        self.assertEqual(decision.thinking, "Reasoning body here.")
+        self.assertTrue(decision.metadata["thinking_closed"])
+
+    def test_plain_json_answer_has_no_gemma_thought(self):
+        # A no-thinking completion (starts with the fenced JSON) must not be mistaken
+        # for a Gemma thought channel.
+        text = '```json\n{"reasoning": "ok", "action_index": 0}\n```'
+        decision = parse_json_action(text, self.actions)
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.thinking, "")
+        self.assertIsNone(decision.metadata.get("reasoning_format"))
+
     def test_extracts_last_balanced_json_object(self):
         text = '{"debug": true}\nfinal answer: {"reasoning": "choose second", "action_index": 1}'
         decision = parse_json_action(text, self.actions)
