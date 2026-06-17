@@ -225,6 +225,18 @@ def main() -> None:
     parser.add_argument("--thinking", action="store_true")
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument(
+        "--top-p",
+        type=float,
+        default=1.0,
+        help="vLLM top-p (nucleus) sampling (1.0 = disabled). E.g. Gemma uses 0.95.",
+    )
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=-1,
+        help="vLLM top-k sampling (-1 = disabled). E.g. Gemma uses 64.",
+    )
+    parser.add_argument(
         "--max-tokens",
         type=int,
         default=4096,
@@ -312,6 +324,8 @@ def main() -> None:
         model=args.model,
         max_tokens=args.max_tokens,
         temperature=args.temperature,
+        top_p=args.top_p,
+        top_k=args.top_k,
         max_retries=args.max_retries,
         thinking=args.thinking,
         enable_prefix_caching=args.enable_prefix_caching,
