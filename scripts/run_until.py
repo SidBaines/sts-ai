@@ -259,7 +259,12 @@ def main() -> None:
         default=None,
         help="LoRA adapter dir to load on top of --model for eval.",
     )
-    parser.add_argument("--max-lora-rank", type=int, default=16)
+    parser.add_argument(
+        "--max-lora-rank",
+        type=int,
+        default=16,
+        help="vLLM max LoRA rank; must be >= the trained adapter's rank.",
+    )
     parser.add_argument("--output-dir", type=Path, default=Path("data") / "rollouts" / "run_until")
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
