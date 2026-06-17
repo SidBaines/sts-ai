@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-__all__ = ["prepare_mlx_data", "train"]
+__all__ = ["build_lora_cmd", "prepare_mlx_data", "train"]
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -97,20 +97,24 @@ def _warn_if_tokenizer_mismatch(manifest_path: Path, base_model: str) -> None:
         )
 
 
-def _run_mlx_lora(
+def build_lora_cmd(
     *,
-    data_dir: Path,
+    python_exe: str,
     base_model: str,
+    data_dir: Path,
     out_adapter_dir: Path,
     num_layers: int,
     iters: int,
     batch_size: int,
     learning_rate: float,
-) -> None:
-    # These are the mlx-lm 0.29 ``python -m mlx_lm lora`` flag names; confirm
-    # with ``python -m mlx_lm lora --help`` when upgrading mlx-lm.
+    wandb_project: str | None = None,
+    steps_per_eval: int | None = None,
+    steps_per_report: int | None = None,
+    save_every: int | None = None,
+    val_batches: int | None = None,
+) -> list[str]:
     cmd = [
-        sys.executable,
+        python_exe,
         "-m",
         "mlx_lm",
         "lora",
@@ -130,7 +134,58 @@ def _run_mlx_lora(
         "--learning-rate",
         str(learning_rate),
     ]
-    subprocess.run(cmd, check=True)
+
+    if wandb_project is not None:
+        cmd.extend(["--report-to", "wandb", "--project-name", wandb_project])
+
+    # Confirm these flag names with `python -m mlx_lm lora --help` for the
+    # installed mlx-lm; pass only when set so an unknown flag cannot break a
+    # default run.
+    if steps_per_eval is not None:
+        cmd.extend(["--steps-per-eval", str(steps_per_eval)])
+    if steps_per_report is not None:
+        cmd.extend(["--steps-per-report", str(steps_per_report)])
+    if save_every is not None:
+        cmd.extend(["--save-every", str(save_every)])
+    if val_batches is not None:
+        cmd.extend(["--val-batches", str(val_batches)])
+
+    return cmd
+
+
+def _run_mlx_lora(
+    *,
+    data_dir: Path,
+    base_model: str,
+    out_adapter_dir: Path,
+    num_layers: int,
+    iters: int,
+    batch_size: int,
+    learning_rate: float,
+    wandb_project: str | None = None,
+    steps_per_eval: int | None = None,
+    steps_per_report: int | None = None,
+    save_every: int | None = None,
+    val_batches: int | None = None,
+) -> None:
+    subprocess.run(
+        build_lora_cmd(
+            python_exe=sys.executable,
+            base_model=base_model,
+            data_dir=data_dir,
+            out_adapter_dir=out_adapter_dir,
+            num_layers=num_layers,
+            iters=iters,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            wandb_project=wandb_project,
+            steps_per_eval=steps_per_eval,
+            steps_per_report=steps_per_report,
+            save_every=save_every,
+            val_batches=val_batches,
+        ),
+        check=True,
+    )
 
 
 def train(
@@ -145,6 +200,11 @@ def train(
     valid_fraction: float = 0.1,
     data_dir: Path | None = None,
     manifest_path: Path | None = None,
+    wandb_project: str | None = None,
+    steps_per_eval: int | None = None,
+    steps_per_report: int | None = None,
+    save_every: int | None = None,
+    val_batches: int | None = None,
 ) -> Path:
     try:
         import mlx_lm  # noqa: F401
@@ -172,6 +232,11 @@ def train(
             iters=iters,
             batch_size=batch_size,
             learning_rate=learning_rate,
+            wandb_project=wandb_project,
+            steps_per_eval=steps_per_eval,
+            steps_per_report=steps_per_report,
+            save_every=save_every,
+            val_batches=val_batches,
         )
         return out_adapter_dir
 
@@ -189,5 +254,10 @@ def train(
             iters=iters,
             batch_size=batch_size,
             learning_rate=learning_rate,
+            wandb_project=wandb_project,
+            steps_per_eval=steps_per_eval,
+            steps_per_report=steps_per_report,
+            save_every=save_every,
+            val_batches=val_batches,
         )
     return out_adapter_dir

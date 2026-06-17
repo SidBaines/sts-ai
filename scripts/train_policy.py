@@ -23,6 +23,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--num-layers", type=int, default=8)
     parser.add_argument("--iters", type=int, default=200)
     parser.add_argument("--batch-size", type=int, default=1)
+    parser.add_argument("--steps-per-eval", type=int, default=None)
+    parser.add_argument("--steps-per-report", type=int, default=None)
+    parser.add_argument("--save-every", type=int, default=None)
+    parser.add_argument("--val-batches", type=int, default=None)
 
     parser.add_argument("--lora-r", type=int, default=16)
     parser.add_argument("--lora-alpha", type=int, default=32)
@@ -31,8 +35,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--per-device-batch-size", type=int, default=1)
     parser.add_argument("--grad-accum", type=int, default=8)
     parser.add_argument("--max-seq-len", type=int, default=4096)
+    parser.add_argument("--eval-fraction", type=float, default=0.0)
+    parser.add_argument("--eval-steps", type=int, default=50)
 
     parser.add_argument("--learning-rate", type=float, default=1e-4)
+    parser.add_argument("--wandb-project", default=None)
+    parser.add_argument("--run-name", default=None)
 
     args = parser.parse_args(argv)
     if args.manifest is None:
@@ -53,6 +61,11 @@ def dispatch(args: argparse.Namespace) -> Path:
             batch_size=args.batch_size,
             learning_rate=args.learning_rate,
             manifest_path=args.manifest,
+            wandb_project=args.wandb_project,
+            steps_per_eval=args.steps_per_eval,
+            steps_per_report=args.steps_per_report,
+            save_every=args.save_every,
+            val_batches=args.val_batches,
         )
 
     from sts_ai.train import train_trl
@@ -70,6 +83,10 @@ def dispatch(args: argparse.Namespace) -> Path:
         grad_accum=args.grad_accum,
         max_seq_len=args.max_seq_len,
         manifest_path=args.manifest,
+        wandb_project=args.wandb_project,
+        run_name=args.run_name,
+        eval_fraction=args.eval_fraction,
+        eval_steps=args.eval_steps,
     )
 
 

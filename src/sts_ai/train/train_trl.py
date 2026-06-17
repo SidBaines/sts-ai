@@ -50,6 +50,10 @@ def train(
     grad_accum: int = 8,
     max_seq_len: int = 4096,
     manifest_path: Path | None = None,
+    wandb_project: str | None = None,
+    run_name: str | None = None,
+    eval_fraction: float = 0.0,
+    eval_steps: int = 50,
 ) -> Path:
     try:
         from datasets import load_dataset
@@ -72,9 +76,26 @@ def train(
     if drop_columns:
         ds = ds.remove_columns(drop_columns)
 
+    train_dataset = ds
+    eval_dataset = None
+    eval_strategy = "no"
+    if eval_fraction > 0:
+        split = ds.train_test_split(test_size=eval_fraction, seed=0)
+        train_dataset = split["train"]
+        eval_dataset = split["test"]
+        eval_strategy = "steps"
+
     if manifest_path is not None:
         tokenizer = AutoTokenizer.from_pretrained(base_model)
         _check_manifest(Path(manifest_path), tokenizer=tokenizer, base_model=base_model)
+
+    if wandb_project is not None:
+        import os
+
+        os.environ.setdefault("WANDB_PROJECT", wandb_project)
+        report_to = ["wandb"]
+    else:
+        report_to = ["none"]
 
     lora_config = LoraConfig(
         r=lora_r,
@@ -82,23 +103,33 @@ def train(
         lora_dropout=lora_dropout,
         task_type="CAUSAL_LM",
     )
-    # Cannot be run/verified in this sandbox (CUDA-only); flag/SFTConfig arg
-    # names are verified against TRL 0.12, confirm on the pod before relying on it.
-    sft_config = SFTConfig(
-        output_dir=str(out_adapter_dir),
-        num_train_epochs=epochs,
-        learning_rate=learning_rate,
-        per_device_train_batch_size=per_device_batch_size,
-        gradient_accumulation_steps=grad_accum,
-        max_seq_length=max_seq_len,
-        completion_only_loss=True,
-    )
-    trainer = SFTTrainer(
-        model=base_model,
-        args=sft_config,
-        train_dataset=ds,
-        peft_config=lora_config,
-    )
+    # Cannot be run/verified in this sandbox (CUDA-only); eval_strategy,
+    # run_name, and report_to are TRL/transformers names to confirm on the pod.
+    sft_kwargs: dict[str, Any] = {
+        "output_dir": str(out_adapter_dir),
+        "num_train_epochs": epochs,
+        "learning_rate": learning_rate,
+        "per_device_train_batch_size": per_device_batch_size,
+        "gradient_accumulation_steps": grad_accum,
+        "max_seq_length": max_seq_len,
+        "completion_only_loss": True,
+        "eval_strategy": eval_strategy,
+        "run_name": run_name,
+        "report_to": report_to,
+    }
+    if eval_dataset is not None:
+        sft_kwargs["eval_steps"] = eval_steps
+    sft_config = SFTConfig(**sft_kwargs)
+
+    trainer_kwargs: dict[str, Any] = {
+        "model": base_model,
+        "args": sft_config,
+        "train_dataset": train_dataset,
+        "peft_config": lora_config,
+    }
+    if eval_dataset is not None:
+        trainer_kwargs["eval_dataset"] = eval_dataset
+    trainer = SFTTrainer(**trainer_kwargs)
     trainer.train()
     trainer.save_model(str(out_adapter_dir))
     return out_adapter_dir

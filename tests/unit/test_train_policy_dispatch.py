@@ -37,6 +37,12 @@ class TrainPolicyDispatchTest(unittest.TestCase):
                     "2",
                     "--learning-rate",
                     "0.0002",
+                    "--wandb-project",
+                    "P",
+                    "--steps-per-eval",
+                    "10",
+                    "--save-every",
+                    "5",
                 ]
             )
 
@@ -53,6 +59,11 @@ class TrainPolicyDispatchTest(unittest.TestCase):
                 batch_size=2,
                 learning_rate=0.0002,
                 manifest_path=manifest,
+                wandb_project="P",
+                steps_per_eval=10,
+                steps_per_report=None,
+                save_every=5,
+                val_batches=None,
             )
 
     def test_trl_backend_forwards_paths_manifest_and_trl_knobs(self):
@@ -92,6 +103,14 @@ class TrainPolicyDispatchTest(unittest.TestCase):
                     "1024",
                     "--learning-rate",
                     "0.0003",
+                    "--wandb-project",
+                    "P",
+                    "--run-name",
+                    "R",
+                    "--eval-fraction",
+                    "0.1",
+                    "--eval-steps",
+                    "20",
                 ]
             )
 
@@ -112,6 +131,10 @@ class TrainPolicyDispatchTest(unittest.TestCase):
                 grad_accum=4,
                 max_seq_len=1024,
                 manifest_path=manifest,
+                wandb_project="P",
+                run_name="R",
+                eval_fraction=0.1,
+                eval_steps=20,
             )
 
 
