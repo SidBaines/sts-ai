@@ -55,6 +55,10 @@ def main() -> None:
     parser.add_argument("--battle-simulations", type=int, default=50)
     parser.add_argument("--max-act", type=int, default=3)
     parser.add_argument("--temperature", type=float, default=0.2)
+    parser.add_argument("--top-p", type=float, default=1.0,
+                        help="vLLM nucleus sampling (1.0 = disabled). E.g. Gemma uses 0.95.")
+    parser.add_argument("--top-k", type=int, default=-1,
+                        help="vLLM top-k sampling (-1 = disabled). E.g. Gemma uses 64.")
     parser.add_argument("--max-tokens", type=int, default=4096,
                         help="Generation cap. Must be large for reasoning/thinking models — a small "
                         "cap (e.g. 256) truncates mid-thought so no JSON is emitted and the agent "
@@ -94,6 +98,8 @@ def main() -> None:
                 model=model,
                 max_tokens=args.max_tokens,
                 temperature=args.temperature,
+                top_p=args.top_p,
+                top_k=args.top_k,
                 max_retries=args.max_retries,
                 thinking=modes[0],
                 enable_prefix_caching=args.enable_prefix_caching,

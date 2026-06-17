@@ -9,6 +9,8 @@ def build_agent(
     model: str = "mlx-community/Qwen3-4B-4bit",
     max_tokens: int = 4096,  # reasoning needs room to finish + emit JSON; see MlxQwenJsonAgent
     temperature: float = 0.2,
+    top_p: float = 1.0,  # vLLM-only sampling controls (ignored by the MLX agent); the
+    top_k: int = -1,     # defaults are vLLM's "disabled" sentinels (keep prior behaviour).
     max_retries: int = 1,
     thinking: bool = False,
     enable_prefix_caching: bool = True,
@@ -32,6 +34,8 @@ def build_agent(
             model_id=model,
             max_tokens=max_tokens,
             temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
             max_retries=max_retries,
             enable_thinking=thinking,
             enable_prefix_caching=enable_prefix_caching,

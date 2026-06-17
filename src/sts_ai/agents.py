@@ -326,6 +326,12 @@ class VllmJsonAgent:
         framing: str = NEUTRAL_FRAME,
         max_tokens: int = 4096,
         temperature: float = 0.2,
+        # Nucleus / top-k sampling. Defaults are vLLM's "disabled" sentinels
+        # (top_p=1.0 keeps all mass; top_k=-1 considers every token), so omitting
+        # them reproduces the prior temperature-only behaviour. Gemma is typically
+        # run at temperature~1.0, top_p=0.95, top_k=64.
+        top_p: float = 1.0,
+        top_k: int = -1,
         max_retries: int = 1,
         enable_thinking: bool = False,
         enable_prefix_caching: bool = True,
@@ -347,6 +353,8 @@ class VllmJsonAgent:
         self.framing = framing
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
         self.max_retries = max_retries
         self.enable_thinking = enable_thinking
         self.enable_prefix_caching = enable_prefix_caching
@@ -375,6 +383,8 @@ class VllmJsonAgent:
             "model_id": self.model_id,
             "framing": self.framing,
             "temperature": self.temperature,
+            "top_p": self.top_p,
+            "top_k": self.top_k,
             "max_tokens": self.max_tokens,
             "thinking": self.enable_thinking,
             "enable_prefix_caching": self.enable_prefix_caching,
@@ -444,6 +454,8 @@ class VllmJsonAgent:
         try:
             params = self._SamplingParams(
                 temperature=self.temperature,
+                top_p=self.top_p,
+                top_k=self.top_k,
                 max_tokens=self.max_tokens,
                 seed=self._seed,
             )
@@ -475,7 +487,7 @@ class VllmJsonAgent:
                 "a <think> block, markdown fence, or any other text."
             )
         prompt = self._apply_chat_template(base)
-        params = self._SamplingParams(temperature=self.temperature, max_tokens=self.max_tokens, seed=seed)
+        params = self._SamplingParams(temperature=self.temperature, top_p=self.top_p, top_k=self.top_k, max_tokens=self.max_tokens, seed=seed)
         # Record submit time so stream_poll can report this request's submit->finish
         # wall-time. hasattr guard keeps object.__new__ test instances working.
         if not hasattr(self, "_submit_ts"):

@@ -274,12 +274,17 @@ class VllmJsonAgentTest(unittest.TestCase):
         agent._SamplingParams = FakeSamplingParams
         agent._seed = 123
         agent.temperature = 0.2
+        agent.top_p = 0.95
+        agent.top_k = 64
         agent.max_tokens = 4096
         agent.llm = RaisingLlm()
 
         self.assertIsNone(agent._generate(["probe prompt"]))
         self.assertEqual(agent.llm.calls[0][0], ["probe prompt"])
         self.assertEqual(agent.llm.calls[0][1]["seed"], 123)
+        # top_p / top_k flow through to the vLLM SamplingParams
+        self.assertEqual(agent.llm.calls[0][1]["top_p"], 0.95)
+        self.assertEqual(agent.llm.calls[0][1]["top_k"], 64)
 
         decisions = agent.choose_actions_batch([("state 1", self.actions), ("state 2", self.actions)])
 
