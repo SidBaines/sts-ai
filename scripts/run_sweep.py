@@ -50,10 +50,10 @@ def main() -> None:
     parser.add_argument("--enable-prefix-caching", action=argparse.BooleanOptionalAction,
                         default=True,
                         help="Enable vLLM prefix caching. vLLM-only and numerically transparent.")
-    parser.add_argument("--max-decisions", type=int, default=200)
+    parser.add_argument("--max-decisions", type=int, default=1500)
     parser.add_argument("--combat-control", choices=["search", "llm"], default="llm")
     parser.add_argument("--battle-simulations", type=int, default=50)
-    parser.add_argument("--max-act", type=int, default=1)
+    parser.add_argument("--max-act", type=int, default=3)
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--max-tokens", type=int, default=4096,
                         help="Generation cap. Must be large for reasoning/thinking models — a small "

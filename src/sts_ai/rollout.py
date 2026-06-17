@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import warnings
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -201,6 +202,15 @@ def build_rollout_meta(
     cfg = getattr(agent, "config", {}) or {}
     term = result.terminal_state or {}
     extra = dict(run_meta.get("extra", {}))
+    budget_truncated = result.stopped_reason == "max_decisions"
+    extra["budget_truncated"] = budget_truncated
+    if budget_truncated:
+        warnings.warn(
+            f"rollout world_seed={result.world_seed} hit the decision budget "
+            "(max_decisions) before the game ended; outcome is truncated, not final.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
     if cfg:
         extra["agent_config"] = dict(cfg)
 

@@ -78,6 +78,24 @@ class BuildRolloutMetaTest(unittest.TestCase):
         self.assertEqual(self.meta.n_invalid, 1)
         self.assertEqual(self.meta.final_floor, 6)
         self.assertEqual(self.meta.hp_trajectory, [80, 72, 60])
+        self.assertFalse(self.meta.extra["budget_truncated"])
+
+    def test_budget_truncation_is_recorded_in_extra_and_warns(self):
+        result = RolloutResult(
+            world_seed=7,
+            decisions=[],
+            terminal_state={"outcome": "GameOutcome.UNDECIDED", "act": 2, "floor": 21,
+                            "cur_hp": 42, "max_hp": 80, "undefined_behavior_evoked": False},
+            stopped_reason="max_decisions",
+            error=None,
+            policy_seed=99,
+            rollout_index=2,
+        )
+
+        with self.assertWarnsRegex(RuntimeWarning, "world_seed=7.*decision budget"):
+            meta = build_rollout_meta(result, _FakeEnv(), _FakeAgent())
+
+        self.assertTrue(meta.extra["budget_truncated"])
 
 
 if __name__ == "__main__":

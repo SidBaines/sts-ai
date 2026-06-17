@@ -4,6 +4,7 @@ These exercise rollout/env logic via fakes or ``object.__new__`` so the fast
 suite runs on any checkout. Tests that drive the real simulator live in
 ``tests/integration``.
 """
+import inspect
 import random
 import unittest
 
@@ -117,6 +118,10 @@ class FakeCombatEnv:
 class TerminalBoundaryTest(unittest.TestCase):
     # object.__new__ exercises is_terminal() without constructing the real env,
     # so no native module is loaded.
+    def test_constructor_default_max_act_is_full_game(self):
+        default = inspect.signature(LightspeedHybridEnv).parameters["max_act"].default
+        self.assertEqual(default, 3)
+
     def test_act_equal_to_max_act_is_not_terminal(self):
         env = object.__new__(LightspeedHybridEnv)
         env.max_act = 1

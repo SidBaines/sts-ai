@@ -16,7 +16,7 @@ class LightspeedHybridEnv:
         ascension: int = 0,
         battle_simulations: int = 2_000,
         boss_simulation_multiplier: float = 2.0,
-        max_act: int = 1,
+        max_act: int = 3,
         combat_control: str = "search",
         build_dir: str | None = None,
     ) -> None:

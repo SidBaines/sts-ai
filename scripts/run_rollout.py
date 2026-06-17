@@ -37,7 +37,8 @@ def main() -> None:
     parser.add_argument("--rollout-index", type=int, default=0)
     parser.add_argument("--policy-seed", type=int, default=None)
     parser.add_argument("--ascension", type=int, default=0)
-    parser.add_argument("--max-decisions", type=int, default=200)
+    parser.add_argument("--max-decisions", type=int, default=1500)
+    parser.add_argument("--max-act", type=int, default=3)
     parser.add_argument(
         "--combat-control",
         choices=["search", "llm"],
@@ -62,6 +63,7 @@ def main() -> None:
         ascension=args.ascension,
         battle_simulations=args.battle_simulations,
         boss_simulation_multiplier=args.boss_simulation_multiplier,
+        max_act=args.max_act,
         combat_control=args.combat_control,
     )
     agent = build_agent(args)

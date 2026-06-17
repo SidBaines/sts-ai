@@ -48,7 +48,8 @@ def main() -> None:
     parser.add_argument("--seed-count", type=int, default=10)
     parser.add_argument("--rollouts-per-seed", type=int, default=1)
     parser.add_argument("--ascension", type=int, default=0)
-    parser.add_argument("--max-decisions", type=int, default=200)
+    parser.add_argument("--max-decisions", type=int, default=1500)
+    parser.add_argument("--max-act", type=int, default=3)
     parser.add_argument("--battle-simulations", type=int, default=2_000)
     parser.add_argument("--boss-simulation-multiplier", type=float, default=2.0)
     parser.add_argument("--output-dir", type=Path, default=Path("data") / "rollouts")
@@ -123,6 +124,7 @@ def main() -> None:
             ascension=args.ascension,
             battle_simulations=args.battle_simulations,
             boss_simulation_multiplier=args.boss_simulation_multiplier,
+            max_act=args.max_act,
         )
         try:
             result = run_rollout(
@@ -203,6 +205,8 @@ def run_seed_subprocess(
         str(args.ascension),
         "--max-decisions",
         str(args.max_decisions),
+        "--max-act",
+        str(args.max_act),
         "--battle-simulations",
         str(args.battle_simulations),
         "--boss-simulation-multiplier",

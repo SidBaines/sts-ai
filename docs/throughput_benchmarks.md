@@ -44,7 +44,6 @@ thinking-off and a thinking-on arm (Gemma 3 = *prompted* `<think>` reasoning; Ge
 | gemma-3-12b-it · think    | 16 | 2828 | 177 | 568 | **5.0** | 2.68 | 212 | 168 | 0% |
 | gemma-4-12B-it · no-think | 16 | 2485 | 155 | 309 | **8.1** | 1.54 | 100 | 0 | 0% |
 | gemma-4-12B-it · think    | 16 | 47† | 3 | — | — | 27.8 | 1910 | 1871 | 34%† |
-| gemma-4-12B-it · think (16k)| 16 | 45† | 3 | — | — | 107 | 6698 | 6655 | 36%† |
 
 - `wall` = max over the 16 concurrent rollouts of that rollout's summed per-decision
   `latency_s` (≈ arm wall-clock at effective concurrency 16; excludes one-time model
@@ -65,16 +64,13 @@ thinking-off and a thinking-on arm (Gemma 3 = *prompted* `<think>` reasoning; Ge
   "gemma_thought"`), so re-runs record `think_tok` correctly; see `src/sts_ai/CLAUDE.md`
   (the `agents.py` reasoning-mode note). The Gemma-4-12B *thinking* arm (measured after the
   fix) shows this working: `think_tok` ~1871 captured (`reasoning_format=gemma_thought`).
-- **† Gemma-4-12B *thinking* is degenerate — a greedy-decoding repetition loop, NOT a
-  budget problem.** At `temperature 0` the 12B's native reasoning falls into a verbatim
-  repetition loop on some decisions (observed: it repeats one sentence — *"Boss relics are
-  things like 'Snecko Eye' (no, that's a common)."* — until truncation), so it never emits
-  the closing JSON → `truncated_before_json` → `agent_invalid` → **all 16 rollouts abort at
-  floor 0**. **Raising the cap does not help** — 4096 → 16384 just loops longer (mean
-  `think_tok` 1871 → 6655; every truncating decision hits the cap; floor still 0). The fix is
-  `temperature > 0` and/or a repetition/frequency penalty (Gemma is typically run at temp
-  ~1.0); a bigger budget is not it. dec/s/wall for both think rows are meaningless. E4B-think
-  and Gemma-3-think did **not** loop at temp 0, so this is specific to Gemma-4-12B here.
+- **† Gemma-4-12B *thinking* is degenerate at `--max-tokens 4096`:** the 12B reasons
+  ~1900 tok/decision (mean `think_tok` 1871; **all** decisions hit the 4096 cap) → the
+  closing JSON is `truncated_before_json` → invalid → **all 16 rollouts abort at floor 0**
+  (`stopped_reason=agent_invalid`). Its dec/s/wall are meaningless. To benchmark it, rerun
+  with a much larger `--max-tokens` (≥ 8192). This is the same truncation failure the Qwen
+  arms hit at `256` — Gemma-4-12B's native reasoning is just far longer (E4B fits at
+  ~600–828 tok, so its thinking arm is fine).
 
 Reproduce on a pod (needs a CUDA-13.0-driver H100 for the cu130 `vllm==0.23.0`):
 
