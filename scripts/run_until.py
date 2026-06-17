@@ -254,6 +254,12 @@ def main() -> None:
         default=True,
         help="Enable vLLM prefix caching. vLLM-only and numerically transparent.",
     )
+    parser.add_argument(
+        "--adapter-path",
+        default=None,
+        help="LoRA adapter dir to load on top of --model for eval.",
+    )
+    parser.add_argument("--max-lora-rank", type=int, default=16)
     parser.add_argument("--output-dir", type=Path, default=Path("data") / "rollouts" / "run_until")
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
@@ -329,6 +335,8 @@ def main() -> None:
         max_retries=args.max_retries,
         thinking=args.thinking,
         enable_prefix_caching=args.enable_prefix_caching,
+        adapter_path=args.adapter_path,
+        max_lora_rank=args.max_lora_rank,
     )
     try:
         run_meta = {

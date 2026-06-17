@@ -129,6 +129,7 @@ class MlxQwenJsonAgent:
         temperature: float = 0.2,
         max_retries: int = 1,
         enable_thinking: bool = False,
+        adapter_path: str | None = None,
     ) -> None:
         try:
             from mlx_lm import generate, load
@@ -148,12 +149,15 @@ class MlxQwenJsonAgent:
         self.temperature = temperature
         self.max_retries = max_retries
         self.enable_thinking = enable_thinking
+        self.adapter_path = adapter_path
         try:
             from mlx_lm import batch_generate
         except (ImportError, ModuleNotFoundError):
             batch_generate = None
 
-        self.model, self.tokenizer = load(model_id)
+        self.model, self.tokenizer = (
+            load(model_id, adapter_path=adapter_path) if adapter_path else load(model_id)
+        )
         self._generate = generate
         self._batch_generate = batch_generate
         self._sampler = make_sampler(temp=temperature) if make_sampler is not None else None
@@ -173,6 +177,7 @@ class MlxQwenJsonAgent:
             "max_tokens": self.max_tokens,
             "thinking": self.enable_thinking,
             "max_retries": self.max_retries,
+            "adapter_path": self.adapter_path,
         }
 
     def _count_tokens(self, text: str) -> int:
@@ -335,6 +340,8 @@ class VllmJsonAgent:
         max_retries: int = 1,
         enable_thinking: bool = False,
         enable_prefix_caching: bool = True,
+        adapter_path: str | None = None,
+        max_lora_rank: int = 16,
         # "auto" lets vLLM use each model's native dtype (bf16 for Qwen3/Gemma3/
         # Llama-3). Do NOT hardcode float16: Gemma3 rejects it ("does not support
         # float16, numerical instability — use bfloat16 or float32").
@@ -358,17 +365,28 @@ class VllmJsonAgent:
         self.max_retries = max_retries
         self.enable_thinking = enable_thinking
         self.enable_prefix_caching = enable_prefix_caching
+        self.adapter_path = adapter_path
+        self.max_lora_rank = max_lora_rank
         self.dtype = dtype
         self.gpu_memory_utilization = gpu_memory_utilization
         self._seed = seed
 
-        self.llm = LLM(
-            model=model_id,
-            dtype=dtype,
-            gpu_memory_utilization=gpu_memory_utilization,
-            enable_prefix_caching=enable_prefix_caching,
-            trust_remote_code=True,
-        )
+        llm_kwargs = {
+            "model": model_id,
+            "dtype": dtype,
+            "gpu_memory_utilization": gpu_memory_utilization,
+            "enable_prefix_caching": enable_prefix_caching,
+            "trust_remote_code": True,
+        }
+        LoRARequest = None
+        if adapter_path:
+            from vllm.lora.request import LoRARequest
+
+            llm_kwargs["enable_lora"] = True
+            llm_kwargs["max_lora_rank"] = max_lora_rank
+
+        self.llm = LLM(**llm_kwargs)
+        self._lora_request = LoRARequest("sts_lora", 1, adapter_path) if adapter_path else None
         self.tokenizer = self.llm.get_tokenizer()
         self._SamplingParams = SamplingParams
         self._native_thinking = self._probe_native_thinking()
@@ -393,6 +411,7 @@ class VllmJsonAgent:
             "backend": "vllm",
             "dtype": self.dtype,
             "gpu_memory_utilization": self.gpu_memory_utilization,
+            "adapter_path": self.adapter_path,
         }
 
     @property
@@ -459,7 +478,10 @@ class VllmJsonAgent:
                 max_tokens=self.max_tokens,
                 seed=self._seed,
             )
-            outputs = self.llm.generate(prompts, params)
+            if getattr(self, "_lora_request", None) is not None:
+                outputs = self.llm.generate(prompts, params, lora_request=self._lora_request)
+            else:
+                outputs = self.llm.generate(prompts, params)
             return [
                 {
                     "text": output.outputs[0].text,
@@ -496,7 +518,10 @@ class VllmJsonAgent:
         # NOTE: vLLM's low-level LLMEngine.add_request signature is version-sensitive.
         # Verified target API: add_request(request_id, prompt, params). Keep this call
         # isolated here so a vLLM version bump is a one-line change.
-        self.llm.llm_engine.add_request(request_id, prompt, params)
+        if getattr(self, "_lora_request", None) is not None:
+            self.llm.llm_engine.add_request(request_id, prompt, params, lora_request=self._lora_request)
+        else:
+            self.llm.llm_engine.add_request(request_id, prompt, params)
 
     def stream_poll(self) -> list[tuple[str, dict]]:
         finished: list[tuple[str, dict]] = []

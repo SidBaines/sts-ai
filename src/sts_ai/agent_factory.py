@@ -14,6 +14,8 @@ def build_agent(
     max_retries: int = 1,
     thinking: bool = False,
     enable_prefix_caching: bool = True,
+    adapter_path: str | None = None,
+    max_lora_rank: int = 16,
 ):
     if agent_name == "first":
         return FirstLegalAgent()
@@ -28,6 +30,7 @@ def build_agent(
             temperature=temperature,
             max_retries=max_retries,
             enable_thinking=thinking,
+            adapter_path=adapter_path,
         )
     if agent_name == "vllm":
         return VllmJsonAgent(
@@ -39,6 +42,8 @@ def build_agent(
             max_retries=max_retries,
             enable_thinking=thinking,
             enable_prefix_caching=enable_prefix_caching,
+            adapter_path=adapter_path,
+            max_lora_rank=max_lora_rank,
         )
     raise ValueError(f"unknown agent: {agent_name}")
 
