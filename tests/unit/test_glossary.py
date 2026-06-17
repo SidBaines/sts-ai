@@ -3,14 +3,19 @@ from __future__ import annotations
 
 import glob
 import json
+import re
 import unittest
 
 from sts_ai import glossary
 from sts_ai.glossary import (
     CARD_DB,
+    INTENT_DB,
+    RELIC_DB,
     STATUS_DB,
     _card_definition,
     augment,
+    intent_effect,
+    relic_definition,
     status_definition,
 )
 from sts_ai.rollout_view import to_view
@@ -88,6 +93,15 @@ class AugmentCombatTest(unittest.TestCase):
         )
         out = augment(text, [], "combat")
         self.assertIn("(deal 8) (also: adds 1 Slimed card to your discard pile)", out)
+
+    def test_non_attack_hp_loss_does_not_claim_no_damage(self):
+        text = (
+            "Enemies:\n  [0] EXPLODER HP 30/30, block 0, intent EXPLODER_EXPLODE\n"
+            "Hand: empty\nPiles: draw 5, discard 0, exhaust 0\nPotions: none\n"
+        )
+        out = augment(text, [], "combat")
+        self.assertIn("intent EXPLODER_EXPLODE (no attack; deals 30 damage to you, then dies)", out)
+        self.assertNotIn("EXPLODER_EXPLODE (no damage;", out)
 
     def test_incoming_damage_note_sums_intents(self):
         # Jaw Worm deals 11; Cultist deals 0 -> total 11.
@@ -177,6 +191,41 @@ class RelicPotionKeyTest(unittest.TestCase):
         out = augment(combat_text, [], "combat")
         key = out[out.index("-- KEY"):]
         self.assertIn("Fire Potion: Deal 20 damage", key)
+
+
+class Act23GlossaryCoverageTest(unittest.TestCase):
+    def test_act2_and_act3_intent_effects(self):
+        for move in (
+            "CHOSEN_DRAIN",
+            "BRONZE_ORB_STASIS",
+            "SPIRE_GROWTH_CONSTRICT",
+            "TIME_EATER_RIPPLE",
+            "AWAKENED_ONE_REBIRTH",
+        ):
+            self.assertIsNotNone(intent_effect(move), move)
+            self.assertNotEqual(intent_effect(move), "", move)
+
+    def test_new_relic_definitions(self):
+        for relic in ("White Beast Statue", "Nilrys Codex", "Philosophers Stone", "Pandoras Box"):
+            self.assertTrue(relic_definition(relic).startswith(f"{relic}: "), relic)
+
+    def test_new_status_definition(self):
+        desc = status_definition("Constricted")
+        self.assertIn("lose that much HP", desc)
+        self.assertIn("per-turn amount", desc)
+
+    def test_new_entries_keep_neutral_tone(self):
+        banned = re.compile(r"\b(dangerous|powerful|be careful|prioritize|threat)\b", re.I)
+        new_intents = (
+            "CHOSEN_DRAIN",
+            "SNECKO_PERPLEXING_GLARE",
+            "TIME_EATER_RIPPLE",
+            "WRITHING_MASS_IMPLANT",
+            "AWAKENED_ONE_REBIRTH",
+        )
+        new_relics = ("White Beast Statue", "Nilrys Codex", "Philosophers Stone", "Pandoras Box")
+        text = "\n".join([INTENT_DB[k] for k in new_intents] + [RELIC_DB[k] for k in new_relics])
+        self.assertIsNone(banned.search(text))
 
 
 class AugmentOocTest(unittest.TestCase):

@@ -38,6 +38,7 @@ STATUS_DB: dict[str, tuple[str, str]] = {
     "Vulnerable": ("the affected creature takes 50% more damage from attacks", "countdown"),
     "Frail": ("the affected creature gains 25% less Block from cards", "countdown"),
     "Entangled": ("you cannot play Attacks this turn", "countdown"),
+    "Constricted": ("at the end of your turn, you lose that much HP", "per_turn"),
     "No Draw": ("you cannot draw any more cards this turn", "countdown"),
     "No Block": ("you cannot gain Block this turn", "countdown"),
     "Lose Strength": ("Strength is reduced by this much (e.g. end-of-turn from Flex)", "magnitude"),
@@ -246,7 +247,9 @@ CARD_DB: dict[str, str] = {
 # `_scan_status_names` (which matches "<Status> <n>"); referenced status names are
 # folded into the KEY by a word-scan. Pure attacks with no rider are omitted (the
 # `(deal N)` already says everything). Grounded in MonsterMoves.h /
-# MonsterSpecific.cpp (Act 1 enemy + boss pool; base/Ascension-0 amounts).
+# MonsterSpecific.cpp (Acts 1-3 enemy + boss pool; base/Ascension-0 amounts).
+# Enemy-only powers that `describeBattleState` does not print are described only
+# when a move directly applies or changes them.
 # ---------------------------------------------------------------------------
 INTENT_DB: dict[str, str] = {
     # Cultist
@@ -305,6 +308,106 @@ INTENT_DB: dict[str, str] = {
     "SLIME_BOSS_GOOP_SPRAY": "adds 3 Slimed cards to your discard pile",
     "SLIME_BOSS_PREPARING": "preparing; next turn it slams you for heavy damage",
     "SLIME_BOSS_SPLIT": "splits into a Spike Slime (L) and an Acid Slime (L)",
+    # Masked Bandits
+    "BEAR_BEAR_HUG": "reduces your Dexterity by 2",
+    "BEAR_LUNGE": "gains 9 Block",
+    "ROMEO_AGONIZING_SLASH": "applies 2 Weak to you",
+    "ROMEO_MOCK": "does nothing this turn",
+    # Mugger
+    "MUGGER_MUG": "steals gold from you",
+    "MUGGER_LUNGE": "steals gold from you",
+    "MUGGER_SMOKE_BOMB": "gains 11 Block, then prepares to escape",
+    "MUGGER_ESCAPE": "escapes from combat (leaves with any stolen gold)",
+    # Byrd
+    "BYRD_CAW": "buffs itself: gains 1 Strength",
+    "BYRD_FLY": "gains Flight; unblocked damage reduces Flight, and at 0 Flight it becomes stunned",
+    "BYRD_STUNNED": "stunned; does nothing this turn",
+    # Centurion and Mystic
+    "CENTURION_DEFEND": "grants 15 Block to the Mystic if it is alive",
+    "MYSTIC_ATTACK_DEBUFF": "applies 2 Frail to you",
+    "MYSTIC_BUFF": "grants 2 Strength to itself and the Centurion if it is alive",
+    "MYSTIC_HEAL": "heals itself and the Centurion for 16 HP if the Centurion is alive",
+    # Chosen
+    "CHOSEN_DEBILITATE": "applies 2 Vulnerable to you",
+    "CHOSEN_DRAIN": "applies 3 Weak to you and gains 3 Strength",
+    "CHOSEN_HEX": "for the rest of combat, adds 1 Dazed to your draw pile whenever you play a non-Attack card",
+    # Shelled Parasite
+    "SHELLED_PARASITE_FELL": "applies 2 Frail to you",
+    "SHELLED_PARASITE_STUNNED": "stunned; does nothing this turn",
+    "SHELLED_PARASITE_SUCK": "heals itself by the unblocked attack damage it deals",
+    # Snake Plant
+    "SNAKE_PLANT_ENFEEBLING_SPORES": "applies 2 Frail and 2 Weak to you",
+    # Snecko
+    "SNECKO_PERPLEXING_GLARE": "randomizes the cost of cards as you draw them",
+    "SNECKO_TAIL_WHIP": "applies 2 Vulnerable to you",
+    # Spheric Guardian
+    "SPHERIC_GUARDIAN_ACTIVATE": "gains 25 Block",
+    "SPHERIC_GUARDIAN_ATTACK_DEBUFF": "applies 5 Frail to you",
+    "SPHERIC_GUARDIAN_HARDEN": "gains 15 Block",
+    # Gremlin Leader
+    "GREMLIN_LEADER_ENCOURAGE": "grants 3 Strength to itself and minions; grants 6 Block to minions",
+    "GREMLIN_LEADER_RALLY": "summons two gremlins into open slots",
+    # Taskmaster
+    "TASKMASTER_SCOURING_WHIP": "adds 1 Wound card to your discard pile",
+    # Bronze Automaton and Bronze Orbs
+    "BRONZE_AUTOMATON_BOOST": "gains 3 Strength and 9 Block",
+    "BRONZE_AUTOMATON_SPAWN_ORBS": "summons two Bronze Orbs",
+    "BRONZE_AUTOMATON_STUNNED": "stunned; does nothing this turn",
+    "BRONZE_ORB_STASIS": "removes a card from your draw or discard pile until that orb dies",
+    "BRONZE_ORB_SUPPORT_BEAM": "grants 12 Block to the Bronze Automaton",
+    # The Champ
+    "THE_CHAMP_ANGER": "removes its debuffs and gains 6 Strength",
+    "THE_CHAMP_DEFENSIVE_STANCE": "gains 15 Block and 5 Metallicize",
+    "THE_CHAMP_FACE_SLAP": "applies 2 Frail and 2 Vulnerable to you",
+    "THE_CHAMP_GLOAT": "gains 3 Strength",
+    "THE_CHAMP_TAUNT": "applies 2 Weak and 2 Vulnerable to you",
+    # The Collector
+    "THE_COLLECTOR_BUFF": "grants 3 Strength to itself and living Torch Heads; gains 15 Block",
+    "THE_COLLECTOR_MEGA_DEBUFF": "applies 3 Weak, 3 Vulnerable, and 3 Frail to you",
+    "THE_COLLECTOR_SPAWN": "summons Torch Heads into open slots",
+    # Orb Walker
+    "ORB_WALKER_LASER": "adds 1 Burn card to your draw pile and 1 Burn card to your discard pile",
+    # Shapes
+    "EXPLODER_EXPLODE": "deals 30 damage to you, then dies",
+    "REPULSOR_REPULSE": "shuffles 2 Dazed cards into your draw pile",
+    "SPIKER_SPIKE": "gains 2 Thorns",
+    # The Maw
+    "THE_MAW_DROOL": "buffs itself: gains 3 Strength",
+    "THE_MAW_ROAR": "applies 3 Weak and 3 Frail to you",
+    # Darkling
+    "DARKLING_HARDEN": "gains 12 Block",
+    "DARKLING_REGROW": "regrowing; does nothing this turn",
+    "DARKLING_REINCARNATE": "revives with half HP and gains Regrow",
+    # Spire Growth
+    "SPIRE_GROWTH_CONSTRICT": "applies 10 Constricted to you",
+    # Transient
+    "TRANSIENT_ATTACK": "after attacking, its Fading counter decreases; when that counter reaches 0 it dies",
+    # Writhing Mass
+    "WRITHING_MASS_FLAIL": "gains 16 Block",
+    "WRITHING_MASS_IMPLANT": "adds a Parasite curse to your deck after combat unless prevented by Omamori",
+    "WRITHING_MASS_WITHER": "applies 2 Weak and 2 Vulnerable to you",
+    # Giant Head
+    "GIANT_HEAD_GLARE": "applies 1 Weak to you",
+    # Nemesis
+    "NEMESIS_ATTACK": "gains 2 Intangible if it does not already have Intangible",
+    "NEMESIS_DEBUFF": "adds 3 Burn cards to your discard pile and gains 2 Intangible if it does not already have Intangible",
+    "NEMESIS_SCYTHE": "gains 2 Intangible if it does not already have Intangible",
+    # Reptomancer and Daggers
+    "REPTOMANCER_SNAKE_STRIKE": "applies 1 Weak to you",
+    "REPTOMANCER_SUMMON": "summons 1 Dagger into an open slot",
+    "DAGGER_STAB": "adds 1 Wound card to your discard pile",
+    "DAGGER_EXPLODE": "dies after attacking",
+    # Time Eater
+    "TIME_EATER_HASTE": "sets its HP to half of max HP and removes its debuffs",
+    "TIME_EATER_HEAD_SLAM": "reduces your next turn's card draw by 1",
+    "TIME_EATER_RIPPLE": "gains 20 Block and applies 1 Weak and 1 Vulnerable to you",
+    # Donu and Deca
+    "DONU_CIRCLE_OF_POWER": "grants 3 Strength to Donu and Deca",
+    "DECA_BEAM": "adds 2 Dazed cards to your discard pile",
+    "DECA_SQUARE_OF_PROTECTION": "grants 16 Block to Donu and Deca",
+    # Awakened One
+    "AWAKENED_ONE_REBIRTH": "revives at 300 HP, removes negative Strength, and enters its second phase",
+    "AWAKENED_ONE_SLUDGE": "shuffles 1 Void card into your draw pile",
 }
 
 
@@ -363,6 +466,8 @@ POTION_DB: dict[str, str] = {
 # simulator carries no relic text, so this is hand-authored from the well-known
 # Ironclad-pool/common relic effects; relics not listed here are skipped (their
 # effect is simply not surfaced) rather than risk an inaccurate description.
+# Relics with no implemented effect found in the simulator are intentionally
+# skipped even when their display names appear in traces.
 # ---------------------------------------------------------------------------
 RELIC_DB: dict[str, str] = {
     "Burning Blood": "At the end of combat, heal 6 HP.",
@@ -448,6 +553,19 @@ RELIC_DB: dict[str, str] = {
     "Black Star": "Elites drop an extra relic.",
     "Empty Cage": "On pickup, remove 2 cards from your deck.",
     "Juzu Bracelet": "Normal-combat ? (unknown) rooms become non-combat events.",
+    "White Beast Statue": "Combat rewards include a potion if there is reward space.",
+    "Nilrys Codex": "At the end of each turn, choose 1 of 3 random cards to shuffle into your draw pile.",
+    "Mummified Hand": "Whenever you play a Power, a random non-free card in your hand costs 0 this turn.",
+    "Odd Mushroom": "While Vulnerable, attack damage you take is multiplied by 1.25 instead of 1.5.",
+    "The Courier": "Shop prices and card removal cost are reduced by 20%; bought cards, relics, and potions are replaced with new items.",
+    "Black Blood": "At the end of combat, heal 12 HP (replaces Burning Blood).",
+    "Ectoplasm": "Gain 1 extra energy each combat, but you can no longer gain gold.",
+    "Philosophers Stone": "Gain 1 extra energy each combat; enemies gain 1 Strength at combat start.",
+    "Snecko Eye": "Draw 2 extra cards each turn; drawn cards with a cost are randomized to cost 0-3.",
+    "Astrolabe": "On pickup, transform up to 3 cards and upgrade the transformed cards.",
+    "Calling Bell": "On pickup, add Curse of the Bell to your deck and gain one common, one uncommon, and one rare relic.",
+    "Pandoras Box": "On pickup, remove all starter Strike/Defend cards and replace each with a random card.",
+    "Tiny House": "On pickup, upgrade 1 random card, gain 5 max HP, gain 50 gold, gain a potion, and receive a card reward.",
 }
 
 
@@ -470,6 +588,7 @@ _KEY_HEADER = "\n\n-- KEY (effects/statuses; numbers are shown next to each abov
 _ENEMY_LINE_RE = re.compile(r"^\s*\[\d+\]\s+\S.*\bHP\s+\d+/\d+")
 _INTENT_RE = re.compile(r"\bintent\s+(\S+)")
 _HAND_CARD_RE = re.compile(r"^\s*\[\d+\]\s+(.*?)\s+\(cost\s+\S+?\)\s*$")
+_NON_ATTACK_DAMAGE_INTENTS = {"EXPLODER_EXPLODE"}
 
 
 def _scan_status_names(line: str) -> set[str]:
@@ -512,7 +631,11 @@ def _label_intent(line: str) -> tuple[str, set[str]]:
             return f"{line} (also: {effect})", refs
         return line, refs
     cut = match.end(1)
-    label = f"no damage; {effect}" if effect else "no attack"
+    if effect:
+        prefix = "no attack" if move in _NON_ATTACK_DAMAGE_INTENTS else "no damage"
+        label = f"{prefix}; {effect}"
+    else:
+        label = "no attack"
     return f"{line[:cut]} ({label}){line[cut:]}", refs
 
 
