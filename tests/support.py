@@ -63,3 +63,26 @@ def requires_vllm(test_item):
     if _REQUIRE_VLLM or vllm_available():
         return test_item
     return unittest.skip(_VLLM_SKIP_REASON)(test_item)
+
+
+def mlx_available() -> bool:
+    """True if the optional ``mlx_lm`` package can be imported."""
+    try:
+        import mlx_lm  # noqa: F401
+    except Exception:
+        return False
+    return True
+
+
+_REQUIRE_MLX = os.environ.get("STS_REQUIRE_MLX") == "1"
+_MLX_SKIP_REASON = (
+    "MLX is not installed (Apple Silicon-only); install with `.[train-mlx]`. "
+    "Set STS_REQUIRE_MLX=1 to fail instead of skip."
+)
+
+
+def requires_mlx(test_item):
+    """Gate a test method or ``TestCase`` on the optional MLX backend."""
+    if _REQUIRE_MLX or mlx_available():
+        return test_item
+    return unittest.skip(_MLX_SKIP_REASON)(test_item)
