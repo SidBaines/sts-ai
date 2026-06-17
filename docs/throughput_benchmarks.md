@@ -29,7 +29,7 @@ with `--batch-size`. vLLM thinking-mode numbers are measured in the next section
 
 ## Results — vLLM on H100 (Gemma 3 & 4)
 
-Measured 2026-06-16 on a RunPod **H100 SXM 80GB** (vLLM 0.23.0, torch cu130 /
+Measured 2026-06-16/17 on a RunPod **H100 SXM 80GB** (vLLM 0.23.0, torch cu130 /
 CUDA 13.0). Config: `--combat-control llm`, **16 seeds**, `--concurrency 48`
 (effective **16** = #seeds, so the GPU is *under-saturated*), `--max-decisions 200`,
 `--max-tokens 4096`, `--temperature 0`, `--battle-simulations 50`. Each model ran a
@@ -42,15 +42,17 @@ thinking-off and a thinking-on arm (Gemma 3 = *prompted* `<think>` reasoning; Ge
 | gemma-4-E4B-it · think    | 16 | 2425 | 152 | 1103 | **2.2** | 5.16 | 828 | 0\* | 0% |
 | gemma-3-12b-it · no-think | 16 | 2617 | 164 | 237 | **11.0** | 1.15 | 87 | 0 | 0% |
 | gemma-3-12b-it · think    | 16 | 2828 | 177 | 568 | **5.0** | 2.68 | 212 | 168 | 0% |
+| gemma-4-12B-it · no-think | 16 | 2485 | 155 | 309 | **8.1** | 1.54 | 100 | 0 | 0% |
+| gemma-4-12B-it · think    | 16 | 47† | 3 | — | — | 27.8 | 1910 | 1871 | 34%† |
 
 - `wall` = max over the 16 concurrent rollouts of that rollout's summed per-decision
   `latency_s` (≈ arm wall-clock at effective concurrency 16; excludes one-time model
   load). `dec/s` = decisions ÷ wall; `s/dec` = avg per-decision turnaround under load.
-- **0% invalid everywhere** — `--max-tokens 4096` is ample for these models (no
-  truncated-before-JSON failures, even when thinking).
+- **0% invalid except Gemma-4-12B *thinking*** — `--max-tokens 4096` is ample for the
+  E4B and Gemma-3 arms, but **not** for Gemma-4-12B native thinking (see † below).
 - **Thinking cost:** Gemma-3-12B ≈ 2.2× slower (5.0 vs 11.0 dec/s); Gemma-4-E4B ≈ 5×
   slower (2.2 vs 11.2) because it reasons far longer (~828 vs 153 completion tokens).
-  Both no-think arms ≈ 11 dec/s.
+  Both E4B/Gemma-3 no-think arms ≈ 11 dec/s; Gemma-4-12B no-think is **8.1 dec/s**.
 - **Under-saturation:** only 16 rollouts were in flight (concurrency cap 48), so these
   dec/s are a **lower bound** — more seeds/rollout-indices raise them.
 - **\* Gemma-4 `think_tok=0` is a capture gap, not "no reasoning":** Gemma-4 emits its
@@ -60,7 +62,15 @@ thinking-off and a thinking-on arm (Gemma 3 = *prompted* `<think>` reasoning; Ge
   parses (hence 0% invalid). **This run predates the parser fix** — `parse_json_action`
   now captures Gemma-4's `thought` channel (tagging `metadata.reasoning_format =
   "gemma_thought"`), so re-runs record `think_tok` correctly; see `src/sts_ai/CLAUDE.md`
-  (the `agents.py` reasoning-mode note).
+  (the `agents.py` reasoning-mode note). The Gemma-4-12B *thinking* arm (measured after the
+  fix) shows this working: `think_tok` ~1871 captured (`reasoning_format=gemma_thought`).
+- **† Gemma-4-12B *thinking* is degenerate at `--max-tokens 4096`:** the 12B reasons
+  ~1900 tok/decision (mean `think_tok` 1871; **all** decisions hit the 4096 cap) → the
+  closing JSON is `truncated_before_json` → invalid → **all 16 rollouts abort at floor 0**
+  (`stopped_reason=agent_invalid`). Its dec/s/wall are meaningless. To benchmark it, rerun
+  with a much larger `--max-tokens` (≥ 8192). This is the same truncation failure the Qwen
+  arms hit at `256` — Gemma-4-12B's native reasoning is just far longer (E4B fits at
+  ~600–828 tok, so its thinking arm is fine).
 
 Reproduce on a pod (needs a CUDA-13.0-driver H100 for the cu130 `vllm==0.23.0`):
 
