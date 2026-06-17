@@ -70,6 +70,8 @@ This is **not** online RL; it is offline reward-weighted learning on already-col
 
 When we generate fresh rollouts per frame and train with policy gradient, the current standard for LLMs is **GRPO** (group-relative: sample a group of `G` rollouts, advantage `= (R_i − mean)/std`, clipped update, **no value network**) or its simpler cousin **RLOO** (REINFORCE with a leave-one-out group mean as baseline). Prefer these over **PPO** specifically because they avoid a critic network — meaningful given the 48 GB Mac / Qwen3-4B constraint (and the plan's "Local Training Is a Benchmark, Not an Assumption" caution). Group over *seeds* (sample `G` rollouts of the same seed; reward = win / floor); the group mean is the baseline, which tames the sparse terminal-reward variance without a learned value head.
 
+**Generation path (durable commitment): online / on-policy rollout generation MUST use the non-blocking continuous-batching orchestrator (`src/sts_ai/streaming_rollout.py::run_streaming_rollouts`, the vLLM `--backend vllm` path that `scripts/run_until.py`/`run_sweep.py` use), NOT the MLX lockstep path (`parallel_rollout.py`).** Lockstep advances K rollouts in synchronized rounds and blocks each round on the *slowest* rollout; the streaming path keeps `concurrency` rollouts in flight and submits a new one the instant any finishes, so the GPU is never idle waiting on a straggler. This matters most for RL because rollout *length variance is huge* — a turn-1 death vs. a full-game win can differ 50×, and under full-game depth even more — so lockstep would waste most of the GPU on every group. A GRPO/RLOO group is just a set of grouped specs `[(world_seed, 0), (world_seed, 1), …, (world_seed, G−1)]` at temperature > 0 fed to `run_streaming_rollouts` (the same orchestrator `run_until.py` drives; the group form differs only in repeating a world seed across rollout indices rather than spanning distinct seeds). The MLX lockstep path stays only as the Mac-local fallback for environments without a continuous-batching engine. See [`full_game_rollouts_plan.md`](full_game_rollouts_plan.md) §6 and [`inference_engine_decision.md`](inference_engine_decision.md).
+
 ### 2c. Seed model: world seed vs. policy seed
 
 *(Implemented 2026-06-15; the RL training arms in the rest of §2 remain unbuilt.)*
@@ -186,7 +188,7 @@ The contrast between "trait installed by data selection" and "trait nudged by fr
 - **Stage 5 (fixed neutral rollout collection):** add the "attach per-trajectory reward label (win / floor / HP) by seed" post-processing step — it's the only missing input for the offline arm.
 - **Stage 6 (training feasibility):** the first training target is **filtered BC → RWR** on neutral rollouts (offline arm). Loss masking choices (reasoning vs. action) are the "where the gradient lands" decision above.
 - **Stage 7 (three-frame experiment):** the offline arm with the framing prefix swapped — directly supported by the fact that framing is not baked into `state_text`.
-- **Stage 9 (on-policy arm):** GRPO / RLOO, out-of-combat action space first, temp > 0, trait-neutral reward, group-over-seeds baseline.
+- **Stage 9 (on-policy arm):** GRPO / RLOO, out-of-combat action space first, temp > 0, trait-neutral reward, group-over-seeds baseline. Generate groups through the **non-blocking streaming orchestrator** (vLLM `run_streaming_rollouts`), never the MLX lockstep path — see §2b "Generation path".
 - **New (optional) arm:** the behaviour-selection / matched-outcome design in §4, as a comparison condition for the framing arms.
 
 ---
