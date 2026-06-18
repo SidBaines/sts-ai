@@ -20,10 +20,13 @@ overwrite once N=60 lands. Branch: `feat/mlx-e4b-local` (built on
 - Stood up an **H100 GPU eval** (base vs trained on fresh held-out seeds). Solved
   the anticipated **MLX-LoRA → vLLM** compatibility problems (fuse → text-only
   arch conversion → flashinfer/nvcc workaround).
-- **Early signal: the (final, overtrained) adapter plays WORSE than base** —
-  likely overtraining, plus a real **native-thinking-format** issue in the
-  training target (see §6). Next: eval an early checkpoint + retrain on the
-  correct thinking representation.
+- **Result (final N=60): the trained adapter plays modestly BETTER than base** —
+  mean floor 12.80 → **13.95**, boss-clear 10% → **17%**, max 25 → **33**, invalid
+  ~0 in both. So the feasibility question is answered **yes**: filtered-BC made E4B
+  play better. (An early *partial* read looked worse — a completion-order artifact;
+  see §5/§6.) The improvement is modest and not strongly powered at N=60; the
+  **native-thinking-format** training defect (§6) is still worth fixing and may
+  unlock more.
 
 ## 1. What we built (pipeline)
 
@@ -108,32 +111,49 @@ three fixes (all the kind of MLX→GPU friction we anticipated):
 `setup_pod.sh` (vLLM 0.23 + sim). Base = `google/gemma-4-E4B-it` (full MM, loads as
 the 240-run did); trained = the text-only converted model.
 
-## 5. Results ⚠️ PARTIAL — overwrite when N=60 lands
+## 5. Results — final (N=60)
 
 Fresh held-out seeds 600–659 (disjoint from training), full-game thinking, temp 1.0
 (matches data-gen). Base re-establishes the baseline on the *same* seeds.
 
-| Arm | n | boss-clear | wins | mean floor | median | max | invalid |
-|---|---|---|---|---|---|---|---|
-| **base** | 60/60 ✓ | 6 (10%) | 0 | **12.80** | 13.5 | 25 | 0.0002 |
-| **trained (final ckpt)** | 46/60 ⚠️ | 0 (0%) | 0 | **11.22** | 12.0 | 16 | 0.0000 |
+| Arm | n | boss-clear | wins | mean floor | median | max | invalid | stopped |
+|---|---|---|---|---|---|---|---|---|
+| **base** | 60 | 6 (10%) | 0 | 12.80 | 13.5 | 25 | 0.0002 | 58 terminal, 2 agent_invalid |
+| **trained** | 60 | **10 (17%)** | 0 | **13.95** | **14.0** | **33** | **0.0000** | 60 terminal |
 
-> ⚠️ Trained arm partial (46/60) and still moving (mean floor was 9.94 @ n=36 →
-> 11.22 @ n=46). **TODO: overwrite with final N=60 base-vs-trained.** Headline so
-> far: **trained is worse** (lower mean floor, 0 boss-clears vs 6, lower max).
+**Trained beats base on every metric**: mean floor **+1.15**, boss-clear **+7 pp**
+(10→17%), max **+8** (33 = into Act 2), and **zero** invalid (base had 2). Modest but
+consistent — a **positive trainability result**: filtered-BC made E4B play better.
 
 - Base mean floor (12.80) ≈ the original baseline (12.5) → fresh seeds comparable.
-- invalid_rate ~0 in both → the regression is policy, not format.
+- invalid ~0 in both → the gain is policy, not format.
+- **Caveat (significance):** +1.15 mean floor at N=60 is ~1 standard error; the
+  direction is consistent across all metrics but the gain is **not strongly
+  powered**. Confirm with the loader-confound control (§7.2) and/or more seeds.
 
-## 6. Why the trained model regressed (interpretation)
+> **⚠️ Partial-read lesson.** At 36/60 the trained arm looked *worse* (mean floor
+> 9.94, 0 clears). `run_until` launches all rollouts concurrently and **fast-dying
+> (low-floor) runs complete first**, so partial means are biased low until the
+> slow/deep runs land (trained climbed 9.94 @36 → 11.22 @46 → 13.95 @60). Base was
+> already 60/60 (unbiased) while trained was mid-completion (biased low) → the early
+> comparison was apples-to-oranges. **Only compare at full N (or equal completion).**
 
-**Primary: overtraining.** 10,000 iters (~17 epochs) on 32 boss-clearing
-trajectories, with the val-loss plateau at ~iter 1,000 — we fused the **most-overfit
-(final)** checkpoint. Filtered-BC on a narrow winning slice, overtrained, memorizes
-and degrades general play. **First fix: eval an early checkpoint (iter 1,000–2,000).**
+## 6. Reading the result (and the partial-read reversal)
 
-**Secondary (and the part to fix properly): we trained on the wrong representation
-of the model's thinking.** ← action item, per this session's decision.
+**The trained model improved modestly** (§5). The early "regression" I reported was a
+**completion-order artifact** (fast-dying runs finish first → partial means biased
+low), not a real effect — see the partial-read lesson in §5. Compare only at full N.
+
+**On overtraining:** we ran 10,000 iters (~17 epochs) on 32 trajectories, well past
+the ~iter-1,000 val-loss plateau, and fused the **final** checkpoint — yet it still
+beat base. So the final checkpoint was *not* catastrophically overfit. It may still
+be past the optimum: an **earlier checkpoint (iter 1,000–2,000)** could match/beat it
+more cleanly and trains far cheaper — worth a quick check.
+
+**It improved *despite* a flawed thinking target.** We trained on a marker-stripped
+transcript of the model's reasoning (below) — a known defect; fixing it is a plausible
+lever for a *larger* gain. Per this session's decision, the next run trains on the
+**correct native thinking format.**
 
 ### The native-thinking-format issue (and the fix)
 
@@ -174,12 +194,12 @@ the next data-generation + training run:
 
 ## 7. Recommended next steps
 
-1. **Eval an early checkpoint** (iter 1,000 / 2,000) on the same seeds — tests the
-   overtraining hypothesis (likely the dominant factor). Fuse + text-only convert as
-   in §4.
+1. **Eval an early checkpoint** (iter 1,000 / 2,000) on the same seeds — the final
+   ckpt already beat base; an earlier one may match/beat it and trains far cheaper.
+   Fuse + text-only convert as in §4.
 2. **Kill the loader confound:** also run the **base** through the text-only
-   `Gemma4ForCausalLM` path (not `gemma4_mm`), so base and trained use the identical
-   vLLM code path. Confirms the gap is the model, not the path.
+   `Gemma4ForCausalLM` path (not `gemma4_mm`), so both arms use the identical vLLM
+   code path. Confirms the +1.15-floor improvement is the model, not the path.
 3. **Retrain on the correct native thinking format** (§6) — or a clean **no-thinking**
    run — with **far fewer iters** (~1–2 epochs), and re-eval.
 4. **The real ceiling-raiser is winning data:** filtered-BC on 0-win rollouts can only
@@ -199,7 +219,7 @@ the next data-generation + training run:
 
 ## 9. Caveats
 
-- Results §5 are **partial**; overwrite with final N=60.
+- The +1.15 mean-floor gain is **modest and ~1 SE at N=60** — directionally consistent across metrics but not strongly powered; confirm with more seeds + the loader control.
 - Loader confound (base via `gemma4_mm`, trained via `gemma4` text-only) not yet controlled (step 7.2).
 - Trained on thinking-mode data with the marker-stripped target (§6) — a known defect to fix.
 - Single seed-quarantine split (4 val seeds); small N for the binary boss-clear metric → prefer mean floor.
