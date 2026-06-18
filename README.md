@@ -14,8 +14,13 @@ This is intentionally narrower than full LLM control of every card-play decision
 
 ## Setup
 
+**Python ≥3.10 is required** (3.12 recommended). The optional MLX backend for
+Gemma-4 (`mlx-lm`/`mlx ≥0.30.4`) only ships wheels for Python ≥3.10, and the
+simulator below is built against the active `.venv`'s interpreter — so create the
+venv with a 3.10+ interpreter (e.g. `python3.12`).
+
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip cmake
 git clone https://github.com/gamerpuppy/sts_lightspeed external/sts_lightspeed
 cd external/sts_lightspeed

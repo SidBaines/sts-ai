@@ -2,7 +2,7 @@
 name = "slay-the-spire-ai"
 version = "0.1.0"
 description = "Local research harness for LLM policies in sts_lightspeed."
-requires-python = ">=3.9"
+requires-python = ">=3.10"  # mlx (Gemma-4) needs >=3.10; sim is built against the venv interpreter
 dependencies = []
 
 [project.optional-dependencies]

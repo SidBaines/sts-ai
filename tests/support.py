@@ -6,8 +6,24 @@ built ``sts_lightspeed`` module and optional GPU backends via explicit gates.
 """
 from __future__ import annotations
 
+import importlib.util
 import os
 import unittest
+
+
+def _module_installed(name: str) -> bool:
+    """True if ``name`` is importable, checked WITHOUT importing it.
+
+    Using ``find_spec`` (not a real ``import``) matters during test collection:
+    importing e.g. ``mlx_lm`` eagerly pulls ``transformers`` into ``sys.modules``,
+    and an unrelated test's ``assertWarns`` (which scans every module's
+    ``__warningregistry__``) then trips transformers' lazy ``__getattr__`` into a
+    torch/torchvision import that may be absent. find_spec avoids that entirely.
+    """
+    try:
+        return importlib.util.find_spec(name) is not None
+    except Exception:
+        return False
 
 
 def simulator_available() -> bool:
@@ -43,12 +59,8 @@ def requires_simulator(test_item):
 
 
 def vllm_available() -> bool:
-    """True if the optional ``vllm`` package can be imported."""
-    try:
-        import vllm  # noqa: F401
-    except Exception:
-        return False
-    return True
+    """True if the optional ``vllm`` package is installed (not imported)."""
+    return _module_installed("vllm")
 
 
 _REQUIRE_VLLM = os.environ.get("STS_REQUIRE_VLLM") == "1"
@@ -66,12 +78,8 @@ def requires_vllm(test_item):
 
 
 def mlx_available() -> bool:
-    """True if the optional ``mlx_lm`` package can be imported."""
-    try:
-        import mlx_lm  # noqa: F401
-    except Exception:
-        return False
-    return True
+    """True if the optional ``mlx_lm`` package is installed (not imported)."""
+    return _module_installed("mlx_lm")
 
 
 _REQUIRE_MLX = os.environ.get("STS_REQUIRE_MLX") == "1"
