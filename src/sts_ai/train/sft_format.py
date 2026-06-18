@@ -18,6 +18,7 @@ __all__ = [
     "user_content",
     "reconstruct_prompt",
     "completion_text",
+    "assistant_turn_content",
     "build_example",
     "tokenize_example",
 ]
@@ -109,6 +110,19 @@ def completion_text(record: dict) -> str:
     return record["agent"]["raw_response"]
 
 
+def assistant_turn_content(record: dict, *, reasoning_format: str | None) -> str:
+    """Return the assistant message content used as the SFT target.
+
+    Gemma thought-channel generation preserves the native channel markers in
+    ``raw_response``. Keep the passthrough centralized so future normalization,
+    if needed, has one round-trip-gated home.
+    """
+    raw_response = record["agent"]["raw_response"]
+    if reasoning_format == "gemma_thought":
+        return raw_response
+    return raw_response
+
+
 def build_example(
     record: dict,
     framing: str,
@@ -122,7 +136,9 @@ def build_example(
         framing,
         induce_reasoning=induce_reasoning,
     )
-    completion = completion_text(record)
+    metadata = record["agent"].get("metadata", {})
+    reasoning_format = metadata.get("reasoning_format")
+    completion = assistant_turn_content(record, reasoning_format=reasoning_format)
     return {
         "messages": [
             {"role": "user", "content": user_message},

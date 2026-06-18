@@ -4,6 +4,7 @@ from __future__ import annotations
 import unittest
 
 from sts_ai.train.sft_format import (
+    assistant_turn_content,
     build_example,
     completion_text,
     reconstruct_prompt,
@@ -94,6 +95,70 @@ class LegacyEncodingTokenizer:
         return text.split()
 
 
+class ChannelAwareFakeTokenizer:
+    assistant_header = "<assistant_header>"
+    turn_end = "<turn_end>"
+
+    def apply_chat_template(
+        self,
+        messages,
+        tokenize=False,
+        add_generation_prompt=False,
+        enable_thinking=None,
+    ):
+        if tokenize:
+            raise AssertionError("unit fake only renders text templates")
+
+        user_prefix = f"<user_header>{messages[0]['content']}{self.turn_end}"
+        if len(messages) == 1:
+            if add_generation_prompt:
+                return f"{user_prefix}{self.assistant_header}"
+            return user_prefix
+
+        if len(messages) == 2:
+            return (
+                f"{user_prefix}{self.assistant_header}"
+                f"{self._assistant_content(messages[1]['content'])}{self.turn_end}"
+            )
+
+        raise AssertionError(f"unexpected message count: {len(messages)}")
+
+    def _assistant_content(self, content):
+        return content
+
+
+class DoubleWrappingFakeTokenizer(ChannelAwareFakeTokenizer):
+    def _assistant_content(self, content):
+        return f"<|channel|>thought\n{content}"
+
+
+def _gemma_thought_record(raw_response):
+    return _record(
+        agent={
+            "raw_response": raw_response,
+            "metadata": {"reasoning_format": "gemma_thought"},
+        }
+    )
+
+
+def _assistant_remainder(tokenizer, messages, *, enable_thinking=True):
+    inference_prompt = tokenizer.apply_chat_template(
+        messages[:1],
+        tokenize=False,
+        add_generation_prompt=True,
+        enable_thinking=enable_thinking,
+    )
+    full_turn = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=False,
+        enable_thinking=enable_thinking,
+    )
+    if not full_turn.startswith(inference_prompt):
+        return None
+    return full_turn[len(inference_prompt) :]
+
+
 class SftFormatTest(unittest.TestCase):
     def test_user_content_returns_raw_rendered_action_prompt(self):
         rendered = user_content(_record(), FRAMING)
@@ -168,6 +233,24 @@ class SftFormatTest(unittest.TestCase):
             raw_response,
         )
 
+    def test_assistant_turn_content_returns_raw_response_for_all_formats(self):
+        raw_response = "<|channel|>thought\nkeep native markers\n"
+
+        self.assertEqual(
+            assistant_turn_content(
+                _gemma_thought_record(raw_response),
+                reasoning_format="gemma_thought",
+            ),
+            raw_response,
+        )
+        self.assertEqual(
+            assistant_turn_content(
+                _record(agent={"raw_response": raw_response}),
+                reasoning_format=None,
+            ),
+            raw_response,
+        )
+
     def test_build_example_returns_canonical_text_pair_and_metadata(self):
         tokenizer = RecordingTokenizer()
         record = _record()
@@ -231,6 +314,81 @@ class SftFormatTest(unittest.TestCase):
         )
 
         self.assertEqual(example["phase"], "out_of_combat")
+
+    def test_build_example_gemma_thought_preserves_channel_marked_completion(self):
+        tokenizer = ChannelAwareFakeTokenizer()
+        raw_response = (
+            "<|channel|>thought\n"
+            "Retain the native reasoning channel.\n"
+            "<|channel|>final\n"
+            '{"action_index": 1}'
+        )
+        record = _gemma_thought_record(raw_response)
+
+        example = build_example(
+            record,
+            FRAMING,
+            tokenizer=tokenizer,
+            enable_thinking=True,
+        )
+
+        self.assertEqual(example["messages"][1]["content"], raw_response)
+        self.assertEqual(example["completion"], example["messages"][1]["content"])
+
+    def test_gemma_thought_assistant_span_round_trips_with_channel_aware_template(self):
+        tokenizer = ChannelAwareFakeTokenizer()
+        raw_response = (
+            "<|channel|>thought\n"
+            "Native thought tokens emitted by inference.\n"
+            "<|channel|>final\n"
+            '{"action_index": 1}'
+        )
+        example = build_example(
+            _gemma_thought_record(raw_response),
+            FRAMING,
+            tokenizer=tokenizer,
+            enable_thinking=True,
+        )
+
+        inference_prompt = tokenizer.apply_chat_template(
+            example["messages"][:1],
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=True,
+        )
+        full_turn = tokenizer.apply_chat_template(
+            example["messages"],
+            tokenize=False,
+            add_generation_prompt=False,
+            enable_thinking=True,
+        )
+
+        # Real tokenizer token-id round-trip coverage belongs in tests/integration/.
+        self.assertTrue(full_turn.startswith(inference_prompt))
+        self.assertEqual(
+            full_turn[len(inference_prompt) :],
+            raw_response + tokenizer.turn_end,
+        )
+
+    def test_gemma_thought_round_trip_check_catches_double_wrapping_template(self):
+        tokenizer = DoubleWrappingFakeTokenizer()
+        raw_response = (
+            "<|channel|>thought\n"
+            "Already wrapped by inference.\n"
+            "<|channel|>final\n"
+            '{"action_index": 0}'
+        )
+        example = build_example(
+            _gemma_thought_record(raw_response),
+            FRAMING,
+            tokenizer=tokenizer,
+            enable_thinking=True,
+        )
+
+        self.assertNotEqual(
+            _assistant_remainder(tokenizer, example["messages"]),
+            raw_response + tokenizer.turn_end,
+        )
 
     def test_tokenize_example_masks_prompt_and_avoids_completion_special_tokens(self):
         tokenizer = EncodingTokenizer()
