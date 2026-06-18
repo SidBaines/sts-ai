@@ -227,6 +227,9 @@ def finalize_hinted_decision(
             launder_outcome="fallback_action_only",
             triggered=True,
         )
+        # This synthetic fallback carries no thought-channel content even if the
+        # copied metadata says gemma_thought. Future SFT normalization must not
+        # infer marker-bearing content from that tag for fallback records.
         return replace(
             hinted_decision,
             raw_response=action_only_raw_response(hinted_decision.action_index),

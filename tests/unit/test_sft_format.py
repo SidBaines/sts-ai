@@ -315,15 +315,15 @@ class SftFormatTest(unittest.TestCase):
 
         self.assertEqual(example["phase"], "out_of_combat")
 
-    def test_build_example_gemma_thought_preserves_channel_marked_completion(self):
+    def test_build_example_preserves_laundered_gemma_thought_completion(self):
         tokenizer = ChannelAwareFakeTokenizer()
-        raw_response = (
+        laundered_raw_response = (
             "<|channel|>thought\n"
-            "Retain the native reasoning channel.\n"
+            "Laundered native reasoning survives into the target.\n"
             "<|channel|>final\n"
-            '{"action_index": 1}'
+            '{"reasoning": "kept after laundering", "action_index": 1}'
         )
-        record = _gemma_thought_record(raw_response)
+        record = _gemma_thought_record(laundered_raw_response)
 
         example = build_example(
             record,
@@ -332,8 +332,14 @@ class SftFormatTest(unittest.TestCase):
             enable_thinking=True,
         )
 
-        self.assertEqual(example["messages"][1]["content"], raw_response)
-        self.assertEqual(example["completion"], example["messages"][1]["content"])
+        self.assertEqual(
+            record["agent"]["metadata"]["reasoning_format"],
+            "gemma_thought",
+        )
+        self.assertIn("<|channel|>thought\n", example["messages"][1]["content"])
+        self.assertIn("<|channel|>final\n", example["messages"][1]["content"])
+        self.assertEqual(example["messages"][1]["content"], laundered_raw_response)
+        self.assertEqual(example["completion"], laundered_raw_response)
 
     def test_gemma_thought_assistant_span_round_trips_with_channel_aware_template(self):
         tokenizer = ChannelAwareFakeTokenizer()

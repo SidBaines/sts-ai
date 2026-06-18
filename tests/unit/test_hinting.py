@@ -292,9 +292,27 @@ class FinalizeHintedDecisionTest(unittest.TestCase):
         self.assertEqual(final.metadata["hint"]["launder_outcome"], "laundered")
 
     def test_action_only_fallback(self):
+        hinted = AgentDecision(
+            action_index=2,
+            raw_response=(
+                "<|channel|>thought\n"
+                "Hinted native reasoning before fallback.\n"
+                "<|channel|>final\n"
+                '{"action_index": 2}'
+            ),
+            reasoning="hinted reason",
+            thinking="hinted thought",
+            valid=True,
+            retries=2,
+            metadata={
+                "source": "hinted",
+                "reasoning_format": "gemma_thought",
+            },
+        )
+
         final = finalize_hinted_decision(
             normal_decision=self.normal,
-            hinted_decision=self.hinted,
+            hinted_decision=hinted,
             laundered_decision=None,
             hint_text=BLOCK_HINT,
             mistake_kind="block",
@@ -311,6 +329,8 @@ class FinalizeHintedDecisionTest(unittest.TestCase):
             final.metadata["hint"]["launder_outcome"],
             "fallback_action_only",
         )
+        self.assertEqual(final.metadata["reasoning_format"], "gemma_thought")
+        self.assertNotIn("<|channel", final.raw_response)
 
     def test_drop_fallback(self):
         final = finalize_hinted_decision(
