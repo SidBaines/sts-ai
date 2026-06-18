@@ -6,7 +6,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from sts_ai.train.reward import label_trajectories
+from sts_ai.train.reward import label_trajectories, rwr_multiplicities
 from sts_ai.train.sft_format import build_example, chat_template_probe_hash
 
 __all__ = ["discover_rollouts", "build_dataset"]
@@ -87,11 +87,18 @@ def build_dataset(
     min_act: int = 1,
     fallback_floor_quantile: float = 0.8,
     min_positives: int = 20,
+    weighting_mode: str = "filter",
+    rwr_beta: float = 5.0,
+    rwr_baseline: str = "median",
+    rwr_max_multiplier: int = 8,
     require_no_thinking: bool = True,
     require_framing_match: bool = True,
     drop_phases: tuple[str, ...] = (),
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     rollout_dir = Path(rollout_dir)
+    if weighting_mode not in {"filter", "rwr"}:
+        raise ValueError("weighting_mode must be 'filter' or 'rwr'")
+
     pairs = discover_rollouts(rollout_dir)
     metas = [_load_json(meta_path) for _jsonl_path, meta_path in pairs]
 
@@ -134,28 +141,74 @@ def build_dataset(
         min_positives=min_positives,
     )
 
+    rwr_report = None
+    multiplicity_by_stem: dict[str, int] = {}
+    if weighting_mode == "rwr":
+        multiplicity_by_stem, rwr_report = rwr_multiplicities(
+            labels,
+            beta=rwr_beta,
+            baseline=rwr_baseline,
+            max_multiplier=rwr_max_multiplier,
+        )
+
     jsonl_by_stem = {jsonl_path.stem: jsonl_path for jsonl_path, _meta_path in pairs}
     examples: list[dict[str, Any]] = []
     skipped: Counter[str] = Counter()
-    for label in labels:
-        if not label.kept:
-            continue
-        jsonl_path = jsonl_by_stem[label.stem]
-        for record in _load_jsonl(jsonl_path):
-            skip_reason = _skip_reason(record, drop_phases)
-            if skip_reason is not None:
-                skipped[skip_reason] += 1
+    n_unique_examples = 0
+    if weighting_mode == "filter":
+        for label in labels:
+            if not label.kept:
                 continue
-            example = build_example(
-                record,
-                framing,
-                tokenizer=tokenizer,
-                enable_thinking=enable_thinking,
-                induce_reasoning=induce_reasoning,
-            )
-            example["stem"] = label.stem
-            example["keep_reason"] = label.keep_reason
-            examples.append(example)
+            jsonl_path = jsonl_by_stem[label.stem]
+            for record in _load_jsonl(jsonl_path):
+                skip_reason = _skip_reason(record, drop_phases)
+                if skip_reason is not None:
+                    skipped[skip_reason] += 1
+                    continue
+                example = build_example(
+                    record,
+                    framing,
+                    tokenizer=tokenizer,
+                    enable_thinking=enable_thinking,
+                    induce_reasoning=induce_reasoning,
+                )
+                example["stem"] = label.stem
+                example["keep_reason"] = label.keep_reason
+                examples.append(example)
+        n_unique_examples = len(examples)
+        n_trajectories_with_multiplicity = sum(1 for label in labels if label.kept)
+    else:
+        for label in labels:
+            multiplicity = multiplicity_by_stem.get(label.stem, 0)
+            if multiplicity == 0:
+                continue
+            jsonl_path = jsonl_by_stem[label.stem]
+            trajectory_examples: list[dict[str, Any]] = []
+            for record in _load_jsonl(jsonl_path):
+                skip_reason = _skip_reason(record, drop_phases)
+                if skip_reason is not None:
+                    skipped[skip_reason] += 1
+                    continue
+                example = build_example(
+                    record,
+                    framing,
+                    tokenizer=tokenizer,
+                    enable_thinking=enable_thinking,
+                    induce_reasoning=induce_reasoning,
+                )
+                example["stem"] = label.stem
+                example["keep_reason"] = label.keep_reason
+                example["multiplicity"] = multiplicity
+                example["weighting_mode"] = weighting_mode
+                trajectory_examples.append(example)
+            n_unique_examples += len(trajectory_examples)
+            for example in trajectory_examples:
+                for _copy_index in range(multiplicity):
+                    # Safe shallow copy: prompt/completion strings and messages are serialized/read only.
+                    examples.append(dict(example))
+        n_trajectories_with_multiplicity = sum(
+            1 for multiplicity in multiplicity_by_stem.values() if multiplicity >= 1
+        )
 
     manifest = {
         "tokenizer_id": tokenizer_id,
@@ -171,8 +224,12 @@ def build_dataset(
         "min_act": min_act,
         "n_rollouts_discovered": len(pairs),
         "n_missing_meta": _count_missing_meta(rollout_dir),
-        "n_kept_trajectories": sum(1 for label in labels if label.kept),
+        "n_kept_trajectories": n_trajectories_with_multiplicity,
         "n_examples": len(examples),
+        "weighting_mode": weighting_mode,
+        "rwr_report": rwr_report,
+        "n_unique_examples": n_unique_examples,
+        "n_trajectories_with_multiplicity": n_trajectories_with_multiplicity,
         "skipped_record_counts": dict(skipped),
         "filter_report": report,
     }

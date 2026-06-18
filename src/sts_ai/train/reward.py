@@ -10,9 +10,15 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 import math
+import statistics
 from typing import Any
 
-__all__ = ["TrajectoryLabel", "is_act_boss_clear", "label_trajectories"]
+__all__ = [
+    "TrajectoryLabel",
+    "is_act_boss_clear",
+    "label_trajectories",
+    "rwr_multiplicities",
+]
 
 
 @dataclass(frozen=True)
@@ -58,6 +64,93 @@ def _quantile(sorted_values: list[int], q: float) -> int:
         raise ValueError("q must be between 0.0 and 1.0")
     idx = int(math.floor(q * (len(sorted_values) - 1)))
     return sorted_values[idx]
+
+
+def rwr_multiplicities(
+    labels: list[TrajectoryLabel],
+    *,
+    beta: float,
+    baseline: str = "median",
+    max_multiplier: int = 8,
+    exclude_simulator_errors: bool = True,
+) -> tuple[dict[str, int], dict]:
+    """Return deterministic RWR integer resampling multiplicities by stem.
+
+    Weights are ``exp((final_floor - baseline_floor) / beta)`` and are rounded
+    then clamped into ``[0, max_multiplier]``. As ``beta -> 0+``, below-baseline
+    floors round to zero while above-baseline floors hit the cap, which is
+    RWR's hard-filter limit but not identical to filter mode. As
+    ``beta -> inf``, all weights approach one, giving near-uniform behaviour
+    cloning over all valid trajectories.
+    """
+    if beta <= 0:
+        raise ValueError("beta must be > 0")
+    if baseline not in {"median", "mean"}:
+        raise ValueError("baseline must be 'median' or 'mean'")
+
+    label_rows = list(labels)
+    pool = [
+        label
+        for label in label_rows
+        if not (
+            exclude_simulator_errors
+            and label.stopped_reason == "simulator_error"
+        )
+    ]
+    n_simulator_error_excluded = len(label_rows) - len(pool)
+
+    baseline_value: float | int | None
+    if pool:
+        floors = [int(label.final_floor) for label in pool]
+        if baseline == "median":
+            baseline_value = statistics.median(floors)
+        else:
+            baseline_value = statistics.mean(floors)
+    else:
+        baseline_value = None
+
+    multiplicity_by_stem: dict[str, int] = {}
+    multiplicity_histogram: Counter[int] = Counter()
+    n_dropped_zero = 0
+    n_capped = 0
+
+    for label in label_rows:
+        stem = str(label.stem)
+        is_excluded = (
+            exclude_simulator_errors
+            and label.stopped_reason == "simulator_error"
+        )
+        if is_excluded or baseline_value is None:
+            multiplicity = 0
+        else:
+            exponent = (int(label.final_floor) - baseline_value) / beta
+            try:
+                rounded = round(math.exp(exponent))
+            except OverflowError:
+                rounded = max_multiplier
+            multiplicity = max(0, min(rounded, max_multiplier))
+            if rounded == 0:
+                n_dropped_zero += 1
+            if max_multiplier > 0 and multiplicity == max_multiplier:
+                n_capped += 1
+
+        multiplicity_by_stem[stem] = int(multiplicity)
+        multiplicity_histogram[int(multiplicity)] += 1
+
+    report = {
+        "mode": "rwr",
+        "beta": beta,
+        "baseline_kind": baseline,
+        "baseline_value": baseline_value,
+        "max_multiplier": max_multiplier,
+        "n_pool": len(pool),
+        "n_dropped_zero": n_dropped_zero,
+        "n_capped": n_capped,
+        "multiplicity_histogram": dict(multiplicity_histogram),
+        "n_simulator_error_excluded": n_simulator_error_excluded,
+        "total_trajectory_multiplicity": sum(multiplicity_by_stem.values()),
+    }
+    return multiplicity_by_stem, report
 
 
 def label_trajectories(

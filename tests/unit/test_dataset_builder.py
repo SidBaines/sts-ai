@@ -11,6 +11,12 @@ from sts_ai.train.sft_format import chat_template_probe_hash
 
 
 FRAMING = "Test framing: choose the strongest legal action."
+ADDITIVE_MANIFEST_KEYS = {
+    "weighting_mode",
+    "rwr_report",
+    "n_unique_examples",
+    "n_trajectories_with_multiplicity",
+}
 
 
 class FakeTokenizer:
@@ -113,6 +119,14 @@ def _write_rollout(root: Path, meta: dict, records: list[dict]) -> Path:
     return jsonl_path
 
 
+def _without_additive_manifest_keys(manifest: dict) -> dict:
+    return {
+        key: value
+        for key, value in manifest.items()
+        if key not in ADDITIVE_MANIFEST_KEYS
+    }
+
+
 class DiscoverRolloutsTest(unittest.TestCase):
     def test_pairs_jsonl_and_meta_and_ignores_missing_meta(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -162,6 +176,184 @@ class BuildDatasetTest(unittest.TestCase):
             self.assertFalse(manifest["filter_report"]["fallback_engaged"])
             self.assertEqual(manifest["n_kept_trajectories"], 1)
             self.assertEqual(manifest["n_examples"], 1)
+
+    def test_rwr_resampling_includes_high_floor_non_kept_trajectory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_rollout(
+                root,
+                _meta(
+                    world_seed=1,
+                    outcome="GameOutcome.VICTORY",
+                    final_act=2,
+                    final_floor=5,
+                ),
+                [
+                    _record(world_seed=1, decision_index=0),
+                    _record(world_seed=1, decision_index=1),
+                ],
+            )
+            _write_rollout(
+                root,
+                _meta(world_seed=2, final_act=1, final_floor=15),
+                [
+                    _record(world_seed=2, decision_index=0),
+                    _record(world_seed=2, decision_index=1, valid=False),
+                    _record(world_seed=2, decision_index=2),
+                ],
+            )
+            _write_rollout(
+                root,
+                _meta(world_seed=3, final_act=1, final_floor=0),
+                [
+                    _record(world_seed=3, decision_index=0),
+                    _record(world_seed=3, decision_index=1, valid=False),
+                ],
+            )
+
+            examples, manifest = build_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="fake-tokenizer",
+                min_positives=1,
+                weighting_mode="rwr",
+                rwr_beta=5.0,
+                rwr_max_multiplier=4,
+            )
+            examples_again, _manifest_again = build_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="fake-tokenizer",
+                min_positives=1,
+                weighting_mode="rwr",
+                rwr_beta=5.0,
+                rwr_max_multiplier=4,
+            )
+
+            self.assertEqual(examples, examples_again)
+            self.assertEqual(manifest["filter_report"]["n_kept"], 1)
+            self.assertEqual(manifest["weighting_mode"], "rwr")
+            self.assertEqual(manifest["n_examples"], 10)
+            self.assertEqual(manifest["n_unique_examples"], 4)
+            self.assertEqual(manifest["n_trajectories_with_multiplicity"], 2)
+            self.assertEqual(manifest["n_kept_trajectories"], 2)
+            self.assertEqual(manifest["skipped_record_counts"], {"agent_invalid": 1})
+            self.assertEqual(
+                manifest["rwr_report"]["multiplicity_histogram"],
+                {1: 1, 4: 1, 0: 1},
+            )
+
+            high_floor_examples = [
+                example for example in examples if example["stem"] == "seed_2_r0"
+            ]
+            self.assertEqual(len(high_floor_examples), 8)
+            self.assertEqual(
+                {example["keep_reason"] for example in high_floor_examples},
+                {"not_kept"},
+            )
+            self.assertEqual(
+                {example["multiplicity"] for example in high_floor_examples},
+                {4},
+            )
+            self.assertEqual(
+                {example["weighting_mode"] for example in examples},
+                {"rwr"},
+            )
+            self.assertEqual(
+                [(example["stem"], example["decision_index"]) for example in examples],
+                [
+                    ("seed_1_r0", 0),
+                    ("seed_1_r0", 1),
+                    ("seed_2_r0", 0),
+                    ("seed_2_r0", 0),
+                    ("seed_2_r0", 0),
+                    ("seed_2_r0", 0),
+                    ("seed_2_r0", 2),
+                    ("seed_2_r0", 2),
+                    ("seed_2_r0", 2),
+                    ("seed_2_r0", 2),
+                ],
+            )
+
+    def test_filter_mode_preserves_legacy_examples_and_manifest_contract(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_rollout(
+                root,
+                _meta(world_seed=21, outcome="GameOutcome.VICTORY", final_act=2),
+                [_record(world_seed=21, decision_index=0)],
+            )
+            _write_rollout(
+                root,
+                _meta(world_seed=22, final_act=1),
+                [_record(world_seed=22, decision_index=0)],
+            )
+
+            examples, manifest = build_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="fake-tokenizer",
+                min_positives=1,
+            )
+            explicit_examples, explicit_manifest = build_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="fake-tokenizer",
+                min_positives=1,
+                weighting_mode="filter",
+            )
+
+            self.assertEqual(examples, explicit_examples)
+            self.assertEqual(
+                _without_additive_manifest_keys(manifest),
+                _without_additive_manifest_keys(explicit_manifest),
+            )
+            self.assertNotIn("multiplicity", examples[0])
+            self.assertNotIn("weighting_mode", examples[0])
+            self.assertEqual(manifest["weighting_mode"], "filter")
+            self.assertIsNone(manifest["rwr_report"])
+            self.assertEqual(manifest["n_unique_examples"], 1)
+            self.assertEqual(manifest["n_trajectories_with_multiplicity"], 1)
+            self.assertEqual(
+                _without_additive_manifest_keys(manifest),
+                {
+                    "tokenizer_id": "fake-tokenizer",
+                    "chat_template_hash": chat_template_probe_hash(
+                        FakeTokenizer(),
+                        enable_thinking=False,
+                    ),
+                    "framing": FRAMING,
+                    "generation_framing": FRAMING,
+                    "reasoning_mode": "none",
+                    "enable_thinking": False,
+                    "induce_reasoning": False,
+                    "min_act": 1,
+                    "n_rollouts_discovered": 2,
+                    "n_missing_meta": 0,
+                    "n_kept_trajectories": 1,
+                    "n_examples": 1,
+                    "skipped_record_counts": {},
+                    "filter_report": {
+                        "n_total": 2,
+                        "n_positives": 1,
+                        "n_kept": 1,
+                        "min_act": 1,
+                        "min_positives": 1,
+                        "fallback_floor_quantile": 0.8,
+                        "fallback_engaged": False,
+                        "threshold_floor": None,
+                        "stopped_reason_counts": {"terminal": 2},
+                        "kept_stopped_reason_counts": {"terminal": 1},
+                        "n_victory": 1,
+                        "n_act_boss_clear": 1,
+                        "agent_invalid_rate": 0.0,
+                    },
+                },
+            )
 
     def test_unfaithful_or_invalid_decisions_are_skipped_and_counted(self):
         with tempfile.TemporaryDirectory() as tmp:

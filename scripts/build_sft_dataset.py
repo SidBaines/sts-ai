@@ -48,6 +48,18 @@ def _print_report(manifest: dict[str, Any]) -> None:
         "skipped_record_counts: "
         + json.dumps(manifest["skipped_record_counts"], sort_keys=True),
     ]
+    if manifest.get("weighting_mode") == "rwr":
+        rwr_report = manifest["rwr_report"]
+        lines.extend(
+            [
+                "weighting_mode: rwr",
+                f"rwr_beta: {rwr_report['beta']}",
+                f"rwr_baseline_value: {rwr_report['baseline_value']}",
+                "rwr_multiplicity_histogram: "
+                + json.dumps(rwr_report["multiplicity_histogram"], sort_keys=True),
+                f"n_unique_examples: {manifest['n_unique_examples']}",
+            ]
+        )
     print("\n".join(lines))
 
 
@@ -73,6 +85,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-act", type=int, default=1)
     parser.add_argument("--min-positives", type=int, default=20)
     parser.add_argument("--fallback-floor-quantile", type=float, default=0.8)
+    parser.add_argument(
+        "--weighting-mode",
+        choices=("filter", "rwr"),
+        default="filter",
+    )
+    parser.add_argument("--rwr-beta", type=float, default=5.0)
+    parser.add_argument(
+        "--rwr-baseline",
+        choices=("median", "mean"),
+        default="median",
+    )
+    parser.add_argument("--rwr-max-multiplier", type=int, default=8)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--allow-fallback", action="store_true")
     parser.add_argument(
@@ -101,12 +125,18 @@ def main() -> None:
         min_act=args.min_act,
         fallback_floor_quantile=args.fallback_floor_quantile,
         min_positives=args.min_positives,
+        weighting_mode=args.weighting_mode,
+        rwr_beta=args.rwr_beta,
+        rwr_baseline=args.rwr_baseline,
+        rwr_max_multiplier=args.rwr_max_multiplier,
         require_no_thinking=not args.allow_thinking,
         drop_phases=tuple(args.drop_phase),
     )
 
     _print_report(manifest)
-    if manifest["filter_report"]["fallback_engaged"] and not args.allow_fallback:
+    if args.weighting_mode == "rwr":
+        print("RWR mode: sparsity guardrail not applicable")
+    elif manifest["filter_report"]["fallback_engaged"] and not args.allow_fallback:
         print(
             "Refusing to write fallback dataset: positives were below "
             "the threshold. Re-run with --allow-fallback to emit the "
