@@ -339,6 +339,7 @@ class VllmJsonAgent:
         top_k: int = -1,
         max_retries: int = 1,
         enable_thinking: bool = False,
+        preserve_special_tokens: bool | None = None,
         enable_prefix_caching: bool = True,
         adapter_path: str | None = None,
         max_lora_rank: int = 16,
@@ -390,6 +391,11 @@ class VllmJsonAgent:
         self.tokenizer = self.llm.get_tokenizer()
         self._SamplingParams = SamplingParams
         self._native_thinking = self._probe_native_thinking()
+        self.preserve_special_tokens = (
+            self.reasoning_mode == "native"
+            if preserve_special_tokens is None
+            else preserve_special_tokens
+        )
 
     def reseed(self, policy_seed: int) -> None:
         self._seed = policy_seed
@@ -407,6 +413,7 @@ class VllmJsonAgent:
             "thinking": self.enable_thinking,
             "enable_prefix_caching": self.enable_prefix_caching,
             "reasoning_mode": self.reasoning_mode,
+            "preserve_special_tokens": self.preserve_special_tokens,
             "max_retries": self.max_retries,
             "backend": "vllm",
             "dtype": self.dtype,
@@ -477,6 +484,7 @@ class VllmJsonAgent:
                 top_k=self.top_k,
                 max_tokens=self.max_tokens,
                 seed=self._seed,
+                skip_special_tokens=not getattr(self, "preserve_special_tokens", False),
             )
             if getattr(self, "_lora_request", None) is not None:
                 outputs = self.llm.generate(prompts, params, lora_request=self._lora_request)
@@ -509,7 +517,14 @@ class VllmJsonAgent:
                 "a <think> block, markdown fence, or any other text."
             )
         prompt = self._apply_chat_template(base)
-        params = self._SamplingParams(temperature=self.temperature, top_p=self.top_p, top_k=self.top_k, max_tokens=self.max_tokens, seed=seed)
+        params = self._SamplingParams(
+            temperature=self.temperature,
+            top_p=self.top_p,
+            top_k=self.top_k,
+            max_tokens=self.max_tokens,
+            seed=seed,
+            skip_special_tokens=not getattr(self, "preserve_special_tokens", False),
+        )
         # Record submit time so stream_poll can report this request's submit->finish
         # wall-time. hasattr guard keeps object.__new__ test instances working.
         if not hasattr(self, "_submit_ts"):

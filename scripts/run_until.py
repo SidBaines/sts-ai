@@ -223,6 +223,12 @@ def main() -> None:
     parser.add_argument("--combat-control", choices=["search", "llm"], default="llm")
     parser.add_argument("--battle-simulations", type=int, default=50)
     parser.add_argument("--thinking", action="store_true")
+    parser.add_argument(
+        "--preserve-special-tokens",
+        choices=["auto", "on", "off"],
+        default="auto",
+        help="vLLM-only: preserve native special tokens in completions (auto = native thinking only).",
+    )
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument(
         "--top-p",
@@ -330,6 +336,7 @@ def main() -> None:
             max_act=args.max_act,
         )
 
+    preserve_special_tokens = {"auto": None, "on": True, "off": False}[args.preserve_special_tokens]
     agent = build_agent(
         args.backend,
         model=args.model,
@@ -339,6 +346,7 @@ def main() -> None:
         top_k=args.top_k,
         max_retries=args.max_retries,
         thinking=args.thinking,
+        preserve_special_tokens=preserve_special_tokens,
         enable_prefix_caching=args.enable_prefix_caching,
         adapter_path=args.adapter_path,
         max_lora_rank=args.max_lora_rank,

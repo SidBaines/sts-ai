@@ -80,7 +80,7 @@ class ParseJsonActionTest(unittest.TestCase):
         # skip_special_tokens=False: the channel markers survive and bound the thought.
         text = (
             "<|channel>thought\nReasoning body here.<channel|>"
-            '{"reasoning": "final", "action_index": 0}'
+            '{"reasoning": "final", "action_index": 0}<|end_of_turn|>'
         )
         decision = parse_json_action(text, self.actions)
         self.assertTrue(decision.valid)
@@ -285,6 +285,7 @@ class VllmJsonAgentTest(unittest.TestCase):
         # top_p / top_k flow through to the vLLM SamplingParams
         self.assertEqual(agent.llm.calls[0][1]["top_p"], 0.95)
         self.assertEqual(agent.llm.calls[0][1]["top_k"], 64)
+        self.assertTrue(agent.llm.calls[0][1]["skip_special_tokens"])
 
         decisions = agent.choose_actions_batch([("state 1", self.actions), ("state 2", self.actions)])
 
@@ -376,6 +377,87 @@ class VllmJsonAgentTest(unittest.TestCase):
         self.assertEqual(decision.completion_tokens, 4)
         self.assertEqual(decision.retries, 1)
         self.assertGreaterEqual(decision.latency_s, 0.0)
+
+    def test_generate_preserves_special_tokens_when_enabled(self):
+        class FakeSamplingParams:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+        class Output:
+            prompt_token_ids = [1, 2]
+            outputs = [types.SimpleNamespace(text='{"action_index": 0}', token_ids=[3])]
+
+        class CapturingLlm:
+            def __init__(self):
+                self.calls = []
+
+            def generate(self, prompts, params):
+                self.calls.append((prompts, params.kwargs))
+                return [Output()]
+
+        agent = object.__new__(VllmJsonAgent)
+        agent._SamplingParams = FakeSamplingParams
+        agent._seed = 123
+        agent.temperature = 0.2
+        agent.top_p = 1.0
+        agent.top_k = -1
+        agent.max_tokens = 4096
+        agent.preserve_special_tokens = True
+        agent.llm = CapturingLlm()
+
+        result = agent._generate(["probe prompt"])
+
+        self.assertIsNotNone(result)
+        self.assertFalse(agent.llm.calls[0][1]["skip_special_tokens"])
+
+    def test_stream_submit_threads_skip_special_tokens(self):
+        class FakeSamplingParams:
+            def __init__(self, **kwargs):
+                self.kwargs = kwargs
+
+        class CapturingEngine:
+            def __init__(self):
+                self.calls = []
+
+            def add_request(self, request_id, prompt, params):
+                self.calls.append((request_id, prompt, params.kwargs))
+
+        engine = CapturingEngine()
+        agent = object.__new__(VllmJsonAgent)
+        agent._base_prompt = lambda state_text, legal_actions: "base prompt"
+        agent._apply_chat_template = lambda prompt: f"chat: {prompt}"
+        agent._SamplingParams = FakeSamplingParams
+        agent.temperature = 0.2
+        agent.top_p = 0.95
+        agent.top_k = 64
+        agent.max_tokens = 4096
+        agent.preserve_special_tokens = True
+        agent.llm = types.SimpleNamespace(llm_engine=engine)
+
+        agent.stream_submit("req-1", "state", self.actions, seed=77)
+
+        self.assertEqual(engine.calls[0][0], "req-1")
+        self.assertEqual(engine.calls[0][1], "chat: base prompt")
+        self.assertFalse(engine.calls[0][2]["skip_special_tokens"])
+
+    def test_config_includes_preserve_special_tokens(self):
+        agent = object.__new__(VllmJsonAgent)
+        agent.model_id = "model"
+        agent.framing = NEUTRAL_FRAME
+        agent.temperature = 0.2
+        agent.top_p = 1.0
+        agent.top_k = -1
+        agent.max_tokens = 4096
+        agent.enable_thinking = True
+        agent.enable_prefix_caching = True
+        agent._native_thinking = True
+        agent.preserve_special_tokens = True
+        agent.max_retries = 1
+        agent.dtype = "auto"
+        agent.gpu_memory_utilization = 0.9
+        agent.adapter_path = None
+
+        self.assertTrue(agent.config["preserve_special_tokens"])
 
     def test_stream_poll_reports_submit_to_finish_latency(self):
         # Streaming path: stream_submit records submit time; stream_poll reports the

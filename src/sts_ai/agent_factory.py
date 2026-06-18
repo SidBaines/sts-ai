@@ -13,6 +13,7 @@ def build_agent(
     top_k: int = -1,     # defaults are vLLM's "disabled" sentinels (keep prior behaviour).
     max_retries: int = 1,
     thinking: bool = False,
+    preserve_special_tokens: bool | None = None,
     enable_prefix_caching: bool = True,
     adapter_path: str | None = None,
     max_lora_rank: int = 16,
@@ -41,6 +42,7 @@ def build_agent(
             top_k=top_k,
             max_retries=max_retries,
             enable_thinking=thinking,
+            preserve_special_tokens=preserve_special_tokens,
             enable_prefix_caching=enable_prefix_caching,
             adapter_path=adapter_path,
             max_lora_rank=max_lora_rank,
