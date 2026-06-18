@@ -42,12 +42,29 @@ class TrainMlxCommandTest(unittest.TestCase):
                 "4",
                 "--learning-rate",
                 "0.0002",
+                "--mask-prompt",
             ],
         )
+        self.assertIn("--mask-prompt", cmd)
         self.assertNotIn("--report-to", cmd)
         self.assertNotIn("--project-name", cmd)
         self.assertNotIn("--steps-per-eval", cmd)
         self.assertNotIn("--save-every", cmd)
+
+    def test_mask_prompt_can_be_disabled(self):
+        cmd = build_lora_cmd(
+            python_exe="python",
+            base_model="base/model",
+            data_dir=Path("data"),
+            out_adapter_dir=Path("adapter"),
+            num_layers=4,
+            iters=9,
+            batch_size=2,
+            learning_rate=0.0002,
+            mask_prompt=False,
+        )
+
+        self.assertNotIn("--mask-prompt", cmd)
 
     def test_optional_wandb_and_eval_flags(self):
         cmd = build_lora_cmd(

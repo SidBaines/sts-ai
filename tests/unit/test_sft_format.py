@@ -8,6 +8,7 @@ from sts_ai.train.sft_format import (
     completion_text,
     reconstruct_prompt,
     tokenize_example,
+    user_content,
 )
 
 
@@ -94,6 +95,16 @@ class LegacyEncodingTokenizer:
 
 
 class SftFormatTest(unittest.TestCase):
+    def test_user_content_returns_raw_rendered_action_prompt(self):
+        rendered = user_content(_record(), FRAMING)
+
+        self.assertIn(FRAMING, rendered)
+        self.assertIn("Act 1, floor 0, screen EVENT_SCREEN. Stored text only.", rendered)
+        self.assertIn("0: event option zero", rendered)
+        self.assertIn("1: event option one", rendered)
+        self.assertNotIn("wrapped(", rendered)
+        self.assertNotIn("legacy(", rendered)
+
     def test_reconstruct_prompt_renders_body_and_applies_chat_template(self):
         tokenizer = RecordingTokenizer()
 
@@ -159,9 +170,10 @@ class SftFormatTest(unittest.TestCase):
 
     def test_build_example_returns_canonical_text_pair_and_metadata(self):
         tokenizer = RecordingTokenizer()
+        record = _record()
 
         example = build_example(
-            _record(),
+            record,
             FRAMING,
             tokenizer=tokenizer,
             enable_thinking=False,
@@ -169,7 +181,33 @@ class SftFormatTest(unittest.TestCase):
 
         self.assertEqual(
             set(example),
-            {"prompt", "completion", "world_seed", "decision_index", "phase"},
+            {
+                "messages",
+                "prompt",
+                "completion",
+                "world_seed",
+                "decision_index",
+                "phase",
+            },
+        )
+        self.assertEqual(
+            example["messages"],
+            [
+                {"role": "user", "content": user_content(record, FRAMING)},
+                {
+                    "role": "assistant",
+                    "content": '{"reasoning": "keep exact braces", "action_index": 1}',
+                },
+            ],
+        )
+        self.assertEqual(example["messages"][0]["role"], "user")
+        self.assertNotIn("wrapped(", example["messages"][0]["content"])
+        self.assertEqual(
+            example["messages"][1],
+            {
+                "role": "assistant",
+                "content": '{"reasoning": "keep exact braces", "action_index": 1}',
+            },
         )
         self.assertTrue(example["prompt"].startswith("wrapped(thinking=False,gen=True)"))
         self.assertEqual(

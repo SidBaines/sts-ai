@@ -21,11 +21,13 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     return records
 
 
-def _mlx_record(record: dict[str, Any]) -> dict[str, str]:
-    return {
-        "prompt": record["prompt"],
-        "completion": record["completion"],
-    }
+def _mlx_record(record: dict[str, Any]) -> dict[str, Any]:
+    if "messages" not in record:
+        raise ValueError(
+            "dataset record is missing required 'messages' field for MLX chat "
+            "training"
+        )
+    return {"messages": record["messages"]}
 
 
 def _write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
@@ -56,12 +58,12 @@ def prepare_mlx_data(
     valid_fraction: float = 0.1,
     shuffle_seed: int = 0,
 ) -> Path:
-    """Convert SFT JSONL to mlx-lm's prompt/completion JSONL layout.
+    """Convert SFT JSONL to mlx-lm's chat JSONL layout.
 
     The input dataset can contain provenance keys such as ``world_seed`` and
-    ``stem``; only ``prompt`` and ``completion`` are written. For a one-example
-    dataset, the single example stays in train and ``valid.jsonl`` is empty so
-    the trainer never sees a duplicated target.
+    ``stem``; only ``messages`` is written so mlx-lm selects its ChatDataset.
+    For a one-example dataset, the single example stays in train and
+    ``valid.jsonl`` is empty so the trainer never sees a duplicated target.
     """
     dataset_path = Path(dataset_path)
     out_dir = Path(out_dir)
@@ -112,6 +114,7 @@ def build_lora_cmd(
     steps_per_report: int | None = None,
     save_every: int | None = None,
     val_batches: int | None = None,
+    mask_prompt: bool = True,
 ) -> list[str]:
     cmd = [
         python_exe,
@@ -134,6 +137,9 @@ def build_lora_cmd(
         "--learning-rate",
         str(learning_rate),
     ]
+
+    if mask_prompt:
+        cmd.append("--mask-prompt")
 
     if wandb_project is not None:
         cmd.extend(["--report-to", "wandb", "--project-name", wandb_project])
@@ -167,6 +173,7 @@ def _run_mlx_lora(
     steps_per_report: int | None = None,
     save_every: int | None = None,
     val_batches: int | None = None,
+    mask_prompt: bool = True,
 ) -> None:
     subprocess.run(
         build_lora_cmd(
@@ -183,6 +190,7 @@ def _run_mlx_lora(
             steps_per_report=steps_per_report,
             save_every=save_every,
             val_batches=val_batches,
+            mask_prompt=mask_prompt,
         ),
         check=True,
     )
@@ -205,6 +213,7 @@ def train(
     steps_per_report: int | None = None,
     save_every: int | None = None,
     val_batches: int | None = None,
+    mask_prompt: bool = True,
 ) -> Path:
     try:
         import mlx_lm  # noqa: F401
@@ -237,6 +246,7 @@ def train(
             steps_per_report=steps_per_report,
             save_every=save_every,
             val_batches=val_batches,
+            mask_prompt=mask_prompt,
         )
         return out_adapter_dir
 
@@ -259,5 +269,6 @@ def train(
             steps_per_report=steps_per_report,
             save_every=save_every,
             val_batches=val_batches,
+            mask_prompt=mask_prompt,
         )
     return out_adapter_dir

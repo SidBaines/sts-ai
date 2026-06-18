@@ -68,7 +68,7 @@ def train(
     out_adapter_dir.mkdir(parents=True, exist_ok=True)
 
     ds = load_dataset("json", data_files=str(dataset_path), split="train")
-    required_columns = {"prompt", "completion"}
+    required_columns = {"messages"}
     missing = sorted(required_columns.difference(ds.column_names))
     if missing:
         raise ValueError(f"dataset is missing required columns: {missing}")
@@ -112,7 +112,10 @@ def train(
         "per_device_train_batch_size": per_device_batch_size,
         "gradient_accumulation_steps": grad_accum,
         "max_seq_length": max_seq_len,
-        "completion_only_loss": True,
+        # Conversational masking knob for TRL>=0.12. This module cannot run in
+        # the sandbox, so verify this on the CUDA pod; if a TRL version lacks
+        # assistant_only_loss, use a response-template completion-only collator.
+        "assistant_only_loss": True,
         "eval_strategy": eval_strategy,
         "run_name": run_name,
         "report_to": report_to,

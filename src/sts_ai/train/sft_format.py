@@ -1,9 +1,9 @@
 """Skew-free SFT prompt/completion reconstruction.
 
-The ``{"prompt", "completion"}`` text pair is the source of truth for SFT data.
-Production trainers should re-tokenize that pair with the real training
-tokenizer. ``tokenize_example`` is a reference helper that makes the intended
-completion-only loss mask explicit and testable.
+The role-based ``messages`` pair is the canonical training surface for SFT data.
+The legacy ``{"prompt", "completion"}`` text pair remains available for
+provenance/eval. ``tokenize_example`` is a reference helper that makes the
+intended completion-only loss mask explicit and testable.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from sts_ai.schemas import LegalAction
 
 __all__ = [
     "chat_template_probe_hash",
+    "user_content",
     "reconstruct_prompt",
     "completion_text",
     "build_example",
@@ -60,6 +61,21 @@ def chat_template_probe_hash(
     return hashlib.sha256(rendered.encode()).hexdigest()[:16]
 
 
+def user_content(
+    record: dict,
+    framing: str,
+    *,
+    induce_reasoning: bool = False,
+) -> str:
+    legal_actions = _legal_actions_from_record(record)
+    return render_action_prompt(
+        record["state_text"],
+        legal_actions,
+        framing,
+        induce_reasoning=induce_reasoning,
+    )
+
+
 def reconstruct_prompt(
     record: dict,
     framing: str,
@@ -68,10 +84,8 @@ def reconstruct_prompt(
     enable_thinking: bool,
     induce_reasoning: bool = False,
 ) -> str:
-    legal_actions = _legal_actions_from_record(record)
-    prompt = render_action_prompt(
-        record["state_text"],
-        legal_actions,
+    prompt = user_content(
+        record,
         framing,
         induce_reasoning=induce_reasoning,
     )
@@ -103,7 +117,17 @@ def build_example(
     enable_thinking: bool,
     induce_reasoning: bool = False,
 ) -> dict:
+    user_message = user_content(
+        record,
+        framing,
+        induce_reasoning=induce_reasoning,
+    )
+    completion = completion_text(record)
     return {
+        "messages": [
+            {"role": "user", "content": user_message},
+            {"role": "assistant", "content": completion},
+        ],
         "prompt": reconstruct_prompt(
             record,
             framing,
@@ -111,7 +135,7 @@ def build_example(
             enable_thinking=enable_thinking,
             induce_reasoning=induce_reasoning,
         ),
-        "completion": completion_text(record),
+        "completion": completion,
         "world_seed": record.get("world_seed"),
         "decision_index": record.get("decision_index"),
         "phase": record.get("phase", "out_of_combat"),
