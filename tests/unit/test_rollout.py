@@ -7,8 +7,10 @@ suite runs on any checkout. Tests that drive the real simulator live in
 import inspect
 import random
 import unittest
+from unittest.mock import patch
 
 from sts_ai.agents import FirstLegalAgent
+from sts_ai.hinting import HintConfig
 from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.rollout import build_rollout_meta, run_rollout
 from sts_ai.schemas import AgentDecision, LegalAction, RolloutResult
@@ -121,6 +123,117 @@ class FakeCombatEnv:
         return {"index": action.index, "bits": action.bits, "description": action.description}
 
 
+class HintableCombatEnv:
+    world_seed = 77
+
+    def __init__(self):
+        self.step_indices: list[int] = []
+
+    def advance_to_decision(self):
+        return 0
+
+    def is_terminal(self):
+        return bool(self.step_indices)
+
+    def phase(self):
+        return "combat"
+
+    def legal_actions(self):
+        return [
+            LegalAction(index=0, bits=0, description="end turn"),
+            LegalAction(
+                index=1,
+                bits=1,
+                description="play Strike (cost 1) -> Cultist (deal 6)",
+            ),
+        ]
+
+    def describe_state(self):
+        return "\n".join(
+            [
+                "Battle turn 0",
+                "Player HP: 70/80, block: 0",
+                "Player powers: none",
+                "Enemies:",
+                "Cultist [enemy 0]: HP 6/48, block 0, intent CULTIST_INCANTATION (no attack)",
+                "Hand:",
+                "[0] Strike (cost 1)",
+            ]
+        )
+
+    def map_graph(self):
+        return None
+
+    def step(self, action_index):
+        self.step_indices.append(action_index)
+        return self.legal_actions()[action_index]
+
+    def summary(self):
+        return {
+            "world_seed": self.world_seed,
+            "phase": self.phase(),
+            "done": self.is_terminal(),
+            "cur_hp": 70,
+            "combat": {
+                "player_cur_hp": 70,
+                "player_block": 0,
+                "player_energy": 1,
+                "enemies": [
+                    {
+                        "name": "Cultist",
+                        "cur_hp": 6,
+                        "block": 0,
+                        "alive": True,
+                        "intent_damage": 0,
+                        "intent_hits": 0,
+                    }
+                ],
+            },
+        }
+
+    @staticmethod
+    def action_dict(action):
+        return {"index": action.index, "bits": action.bits, "description": action.description}
+
+
+class ScriptedHintAgent:
+    name = "scripted-hint"
+
+    def __init__(self, *, hinted_action_index: int = 1, laundered_action_index: int = 1):
+        self.hinted_action_index = hinted_action_index
+        self.laundered_action_index = laundered_action_index
+        self.calls: list[str] = []
+        self.reseed_calls: list[int] = []
+        self.laundered_raw = (
+            f'{{"reasoning":"strike kills","action_index":{laundered_action_index}}}'
+        )
+
+    def reseed(self, policy_seed: int) -> None:
+        self.reseed_calls.append(policy_seed)
+
+    def choose_action(self, state_text, legal_actions):
+        self.calls.append(state_text)
+        if "Target action:" in state_text:
+            return AgentDecision(
+                action_index=self.laundered_action_index,
+                raw_response=self.laundered_raw,
+                reasoning="strike kills",
+            )
+        if "Factual hint:" in state_text:
+            return AgentDecision(
+                action_index=self.hinted_action_index,
+                raw_response=(
+                    f'{{"reasoning":"hinted","action_index":{self.hinted_action_index}}}'
+                ),
+                reasoning="hinted",
+            )
+        return AgentDecision(
+            action_index=0,
+            raw_response='{"reasoning":"normal","action_index":0}',
+            reasoning="normal",
+        )
+
+
 class TerminalBoundaryTest(unittest.TestCase):
     # object.__new__ exercises is_terminal() without constructing the real env,
     # so no native module is loaded.
@@ -190,6 +303,109 @@ class RolloutPhaseRecordingTest(unittest.TestCase):
             after_state={},
         )
         self.assertEqual(record.phase, "out_of_combat")
+
+
+class SerialHintingTest(unittest.TestCase):
+    def test_combat_mistake_triggers_hint_launder_and_corrected_step(self):
+        env = HintableCombatEnv()
+        agent = ScriptedHintAgent()
+
+        result = run_rollout(
+            env,
+            agent,
+            max_decisions=1,
+            hint_cfg=HintConfig(enabled=True),
+        )
+
+        self.assertEqual(result.stopped_reason, "max_decisions")
+        self.assertEqual(env.step_indices, [1])
+        self.assertEqual(len(agent.calls), 3)
+        self.assertNotIn("Factual hint:", agent.calls[0])
+        self.assertIn("Factual hint:", agent.calls[1])
+        self.assertIn("Target action: 1: play Strike", agent.calls[2])
+        self.assertEqual(len(result.decisions), 1)
+        record = result.decisions[0]
+        self.assertTrue(record.hint_applied)
+        self.assertEqual(record.selected_action["index"], 1)
+        self.assertTrue(record.agent["valid"])
+        self.assertEqual(record.agent["retries"], 0)
+        self.assertEqual(record.agent["raw_response"], agent.laundered_raw)
+        hint_meta = record.agent["metadata"]["hint"]
+        self.assertEqual(hint_meta["mistake_kind"], "lethal")
+        self.assertEqual(hint_meta["launder_outcome"], "laundered")
+        self.assertEqual(hint_meta["original_action_index"], 0)
+        self.assertEqual(hint_meta["final_action_index"], 1)
+
+    def test_hint_no_change_records_provenance_and_keeps_normal_action(self):
+        env = HintableCombatEnv()
+        agent = ScriptedHintAgent(hinted_action_index=0)
+
+        result = run_rollout(
+            env,
+            agent,
+            max_decisions=1,
+            hint_cfg=HintConfig(enabled=True),
+        )
+
+        self.assertEqual(env.step_indices, [0])
+        self.assertEqual(len(agent.calls), 2)
+        record = result.decisions[0]
+        self.assertFalse(record.hint_applied)
+        self.assertEqual(record.selected_action["index"], 0)
+        self.assertEqual(record.agent["action_index"], 0)
+        self.assertEqual(record.agent["raw_response"], '{"reasoning":"normal","action_index":0}')
+        hint_meta = record.agent["metadata"]["hint"]
+        self.assertFalse(hint_meta["triggered"])
+        self.assertEqual(hint_meta["launder_outcome"], "no_change")
+
+    def test_hint_cfg_none_matches_default_path_without_extra_agent_calls(self):
+        default_env = HintableCombatEnv()
+        default_agent = ScriptedHintAgent()
+        explicit_env = HintableCombatEnv()
+        explicit_agent = ScriptedHintAgent()
+
+        default_result = run_rollout(default_env, default_agent, max_decisions=1)
+        explicit_result = run_rollout(
+            explicit_env,
+            explicit_agent,
+            max_decisions=1,
+            hint_cfg=None,
+        )
+
+        self.assertEqual(len(default_agent.calls), 1)
+        self.assertEqual(len(explicit_agent.calls), 1)
+        self.assertEqual(default_env.step_indices, [0])
+        self.assertEqual(explicit_env.step_indices, [0])
+        self.assertEqual(
+            default_result.decisions[0].selected_action,
+            explicit_result.decisions[0].selected_action,
+        )
+        self.assertEqual(
+            default_result.decisions[0].agent,
+            explicit_result.decisions[0].agent,
+        )
+        self.assertFalse(explicit_result.decisions[0].hint_applied)
+        self.assertNotIn("hint", explicit_result.decisions[0].agent["metadata"])
+
+    def test_hint_path_reuses_one_affordance_compute_for_detection_and_record(self):
+        env = HintableCombatEnv()
+        agent = ScriptedHintAgent()
+        expected_affordances = {"single_target_lethal_available": True}
+
+        with patch(
+            "sts_ai.rollout.affordances.compute",
+            return_value=expected_affordances,
+        ) as compute:
+            result = run_rollout(
+                env,
+                agent,
+                max_decisions=1,
+                hint_cfg=HintConfig(enabled=True),
+            )
+
+        self.assertEqual(compute.call_count, 1)
+        self.assertIs(result.decisions[0].affordances, expected_affordances)
+        self.assertTrue(result.decisions[0].hint_applied)
 
 
 class FakeRandomEnv:

@@ -251,6 +251,7 @@ class StreamingRolloutSpecTest(unittest.TestCase):
             "policy_seed",
             "rollout_index",
             "action_executed",
+            "hint_applied",
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:

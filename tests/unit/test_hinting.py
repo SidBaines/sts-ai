@@ -14,6 +14,7 @@ from sts_ai.hinting import (
     detect_mistake,
     finalize_hinted_decision,
     launder_guardrail_ok,
+    mistake_kind_for,
 )
 from sts_ai.schemas import AgentDecision
 
@@ -192,6 +193,16 @@ class DetectMistakeTest(unittest.TestCase):
                 self.cfg,
             )
         )
+
+
+class MistakeKindTest(unittest.TestCase):
+    def test_known_hint_kinds(self):
+        self.assertEqual(mistake_kind_for(LETHAL_HINT), "lethal")
+        self.assertEqual(mistake_kind_for(BLOCK_HINT), "block")
+
+    def test_unknown_hint_raises(self):
+        with self.assertRaises(ValueError):
+            mistake_kind_for("some future hint")
 
 
 class LaunderHelpersTest(unittest.TestCase):

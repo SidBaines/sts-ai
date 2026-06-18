@@ -67,6 +67,9 @@ class DecisionRecord:
     # False only for terminal agent-invalid records: the model response is kept
     # for audit, but no simulator action was executed from it.
     action_executed: bool = True
+    # True when the serial hinting hook corrected the action and kept a laundered
+    # or action-only final response. Additive; default keeps existing traces valid.
+    hint_applied: bool = False
 
 
 @dataclass

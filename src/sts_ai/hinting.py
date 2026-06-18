@@ -13,6 +13,20 @@ from typing import Any
 from .affordances import action_contributes_block, action_is_single_target_lethal
 from .schemas import AgentDecision
 
+__all__ = [
+    "BLOCK_HINT",
+    "LETHAL_HINT",
+    "HintConfig",
+    "action_only_raw_response",
+    "build_hinted_prompt_suffix",
+    "build_launder_state_text",
+    "detect_mistake",
+    "finalize_hinted_decision",
+    "launder_guardrail_ok",
+    "mistake_kind_for",
+    "no_change_provenance",
+]
+
 
 @dataclass(frozen=True)
 class HintConfig:
@@ -24,6 +38,18 @@ class HintConfig:
 
 LETHAL_HINT = "You can defeat an enemy this turn."
 BLOCK_HINT = "You can fully block the incoming damage this turn."
+
+_MISTAKE_KIND_BY_HINT = {
+    LETHAL_HINT: "lethal",
+    BLOCK_HINT: "block",
+}
+
+
+def mistake_kind_for(hint: str) -> str:
+    try:
+        return _MISTAKE_KIND_BY_HINT[hint]
+    except KeyError as exc:
+        raise ValueError(f"unknown hint: {hint!r}") from exc
 
 
 def _as_int(value: Any, default: int = 0) -> int:

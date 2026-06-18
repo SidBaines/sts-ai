@@ -387,6 +387,70 @@ class BuildDatasetTest(unittest.TestCase):
                 },
             )
 
+    def test_laundered_hint_records_are_kept_with_laundered_completion(self):
+        laundered_text = '{"reasoning":"strike kills","action_index":1}'
+        record = _record(world_seed=6, decision_index=0, valid=True, retries=0)
+        record["hint_applied"] = True
+        record["agent"]["raw_response"] = laundered_text
+        record["agent"]["metadata"] = {
+            "hint": {
+                "triggered": True,
+                "launder_outcome": "laundered",
+            }
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_rollout(
+                root,
+                _meta(world_seed=6, outcome="GameOutcome.VICTORY", final_act=2, final_floor=50),
+                [record],
+            )
+
+            examples, manifest = build_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="fake-tokenizer",
+                min_positives=1,
+            )
+
+            self.assertEqual(len(examples), 1)
+            self.assertEqual(examples[0]["completion"], laundered_text)
+            self.assertEqual(manifest["skipped_record_counts"], {})
+
+    def test_action_only_hint_fallback_records_are_kept_verbatim(self):
+        synthetic_text = '{"reasoning":"","action_index":1}'
+        record = _record(world_seed=8, decision_index=0, valid=True, retries=0)
+        record["hint_applied"] = True
+        record["agent"]["raw_response"] = synthetic_text
+        record["agent"]["metadata"] = {
+            "hint": {
+                "triggered": True,
+                "launder_outcome": "fallback_action_only",
+            }
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_rollout(
+                root,
+                _meta(world_seed=8, outcome="GameOutcome.VICTORY", final_act=2, final_floor=50),
+                [record],
+            )
+
+            examples, manifest = build_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="fake-tokenizer",
+                min_positives=1,
+            )
+
+            self.assertEqual(len(examples), 1)
+            self.assertEqual(examples[0]["completion"], synthetic_text)
+            self.assertEqual(manifest["skipped_record_counts"], {})
+
     def test_manifest_contains_expected_provenance_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

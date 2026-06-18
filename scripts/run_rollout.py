@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from sts_ai.agent_factory import build_agent as make_agent
+from sts_ai.hinting import HintConfig
 from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.rollout import run_rollout
 
@@ -48,6 +49,13 @@ def main() -> None:
     )
     parser.add_argument("--battle-simulations", type=int, default=2_000)
     parser.add_argument("--boss-simulation-multiplier", type=float, default=2.0)
+    parser.add_argument("--hints", choices=["off", "on"], default="off")
+    parser.add_argument(
+        "--hint-on-launder-fail",
+        choices=["action_only", "drop"],
+        default="action_only",
+    )
+    parser.add_argument("--hint-block-hp-fraction", type=float, default=1.0)
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--error-output", type=Path, default=None)
     args = parser.parse_args()
@@ -67,6 +75,11 @@ def main() -> None:
         combat_control=args.combat_control,
     )
     agent = build_agent(args)
+    hint_cfg = HintConfig(
+        enabled=args.hints == "on",
+        full_block_hp_fraction=args.hint_block_hp_fraction,
+        on_launder_fail=args.hint_on_launder_fail,
+    )
     result = run_rollout(
         env,
         agent,
@@ -74,6 +87,7 @@ def main() -> None:
         output_path=output,
         rollout_index=args.rollout_index,
         policy_seed=args.policy_seed,
+        hint_cfg=hint_cfg,
     )
 
     print(f"wrote: {output}")

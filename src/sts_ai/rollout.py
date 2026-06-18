@@ -8,10 +8,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sts_ai import affordances, glossary
+from sts_ai import affordances, glossary, hinting
 from sts_ai.agents import ActionAgent
+from sts_ai.hinting import HintConfig
 from sts_ai.lightspeed import LightspeedHybridEnv
-from sts_ai.schemas import DecisionRecord, RolloutMeta, RolloutResult
+from sts_ai.schemas import AgentDecision, DecisionRecord, RolloutMeta, RolloutResult
 from sts_ai.seeding import derive_policy_seed
 
 
@@ -40,9 +41,16 @@ def build_decision_record(
     policy_seed: int | None,
     rollout_index: int,
     action_executed: bool = True,
+    hint_applied: bool = False,
+    affordances_override: dict[str, Any] | None = None,
 ) -> DecisionRecord:
     """Build one DecisionRecord (incl. computed affordances). Shared by the serial
     loop here and the parallel orchestrator so both emit identical records."""
+    record_affordances = (
+        affordances_override
+        if affordances_override is not None
+        else affordances.compute(state, state_text, legal_action_dicts, phase)
+    )
     return DecisionRecord(
         world_seed=world_seed,
         decision_index=decision_index,
@@ -53,10 +61,11 @@ def build_decision_record(
         agent=asdict(agent_decision),
         after_state=after_state,
         phase=phase,
-        affordances=affordances.compute(state, state_text, legal_action_dicts, phase),
+        affordances=record_affordances,
         policy_seed=policy_seed,
         rollout_index=rollout_index,
         action_executed=action_executed,
+        hint_applied=hint_applied,
     )
 
 
@@ -98,6 +107,75 @@ def clamp_action_index(agent_decision: Any, n_actions: int) -> int:
     return idx
 
 
+def _apply_serial_hint(
+    agent: ActionAgent,
+    view: dict[str, Any],
+    agent_decision: AgentDecision,
+    action_index: int,
+    hint_cfg: HintConfig,
+    decision_affordances: dict[str, Any],
+) -> tuple[AgentDecision, int, bool]:
+    """Returns (decision, action_index, hint_applied). Combat-only; assumes the normal
+    decision is valid and hint_cfg is enabled. Issues the hinted re-decide + laundering
+    agent calls and applies finalize/abort. Pure orchestration over the hinting helpers."""
+    hint = hinting.detect_mistake(
+        decision_affordances,
+        view["legal_action_dicts"][action_index],
+        view["state"]["combat"],
+        view["state_text"],
+        hint_cfg,
+    )
+    if hint is None:
+        return agent_decision, action_index, False
+
+    mistake_kind = hinting.mistake_kind_for(hint)
+    normal_decision = agent_decision
+    hinted_decision = agent.choose_action(
+        view["state_text"] + hinting.build_hinted_prompt_suffix(hint),
+        view["legal_actions"],
+    )
+    hinted_action_index = clamp_action_index(
+        hinted_decision,
+        len(view["legal_actions"]),
+    )
+    if not (
+        hinted_decision.valid
+        and hinted_action_index != action_index
+    ):
+        reason = "hinted_invalid" if not hinted_decision.valid else "no_change"
+        return (
+            hinting.no_change_provenance(
+                normal_decision,
+                hint,
+                mistake_kind,
+                reason,
+            ),
+            action_index,
+            False,
+        )
+
+    laundered = agent.choose_action(
+        hinting.build_launder_state_text(
+            view["state_text"],
+            view["legal_action_dicts"][hinted_action_index],
+        ),
+        view["legal_actions"],
+    )
+    final = hinting.finalize_hinted_decision(
+        normal_decision=normal_decision,
+        hinted_decision=hinted_decision,
+        laundered_decision=laundered,
+        hint_text=hint,
+        mistake_kind=mistake_kind,
+        cfg=hint_cfg,
+    )
+    final_action_index = clamp_action_index(final, len(view["legal_actions"]))
+    hint_applied = final.metadata.get("hint", {}).get(
+        "launder_outcome"
+    ) in ("laundered", "fallback_action_only")
+    return final, final_action_index, hint_applied
+
+
 def run_rollout(
     env: LightspeedHybridEnv,
     agent: ActionAgent,
@@ -106,6 +184,7 @@ def run_rollout(
     run_meta: dict[str, Any] | None = None,
     rollout_index: int = 0,
     policy_seed: int | None = None,
+    hint_cfg: HintConfig | None = None,
 ) -> RolloutResult:
     world_seed = env.world_seed
     if policy_seed is None:
@@ -151,6 +230,29 @@ def run_rollout(
             stopped_reason = "agent_invalid"
             break
 
+        hint_applied = False
+        affordances_override: dict[str, Any] | None = None
+        if (
+            hint_cfg is not None
+            and hint_cfg.enabled
+            and view["phase"] == "combat"
+            and agent_decision.valid
+        ):
+            affordances_override = affordances.compute(
+                view["state"],
+                view["state_text"],
+                view["legal_action_dicts"],
+                view["phase"],
+            )
+            agent_decision, action_index, hint_applied = _apply_serial_hint(
+                agent,
+                view,
+                agent_decision,
+                action_index,
+                hint_cfg,
+                affordances_override,
+            )
+
         try:
             selected = env.step(action_index)
         except Exception as exc:  # noqa: BLE001 - preserve simulator failures in rollout metadata.
@@ -170,6 +272,8 @@ def run_rollout(
             phase=view["phase"],
             policy_seed=policy_seed,
             rollout_index=rollout_index,
+            hint_applied=hint_applied,
+            affordances_override=affordances_override,
         )
         decisions.append(record)
 
