@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from sts_ai.seeding import derive_batch_seed, derive_policy_seed
+from sts_ai.seeding import derive_batch_seed, derive_policy_seed, derive_stage_seed
 
 
 class PolicySeedTest(unittest.TestCase):
@@ -27,6 +27,19 @@ class BatchSeedTest(unittest.TestCase):
         self.assertEqual(derive_batch_seed(members), derive_batch_seed(members))
         self.assertEqual(derive_batch_seed(members), 9164810563290509533)
         self.assertLess(derive_batch_seed(members), 1 << 63)
+
+
+class StageSeedTest(unittest.TestCase):
+    def test_stage_seed_is_deterministic_distinct_and_stable(self):
+        hinted = derive_stage_seed(7, 1, 2, "HINTED")
+        launder = derive_stage_seed(7, 1, 2, "LAUNDER")
+        normal = derive_stage_seed(7, 1, 2, "NORMAL")
+
+        self.assertEqual(hinted, derive_stage_seed(7, 1, 2, "HINTED"))
+        self.assertEqual(hinted, 8228253589604550278)
+        self.assertEqual(len({normal, hinted, launder}), 3)
+        self.assertNotEqual(hinted, derive_batch_seed([(7, 1, 2)]))
+        self.assertLess(hinted, 1 << 63)
 
 
 if __name__ == "__main__":

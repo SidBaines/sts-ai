@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from dataclasses import asdict
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from sts_ai.agents import parse_json_action
+from sts_ai.hinting import HintConfig, action_only_raw_response
 from sts_ai.schemas import AgentDecision, LegalAction, RolloutResult
-from sts_ai.seeding import derive_batch_seed, derive_policy_seed
+from sts_ai.seeding import derive_batch_seed, derive_policy_seed, derive_stage_seed
 from sts_ai.streaming_rollout import run_streaming_rollouts
 from tests.unit.test_parallel_rollout import FakeParallelEnv
 
@@ -128,6 +130,169 @@ class RetryStreamingAgent:
         legal_actions: list[LegalAction],
     ) -> AgentDecision:
         return parse_json_action(text, legal_actions)
+
+    def stream_has_unfinished(self) -> bool:
+        return bool(self.pending)
+
+
+class HintableStreamingCombatEnv:
+    def __init__(self, world_seed: int = 77) -> None:
+        self.world_seed = world_seed
+        self.step_indices: list[int] = []
+
+    def advance_to_decision(self) -> int:
+        return 0
+
+    def is_terminal(self) -> bool:
+        return bool(self.step_indices)
+
+    def phase(self) -> str:
+        return "combat"
+
+    def legal_actions(self) -> list[LegalAction]:
+        return [
+            LegalAction(index=0, bits=0, description="end turn"),
+            LegalAction(
+                index=1,
+                bits=1,
+                description="play Strike (cost 1) -> Cultist (deal 6)",
+            ),
+        ]
+
+    def describe_state(self) -> str:
+        return "\n".join(
+            [
+                "Battle turn 0",
+                "Player HP: 70/80, block: 0",
+                "Player powers: none",
+                "Enemies:",
+                "Cultist [enemy 0]: HP 6/48, block 0, intent CULTIST_INCANTATION (no attack)",
+                "Hand:",
+                "[0] Strike (cost 1)",
+            ]
+        )
+
+    def map_graph(self) -> None:
+        return None
+
+    def step(self, action_index: int) -> LegalAction:
+        self.step_indices.append(action_index)
+        return self.legal_actions()[action_index]
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "world_seed": self.world_seed,
+            "phase": self.phase(),
+            "done": self.is_terminal(),
+            "step_indices": list(self.step_indices),
+            "cur_hp": 70,
+            "combat": {
+                "player_cur_hp": 70,
+                "player_block": 0,
+                "player_energy": 1,
+                "enemies": [
+                    {
+                        "name": "Cultist",
+                        "cur_hp": 6,
+                        "block": 0,
+                        "alive": True,
+                        "intent_damage": 0,
+                        "intent_hits": 0,
+                    }
+                ],
+            },
+        }
+
+    @staticmethod
+    def action_dict(action: LegalAction) -> dict[str, Any]:
+        return {
+            "index": action.index,
+            "bits": action.bits,
+            "description": action.description,
+        }
+
+
+class HintingStreamingAgent:
+    name = "hinting-streaming"
+
+    def __init__(
+        self,
+        *,
+        normal_action_index: int = 0,
+        hinted_action_index: int = 1,
+        laundered_action_index: int = 1,
+        order: str = "fifo",
+    ) -> None:
+        self.normal_action_index = normal_action_index
+        self.hinted_action_index = hinted_action_index
+        self.laundered_action_index = laundered_action_index
+        self.order = order
+        self.pending: dict[str, dict[str, Any]] = {}
+        self.submits: list[tuple[str, str, int, bool]] = []
+        self.seen_seeds: dict[str, int] = {}
+        self.max_pending = 0
+        self.normal_raw = self._raw("normal", normal_action_index)
+        self.hinted_raw = self._raw("hinted", hinted_action_index)
+        self.laundered_raw = self._raw("strike kills", laundered_action_index)
+
+    @staticmethod
+    def _raw(reasoning: str, action_index: int) -> str:
+        return json.dumps(
+            {"reasoning": reasoning, "action_index": action_index},
+            separators=(",", ":"),
+        )
+
+    def stream_submit(
+        self,
+        request_id: str,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        seed: int,
+        retry: bool = False,
+    ) -> None:
+        self.max_pending = max(self.max_pending, len(self.pending) + 1)
+        self.pending[request_id] = {"legal_actions": legal_actions}
+        self.submits.append((request_id, state_text, seed, retry))
+        self.seen_seeds[request_id] = seed
+
+    def stream_poll(self) -> list[tuple[str, dict]]:
+        if not self.pending:
+            return []
+        rid = (
+            next(reversed(self.pending))
+            if self.order == "lifo"
+            else next(iter(self.pending))
+        )
+        request = self.pending.pop(rid)
+        if rid.endswith(":h"):
+            text = self.hinted_raw
+        elif rid.endswith(":l"):
+            text = self.laundered_raw
+        else:
+            text = self.normal_raw
+        return [
+            (
+                rid,
+                {
+                    "text": text,
+                    "prompt_tokens": 2,
+                    "completion_tokens": 1,
+                    "latency_s": 0.0,
+                },
+            )
+        ]
+
+    def build_decision_from_text(
+        self,
+        text: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        legal_actions: list[LegalAction],
+    ) -> AgentDecision:
+        decision = parse_json_action(text, legal_actions)
+        decision.prompt_tokens = prompt_tokens
+        decision.completion_tokens = completion_tokens
+        return decision
 
     def stream_has_unfinished(self) -> bool:
         return bool(self.pending)
@@ -375,6 +540,178 @@ class StreamingRolloutSpecTest(unittest.TestCase):
         self.assertEqual(len(agent.submits), 1)
         self.assertTrue(all(request_id.endswith(":a0") for request_id, _ in agent.submits))
         self.assertTrue(all(not retry for _, retry in agent.submits))
+
+    def test_hint_three_stage_resolves_single_decision_index(self) -> None:
+        agent = HintingStreamingAgent()
+
+        results = run_streaming_rollouts(
+            [(77, 0)],
+            lambda ws: HintableStreamingCombatEnv(world_seed=ws),
+            agent,
+            concurrency=1,
+            max_decisions=200,
+            hint_cfg=HintConfig(enabled=True),
+        )
+
+        self.assertEqual(
+            [request_id for request_id, _, _, _ in agent.submits],
+            ["77:0:0:a0", "77:0:0:a0:h", "77:0:0:a0:l"],
+        )
+        self.assertEqual(
+            agent.seen_seeds["77:0:0:a0"],
+            derive_batch_seed([(77, 0, 0)]),
+        )
+        self.assertEqual(
+            agent.seen_seeds["77:0:0:a0:h"],
+            derive_stage_seed(77, 0, 0, "HINTED"),
+        )
+        self.assertEqual(
+            agent.seen_seeds["77:0:0:a0:l"],
+            derive_stage_seed(77, 0, 0, "LAUNDER"),
+        )
+        self.assertEqual(len(set(agent.seen_seeds.values())), 3)
+        self.assertIn("Factual hint:", agent.submits[1][1])
+        self.assertIn("Target action: 1: play Strike", agent.submits[2][1])
+
+        result = results[0]
+        self.assertEqual(len(result.decisions), 1)
+        self.assertEqual(result.decisions[0].decision_index, 0)
+        self.assertEqual(result.terminal_state["step_indices"], [1])
+        record = result.decisions[0]
+        self.assertTrue(record.hint_applied)
+        self.assertEqual(record.selected_action["index"], 1)
+        self.assertTrue(record.agent["valid"])
+        self.assertEqual(record.agent["retries"], 0)
+        self.assertEqual(record.agent["raw_response"], agent.laundered_raw)
+        self.assertEqual(
+            record.agent["metadata"]["hint"]["launder_outcome"],
+            "laundered",
+        )
+
+    def test_hint_no_change_aborts_to_normal(self) -> None:
+        agent = HintingStreamingAgent(hinted_action_index=0)
+
+        results = run_streaming_rollouts(
+            [(77, 0)],
+            lambda ws: HintableStreamingCombatEnv(world_seed=ws),
+            agent,
+            concurrency=1,
+            max_decisions=200,
+            hint_cfg=HintConfig(enabled=True),
+        )
+
+        self.assertEqual(
+            [request_id for request_id, _, _, _ in agent.submits],
+            ["77:0:0:a0", "77:0:0:a0:h"],
+        )
+        record = results[0].decisions[0]
+        self.assertEqual(results[0].terminal_state["step_indices"], [0])
+        self.assertFalse(record.hint_applied)
+        self.assertEqual(record.selected_action["index"], 0)
+        self.assertEqual(record.agent["action_index"], 0)
+        self.assertEqual(record.agent["raw_response"], agent.normal_raw)
+        self.assertFalse(record.agent["metadata"]["hint"]["triggered"])
+        self.assertEqual(
+            record.agent["metadata"]["hint"]["launder_outcome"],
+            "no_change",
+        )
+
+    def test_launder_fallback_action_only(self) -> None:
+        agent = HintingStreamingAgent(laundered_action_index=0)
+
+        results = run_streaming_rollouts(
+            [(77, 0)],
+            lambda ws: HintableStreamingCombatEnv(world_seed=ws),
+            agent,
+            concurrency=1,
+            max_decisions=200,
+            hint_cfg=HintConfig(enabled=True),
+        )
+
+        self.assertEqual(len(agent.submits), 3)
+        record = results[0].decisions[0]
+        self.assertEqual(results[0].terminal_state["step_indices"], [1])
+        self.assertTrue(record.hint_applied)
+        self.assertEqual(record.selected_action["index"], 1)
+        self.assertEqual(record.agent["raw_response"], action_only_raw_response(1))
+        self.assertEqual(
+            record.agent["metadata"]["hint"]["launder_outcome"],
+            "fallback_action_only",
+        )
+
+    def test_hints_off_is_byte_identical(self) -> None:
+        specs = [(7, 0), (7, 1), (8, 0)]
+        baseline_agent = FakeStreamingAgent()
+        disabled_agent = FakeStreamingAgent()
+
+        baseline_results = run_streaming_rollouts(
+            specs,
+            _make_env_with_decisions(3),
+            baseline_agent,
+            concurrency=2,
+            max_decisions=200,
+        )
+        disabled_results = run_streaming_rollouts(
+            specs,
+            _make_env_with_decisions(3),
+            disabled_agent,
+            concurrency=2,
+            max_decisions=200,
+            hint_cfg=HintConfig(enabled=False),
+        )
+
+        self.assertEqual(
+            _action_sequences(disabled_results),
+            _action_sequences(baseline_results),
+        )
+        self.assertEqual(len(disabled_agent.seen_seeds), len(baseline_agent.seen_seeds))
+        self.assertEqual(set(disabled_agent.seen_seeds), set(baseline_agent.seen_seeds))
+        self.assertEqual(
+            [
+                asdict(decision)
+                for result in disabled_results
+                for decision in result.decisions
+            ],
+            [
+                asdict(decision)
+                for result in baseline_results
+                for decision in result.decisions
+            ],
+        )
+
+    def test_concurrency_slot_continues_while_hint_stage_resolves(self) -> None:
+        agent = HintingStreamingAgent()
+
+        def make_env(world_seed: int) -> FakeParallelEnv | HintableStreamingCombatEnv:
+            if world_seed == 77:
+                return HintableStreamingCombatEnv(world_seed=world_seed)
+            return FakeParallelEnv(world_seed=world_seed, decisions=2)
+
+        results = run_streaming_rollouts(
+            [(77, 0), (88, 0)],
+            make_env,
+            agent,
+            concurrency=2,
+            max_decisions=200,
+            hint_cfg=HintConfig(enabled=True),
+        )
+
+        by_spec = {(result.world_seed, result.rollout_index): result for result in results}
+        hinted = by_spec[(77, 0)]
+        normal = by_spec[(88, 0)]
+        self.assertEqual([d.decision_index for d in hinted.decisions], [0])
+        self.assertEqual([d.decision_index for d in normal.decisions], [0, 1])
+        self.assertTrue(hinted.decisions[0].hint_applied)
+        self.assertEqual(hinted.decisions[0].selected_action["index"], 1)
+        self.assertEqual(len(normal.decisions), 2)
+        self.assertTrue(all(not d.hint_applied for d in normal.decisions))
+        self.assertLessEqual(agent.max_pending, 2)
+
+        request_ids = [request_id for request_id, _, _, _ in agent.submits]
+        self.assertEqual(len(request_ids), 5)
+        self.assertIn("77:0:0:a0:h", request_ids)
+        self.assertIn("77:0:0:a0:l", request_ids)
+        self.assertLess(request_ids.index("88:0:1:a0"), request_ids.index("77:0:0:a0:l"))
 
 
 if __name__ == "__main__":

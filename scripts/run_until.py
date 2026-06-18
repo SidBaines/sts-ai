@@ -255,6 +255,24 @@ def main() -> None:
         help="Invalid-response retries before stopping a rollout with agent_invalid.",
     )
     parser.add_argument(
+        "--hints",
+        choices=["off", "on"],
+        default="off",
+        help="vLLM streaming only: enable tactical hint re-decide/launder stages.",
+    )
+    parser.add_argument(
+        "--hint-block-hp-fraction",
+        type=float,
+        default=1.0,
+        help="Hint when full block is possible and incoming damage reaches this HP fraction.",
+    )
+    parser.add_argument(
+        "--hint-on-launder-fail",
+        choices=["action_only", "drop"],
+        default="action_only",
+        help="Hint behavior when the laundering response does not select the target action.",
+    )
+    parser.add_argument(
         "--enable-prefix-caching",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -275,6 +293,8 @@ def main() -> None:
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
+    if args.hints == "on" and args.backend == "mlx":
+        parser.error("--hints on requires the vllm backend (hinting runs on the streaming path only)")
     if args.target < 1:
         parser.error("--target must be >= 1")
     if args.concurrency < 1:
@@ -283,6 +303,7 @@ def main() -> None:
         parser.error("--batch-size must be >= 1")
 
     from sts_ai.agent_factory import agent_label, build_agent
+    from sts_ai.hinting import HintConfig
     from sts_ai.lightspeed import LightspeedHybridEnv
     from sts_ai.parallel_rollout import run_parallel_rollouts
     from sts_ai.rollout import current_git_sha
@@ -337,6 +358,11 @@ def main() -> None:
         )
 
     preserve_special_tokens = {"auto": None, "on": True, "off": False}[args.preserve_special_tokens]
+    hint_cfg = HintConfig(
+        enabled=args.hints == "on",
+        full_block_hp_fraction=args.hint_block_hp_fraction,
+        on_launder_fail=args.hint_on_launder_fail,
+    )
     agent = build_agent(
         args.backend,
         model=args.model,
@@ -363,6 +389,9 @@ def main() -> None:
                 "seed_start": args.seed_start,
                 "excluded_seed_count": len(excluded),
                 "skipped_existing": skipped_existing,
+                "hints": args.hints,
+                "hint_block_hp_fraction": args.hint_block_hp_fraction,
+                "hint_on_launder_fail": args.hint_on_launder_fail,
             },
         }
         if args.backend == "vllm":
@@ -374,6 +403,7 @@ def main() -> None:
                 concurrency=args.concurrency,
                 max_decisions=args.max_decisions,
                 run_meta=run_meta,
+                hint_cfg=hint_cfg,
             )
         else:
             results = run_parallel_rollouts(

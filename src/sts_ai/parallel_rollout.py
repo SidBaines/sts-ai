@@ -30,7 +30,7 @@ from sts_ai.rollout import (
     prepare_decision,
     write_rollout_meta,
 )
-from sts_ai.schemas import DecisionRecord, RolloutResult
+from sts_ai.schemas import AgentDecision, DecisionRecord, RolloutResult
 from sts_ai.seeding import derive_batch_seed, derive_policy_seed
 
 
@@ -56,6 +56,15 @@ class _Slot:
         self.error: Optional[dict[str, Any]] = None
         self.done = False
         self.attempt = 0
+        # Streaming-only hint sub-state (NORMAL/HINTED/LAUNDER stages); unused by the parallel/lockstep path.
+        self.stage: str = "NORMAL"
+        self.normal_decision: Optional[AgentDecision] = None
+        self.normal_action_index: Optional[int] = None
+        self.normal_affordances: Optional[dict[str, Any]] = None
+        self.hint_text: Optional[str] = None
+        self.mistake_kind: Optional[str] = None
+        self.hinted_decision: Optional[AgentDecision] = None
+        self.hinted_action_index: Optional[int] = None
 
 
 def finalize_slot(

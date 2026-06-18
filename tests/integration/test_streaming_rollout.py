@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from sts_ai.agents import parse_json_action
+from sts_ai.hinting import HintConfig
 
 from tests.integration.test_combat_control import ScriptedCombatAgent
 from tests.support import requires_simulator, requires_vllm
@@ -58,6 +59,20 @@ def _make_env(seed: int):
     return LightspeedHybridEnv(world_seed=seed, battle_simulations=50, max_act=1, combat_control="llm")
 
 
+def _hint_structure(result):
+    structure = {}
+    for decision in result.decisions:
+        hint = decision.agent.get("metadata", {}).get("hint")
+        if hint:
+            structure[decision.decision_index] = {
+                "final_action_index": hint.get("final_action_index"),
+                "selected_action_index": decision.selected_action.get("index"),
+                "launder_outcome": hint.get("launder_outcome"),
+                "mistake_kind": hint.get("mistake_kind"),
+            }
+    return structure
+
+
 @requires_simulator
 class StreamingParityTest(unittest.TestCase):
     def test_streaming_concurrency1_matches_serial(self):
@@ -87,6 +102,32 @@ class StreamingParityTest(unittest.TestCase):
         for r in results:
             self.assertGreater(len(r.decisions), 0)
             self.assertIsNone(r.error)
+
+    def test_streaming_concurrency1_hint_structure_matches_serial(self):
+        from sts_ai.rollout import run_rollout
+        from sts_ai.streaming_rollout import run_streaming_rollouts
+
+        max_decisions = 40
+        hint_cfg = HintConfig(enabled=True)
+        serial = run_rollout(
+            _make_env(3),
+            ScriptedStreamingAgent(),
+            max_decisions=max_decisions,
+            hint_cfg=hint_cfg,
+        )
+        streaming = run_streaming_rollouts(
+            [(3, 0)],
+            _make_env,
+            ScriptedStreamingAgent(),
+            concurrency=1,
+            max_decisions=max_decisions,
+            hint_cfg=hint_cfg,
+        )[0]
+
+        serial_hints = _hint_structure(serial)
+        streaming_hints = _hint_structure(streaming)
+        self.assertEqual(set(serial_hints), set(streaming_hints))
+        self.assertEqual(serial_hints, streaming_hints)
 
 
 @requires_simulator

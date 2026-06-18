@@ -39,3 +39,17 @@ def derive_batch_seed(members: Iterable[tuple[int, int, int]]) -> int:
     for world_seed, rollout_index, decision_index in sorted(members):
         hasher.update(f"{world_seed}:{rollout_index}:{decision_index}\n".encode("utf-8"))
     return _digest_to_seed(hasher.digest())
+
+
+def derive_stage_seed(
+    world_seed: int,
+    rollout_index: int,
+    decision_index: int,
+    stage: str,
+) -> int:
+    """Derive a process-stable seed for a streaming hint sub-stage."""
+    hasher = hashlib.sha256()
+    hasher.update(
+        f"{world_seed}:{rollout_index}:{decision_index}:{stage}\n".encode("utf-8")
+    )
+    return _digest_to_seed(hasher.digest())
