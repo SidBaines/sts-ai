@@ -60,6 +60,8 @@ _PLAY_RE = re.compile(
 )
 _HAND_RE = re.compile(r"^\[(\d+)\]\s+(.*?)\s+\(cost\s+(\S+?)\)\s*$")
 _DEX_RE = re.compile(r"\bDexterity\s+(-?\d+)")
+_PLAYER_BLOCK_RE = re.compile(r"\bblock:\s*(-?\d+)\b")
+_ENEMY_INDEX_SUFFIX_RE = re.compile(r"\s*\[enemy (\d+)\]$")
 
 
 def calc_block(base: int, dex: int, frail: bool, no_block: bool) -> int:
@@ -80,6 +82,17 @@ def _parse_player_powers(state_text: str) -> tuple[int, bool, bool]:
             dex = int(dex_match.group(1)) if dex_match else 0
             return dex, ("Frail" in line), ("No Block" in line)
     return 0, False, False
+
+
+def _parse_player_block(state_text: str) -> int:
+    """Current player Block from the 'Player HP:' line, defaulting to 0."""
+    for line in state_text.splitlines():
+        if line.startswith("Player HP:"):
+            match = _PLAYER_BLOCK_RE.search(line)
+            if match:
+                return int(match.group(1))
+            break
+    return 0
 
 
 def _parse_hand(state_text: str) -> list[tuple[str, Optional[int]]]:
@@ -114,6 +127,69 @@ def _card_block(name: str, dex: int, frail: bool, no_block: bool, cur_block: int
     if base_name == "Iron Wave":  # engine double-applies calculateCardBlock
         return calc_block(calc_block(base, dex, frail, no_block), dex, frail, no_block)
     return calc_block(base, dex, frail, no_block)
+
+
+def _target_effective_hp(combat: dict[str, Any], target: str) -> Optional[int]:
+    """Effective HP (cur_hp + block) for a named living target, honoring [enemy i]."""
+    if not isinstance(combat, dict):
+        return None
+
+    target = target.strip()
+    if not target:
+        return None
+
+    suffix_match = _ENEMY_INDEX_SUFFIX_RE.search(target)
+    target_name = _ENEMY_INDEX_SUFFIX_RE.sub("", target).strip()
+    enemies = combat.get("enemies", [])
+    if not isinstance(enemies, list):
+        return None
+
+    if suffix_match:
+        enemy_index = int(suffix_match.group(1))
+        if 0 <= enemy_index < len(enemies):
+            enemy = enemies[enemy_index]
+            if (
+                isinstance(enemy, dict)
+                and enemy.get("alive")
+                and str(enemy.get("name")) == target_name
+            ):
+                return int(enemy.get("cur_hp", 0)) + int(enemy.get("block", 0))
+
+    for enemy in enemies:
+        if (
+            isinstance(enemy, dict)
+            and enemy.get("alive")
+            and str(enemy.get("name")) == target_name
+        ):
+            return int(enemy.get("cur_hp", 0)) + int(enemy.get("block", 0))
+    return None
+
+
+def action_is_single_target_lethal(action_dict: dict[str, Any], combat: dict[str, Any]) -> bool:
+    """True iff this play action deals at least the targeted enemy's effective HP."""
+    desc = str(action_dict.get("description", ""))
+    match = _PLAY_RE.match(desc)
+    if not match:
+        return False
+    deal = match.group(4)
+    if deal is None:
+        return False
+    target_hp = _target_effective_hp(combat, match.group(3) or "")
+    return target_hp is not None and int(deal) >= target_hp
+
+
+def action_contributes_block(action_dict: dict[str, Any], state_text: str) -> bool:
+    """True iff this play action produces positive Block under the current powers."""
+    desc = str(action_dict.get("description", ""))
+    if desc.strip() == "end turn":
+        return False
+    match = _PLAY_RE.match(desc)
+    if not match:
+        return False
+    dex, frail, no_block = _parse_player_powers(state_text)
+    cur_block = _parse_player_block(state_text)
+    block = _card_block(match.group(1), dex, frail, no_block, cur_block)
+    return block is not None and block > 0
 
 
 def _max_block_within_energy(items: list[tuple[int, int]], energy: int) -> int:
@@ -160,9 +236,6 @@ def compute(state: dict[str, Any], state_text: str, legal_actions: list[dict[str
     defensible_total = cur_block + max_block
 
     # Attack options from the (already-computed) (deal N) on legal actions.
-    enemy_hp_by_name: dict[str, int] = {}
-    for e in enemies:
-        enemy_hp_by_name.setdefault(str(e.get("name")), int(e.get("cur_hp", 0)) + int(e.get("block", 0)))
     max_single = 0
     lethal = False
     play_count = 0
@@ -181,11 +254,7 @@ def compute(state: dict[str, Any], state_text: str, legal_actions: list[dict[str
             continue
         dmg = int(deal)
         max_single = max(max_single, dmg)
-        target = (match.group(3) or "").strip()
-        # The binding appends " [enemy i]" to disambiguate same-named targets; drop it
-        # so the name still matches enemy_hp_by_name (keyed by name).
-        target = re.sub(r"\s*\[enemy \d+\]$", "", target)
-        if target and target in enemy_hp_by_name and dmg >= enemy_hp_by_name[target]:
+        if action_is_single_target_lethal(action, combat):
             lethal = True
 
     return {
