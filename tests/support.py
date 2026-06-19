@@ -94,3 +94,22 @@ def requires_mlx(test_item):
     if _REQUIRE_MLX or mlx_available():
         return test_item
     return unittest.skip(_MLX_SKIP_REASON)(test_item)
+
+
+def torch_available() -> bool:
+    """True if the optional ``torch`` package is installed (not imported)."""
+    return _module_installed("torch")
+
+
+_REQUIRE_TORCH = os.environ.get("STS_REQUIRE_TORCH") == "1"
+_TORCH_SKIP_REASON = (
+    "torch is not installed (CUDA training-only); install with `.[train-cuda]`. "
+    "Set STS_REQUIRE_TORCH=1 to fail instead of skip."
+)
+
+
+def requires_torch(test_item):
+    """Gate a test method or ``TestCase`` on the optional torch backend."""
+    if _REQUIRE_TORCH or torch_available():
+        return test_item
+    return unittest.skip(_TORCH_SKIP_REASON)(test_item)
