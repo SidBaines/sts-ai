@@ -343,6 +343,8 @@ class VllmJsonAgent:
         enable_prefix_caching: bool = True,
         adapter_path: str | None = None,
         max_lora_rank: int = 16,
+        enable_lora: bool = False,
+        enable_sleep_mode: bool = False,
         # "auto" lets vLLM use each model's native dtype (bf16 for Qwen3/Gemma3/
         # Llama-3). Do NOT hardcode float16: Gemma3 rejects it ("does not support
         # float16, numerical instability — use bfloat16 or float32").
@@ -380,13 +382,16 @@ class VllmJsonAgent:
             "trust_remote_code": True,
         }
         LoRARequest = None
+        if enable_lora or adapter_path:
+            llm_kwargs["enable_lora"] = True
+            llm_kwargs["max_lora_rank"] = max_lora_rank
+        if enable_sleep_mode:
+            llm_kwargs["enable_sleep_mode"] = True
         if adapter_path:
             from vllm.lora.request import LoRARequest
 
-            llm_kwargs["enable_lora"] = True
-            llm_kwargs["max_lora_rank"] = max_lora_rank
-
         self.llm = LLM(**llm_kwargs)
+        self._lora_counter = 1 if adapter_path else 0
         self._lora_request = LoRARequest("sts_lora", 1, adapter_path) if adapter_path else None
         self.tokenizer = self.llm.get_tokenizer()
         self._SamplingParams = SamplingParams
@@ -428,6 +433,22 @@ class VllmJsonAgent:
         if self._native_thinking:
             return "native"
         return "prompted"
+
+    def sleep(self, level: int = 1) -> None:
+        """Call vLLM offline `LLM.sleep(level)` to free cache/GPU memory."""
+        self.llm.sleep(level)
+
+    def wake(self) -> None:
+        """Call vLLM offline `LLM.wake_up()` after sleep-mode training."""
+        self.llm.wake_up()
+
+    def set_adapter(self, adapter_path: str) -> None:
+        """Hot-swap a LoRA via vLLM `LoRARequest` with a fresh adapter id."""
+        from vllm.lora.request import LoRARequest
+
+        self._lora_counter += 1
+        self._lora_request = LoRARequest("sts_lora", self._lora_counter, adapter_path)
+        self.adapter_path = adapter_path
 
     def _probe_native_thinking(self) -> bool:
         messages = [{"role": "user", "content": "ping"}]

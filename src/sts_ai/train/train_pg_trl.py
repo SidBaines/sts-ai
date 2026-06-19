@@ -68,6 +68,7 @@ def train(
     max_seq_len: int = 4096,
     clip_eps: float = 0.2,
     kl_beta: float = 0.02,
+    init_adapter_path: str | None = None,
     manifest_path: Path | None = None,
     wandb_project: str | None = None,
     run_name: str | None = None,
@@ -154,13 +155,18 @@ def train(
         report_to = ["none"]
 
     base = AutoModelForCausalLM.from_pretrained(base_model)
-    lora_config = LoraConfig(
-        r=lora_r,
-        lora_alpha=lora_alpha,
-        lora_dropout=lora_dropout,
-        task_type="CAUSAL_LM",
-    )
-    model = get_peft_model(base, lora_config)
+    if init_adapter_path is not None:
+        from peft import PeftModel
+
+        model = PeftModel.from_pretrained(base, init_adapter_path, is_trainable=True)
+    else:
+        lora_config = LoraConfig(
+            r=lora_r,
+            lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
+            task_type="CAUSAL_LM",
+        )
+        model = get_peft_model(base, lora_config)
 
     class PGTrainer(Trainer):
         def compute_loss(
