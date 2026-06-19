@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
+import sys
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -13,9 +14,14 @@ from sts_ai.train.reward import is_act_boss_clear
 
 
 def load_metas(path: Path | str) -> list[dict[str, Any]]:
+    # Recursive: run_until writes sidecars under an agent-label subdir
+    # (output_dir/<label>/seed_*_r*.meta.json), so a non-recursive glob at the
+    # arm root would silently find zero. rglob also matches flat layouts (the
+    # pattern is checked at the root too), so callers may point at either the
+    # arm root or the leaf label dir.
     root = Path(path)
     metas: list[dict[str, Any]] = []
-    for meta_path in sorted(root.glob("seed_*_r*.meta.json")):
+    for meta_path in sorted(root.rglob("seed_*_r*.meta.json")):
         metas.append(json.loads(meta_path.read_text(encoding="utf-8")))
     return metas
 
@@ -199,6 +205,16 @@ def main() -> None:
         bootstrap_seed=args.bootstrap_seed,
         n_resamples=args.n_resamples,
     )
+    # Fail loud rather than emit an all-zeros "no difference" report when an arm
+    # has no rollouts (e.g. a wrong dir or a generation stage that wrote nothing).
+    for arm in ("base", "trained"):
+        if report["arms"][arm]["n_rollouts"] == 0:
+            arm_dir = args.base if arm == "base" else args.trained
+            print(
+                f"ERROR: no seed_*_r*.meta.json found for the {arm} arm under {arm_dir}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
     print(format_report(report))
     if args.out is not None:
         args.out.write_text(

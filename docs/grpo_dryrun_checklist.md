@@ -42,9 +42,12 @@ Preflight: the script prints the launch line + an empty-specs guard (returns bef
 $PY scripts/compare_paired.py --base "$OUT/eval/base" --trained "$OUT/eval/trained" \
   --metric final_floor --min-act 1 --out "$OUT/eval/paired.json"
 ```
-Dry-run: point it at the §1 `/tmp/dry/eval/{base,trained}` dirs. Confirm it prints the paired
-delta + sign-test p + bootstrap CI and the per-arm `agent_invalid_rate`/`budget_truncated_rate`.
-This is CPU and unit-tested; the dry-run only confirms the meta dirs are shaped as expected.
+Dry-run: point it at the §1 `/tmp/dry/eval/{base,trained}` dirs. Confirm it prints a NON-ZERO
+`paired_seeds` count plus the paired delta + sign-test p + bootstrap CI and the per-arm
+`agent_invalid_rate`/`budget_truncated_rate`. `load_metas` recurses into the agent-label subdir
+that `run_until` writes (`output_dir/<label>/seed_*_r*.meta.json`), and the CLI **errors (exit 2)**
+if an arm has zero rollouts — so a `paired_seeds: 0` can only mean genuinely-empty inputs, not a
+dir-level mismatch. This is CPU and unit-tested.
 
 ## 3. Offline PG dataset — `build_pg_dataset.py`
 Production (signed-advantage stepping stone, from raw rollouts + final_floor):

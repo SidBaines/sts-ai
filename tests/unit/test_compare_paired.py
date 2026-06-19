@@ -153,9 +153,34 @@ class ComparePairedHelpersTest(unittest.TestCase):
             self.assertEqual(report["paired"]["deltas_by_seed"], {1: 2.0, 2: -2.0})
             self.assertEqual(report["paired"]["mean_delta"], 0.0)
 
+    def test_load_metas_descends_into_agent_label_subdir(self) -> None:
+        # run_until writes sidecars under output_dir/<agent_label>/, so load_metas
+        # must recurse — a non-recursive glob at the arm root silently finds zero.
+        with tempfile.TemporaryDirectory() as tmp:
+            arm = Path(tmp) / "base"
+            label_dir = arm / "vllm_gemma_4_E4B_it_thinking_8192"
+            label_dir.mkdir(parents=True)
+            _write_meta(label_dir, world_seed=47, rollout_index=0, final_floor=12)
+            _write_meta(label_dir, world_seed=48, rollout_index=0, final_floor=15)
+
+            metas = load_metas(arm)
+            self.assertEqual(len(metas), 2)
+            self.assertEqual({m["world_seed"] for m in metas}, {47, 48})
+
+    def test_format_report_smoke(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            base = root / "base"
+            trained = root / "trained"
+            base.mkdir()
+            trained.mkdir()
+            _write_meta(base, world_seed=1, rollout_index=0, final_floor=10)
+            _write_meta(trained, world_seed=1, rollout_index=0, final_floor=12)
+
+            report = build_report(base, trained, n_resamples=200, bootstrap_seed=7)
             rendered = format_report(report)
             self.assertIn("Paired base-vs-trained eval", rendered)
-            self.assertIn("paired_seeds: 2", rendered)
+            self.assertIn("paired_seeds: 1", rendered)
             # Per-arm rows and the sign-test line are present in the rendered table.
             self.assertIn("agent_invalid_rate", rendered)
             self.assertIn("sign-test:", rendered)
