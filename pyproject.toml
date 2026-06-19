@@ -12,7 +12,12 @@ train-mlx = ["mlx-lm==0.31.2"] # 0.31.2 is the first Gemma-4-capable mlx-lm.
 # or torch here (they are owned by the [vllm] extra; pinning them risks a conflict
 # with vllm==0.23.0). Exact versions MUST be verified/locked on the CUDA pod
 # against the vllm-pulled torch before relying on this.
-train-cuda = ["trl>=0.12,<0.15", "peft>=0.13", "accelerate>=1.0", "datasets>=3.0"]
+# VERIFIED 2026-06-19 on a CUDA-13 H100: trl 1.6.0 coexists with the vllm-pulled
+# transformers 5.12.1 + torch 2.11+cu130 and exposes assistant_only_loss. The old
+# trl<0.15 pin resolved to 0.14, which lacks assistant_only_loss (TypeError at
+# SFTConfig). NOTE trl>=0.20 renamed SFTConfig max_seq_length -> max_length
+# (train_trl.py now uses max_length to match).
+train-cuda = ["trl>=1.6,<2", "peft>=0.13", "accelerate>=1.0", "datasets>=3.0", "wandb>=0.16"]
 vllm = ["vllm==0.23.0"]
 viz = ["streamlit==1.40.2"]
 

@@ -32,6 +32,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--lora-alpha", type=int, default=32)
     parser.add_argument("--lora-dropout", type=float, default=0.05)
     parser.add_argument("--epochs", type=int, default=1)
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=-1,
+        help="TRL backend: cap optimizer steps (>0 overrides --epochs). -1 = full epochs.",
+    )
     parser.add_argument("--per-device-batch-size", type=int, default=1)
     parser.add_argument("--grad-accum", type=int, default=8)
     parser.add_argument("--max-seq-len", type=int, default=4096)
@@ -78,6 +84,7 @@ def dispatch(args: argparse.Namespace) -> Path:
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
         epochs=args.epochs,
+        max_steps=args.max_steps,
         learning_rate=args.learning_rate,
         per_device_batch_size=args.per_device_batch_size,
         grad_accum=args.grad_accum,

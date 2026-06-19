@@ -45,6 +45,7 @@ def train(
     lora_alpha: int = 32,
     lora_dropout: float = 0.05,
     epochs: int = 1,
+    max_steps: int = -1,
     learning_rate: float = 1e-4,
     per_device_batch_size: int = 1,
     grad_accum: int = 8,
@@ -68,7 +69,14 @@ def train(
     out_adapter_dir.mkdir(parents=True, exist_ok=True)
 
     ds = load_dataset("json", data_files=str(dataset_path), split="train")
-    required_columns = {"messages"}
+    # Use the skew-free prompt/completion pair (not messages): Gemma-4 E4B is a
+    # VLM arch and TRL blocks assistant_only_loss for VLMs, but completion_only_loss
+    # over prompt/completion is VLM-safe and gives the same prompt-masked loss.
+    # The prompt is already chat-templated by sft_format.reconstruct_prompt and the
+    # completion is the verbatim raw_response, so TRL must NOT re-template (dropping
+    # the messages column keeps the format unambiguously prompt-completion). RWR
+    # weighting is preserved because rows are physically replicated by multiplicity.
+    required_columns = {"prompt", "completion"}
     missing = sorted(required_columns.difference(ds.column_names))
     if missing:
         raise ValueError(f"dataset is missing required columns: {missing}")
@@ -108,14 +116,19 @@ def train(
     sft_kwargs: dict[str, Any] = {
         "output_dir": str(out_adapter_dir),
         "num_train_epochs": epochs,
+        # -1 = use num_train_epochs; >0 caps optimizer steps (transformers default
+        # semantics). Lets us bound a multi-epoch-equivalent dataset to a sane budget.
+        "max_steps": max_steps,
         "learning_rate": learning_rate,
         "per_device_train_batch_size": per_device_batch_size,
         "gradient_accumulation_steps": grad_accum,
-        "max_seq_length": max_seq_len,
-        # Conversational masking knob for TRL>=0.12. This module cannot run in
-        # the sandbox, so verify this on the CUDA pod; if a TRL version lacks
-        # assistant_only_loss, use a response-template completion-only collator.
-        "assistant_only_loss": True,
+        # TRL renamed max_seq_length -> max_length (verified on the CUDA pod with
+        # trl 1.6.0 + transformers 5.12.1; the old name raises TypeError there).
+        "max_length": max_seq_len,
+        # Prompt-masked loss over the prompt/completion pair. completion_only_loss
+        # (not assistant_only_loss) because Gemma-4 E4B is a VLM arch and TRL blocks
+        # assistant_only_loss for VLMs (verified on the CUDA pod, trl 1.6.0).
+        "completion_only_loss": True,
         "eval_strategy": eval_strategy,
         "run_name": run_name,
         "report_to": report_to,

@@ -126,6 +126,7 @@ class TrainPolicyDispatchTest(unittest.TestCase):
                 lora_alpha=16,
                 lora_dropout=0.1,
                 epochs=3,
+                max_steps=-1,
                 learning_rate=0.0003,
                 per_device_batch_size=2,
                 grad_accum=4,
