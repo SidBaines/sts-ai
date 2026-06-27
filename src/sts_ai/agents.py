@@ -154,12 +154,17 @@ class MlxQwenJsonAgent:
             from mlx_lm import batch_generate
         except (ImportError, ModuleNotFoundError):
             batch_generate = None
+        try:
+            from mlx_lm import stream_generate
+        except (ImportError, ModuleNotFoundError):
+            stream_generate = None
 
         self.model, self.tokenizer = (
             load(model_id, adapter_path=adapter_path) if adapter_path else load(model_id)
         )
         self._generate = generate
         self._batch_generate = batch_generate
+        self._stream_generate = stream_generate
         self._sampler = make_sampler(temp=temperature) if make_sampler is not None else None
 
     def reseed(self, policy_seed: int) -> None:
@@ -188,8 +193,20 @@ class MlxQwenJsonAgent:
         except Exception:  # noqa: BLE001 - token counting must never break a rollout
             return 0
 
-    def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
-        base_prompt = render_action_prompt(state_text, legal_actions, self.framing)
+    def choose_action(
+        self,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        prompt_override: str | None = None,
+    ) -> AgentDecision:
+        # `prompt_override` (Interactive Studio advanced-template editor) bypasses
+        # render_action_prompt with a fully-rendered user prompt. Default None keeps
+        # the harness path byte-identical.
+        base_prompt = (
+            prompt_override
+            if prompt_override is not None
+            else render_action_prompt(state_text, legal_actions, self.framing)
+        )
         last_decision: AgentDecision | None = None
         start = time.perf_counter()
 
@@ -222,6 +239,46 @@ class MlxQwenJsonAgent:
         assert last_decision is not None
         last_decision.latency_s = round(time.perf_counter() - start, 4)
         return last_decision
+
+    def stream_choose_action(
+        self,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        prompt_override: str | None = None,
+    ):
+        """Generator for the Interactive Studio's live token view. Yields each
+        incremental text segment (str) as the model decodes, then RETURNS the
+        parsed `AgentDecision` (read it from ``StopIteration.value``). No retries
+        — streaming is single-shot/interactive. Raises if mlx-lm lacks
+        stream_generate (the caller should fall back to choose_action)."""
+        if self._stream_generate is None:
+            raise RuntimeError("this mlx-lm build has no stream_generate; use choose_action")
+        base_prompt = (
+            prompt_override
+            if prompt_override is not None
+            else render_action_prompt(state_text, legal_actions, self.framing)
+        )
+        chat_prompt = self._apply_chat_template(base_prompt)
+        kwargs: dict = {"max_tokens": self.max_tokens}
+        if self._sampler is not None:
+            kwargs["sampler"] = self._sampler
+        pieces: list[str] = []
+        start = time.perf_counter()
+        for response in self._stream_generate(self.model, self.tokenizer, chat_prompt, **kwargs):
+            segment = response.text
+            pieces.append(segment)
+            yield segment
+        full = "".join(pieces)
+        completion_tokens = self._count_tokens(full)
+        decision = parse_json_action(
+            full, legal_actions, completion_tokens=completion_tokens, max_tokens=self.max_tokens
+        )
+        decision.retries = 0
+        decision.prompt_tokens = self._count_tokens(chat_prompt)
+        decision.completion_tokens = completion_tokens
+        decision.thinking_tokens = self._count_tokens(decision.thinking)
+        decision.latency_s = round(time.perf_counter() - start, 4)
+        return decision
 
     def _generate_chat(self, chat_prompt: str) -> str:
         kwargs = {
@@ -612,8 +669,20 @@ class VllmJsonAgent:
         decision.thinking_tokens = self._count_tokens(decision.thinking)
         return decision
 
-    def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
-        base_prompt = self._base_prompt(state_text, legal_actions)
+    def choose_action(
+        self,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        prompt_override: str | None = None,
+    ) -> AgentDecision:
+        # `prompt_override` (Interactive Studio advanced-template editor) bypasses
+        # _base_prompt with a fully-rendered user prompt. Default None keeps the
+        # harness path byte-identical.
+        base_prompt = (
+            prompt_override
+            if prompt_override is not None
+            else self._base_prompt(state_text, legal_actions)
+        )
         last_decision: AgentDecision | None = None
         start = time.perf_counter()
 

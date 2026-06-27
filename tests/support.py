@@ -96,6 +96,25 @@ def requires_mlx(test_item):
     return unittest.skip(_MLX_SKIP_REASON)(test_item)
 
 
+def fastapi_available() -> bool:
+    """True if the optional ``fastapi`` package is installed (not imported)."""
+    return _module_installed("fastapi")
+
+
+_REQUIRE_FASTAPI = os.environ.get("STS_REQUIRE_FASTAPI") == "1"
+_FASTAPI_SKIP_REASON = (
+    "fastapi is not installed; install with `.[app]`. "
+    "Set STS_REQUIRE_FASTAPI=1 to fail instead of skip."
+)
+
+
+def requires_fastapi(test_item):
+    """Gate a test method or ``TestCase`` on the optional FastAPI app backend."""
+    if _REQUIRE_FASTAPI or fastapi_available():
+        return test_item
+    return unittest.skip(_FASTAPI_SKIP_REASON)(test_item)
+
+
 def torch_available() -> bool:
     """True if the optional ``torch`` package is installed (not imported)."""
     return _module_installed("torch")

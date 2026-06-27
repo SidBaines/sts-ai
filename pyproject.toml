@@ -20,6 +20,11 @@ train-mlx = ["mlx-lm==0.31.2"] # 0.31.2 is the first Gemma-4-capable mlx-lm.
 train-cuda = ["trl>=1.6,<2", "peft>=0.13", "accelerate>=1.0", "datasets>=3.0", "wandb>=0.16"]
 vllm = ["vllm==0.23.0"]
 viz = ["streamlit==1.40.2"]
+# Interactive Rollout Studio backend (src/sts_ai/interactive, scripts/interactive_app.py).
+# Pure-Python; plain uvicorn (no [standard] extra) to stay minimal/offline. SSE uses
+# starlette's StreamingResponse and static files are served via FileResponse, so no
+# sse-starlette/aiofiles are needed. Pair with [llm] for the local MLX model backend.
+app = ["fastapi==0.138.1", "uvicorn==0.49.0"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

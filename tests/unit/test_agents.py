@@ -188,6 +188,70 @@ class MlxQwenJsonAgentRetryTest(unittest.TestCase):
         self.assertEqual(decision.retries, 1)
         self.assertGreaterEqual(decision.latency_s, 0.0)  # timing populated
 
+    def test_prompt_override_bypasses_render_action_prompt(self):
+        # The Interactive Studio advanced-template path: choose_action must send
+        # the override verbatim and never call render_action_prompt's framing path.
+        actions = [LegalAction(index=0, bits=1, description="first")]
+        agent = object.__new__(MlxQwenJsonAgent)
+        agent.framing = "SHOULD NOT APPEAR"
+        agent.max_retries = 0
+        agent.max_tokens = 64
+        agent._count_tokens = lambda text: 0
+        seen = {}
+        agent._apply_chat_template = lambda prompt: prompt
+
+        def _gen(chat_prompt):
+            seen["prompt"] = chat_prompt
+            return '{"reasoning":"r","action_index":0}'
+
+        agent._generate_chat = _gen
+
+        decision = agent.choose_action("state", actions, prompt_override="CUSTOM PROMPT {x}")
+        self.assertTrue(decision.valid)
+        self.assertEqual(seen["prompt"], "CUSTOM PROMPT {x}")
+        self.assertNotIn("SHOULD NOT APPEAR", seen["prompt"])
+
+
+class MlxStreamChooseActionTest(unittest.TestCase):
+    def test_stream_yields_segments_then_returns_decision(self):
+        actions = [LegalAction(index=0, bits=1, description="first"),
+                   LegalAction(index=1, bits=2, description="second")]
+        agent = object.__new__(MlxQwenJsonAgent)
+        agent.framing = "neutral"
+        agent.max_tokens = 64
+        agent._sampler = None
+        agent._count_tokens = lambda text: len(text.split()) if text else 0
+        agent._apply_chat_template = lambda prompt: prompt
+
+        class _Resp:
+            def __init__(self, text):
+                self.text = text
+
+        segments = ['{"reasoning"', ': "go", ', '"action_index": 1}']
+
+        def fake_stream(model, tokenizer, prompt, **kwargs):
+            for s in segments:
+                yield _Resp(s)
+
+        agent.model = None
+        agent.tokenizer = None
+        agent._stream_generate = fake_stream
+
+        gen = agent.stream_choose_action("state", actions)
+        streamed = []
+        decision = None
+        try:
+            while True:
+                streamed.append(next(gen))
+        except StopIteration as stop:
+            decision = stop.value
+
+        self.assertEqual(streamed, segments)  # incremental segments surfaced
+        self.assertIsNotNone(decision)
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 1)
+        self.assertEqual(decision.reasoning, "go")
+
 
 class VllmJsonAgentTest(unittest.TestCase):
     def setUp(self):

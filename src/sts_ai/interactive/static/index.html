@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>StS Interactive Rollout Studio</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style id="board-css"></style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🗡️ StS Rollout Studio</div>
+    <div class="topbar-actions">
+      <button id="btn-new">+ New session</button>
+      <span id="status-line" class="status-line"></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- LEFT: session tree + scrubber -->
+    <aside class="col col-left">
+      <h2>Sessions</h2>
+      <div id="session-tree" class="session-tree"><em class="dim">none yet</em></div>
+      <hr />
+      <h2>This session</h2>
+      <div id="session-info" class="dim">—</div>
+      <div class="scrubber">
+        <label>decision <span id="scrub-label">0</span></label>
+        <input id="scrub" type="range" min="0" max="0" value="0" />
+        <div class="row">
+          <button id="btn-prev">◀ prev</button>
+          <button id="btn-next">next ▶</button>
+          <button id="btn-frontier">⏭ frontier</button>
+        </div>
+        <button id="btn-branch" class="full">🌱 Branch from this decision</button>
+      </div>
+    </aside>
+
+    <!-- CENTER: board + token stream -->
+    <section class="col col-center">
+      <div id="board" class="board"><em class="dim">Create or select a session to begin.</em></div>
+      <div id="stream-wrap" class="stream-wrap hidden">
+        <div class="row between">
+          <strong>🧠 Live model output</strong>
+          <button id="btn-cancel-stream">✖ cancel</button>
+        </div>
+        <pre id="stream" class="stream"></pre>
+      </div>
+    </section>
+
+    <!-- RIGHT: controls -->
+    <aside class="col col-right">
+      <h2>Act this decision</h2>
+      <div id="legal-actions" class="legal-actions dim">—</div>
+
+      <div class="control-block">
+        <div class="row">
+          <label>Method
+            <select id="method">
+              <option value="user">user (you choose)</option>
+              <option value="model" selected>model (LLM)</option>
+              <option value="heuristic">heuristic</option>
+              <option value="random">random</option>
+              <option value="first">first legal</option>
+            </select>
+          </label>
+          <label class="narrow">N <input id="n-steps" type="number" min="1" value="1" /></label>
+        </div>
+        <div class="row">
+          <button id="btn-step" class="primary">▶ Step</button>
+          <button id="btn-stream" class="primary">🧠 Stream model</button>
+        </div>
+        <div class="row">
+          <button id="btn-sample">🎲 Sample (no commit)</button>
+          <label class="narrow">k <input id="k-samples" type="number" min="1" value="1" /></label>
+        </div>
+        <div id="candidates" class="candidates"></div>
+      </div>
+
+      <details class="control-block" open>
+        <summary>Model config</summary>
+        <div class="row">
+          <label class="narrow">temp <input id="cfg-temp" type="number" step="0.05" min="0" value="0.2" /></label>
+          <label class="narrow">max_tok <input id="cfg-maxtok" type="number" min="1" value="4096" /></label>
+          <label class="check"><input id="cfg-thinking" type="checkbox" /> thinking</label>
+        </div>
+        <div class="dim" id="cfg-model">—</div>
+      </details>
+
+      <details class="control-block prompt-editor" open>
+        <summary>Prompt / framing</summary>
+        <div class="tabs">
+          <button class="tab active" data-tab="framing">Framing</button>
+          <button class="tab" data-tab="advanced">Advanced template</button>
+        </div>
+
+        <div class="tab-pane" data-pane="framing">
+          <div class="row">
+            <select id="framing-presets"></select>
+            <button id="btn-load-framing">load</button>
+          </div>
+          <textarea id="framing-text" rows="5" placeholder="framing (the experimental variable)"></textarea>
+          <div class="row">
+            <input id="framing-save-name" placeholder="save as…" />
+            <button id="btn-save-framing">save</button>
+            <button id="btn-apply-framing" class="primary">apply</button>
+          </div>
+        </div>
+
+        <div class="tab-pane hidden" data-pane="advanced">
+          <label class="check"><input id="use-advanced" type="checkbox" /> use advanced template</label>
+          <div class="row">
+            <select id="prompt-presets"></select>
+            <button id="btn-load-prompt">load</button>
+          </div>
+          <textarea id="prompt-text" rows="9" placeholder="full prompt template with {framing} {state_text} {valid_indices} {action_lines} {reasoning_instruction}"></textarea>
+          <div class="row">
+            <input id="prompt-save-name" placeholder="save as…" />
+            <button id="btn-save-prompt">save</button>
+            <button id="btn-apply-prompt" class="primary">apply</button>
+          </div>
+        </div>
+
+        <button id="btn-preview" class="full">👁 Preview rendered prompt</button>
+        <pre id="prompt-preview" class="prompt-preview hidden"></pre>
+      </details>
+    </aside>
+  </main>
+
+  <!-- New-session dialog -->
+  <dialog id="new-dialog">
+    <form method="dialog" id="new-form">
+      <h2>New session</h2>
+      <label>World seed <input id="ns-seed" type="number" value="3" required /></label>
+      <label>Combat control
+        <select id="ns-combat">
+          <option value="llm" selected>llm (step every combat decision)</option>
+          <option value="search">search (auto-resolve combats)</option>
+        </select>
+      </label>
+      <div class="row">
+        <label class="narrow">ascension <input id="ns-asc" type="number" value="0" /></label>
+        <label class="narrow">max act <input id="ns-maxact" type="number" value="3" /></label>
+        <label class="narrow">battle sims <input id="ns-sims" type="number" value="2000" /></label>
+      </div>
+      <label>Label <input id="ns-label" placeholder="optional" /></label>
+      <menu class="row">
+        <button value="cancel">cancel</button>
+        <button id="ns-create" value="create" class="primary">create</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
