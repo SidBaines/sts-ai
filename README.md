@@ -106,6 +106,62 @@ Current working policy:
 
 The first implementation priority is to verify simulator throughput and action parsing before committing to full-parameter local training.
 
+## Interactive Rollout Studio
+
+A FastAPI backend + offline browser UI for interactively driving agents and
+diagnosing failure modes. Runs fully offline once an MLX model is cached.
+
+```bash
+.venv/bin/python -m pip install -e '.[app,llm]'   # app=FastAPI backend, llm=MLX model
+scripts/build_lightspeed.sh                        # the simulator must be built first
+PYTHONPATH=src .venv/bin/python scripts/interactive_app.py
+# then open http://127.0.0.1:8000
+```
+
+Options: `--host` / `--port` (default `127.0.0.1:8000`), `--cache-dir`
+(default `data/interactive`), `--model-backend {mlx,vllm}` (default `mlx`),
+`--model <id-or-local-path>` (default: the agent's `mlx-community/Qwen3-4B-4bit`;
+point at a local path for offline use).
+
+**What you can do**
+
+- **New session** at any world seed, ascension, and combat mode. Combats are
+  **steppable** (`combat_control="llm"`, default — you see every card play) or
+  **auto-resolved** by the search agent (`search`).
+- **Sample N decisions per turn** from any method — `user` (click a legal action),
+  `model` (the LLM), `heuristic`, `random`, `first`. "Sample (no commit)" previews
+  K candidate decisions with their reasoning before you commit one.
+- **Stream the model** live: watch its reasoning/thinking tokens arrive over SSE,
+  with a cancel button.
+- **View and edit the LLM framing + prompt.** The *Framing* tab edits the
+  framing string (the study's independent variable) — byte-identical to the batch
+  harness prompt. The *Advanced* tab edits the whole prompt template. Both support
+  a live preview and save/load of named templates (under `<cache-dir>/templates/`).
+- **Branch** from any past decision to explore alternatives; the session tree is
+  shown on the left and is clickable. Use the decision scrubber to step back
+  through committed decisions (read-only) and "Branch from this decision" to fork.
+- **Save / load.** Sessions auto-save after every decision and survive restarts.
+
+**How branching works.** The C++ game state has no binary snapshot, so loading or
+branching a position **replays the recorded action sequence** into a fresh
+simulator (no model calls during replay). Replay reproduces the frontier exactly
+in both combat modes. Live sessions stay warm in memory, so you only pay replay
+cost on load/branch, never per step. A late-game branch in `search` mode re-runs
+each combat's search, so it can take a few seconds.
+
+Every session is cached under `data/interactive/<id>/` as a canonical
+`decisions.jsonl` (+ a `meta.json` and a `session.json` lineage sidecar), so
+`summarize_rollouts.py` / `compute_risk_proxies.py` / `compare_models.py` /
+`visualize_rollout.py` all work on Studio output unchanged.
+
+> Note (v1): committing a *sampled model candidate* records it as a `user`
+> choice (it replays the chosen action, not the model's reasoning). To commit a
+> genuine model decision, use **Step** or **Stream**.
+
+Backend and core logic live in the unit-tested `sts_ai.interactive` package — see
+[`src/sts_ai/interactive/CLAUDE.md`](src/sts_ai/interactive/CLAUDE.md) for internals
+and gotchas.
+
 ## Simulator Fault Policy
 
 The local `sts_lightspeed` patch is strict about invalid battle actions and unknown potion enum values. These now raise Python-visible exceptions instead of silently mutating state or flooding stderr. Batch rollouts record those as error sidecars; timeout mode isolates each seed in a subprocess so native hangs or very slow searches are contained.
