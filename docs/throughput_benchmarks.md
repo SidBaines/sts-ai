@@ -1,4 +1,4 @@
-# Rollout throughput benchmarks (local MLX + vLLM/H100)
+# Rollout throughput benchmarks (local MLX + local vLLM + vLLM/H100)
 
 Measured numbers to help **plan experiments** (how long will N rollouts of model X
 take, which model to pick for a given budget). Generated from the 2026-06-15
@@ -26,6 +26,21 @@ default for vLLM.
 The MLX numbers below are unchanged because MLX still uses `parallel_rollout`
 with `--batch-size`. vLLM thinking-mode numbers are measured in the next section
 (Gemma 3 & 4 on H100); do not infer CUDA numbers from the local MLX table.
+
+## Local vLLM on Apple Silicon (vllm-metal)
+
+vLLM also runs **locally on Apple Silicon** via the `vllm-metal` plugin (MLX compute backend). Full setup +
+run commands + gotchas: [`vllm_metal_local.md`](vllm_metal_local.md). Measured 2026-07-06 on the M5 Pro with
+`gemma-4-e4b-it-bf16` (vllm-metal 0.3.0.dev / vLLM 0.24.0 core, `mlx-lm` 0.31.3):
+
+- **Raw batched decode: parity with `mlx-lm`.** Both ~13× batch scaling to ~330 tok/s @ batch 32 (24.7→321 tok/s
+  vllm-metal vs 27.0→337 `mlx-lm`) — same MLX kernels underneath, so no kernel-level speedup on either.
+- **Continuous batching: ~1.33× over MLX-style lockstep** (thinking on, 12 seeds, K=12, 144 decisions, 100% valid;
+  work matched at ~730 mean gen tok). Streaming (`streaming_rollout`) 16.4 min / 0.146 dec/s vs lockstep
+  (`parallel_rollout`) 21.9 min / 0.110 dec/s. This isolates the per-round-straggler effect (`specs == K`, uniform
+  decision cap → zero finish-time variance), so it's a **lower bound**; full-game runs should show ~1.3–2×.
+- **Why it matters:** the ~1.3–2× is vLLM-exclusive locally (`mlx-lm` has no continuous batching), and it's the
+  *same* `VllmJsonAgent`/`streaming_rollout` deployed on the CUDA pod. Generation only — no LoRA/sleep on Metal.
 
 ## Results — vLLM on H100 (Gemma 3 & 4)
 
