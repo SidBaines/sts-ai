@@ -85,22 +85,50 @@ $PY scripts/run_grpo.py --base-model "$MODEL" --tokenizer "$MODEL" \
   --combat-control llm --max-act 3 --max-decisions 1500 --battle-simulations 50 \
   --clip-eps 0.2 --kl-beta 0.02 --learning-rate 1e-5
 ```
-Dry-run (1 iteration, 2 seeds × G=2, tiny model, shallow game):
+Dry-run (**2 iterations** — see below — 2 seeds × G=2, tiny model, shallow game):
 ```
 $PY scripts/run_grpo.py --base-model "$DRY_MODEL" --tokenizer "$DRY_MODEL" \
   --train-seeds-config configs/frozen_seeds.json --train-split smoke \
-  --out-dir /tmp/dry/grpo --num-iterations 1 --group-size 2 --seeds-per-iter 2 \
+  --out-dir /tmp/dry/grpo --num-iterations 2 --group-size 2 --seeds-per-iter 2 \
   --concurrency 4 --temperature 1.0 --top-p 0.95 --top-k 64 \
   --combat-control llm --max-act 1 --max-decisions 60 --battle-simulations 20 \
-  --clip-eps 0.2 --kl-beta 0.02 --learning-rate 1e-5
+  --clip-eps 0.2 --kl-beta 0.02 --learning-rate 1e-5 \
+  --wandb-project sts-grpo-dryrun --hf-repo <you>/sts-grpo-dryrun --gpu-memory-utilization 0.85
 ```
 This is the **#1 dry-run target** because it exercises the in-process co-residency that nothing
-else does. Confirm in one iteration: vLLM constructs with `enable_lora=True, enable_sleep_mode=True`;
-generation runs; **`agent.sleep()` actually frees enough GPU for the trainer to load** (the whole
-point of sleep mode — if it OOMs here, lower vLLM `gpu_memory_utilization`); `train_pg` produces an
-adapter; `agent.set_adapter()` hot-swaps it (the next iteration's generation uses it); the returned
-summary lists the iteration + `final_adapter`. Watch `nvidia-smi` across the wake→sleep→train→wake
-transitions to confirm the memory hand-off.
+else does. **Use `--num-iterations 2`, not 1**: with 1 iteration the loop trains and exits, so the
+**`wake()` *after* a training step is never exercised** — and that is exactly where the real run
+died (vLLM cumem `wake_up` OOMs re-acquiring GPU because the TRL trainer's memory from the previous
+iteration was still resident; bitten 2026-06-20). Confirm across the two iterations: vLLM constructs
+with `enable_lora=True, enable_sleep_mode=True`; generation runs; **`agent.sleep()` frees enough GPU
+for the trainer to load**; `train_pg` produces an adapter AND frees its GPU memory before returning;
+`agent.set_adapter()` hot-swaps it; **iteration 1 `wake()` succeeds and its generation uses the
+swapped adapter** (the transition that 1 iteration skips); the summary lists both iterations +
+`final_adapter`. If wake() OOMs, the mitigations are already wired: the trainer frees its memory
+(`del model/trainer/base; gc.collect(); torch.cuda.empty_cache()`), `grpo_loop` frees again before
+each wake, and `--gpu-memory-utilization 0.85` leaves headroom for the residual torch CUDA context.
+Watch `nvidia-smi` across the wake→sleep→train→wake transitions to confirm the memory hand-off.
+
+## 5b. Local MLX backend — `run_grpo.py --backend mlx` (Apple Silicon, no GPU rental)
+The same loop runs locally on MLX for cheap iteration; the `--backend cuda` path above is unchanged. Validated
+2026-07-07 on Qwen3-1.7B and gemma-4-e4b. Dry-run (runs in the project `.venv` — mlx-lm — NOT the vllm-metal venv):
+```
+PYTHONPATH=src .venv/bin/python scripts/run_grpo.py --backend mlx \
+  --base-model mlx-community/gemma-4-e4b-it-bf16 --tokenizer mlx-community/gemma-4-e4b-it-bf16 \
+  --train-seeds-config configs/frozen_seeds.json --train-split smoke \
+  --out-dir /tmp/dry/grpo_mlx --num-iterations 2 --group-size 2 --seeds-per-iter 1 \
+  --concurrency 2 --combat-control llm --max-act 1 --max-decisions 6 \
+  --thinking --clip-eps 0.2 --kl-beta 0.02 --learning-rate 1e-5
+```
+No vLLM/CUDA: the vLLM-only flags (`--gpu-memory-utilization`, `--top-p`, `--top-k`) are ignored on this path.
+**The `--num-iterations >= 2` rule still applies**, but here it validates the *unified-memory* hand-off
+(`MlxQwenJsonAgent.sleep()` drops its model → `train_pg_mlx` trains + saves an mlx adapter → `set_adapter()` records
+it → iteration 1 `wake()` reloads it), not a CUDA cumem re-acquire. Confirm: both
+`iter_*/adapter/adapters.safetensors` written; `grpo_summary.json` lists 2 iterations with **distinct**
+`current_adapter`s + a `final_adapter`; `train_metrics` (mean_kl/mean_ratio/clip_fraction/loss) populated. `--thinking`
+un-gates native-thinking data (`build_pg_dataset(require_no_thinking=False)`). Caveats: mlx LoRA is not bit-identical
+to PEFT; generation is lockstep (no continuous batching); no LoRA/sleep on Metal — so iterate here, run
+`--backend cuda` for the defensible pod result.
 
 ## Known guards already in the code (the dry-run confirms they fire)
 - `train_pg` / `train_policy`: manifest `chat_template_hash` skew-check raises on a tokenizer/template

@@ -68,6 +68,7 @@ def train(
     max_seq_len: int = 4096,
     clip_eps: float = 0.2,
     kl_beta: float = 0.02,
+    gradient_checkpointing: bool = False,
     init_adapter_path: str | None = None,
     manifest_path: Path | None = None,
     wandb_project: str | None = None,
@@ -168,6 +169,13 @@ def train(
         )
         model = get_peft_model(base, lora_config)
 
+    if gradient_checkpointing:
+        # PEFT + gradient checkpointing: the frozen base's inputs don't require grad,
+        # so checkpointing's backward recompute produces no gradient unless we
+        # explicitly mark the input embeddings as grad-requiring. Standard PEFT idiom.
+        model.enable_input_require_grads()
+        model.config.use_cache = False
+
     class PGTrainer(Trainer):
         def compute_loss(
             self,
@@ -218,6 +226,8 @@ def train(
         learning_rate=learning_rate,
         per_device_train_batch_size=per_device_batch_size,
         gradient_accumulation_steps=grad_accum,
+        gradient_checkpointing=gradient_checkpointing,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
         report_to=report_to,
         run_name=run_name,
         remove_unused_columns=False,
@@ -230,4 +240,27 @@ def train(
     )
     trainer.train()
     trainer.save_model(str(out_adapter_dir))
+    # Persist the training log history so an outer loop (e.g. grpo_loop) can read
+    # per-step loss/KL/clip-fraction without re-instrumenting the Trainer's wandb.
+    try:
+        (out_adapter_dir / "trainer_log.json").write_text(
+            json.dumps(trainer.state.log_history, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+    except Exception:  # best-effort telemetry; never fail the training run
+        pass
+
+    # Release the trainer's GPU memory so a co-resident vLLM engine (the GRPO
+    # in-process loop) can re-acquire it on the next iteration's wake(). torch's
+    # caching allocator holds the model+optimizer+activations until the objects
+    # are dropped AND the cache is emptied; without this, vLLM's cumem wake_up
+    # OOMs at iteration 1 (the 1-iteration dry-run never reaches a 2nd wake).
+    import gc
+
+    del trainer
+    del model
+    del base
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     return out_adapter_dir

@@ -181,9 +181,35 @@ class MlxQwenJsonAgent:
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
             "thinking": self.enable_thinking,
+            "reasoning_mode": "native" if self.enable_thinking else "none",
             "max_retries": self.max_retries,
             "adapter_path": self.adapter_path,
         }
+
+    def sleep(self, level: int = 1) -> None:
+        """Release the policy model so the co-resident trainer can use memory."""
+        self.model = None
+        import mlx.core as mx
+
+        mx.clear_cache()
+
+    def wake(self) -> None:
+        """Reload the model after sleep; no-op when already resident."""
+        if self.model is not None:
+            return
+
+        from mlx_lm import load
+
+        self.model, self.tokenizer = (
+            load(self.model_id, adapter_path=self.adapter_path)
+            if self.adapter_path
+            else load(self.model_id)
+        )
+
+    def set_adapter(self, adapter_path: str) -> None:
+        """Use a newly trained adapter on next wake (sleep -> train -> set -> wake)."""
+        self.adapter_path = adapter_path
+        self.model = None
 
     def _count_tokens(self, text: str) -> int:
         if not text:
