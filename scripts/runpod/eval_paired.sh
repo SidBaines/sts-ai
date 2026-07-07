@@ -16,7 +16,16 @@ K="${K:-4}"
 CONCURRENCY="${CONCURRENCY:-96}"
 PY=".venv/bin/python"
 
-SAMPLING=(--thinking --temperature 1.0 --top-p 0.95 --top-k 64 --max-tokens 8192)
+# EVAL_THINKING must MATCH the reasoning mode the adapter was trained under, or the
+# comparison is invalid. GRPO trains no-thinking rollouts (run_grpo.py uses the agent
+# default enable_thinking=False) -> run_grpo.sh sets EVAL_THINKING=off. The offline-PG
+# path trains native-thinking data, so it leaves the default ("on").
+EVAL_THINKING="${EVAL_THINKING:-on}"
+if [ "$EVAL_THINKING" = "off" ]; then
+  SAMPLING=(--temperature 1.0 --top-p 0.95 --top-k 64 --max-tokens 4096)
+else
+  SAMPLING=(--thinking --temperature 1.0 --top-p 0.95 --top-k 64 --max-tokens 8192)
+fi
 GAME=(--combat-control llm --max-act 3 --battle-simulations 50)
 export VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}"
 export PYTHONPATH=src

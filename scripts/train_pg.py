@@ -29,6 +29,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-seq-len", type=int, default=4096)
     parser.add_argument("--clip-eps", type=float, default=0.2)
     parser.add_argument("--kl-beta", type=float, default=0.02)
+    parser.add_argument("--gradient-checkpointing", dest="gradient_checkpointing", action="store_true", default=False)
+    parser.add_argument("--no-gradient-checkpointing", dest="gradient_checkpointing", action="store_false")
     parser.add_argument("--wandb-project", default=None)
     parser.add_argument("--run-name", default=None)
 
@@ -55,6 +57,7 @@ def dispatch(args: argparse.Namespace) -> Path:
         max_seq_len=args.max_seq_len,
         clip_eps=args.clip_eps,
         kl_beta=args.kl_beta,
+        gradient_checkpointing=args.gradient_checkpointing,
         manifest_path=args.manifest,
         wandb_project=args.wandb_project,
         run_name=args.run_name,

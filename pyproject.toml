@@ -6,8 +6,12 @@ requires-python = ">=3.10"  # mlx (Gemma-4) needs >=3.10; sim is built against t
 dependencies = []
 
 [project.optional-dependencies]
-llm = ["mlx-lm==0.31.2"]
-train-mlx = ["mlx-lm==0.31.2"] # 0.31.2 is the first Gemma-4-capable mlx-lm.
+llm = ["mlx-lm==0.31.3"]
+# 0.31.3 fixes gemma-4-E4B loading: 0.31.2's gemma4_text decoder instantiated
+# k/v/k_norm for the 18 KV-shared layers (which the checkpoint omits), so load()
+# died with "Missing 54 parameters". 0.31.3 guards them with `has_kv`. Verified
+# on-Mac: mlx-community/gemma-4-e4b-it-bf16 loads (~3s) and generates.
+train-mlx = ["mlx-lm==0.31.3"]
 # CUDA LoRA training. trl/peft/accelerate/datasets only -- do NOT pin transformers
 # or torch here (they are owned by the [vllm] extra; pinning them risks a conflict
 # with vllm==0.23.0). Exact versions MUST be verified/locked on the CUDA pod

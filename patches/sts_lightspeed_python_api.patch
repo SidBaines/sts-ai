@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..3297545 100644
+index a9afe35..43a40d4 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -12,21 +12,682 @@
+@@ -12,21 +12,705 @@
  
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
@@ -31,6 +31,17 @@ index a9afe35..3297545 100644
  using namespace sts;
  
 +namespace {
++
++// Persistent enemy powers surfaced to the model (describeBattleState) and the
++// structured enemies() dict. Strength/Vulnerable/Weak/Poison are handled with
++// dedicated fields elsewhere, so they are omitted here. Every entry has a KEY
++// definition in sts_ai.glossary.STATUS_DB (keyed by enemyStatusStrings).
++constexpr MonsterStatus kPlayerRelevantEnemyPowers[] = {
++    MS::ARTIFACT, MS::METALLICIZE, MS::PLATED_ARMOR, MS::REGEN, MS::THORNS,
++    MS::INTANGIBLE, MS::ENRAGE, MS::CURL_UP, MS::MALLEABLE, MS::MODE_SHIFT,
++    MS::ANGRY, MS::FLIGHT, MS::SHARP_HIDE, MS::ASLEEP, MS::SPORE_CLOUD,
++    MS::TIME_WARP, MS::PAINFUL_STABS, MS::BARRICADE,
++};
 +
 +const char* screenStateName(ScreenState state) {
 +    switch (state) {
@@ -610,6 +621,18 @@ index a9afe35..3297545 100644
 +            emitES("Weak", m.weak);
 +            emitES("Poison", static_cast<int>(m.poison));
 +        }
++        // Persistent enemy powers the player must plan around (Enrage, Metallicize,
++        // Curl Up, Mode Shift, Asleep, ...). Without these, an effect like Nob's
++        // Enrage was invisible after its opening turn, so the strength growth had no
++        // visible cause. Read via the printLogs-style status accessors; each has a
++        // KEY entry in sts_ai.glossary. Strength/Vulnerable/Weak/Poison are emitted
++        // above, so they are excluded here to avoid duplicates.
++        for (const auto s : kPlayerRelevantEnemyPowers) {
++            if (m.hasStatusInternal(s)) {
++                os << ", " << enemyStatusStrings[static_cast<int>(s)]
++                   << " " << m.getStatusInternal(s);
++            }
++        }
 +    }
 +
 +    os << "\nHand:";
@@ -685,7 +708,7 @@ index a9afe35..3297545 100644
  
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +702,136 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -41,6 +725,146 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
          .def("playout", &search::ScumSearchAgent2::playout);
  
@@ -798,12 +821,22 @@ index a9afe35..3297545 100644
 +                d["vulnerable"] = m.vulnerable;
 +                d["weak"] = m.weak;
 +                d["poison"] = static_cast<int>(m.poison);
++                // Persistent enemy powers (Enrage, Metallicize, Curl Up, ...) as a
++                // nested {name: amount} dict, keyed by the same display strings shown
++                // in describeBattleState so downstream analysis can join on them.
++                pybind11::dict powers;
++                for (const auto s : kPlayerRelevantEnemyPowers) {
++                    if (m.hasStatusInternal(s)) {
++                        powers[enemyStatusStrings[static_cast<int>(s)]] = m.getStatusInternal(s);
++                    }
++                }
++                d["powers"] = powers;
 +                out.append(d);
 +            }
 +            return out;
 +        }, "structured per-enemy snapshot: index, name, cur_hp, max_hp, block, intent, "
 +           "alive, intent_damage (per-hit, pre-block), intent_hits (-1 if not attacking), "
-+           "strength, vulnerable, weak, poison")
++           "strength, vulnerable, weak, poison, powers ({name: amount} of persistent powers)")
 +        .def_property_readonly("outcome", [](const BattleContext &bc) { return bc.outcome; })
 +        .def_property_readonly("input_state", [](const BattleContext &bc) { return bc.inputState; })
 +        .def_property_readonly("turn", [](const BattleContext &bc) { return bc.turn; })
@@ -822,7 +855,7 @@ index a9afe35..3297545 100644
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
          .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -75,6 +866,43 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +899,43 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
  
@@ -866,7 +899,7 @@ index a9afe35..3297545 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -836,5 +1664,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +1697,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
  
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")

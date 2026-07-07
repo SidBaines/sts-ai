@@ -34,8 +34,8 @@ from typing import Optional
 # ---------------------------------------------------------------------------
 STATUS_DB: dict[str, tuple[str, str]] = {
     # Debuffs (can land on the player or on enemies)
-    "Weak": ("the affected creature deals 25% less attack damage", "countdown"),
-    "Vulnerable": ("the affected creature takes 50% more damage from attacks", "countdown"),
+    "Weak": ("the affected creature deals 25% less attack damage (already reflected in the shown deal N)", "countdown"),
+    "Vulnerable": ("the affected creature takes 50% more damage from attacks (already reflected in the shown deal N)", "countdown"),
     "Frail": ("the affected creature gains 25% less Block from cards", "countdown"),
     "Entangled": ("you cannot play Attacks this turn", "countdown"),
     "Constricted": ("at the end of your turn, you lose that much HP", "per_turn"),
@@ -44,7 +44,7 @@ STATUS_DB: dict[str, tuple[str, str]] = {
     "Lose Strength": ("Strength is reduced by this much (e.g. end-of-turn from Flex)", "magnitude"),
     "Lose Dexterity": ("Dexterity is reduced by this much", "magnitude"),
     # Core stats
-    "Strength": ("adds its value to the damage of each attack (can be negative)", "magnitude"),
+    "Strength": ("adds its value to the damage of each attack, can be negative (already reflected in the shown deal N)", "magnitude"),
     "Dexterity": ("adds its value to the Block gained from cards", "magnitude"),
     "Focus": ("adds its value to orb effects", "magnitude"),
     "Vigor": ("adds its value to your next attack's damage, then is removed", "magnitude"),
@@ -70,8 +70,22 @@ STATUS_DB: dict[str, tuple[str, str]] = {
     "Juggernaut": ("whenever you gain Block, deal that much damage to a random enemy", "magnitude"),
     "Double Tap": ("your next that-many Attacks this turn are played twice", "magnitude"),
     "Corruption": ("Skills cost 0 this combat but Exhaust when played", "magnitude"),
-    "Barricade": ("your Block is no longer removed at the start of your turn", "magnitude"),
+    "Barricade": ("Block is no longer removed at the start of the turn", "magnitude"),
     "Pen Nib": ("your next attack deals double damage", "magnitude"),
+    # Enemy-only powers (surfaced on the enemy line by the binding; source-grounded
+    # in MonsterStatusEffects.h / Monster.cpp / MonsterSpecific.cpp). Comprehension
+    # only -- the player sees these as power icons in the real game.
+    "Enrage": ("whenever you play a Skill, this enemy gains that much Strength", "magnitude"),
+    "Curl Up": ("the first time this enemy takes attack damage, it gains that much Block (once)", "magnitude"),
+    "Malleable": ("each time this enemy takes attack damage it gains that much Block, and the amount then grows by 1 (resets at end of round)", "magnitude"),
+    "Mode Shift": ("after this enemy takes that much more attack damage it shifts to a defensive stance (gains Block, stops attacking); the number is the remaining threshold", "magnitude"),
+    "Angry": ("each time this enemy takes attack damage, it gains that much Strength", "magnitude"),
+    "Flight": ("this enemy's attack damage is halved; each hit you land drops this by 1, and at 0 it is briefly stunned; the number is the stacks remaining", "magnitude"),
+    "Sharp Hide": ("whenever you play an Attack, you take that much damage", "magnitude"),
+    "Asleep": ("this enemy is asleep and will not attack until it wakes (after a few turns, or when it takes damage)", "magnitude"),
+    "Spore Cloud": ("when this enemy dies, you gain that much Vulnerable", "magnitude"),
+    "Time Warp": ("after you play 12 cards this turn, this enemy takes an extra turn and gains Strength; the number counts cards played", "magnitude"),
+    "Painful Stabs": ("whenever this enemy deals unblocked attack damage, it adds a Wound to your discard pile", "magnitude"),
 }
 
 
@@ -710,14 +724,28 @@ def _incoming_damage(state_text: str) -> int:
     return total
 
 
-def _combat_notes(state_text: str, legal_actions: list[dict]) -> str:
+def _combat_notes(state_text: str, legal_actions: list[dict], damage_note: bool = True) -> str:
     """Derived, sim-grounded combat notes appended after the board: the aggregated
     incoming damage (the model sums intents poorly) and an explicit can't-play
     warning for the 0-energy / nothing-playable trap (where the only legal action
-    is `end turn`, yet the hand is still listed and is misread as playable)."""
+    is `end turn`, yet the hand is still listed and is misread as playable).
+
+    `damage_note` gates the "already includes Strength/Weak/Vulnerable" clarifier
+    (Tier-1 comprehension fix: the model was reading `deal N` and then adding the
+    enemy's Strength again — see docs/gemma_performance_analysis_2026-07-06.md). The
+    toggle exists so an A/B harness can reconstruct the pre-fix wording."""
     notes: list[str] = []
     if _has_enemies(state_text):
-        notes.append(f"Incoming attack damage this turn: {_incoming_damage(state_text)} (before your Block)")
+        clarifier = (
+            " (this total already includes each attacker's Strength, Weak, and "
+            "Vulnerable -- do not add those again)"
+            if damage_note
+            else ""
+        )
+        notes.append(
+            f"Incoming attack damage this turn: {_incoming_damage(state_text)} "
+            f"(before your Block){clarifier}"
+        )
     has_play = any(str(a.get("description", "")).strip().startswith("play ") for a in legal_actions)
     if legal_actions and not has_play and _hand_card_names(state_text):
         notes.append(
@@ -923,6 +951,7 @@ def augment(
     legal_actions: list[dict],
     phase: str,
     map_graph: Optional[dict] = None,
+    damage_note: bool = True,
 ) -> str:
     """Fold the effect/status reference into `state_text`.
 
@@ -945,7 +974,7 @@ def augment(
                 statuses |= _scan_status_names(line)
             out_lines.append(line)
         body = "\n".join(out_lines)
-        notes = _combat_notes(state_text, legal_actions)
+        notes = _combat_notes(state_text, legal_actions, damage_note=damage_note)
         key = _build_key(statuses, _hand_card_names(state_text), potion_names=_potion_names(state_text))
         return body + notes + key
     map_block = _render_map(map_graph, legal_actions) if map_graph else ""

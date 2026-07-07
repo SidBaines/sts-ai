@@ -107,6 +107,18 @@ class AugmentCombatTest(unittest.TestCase):
         # Jaw Worm deals 11; Cultist deals 0 -> total 11.
         self.assertIn("Incoming attack damage this turn: 11 (before your Block)", self.out)
 
+    def test_incoming_damage_note_has_final_damage_clause(self):
+        # Tier-1 comprehension fix: the note tells the model the total already
+        # includes Strength/Weak/Vulnerable, so it stops adding them a second time.
+        self.assertIn("already includes each attacker's Strength, Weak, and Vulnerable", self.out)
+        self.assertIn("do not add those again", self.out)
+
+    def test_damage_note_clause_can_be_disabled(self):
+        # The A/B harness reconstructs the pre-fix wording via damage_note=False.
+        legacy = augment(COMBAT_TEXT, [], "combat", damage_note=False)
+        self.assertIn("Incoming attack damage this turn: 11 (before your Block)", legacy)
+        self.assertNotIn("do not add those again", legacy)
+
     def test_cant_play_note_for_zero_energy_trap(self):
         text = (
             "Battle turn 0\nPlayer HP: 80/80, block: 5, energy: 0/3\nPlayer powers: none\n"
@@ -125,6 +137,7 @@ class AugmentCombatTest(unittest.TestCase):
             "combat",
         )
         self.assertNotIn("You cannot play any card right now", out)
+
 
     def test_key_block_defines_active_statuses(self):
         key = self.out[self.out.index("-- KEY"):]
@@ -151,6 +164,36 @@ class AugmentCombatTest(unittest.TestCase):
         self.assertIn("intent FOE_GLARE (no attack)", out)
         self.assertNotIn("Bogusbuff", out[out.index("-- KEY"):] if "-- KEY" in out else "")
         self.assertNotIn("Mysterycard:", out)
+
+
+class EnemyPowerKeyTest(unittest.TestCase):
+    """Tier-1 Fix 2: persistent enemy powers now emitted on the enemy line by the
+    binding (Enrage, Metallicize, ...) get their KEY definition automatically via
+    the existing status scan, so the model learns what the growing Strength means."""
+
+    def _key(self, out: str) -> str:
+        return out[out.index("-- KEY"):] if "-- KEY" in out else ""
+
+    def test_enrage_on_enemy_line_is_defined_in_key(self):
+        text = (
+            "Enemies:\n"
+            "  [0] GREMLIN_NOB HP 71/85, block 4, intent GREMLIN_NOB_RUSH (deal 18), "
+            "Strength 12, Metallicize 4, Enrage 2\n"
+            "Hand:\n  [0] Strike (cost 1)\n"
+            "Piles: draw 3, discard 0, exhaust 0\nPotions: none\n"
+        )
+        key = self._key(augment(text, [], "combat"))
+        self.assertIn("Enrage:", key)
+        self.assertIn("play a Skill", key)
+        self.assertIn("Metallicize:", key)
+
+    def test_new_enemy_powers_have_definitions(self):
+        # Every power the binding can emit (kPlayerRelevantEnemyPowers) must have a
+        # KEY entry, else the model sees a bare name with no explanation.
+        for name in ("Enrage", "Curl Up", "Malleable", "Mode Shift", "Angry",
+                     "Flight", "Sharp Hide", "Asleep", "Spore Cloud", "Time Warp",
+                     "Painful Stabs"):
+            self.assertIsNotNone(status_definition(name), f"missing STATUS_DB def for {name}")
 
 
 class RelicPotionKeyTest(unittest.TestCase):

@@ -23,7 +23,12 @@ class ReplayError(RuntimeError):
     (a determinism break, a serializer change, or a corrupt/edited record)."""
 
 
-def resolve_action_index(env: Any, bits: int | None, description: str) -> int:
+def resolve_action_index(
+    env: Any,
+    bits: int | None,
+    description: str,
+    recorded_index: int | None = None,
+) -> int:
     """Find the display index of the action matching (bits, description) in the
     env's current legal-action list.
 
@@ -38,6 +43,14 @@ def resolve_action_index(env: Any, bits: int | None, description: str) -> int:
     if bits is not None:
         exact = [a for a in legal if int(a.bits) == int(bits) and a.description == description]
         if len(exact) == 1:
+            return exact[0].index
+        if len(exact) > 1:
+            if recorded_index is not None:
+                for action in exact:
+                    if int(action.index) == int(recorded_index):
+                        return action.index
+            # Same bits + same display text is semantically interchangeable
+            # for replay purposes (e.g. duplicate identical gold rewards).
             return exact[0].index
     by_desc = [a for a in legal if a.description == description]
     if len(by_desc) == 1:
@@ -63,7 +76,12 @@ def replay_actions(env: Any, actions: Sequence[Mapping[str, Any]]) -> int:
                 f"env reached a terminal state after {applied} of {len(actions)} replayed "
                 f"actions; cannot apply {action.get('description')!r}"
             )
-        idx = resolve_action_index(env, action.get("bits"), str(action.get("description", "")))
+        idx = resolve_action_index(
+            env,
+            action.get("bits"),
+            str(action.get("description", "")),
+            action.get("index"),
+        )
         env.step(idx)
         applied += 1
     env.advance_to_decision()

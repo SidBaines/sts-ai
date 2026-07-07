@@ -12,12 +12,14 @@ rollouts from continuous batching that `mlx-lm` can't do.
 | engine | `mlx-lm` lockstep (`parallel_rollout`) | vLLM continuous batching (`streaming_rollout`) |
 | raw batched throughput | ~parity | ~parity (vllm-metal runs MLX kernels underneath) |
 | variable-length (thinking) rollouts | slower (waits for slowest-of-K each round) | **~1.3–2× faster** (refills finished slots) |
-| LoRA / adapter eval | ✅ (`--adapter-path`) | ❌ not supported on Metal |
+| LoRA / adapter eval | ✅ (`--adapter-path`) | Direct LoRA ❌; fused MLX model ✅ |
 | code path parity with CUDA pod | different orchestrator | **same** `VllmJsonAgent`/`streaming_rollout` as the pod |
 
-**Rule of thumb:** for local *thinking* rollout generation at K≥8, prefer `--backend vllm`. For adapter/LoRA eval
-or quick single rollouts, stay on `--backend mlx`. **Training (SFT/RWR/GRPO) is unaffected** — it stays on `mlx_lm lora`
-(MPS) or TRL (CUDA); vllm-metal has no LoRA/sleep and does not replace either.
+**Rule of thumb:** for local *thinking* rollout generation at K≥8, prefer `--backend vllm`. For a live LoRA
+adapter (`--adapter-path`) or quick single rollouts, stay on `--backend mlx`. If MLX lockstep eval is too slow,
+fuse the adapter into a standalone MLX model and run that model through `--backend vllm`. **Training
+(SFT/RWR/GRPO) is unaffected** — it stays on `mlx_lm lora` (MPS) or TRL (CUDA); vllm-metal has no LoRA/sleep and
+does not replace either.
 
 ## Benchmark (M5 Pro, 48 GB, macOS 26.5, gemma-4-e4b-it-bf16)
 
@@ -87,6 +89,37 @@ PYTHONPATH=src ~/.venv-vllm-metal/bin/python scripts/run_until.py \
 Traces/metas are shape-identical to the MLX and CUDA paths (same `DecisionRecord` schema), so
 `compare_models.py` / `compare_paired.py` / `visualize_rollout.py` all consume them unchanged.
 
+### Fused adapter eval
+
+`vllm-metal` cannot serve a LoRA adapter separately on Metal, but it can load a full model directory produced by
+`mlx_lm fuse`. This is the local escape hatch for adapter evals that need continuous batching:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m mlx_lm fuse \
+  --model mlx-community/gemma-4-e4b-it-bf16 \
+  --adapter-path data/local_curricula/gremlin_nob/adapters/rwr_sft_won \
+  --save-path data/local_curricula/gremlin_nob/models/rwr_sft_won_fused
+
+PYTHONPATH=src ~/.venv-vllm-metal/bin/python scripts/local_task_eval.py \
+  --task gremlin_nob \
+  --manifest data/local_curricula/gremlin_nob/manifests/source.json \
+  --model data/local_curricula/gremlin_nob/models/rwr_sft_won_fused \
+  --backend vllm --split holdout --thinking \
+  --temperature 0 --top-p 0.95 --top-k 64 --max-tokens 8192 \
+  --concurrency 11 \
+  --output-dir data/local_curricula/gremlin_nob/eval/rwr_sft_won_fused_vllm
+```
+
+Observed caveat (2026-07-07, Gemma-4 E4B Nob RWR/SFT): fused-model eval itself works, but it faithfully reflects
+whatever the adapter learned. The first Nob adapter loaded and generated cleanly, yet no longer used Gemma's native
+`thought` channel because the MLX SFT data path had fed assistant `content` through the stock `ChatDataset`, whose
+Gemma template stripped `<|channel>thought...<channel|>` before training. The corrected path bypasses that dataset:
+`train_mlx.prepare_native_mlx_data` pre-tokenizes `prompt + completion + "<turn|>\n"`, preserves the thought channel,
+and drops/counts samples whose thought would be truncated. A fused corrected adapter (`rwr_sft_won_native8k_stop`)
+emitted Gemma thought tokens under vLLM and stopped cleanly. Treat fused-model eval as a valid local adapter arm, but
+check `meta.extra.agent_config`, `agent.raw_response`, and token counts before comparing speed or reasoning behaviour
+against a native-thinking base arm.
+
 ## Gotchas (Metal-specific)
 
 - **macOS `spawn` needs an `if __name__ == "__main__":` guard.** vLLM's V1 `EngineCore` runs in a spawned
@@ -99,14 +132,15 @@ Traces/metas are shape-identical to the MLX and CUDA paths (same `DecisionRecord
   **after** all results are produced (exit code stays 0) — ignore it. Don't gate success on a clean stderr.
 - **gemma-4 is "experimental"** in vllm-metal's support matrix (Qwen3 is fully supported). It worked cleanly here
   (288/288 decisions valid across both benchmark arms), but treat it as not-yet-guaranteed across upgrades.
-- **No LoRA, no sleep mode on Metal.** `VllmJsonAgent` defaults (`enable_lora=False`, `enable_sleep_mode=False`)
-  keep plain generation compatible; do **not** pass `--adapter-path` on this path (that would request LoRA). GRPO's
+- **No live LoRA, no sleep mode on Metal.** `VllmJsonAgent` defaults (`enable_lora=False`,
+  `enable_sleep_mode=False`) keep plain generation compatible; do **not** pass `--adapter-path` on this path (that
+  would request live LoRA). Use `mlx_lm fuse` first if you need local continuous-batching eval of an adapter. GRPO's
   co-resident sleep/wake hot-swap is CUDA-only.
 - **`gpu_memory_utilization` (default 0.90) is honored on Metal** (unified memory); it loaded and KV-cached fine.
   Note vLLM reports "available" GB depressed by the OS page cache from the model read — not an OOM signal.
 
 ## What this is not
 - Not a raw-speed upgrade (parity with the existing MLX batched path).
-- Not a training path (generation only; no LoRA/sleep).
+- Not a training path (generation only; no live LoRA/sleep).
 - Not a dependency of the core package — it lives in its own installer venv, not a pip extra.
 </content>

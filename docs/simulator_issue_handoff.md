@@ -1,5 +1,47 @@
 # Simulator Issue Handoff
 
+## Phantom enemy powers — a second uninitialized-memory bug (found 2026-07-06)
+
+**A distinct, still-open UB in the same family as the potions bug below.** While
+adding persistent enemy-power serialization (Tier-1 Fix 2, see
+[`gemma_performance_analysis_2026-07-06.md`](gemma_performance_analysis_2026-07-06.md)),
+monsters were observed carrying **phantom statuses** they should not have:
+
+- seed 104 Gremlin Nob: `Metallicize 4` (gains 4 block/turn — visible in the
+  recorded data: the Nob's `block` was 4 from turn 1 on);
+- seed 103 Gremlin Nob: `Regen 3`;
+- seeds 101/102/105 Gremlin Nob: clean.
+
+**Deterministic per seed, varies across seeds → uninitialized/stale memory, not a
+real game property** (a real Nob has neither). Key facts established:
+
+- It is **real applied combat state, not a read-time artifact**: a sentinel
+  (`metallicize = 99` in `Monster::construct`) surfaced as `Metallicize 103`, i.e.
+  a genuine `buff<METALLICIZE>(4)` runs *after* `construct()` during `init()`
+  (`rollMove`/`preBattleAction` drain). `hasStatus<>()` (combat logic) reads the same
+  `statusBits`, so **the simulator itself applies the phantom power** — it affects
+  outcomes, not just the serializer.
+- It is **present in normal rollout generation** (the recorded CUDA/vLLM iter2 data,
+  no replay involved), so all full-LLM-combat training/eval data is affected: some
+  fraction of fights have slightly-tankier or regenerating enemies.
+- **Zeroing all status fields at the top of `Monster::construct` did NOT fix it**
+  (the phantom `buff` is applied post-construct from a source not yet traced), so
+  that change was reverted. Root cause is still open — likely the same
+  default-constructed-`BattleContext`-with-uninitialized-storage pattern as the
+  potions bug, feeding a garbage status **type + amount** into a buff during battle
+  init.
+
+**Decision for the serializer:** surface the powers anyway. The model's job is to
+play *this* simulator well, and the phantom is that simulator's true (if
+non-canonical) state — hiding it would make the model underestimate real in-sim
+enemy tankiness. It is flagged here as a sim-correctness bug to root-cause (it also
+makes the env diverge from real StS and breaks cross-build reproducibility, exactly
+like the potions UB). **Next step to root-cause:** bisect the `init()` drain
+(`MonsterGroup::init` → `rollMove` → `preBattleAction` → `executeActions`) with the
+sentinel to find which `buff`/`setStatus` reads uninitialized storage; suspect a
+stale action left in the queue or a `MonsterGroup` field not zeroed on a reused
+`BattleContext`.
+
 ## Partial Resolution (updated 2026-06-14)
 
 **Root cause was misdiagnosed in the original handoff below.** It is *not* a stale

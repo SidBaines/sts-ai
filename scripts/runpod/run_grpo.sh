@@ -24,6 +24,9 @@ SEEDS_PER_ITER="${SEEDS_PER_ITER:-8}"
 KL_BETA="${KL_BETA:-0.02}"
 CLIP_EPS="${CLIP_EPS:-0.2}"
 LR="${LR:-1e-5}"
+WANDB_PROJECT="${WANDB_PROJECT:-sts-e4b-grpo}"
+RUN_NAME="${RUN_NAME:-grpo-$(date +%Y%m%d-%H%M%S)}"
+HF_REPO="${HF_REPO:-}"   # e.g. user/sts-e4b-grpo; empty disables HF push
 PY=".venv/bin/python"
 
 export VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}"
@@ -41,6 +44,12 @@ $PY scripts/run_grpo.py \
   --temperature 1.0 --top-p 0.95 --top-k 64 \
   --combat-control llm --max-act 3 --max-decisions 1500 --battle-simulations 50 \
   --clip-eps "$CLIP_EPS" --kl-beta "$KL_BETA" --learning-rate "$LR" \
+  --per-device-batch-size "${PER_DEVICE_BATCH_SIZE:-4}" --grad-accum "${GRAD_ACCUM:-2}" \
+  --gradient-checkpointing \
+  ${START_ITERATION:+--start-iteration "$START_ITERATION"} \
+  ${RESUME_ADAPTER:+--resume-adapter "$RESUME_ADAPTER"} \
+  --wandb-project "$WANDB_PROJECT" --run-name "$RUN_NAME" \
+  ${HF_REPO:+--hf-repo "$HF_REPO"} \
   2>&1 | tee "$LOGS/1_grpo.log"
 
 # The loop prints {"final_adapter": ...}; the canonical location is the last iteration's adapter.
@@ -49,8 +58,15 @@ FINAL_ADAPTER=$(find "$OUT/grpo" -maxdepth 2 -type d -name adapter | sort -V | t
 log "final adapter: $FINAL_ADAPTER"
 
 log "PHASE 2/2  paired eval base vs GRPO-final on the frozen eval split (K=$K/seed)"
+# EVAL_THINKING=off: GRPO trains no-thinking rollouts, so eval must be no-thinking too.
 MODEL="$MODEL" ADAPTER="$FINAL_ADAPTER" OUT_EVAL="$OUT/eval" K="$K" \
-  CONCURRENCY="$CONCURRENCY" REPO_DIR="$REPO_DIR" \
+  CONCURRENCY="$CONCURRENCY" REPO_DIR="$REPO_DIR" EVAL_THINKING=off \
   bash scripts/runpod/eval_paired.sh 2>&1 | tee "$LOGS/2_eval.log"
+
+if [ -n "$HF_REPO" ]; then
+  log "Uploading eval artifacts to HF: $HF_REPO/eval"
+  huggingface-cli upload "$HF_REPO" "$OUT/eval" eval --repo-type model 2>&1 | tail -3 \
+    || echo "WARNING: HF upload of eval artifacts failed (results remain on pod under $OUT/eval)"
+fi
 
 log "DONE. $OUT/eval/paired.json shows GRPO-final vs base (read beside the agent_invalid rate)."

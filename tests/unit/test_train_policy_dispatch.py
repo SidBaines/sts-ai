@@ -64,6 +64,7 @@ class TrainPolicyDispatchTest(unittest.TestCase):
                 steps_per_report=None,
                 save_every=5,
                 val_batches=None,
+                max_seq_length=8192,
             )
 
     def test_trl_backend_forwards_paths_manifest_and_trl_knobs(self):

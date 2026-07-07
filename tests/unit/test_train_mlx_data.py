@@ -7,7 +7,16 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from sts_ai.train.train_mlx import prepare_mlx_data
+from sts_ai.train.train_mlx import prepare_mlx_data, prepare_native_mlx_data
+
+
+class FakeTokenizer:
+    def encode(self, text: str, add_special_tokens: bool = True) -> list[int]:
+        del add_special_tokens
+        return [ord(char) for char in text]
+
+    def decode(self, token_ids: list[int]) -> str:
+        return "".join(chr(token_id) for token_id in token_ids)
 
 
 def _messages(index: int) -> list[dict[str, str]]:
@@ -117,6 +126,83 @@ class PrepareMlxDataTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "messages"):
                 prepare_mlx_data(dataset, out_dir)
+
+    def test_gemma_native_thought_channel_raises_instead_of_stripping(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset = root / "dataset.jsonl"
+            out_dir = root / "mlx"
+            record = {
+                "messages": [
+                    {"role": "user", "content": "prompt"},
+                    {
+                        "role": "assistant",
+                        "content": "<|channel>thought\nthink\n<channel|>{\"action_index\": 0}",
+                    },
+                ],
+                "completion": "<|channel>thought\nthink\n<channel|>{\"action_index\": 0}",
+            }
+            dataset.write_text(json.dumps(record) + "\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "strip Gemma native thought"):
+                prepare_mlx_data(dataset, out_dir)
+
+    def test_native_mlx_data_preserves_thought_and_drops_truncated_thinking(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset = root / "dataset.jsonl"
+            out_dir = root / "native"
+            prompt = "PROMPT:"
+            good_completion = "<|channel>thought\nok\n<channel|>{\"action_index\": 0}"
+            too_long_thinking = (
+                "<|channel>thought\n"
+                + ("x" * 80)
+                + "\n<channel|>{\"action_index\": 1}"
+            )
+            records = [
+                {
+                    "prompt": prompt,
+                    "completion": good_completion,
+                    "messages": _messages(0),
+                },
+                {
+                    "prompt": prompt,
+                    "completion": too_long_thinking,
+                    "messages": _messages(1),
+                },
+                {
+                    "prompt": prompt,
+                    "completion": "<|channel>thought\nunfinished",
+                    "messages": _messages(2),
+                },
+            ]
+            dataset.write_text(
+                "".join(json.dumps(record) + "\n" for record in records),
+                encoding="utf-8",
+            )
+
+            report = prepare_native_mlx_data(
+                dataset,
+                out_dir,
+                tokenizer=FakeTokenizer(),
+                max_seq_length=len(prompt)
+                + len(good_completion)
+                + len("<turn|>\n"),
+                valid_fraction=0.0,
+            )
+
+            train_records = _read_jsonl(out_dir / "train.jsonl")
+            self.assertEqual(report["n_input_records"], 3)
+            self.assertEqual(report["n_kept_records"], 1)
+            self.assertEqual(report["skipped_record_counts"]["would_truncate_thinking"], 1)
+            self.assertEqual(report["skipped_record_counts"]["source_thinking_truncated"], 1)
+            self.assertEqual(len(train_records), 1)
+            kept = train_records[0]
+            self.assertEqual(kept["offset"], len(prompt))
+            self.assertEqual(
+                FakeTokenizer().decode(kept["input_ids"][kept["offset"] :]),
+                good_completion + "<turn|>\n",
+            )
 
 
 if __name__ == "__main__":

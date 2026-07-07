@@ -5,6 +5,13 @@
 fight-by-fight "learning schedule" (curriculum RL). This doc is the writeup of the codebase capability
 investigation so we can pick it up without re-deriving.
 
+> **Implementation update (2026-07-07):** this is now implemented as a detachable **local curriculum task** lane,
+> not as Nob-specific logic in the main full-run training path. See `src/sts_ai/local_tasks/` and
+> `scripts/local_task_{prepare,build_sft,eval,compare,grpo}.py`. Gremlin Nob is the first task (`--task
+> gremlin_nob`): task reward and labels live in task manifests / `meta.extra["local_task"]`, adapters are standalone
+> skill patches, and the main harness only consumes them through the existing `--adapter-path` surface. The default
+> source split over the 43 Nob fights is 32 train / 11 holdout (`world_seed % 4 == 0` holdout).
+
 ## Context / why the Nob
 
 - We are **not** in the framing-experiment phase yet — the near-term goal is competence (get E4B to play well).
@@ -28,8 +35,9 @@ investigation so we can pick it up without re-deriving.
 
 ## Bottom line
 
-The training *machinery* already exists (SFT/RWR/PG/GRPO). What's missing is **fight-scoped reward** and a
-**fight-scoped episode** — both small additions. The single enabling fact:
+The training *machinery* already exists (SFT/RWR/PG/GRPO). The original missing pieces were **fight-scoped
+reward** and a **fight-scoped episode**; these now live in the detachable local-task lane for `gremlin_nob`.
+The single enabling fact:
 
 > Every rollout record stores the model-facing prompt (`state_text`) **and** the verbatim completion
 > (`agent.raw_response`, incl. E4B's `thought` channel). So offline training examples reconstruct with **zero
@@ -38,7 +46,8 @@ The training *machinery* already exists (SFT/RWR/PG/GRPO). What's missing is **f
 Three rungs, increasing cost (details below):
 1. **RWR / filtered-SFT on won-Nob combat decisions** — ~a day of glue, **runs on MPS**, uses existing data.
 2. **Hinted-rollout SFT** — the existing "teacher" analogue; breaks the thin-positives ceiling; mostly config.
-3. **Nob-scoped GRPO** — the real "learning schedule" rung; ~1–2 days new code; **NVIDIA-only**.
+3. **Nob-scoped GRPO** — the real "learning schedule" rung; now available locally through
+   `scripts/local_task_grpo.py --backend mlx`; CUDA remains a later scale-up path, not required for the first pass.
 
 ---
 
@@ -64,8 +73,8 @@ full games because we skip the pre-Nob game.
 | Method | Exists today? | Delta to focus on the Nob |
 |---|---|---|
 | **Filtered-SFT / RWR** | ✅ full pipeline (`scripts/build_sft_dataset.py` → `scripts/train_policy.py`); RWR = deterministic resampling→SFT (`train/reward.py::rwr_multiplicities`) | **~100–150 LOC:** a "Nob-fight dataset builder" — reuse the fight-window extraction from `scratch/nob_fight_analysis.py`, label won/convincing by HP, emit `sft_format.build_example()` for those combat records (replicate by HP-margin for RWR). **No new trainer.** |
-| **Offline signed-advantage PG** | ✅ `scripts/build_pg_dataset.py` + `scripts/train_pg.py` | Nob reward + un-gate thinking (gates below). CUDA-only. |
-| **Online GRPO** | ✅ loop/loss/vLLM-hot-swap built & fake-tested (`train/grpo_loop.py`, `scripts/run_grpo.py`, `scripts/runpod/run_grpo.sh`) | Fight-scoped episode + Nob reward + replay-to-Nob env + un-gate thinking. **~1–2 days.** CUDA-only. |
+| **Offline signed-advantage PG** | ✅ whole-run path exists (`scripts/build_pg_dataset.py` + `scripts/train_pg.py`); local-task reward path now exists in `local_tasks/pg_dataset.py` | For Nob, use task-local reward/meta rather than `final_floor`; local MLX PG/GRPO is available for the first pass. |
+| **Online GRPO** | ✅ whole-run loop/loss exists; local-task MLX entrypoint now exists (`scripts/local_task_grpo.py`) | Fight-scoped episode + Nob reward + replay-to-Nob env are wired for `--task gremlin_nob`; CUDA/vLLM remains a later scale-up path. |
 | **Logit distillation** | ❌ not supported | We store completion *text + token counts* but **no teacher logprobs**. Needs a teacher emitting logits + a KL-distillation loss — neither exists. **Skip** — hinting (rung 2) is a cheaper teacher. |
 
 ### Two real gates for the RL path
@@ -92,10 +101,9 @@ runner yet (only the interactive server) — hooking it into a `make_env` is sma
 - **SFT / RWR → MPS ✅.** `train/train_mlx.py` shells to `mlx_lm lora --train --mask-prompt`. Confirmed the
   installed **mlx-lm 0.31.3 ships `gemma4_text` + `linear_to_lora_layers`**, so LoRA can target the E4B arch
   locally (worth one smoke iter to confirm end-to-end). This is the fast local loop.
-- **Any advantage-weighted gradient (offline PG *or* online GRPO) → NVIDIA only.** Trainer is TRL/PEFT on
-  torch-CUDA (`train/train_pg_trl.py`); online GRPO also needs vLLM (`VllmJsonAgent`, CUDA-only). **There is no
-  MLX policy-gradient trainer** — only SFT/LoRA. RWR is the one reward-driven method that runs on the Mac
-  (resampling→SFT, not a gradient with advantages).
+- **Advantage-weighted gradient has two paths now.** `--backend mlx` is the cheap local iteration route
+  (`train_pg_mlx.py` + lockstep generation, no vLLM/CUDA); CUDA/vLLM remains the higher-throughput pod route.
+  For Nob specifically, `scripts/local_task_grpo.py --backend mlx` keeps the reward and episode task-local.
 - **Generating more Nob data:** MPS works for E4B but slow; vLLM (NVIDIA) is the throughput path. Partial
   rollouts from the Nob entry cut generation cost sharply either way.
 
@@ -136,5 +144,150 @@ runner yet (only the interactive server) — hooking it into a `make_env` is sma
 - Mid-game start: `src/sts_ai/interactive/replay.py` (`replay_actions`)
 - Teacher analogue: `src/sts_ai/hinting.py`
 - Dry-run discipline: `docs/grpo_dryrun_checklist.md`
+
+---
+
+## Execution report (2026-07-07)
+
+### What was implemented
+
+This workstream moved the Nob curriculum from a capability assessment into a detachable local-task lane:
+
+- Added task-local infrastructure under `src/sts_ai/local_tasks/` for replayable fight windows, task reward/labels,
+  task-local SFT/RWR data, task-local PG data, and replay-to-fight evaluation.
+- Added CLI entrypoints:
+  - `scripts/local_task_prepare.py`
+  - `scripts/local_task_build_sft.py`
+  - `scripts/local_task_eval.py`
+  - `scripts/local_task_compare.py`
+  - `scripts/local_task_grpo.py`
+- Kept Nob-specific logic out of the main full-run training/eval path. Main runs only see a produced adapter via the
+  existing adapter surfaces.
+- Added local MLX GRPO support for this lane, so Nob-scoped GRPO is no longer CUDA-only for a first local pass.
+- Added tests for local-task extraction/replay/reward/dataset behavior.
+
+The first SFT/RWR dataset used only the Gremlin Nob train split:
+
+- Source fights: 43 base E4B Nob fights.
+- Split: 32 train / 11 holdout.
+- Positive train windows: 18 won or convincing windows.
+- Training decisions: 343 unique combat decisions, RWR-resampled to 461 examples.
+- Excluded: losses, non-Nob decisions, out-of-combat decisions, and all holdout windows.
+- Training type: supervised behavior cloning with RWR replication, not policy-gradient RL.
+
+### Extra issues found and fixed
+
+Two training/eval issues fell out during the first run:
+
+- `vllm-metal` cannot serve a live LoRA adapter on Metal. The local continuous-batching eval path is therefore:
+  train MLX LoRA -> `mlx_lm fuse` -> evaluate the fused model with `--backend vllm`.
+- The first MLX SFT run was invalid as a native-thinking run. `mlx_lm`'s stock chat dataset calls the Gemma 4 chat
+  template without `enable_thinking=True`, which strips `<|channel>thought...<channel|>` from assistant content.
+  The adapter therefore learned compact JSON completions despite the source data containing thought-channel
+  completions.
+
+Fixes added:
+
+- `train_mlx.prepare_mlx_data` now refuses Gemma thought-channel completions so the unsafe path fails loudly.
+- `train_mlx.prepare_native_mlx_data` pre-tokenizes `prompt + completion + "<turn|>\n"` and feeds token ids directly
+  to MLX's LoRA trainer, preserving native thought.
+- `scripts/train_policy.py --max-seq-len` now defaults to 8192 for MLX SFT.
+- Native data prep drops and loudly counts samples that are missing fields, already have truncated thought, would cut
+  off inside thought under the sequence cap, or are too long after thought closes.
+- The assistant turn terminator `"<turn|>\n"` is included in the supervised target. Without it, the first corrected
+  native adapter emitted valid JSON but kept generating until the 8192-token cap.
+
+### Training artifacts
+
+Bad first run, kept for comparison:
+
+- Adapter: `data/local_curricula/gremlin_nob/adapters/rwr_sft_won`
+- Fused model: `data/local_curricula/gremlin_nob/models/rwr_sft_won_fused`
+- Eval: `data/local_curricula/gremlin_nob/eval/rwr_sft_won_fused_vllm`
+
+Corrected native-thinking run:
+
+- Adapter: `data/local_curricula/gremlin_nob/adapters/rwr_sft_won_native8k_stop`
+- Fused model: `data/local_curricula/gremlin_nob/models/rwr_sft_won_native8k_stop_fused`
+- Eval: `data/local_curricula/gremlin_nob/eval/rwr_sft_won_native8k_stop_fused_vllm`
+- Data prep report: kept 461/461 examples, skipped 0; max total length 3409 tokens, max completion length 2789.
+- Training: 200 iterations, batch size 1, learning rate 1e-4; final train loss 0.320, val loss 0.475; 186,663
+  trained tokens; peak MLX memory 30.084 GB.
+- Smoke check: the fused model emitted Gemma native thought under vLLM (`thinking_tokens=887`,
+  `completion_tokens=976`), produced valid JSON, and did not hit the generation cap.
+
+### Holdout eval results
+
+Base vLLM holdout arm:
+
+- Eval dir: `data/local_curricula/gremlin_nob/eval/base_vllm`
+- N: 11 windows
+- Mean reward: -0.116
+- Win rate: 7/11
+- Convincing wins: 4/11
+- Mean HP loss: 41.4
+- Invalid rate: 0
+
+Bad first adapter:
+
+- Mean reward: -0.359
+- Win rate: 6/11
+- Convincing wins: 1/11
+- Mean HP loss: 48.0
+- Invalid rate: 0
+- Paired reward delta vs base: -0.243 (2 positive / 5 negative / 4 tied, sign-test p=0.453)
+- Interpretation: negative result caused by thought stripping in training, not by adapter fusion.
+
+Corrected native-thinking adapter:
+
+- Mean reward: -0.086
+- Win rate: 7/11
+- Convincing wins: 4/11
+- Mean HP loss: 36.5
+- Invalid rate: 0
+- Paired reward delta vs base: +0.030 (3 positive / 2 negative / 6 tied, sign-test p=1.0)
+- Paired HP-loss delta vs base: -4.91 HP (3 improved / 2 worse / 6 tied, sign-test p=1.0)
+- Generation health: 215 decisions, 0 invalid turns, 0 cap/truncation hits; mean completion 972 tokens, mean
+  thought 880 tokens.
+
+Terminal holdout outcomes for the corrected adapter:
+
+| seed | player HP | Nob state | label |
+|---:|---:|---|---|
+| 56 | 70/88 | dead | convincing |
+| 68 | 24/80 | dead | won |
+| 76 | 0/85 | 22/83 alive | loss |
+| 88 | 14/80 | dead | won |
+| 104 | 0/80 | 29/85 alive | loss |
+| 108 | 45/80 | dead | convincing |
+| 116 | 0/80 | 1/84 alive | loss |
+| 120 | 52/85 | dead | won |
+| 128 | 40/80 | dead | convincing |
+| 136 | 0/80 | 30/86 alive | loss |
+| 144 | 47/80 | dead | convincing |
+
+### Interpretation
+
+The corrected run proves the local SFT/RWR path can train on Gemma native-thinking completions without destroying
+thought-channel behavior. The adapter is no longer worse than base on the small holdout and is directionally better on
+mean reward and HP loss, but the result is not statistically meaningful: N=11 is too small and six paired windows tied
+on reward.
+
+The most important outcome of this workstream is infrastructure and a fixed native-thinking training path, not a
+claimed robust Nob competence gain.
+
+### What remains
+
+- Run a lower-variance Nob eval before making a competence claim: more holdout windows, multiple rollouts per window,
+  or both.
+- Decide whether the next data rung is more partial Nob rollouts, hinted-rollout SFT, or Nob-scoped MLX GRPO.
+- If using SFT again, consider adding high-quality corrected/hinted positives rather than only filtering existing
+  wins; the current positive set is thin.
+- Test whether a Nob adapter composes cleanly with future full-run or other local-task adapters. This work only
+  produced a standalone skill patch.
+- Do not merge Nob-specific reward into the main training path unless we deliberately promote local curricula into a
+  broader schedule. For now, keep this detachable.
+- Native MLX SFT logging is minimal because the in-process trainer path bypasses the subprocess CLI and does not wire
+  wandb yet.
 </content>
 </invoke>
