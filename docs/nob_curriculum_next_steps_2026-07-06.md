@@ -289,5 +289,62 @@ claimed robust Nob competence gain.
   broader schedule. For now, keep this detachable.
 - Native MLX SFT logging is minimal because the in-process trainer path bypasses the subprocess CLI and does not wire
   wandb yet.
-</content>
-</invoke>
+
+---
+
+## Retrain + sampled-eval follow-up (2026-07-08)
+
+> Full standalone report: [`nob_rwr_retrain_sampled_eval_2026-07-08.md`](nob_rwr_retrain_sampled_eval_2026-07-08.md).
+
+Follow-up to the two "what remains" items above: retrained at the val-loss optimum and replaced the underpowered
+greedy eval. **Conclusion: the RWR/filtered-BC rung is at its ceiling — a properly-trained adapter is
+indistinguishable from base on the Nob holdout. The next rung must inject new signal (hinted SFT or shaped-reward
+GRPO), not more of the model's own wins.**
+
+### Retrain (undertraining hypothesis: confirmed on loss, not on play)
+
+The first corrected run (200 iters, bs=1) had seen <0.5 epochs of its 461 examples. Retrained identically at
+`--iters 1400` (~3.4 epochs): val loss falls 0.450 → **0.396 at iter 1000** (~2.4 epochs), then overfits (0.448 @
+1200 while train loss → 0.15). Fused the **iter-1000** checkpoint (plot: `scratch/plots/nob_sft_train_val_loss.png`,
+script `scratch/plot_sft_loss.py`; the old 200-iter run ended at val 0.475). Artifacts:
+`adapters/rwr_sft_won_native8k_stop_3ep{,_it1000}`, `models/rwr_sft_won_native8k_stop_3ep_it1000_fused`.
+Greedy holdout eval of the retrained model: still a wash (−0.141 vs base −0.116, 6/11 wins, 6 exact ties) —
+better val loss did **not** translate into better greedy play.
+
+### Eval protocol fix (the "lower-variance eval" item)
+
+- The 2026-07-07 greedy evals ran at **temperature 0.0** (undocumented at the time): 6/11 windows tied because both
+  arms play the identical deterministic game. K repeats at temp 0 are a no-op — sampled eval requires temp > 0.
+- `local_task_eval.py --rollouts-per-window K`: K sampled episodes per window (`rollout_index = ordinal*K + k`,
+  byte-compatible with old dirs at K=1). Both backends now **resume**: completed episodes (meta present) are
+  skipped, partial episodes are deleted and re-run.
+- `local_task_compare.py` had a real K>1 bug: `_by_window` kept only the lexically-last rollout per window. It now
+  averages K rollouts per window before pairing and adds a paired bootstrap 95% CI (`sts_ai.eval_stats`).
+- Task metrics (`extra.local_task`) were only injected into episode metas by a post-loop over the *current
+  process's* results — a crashed/resumed eval left completed episodes with no reward (compare would silently read
+  0.0). Now disk-based (`runner.inject_local_task_meta`) and run over **all** expected episodes. Regression tests
+  in `tests/unit/test_local_tasks.py`, `tests/unit/test_local_task_compare.py`.
+
+### Sampled holdout result (temp 0.7, K=4, 44 episodes/arm, paired per-window means)
+
+| arm | mean reward | win rate | convincing | mean HP loss | invalid | attack share |
+|---|---|---|---|---|---|---|
+| base | −0.252 | 24/44 (55%) | 25% | 43.1 | 0 | 0.245 |
+| retrained (it1000) | −0.249 | 23/44 (52%) | 23% | 43.0 | 0 | 0.247 |
+
+Paired (11 windows): reward delta **+0.003, 95% CI [−0.16, +0.18]**, sign +5/−3/=3, p=0.73; HP-loss delta −0.09,
+CI [−6.6, +5.0]. Per-window deltas are symmetric shuffling (56: +0.64, 116: +0.31 vs 68: −0.50, 128: −0.39), not
+systematic gain. Window structure: 3 windows hopeless for both arms (76/104/136: 0/4 everywhere), 4 near-safe
+(88/108/120/128), 4 swing (56/68/116/144) — the swing windows carry essentially all paired sensitivity.
+Dirs: `eval/base_vllm_t07_k4`, `eval/rwr_sft_won_native8k_stop_3ep_it1000_fused_vllm_t07_k4`,
+`eval/compare_t07_k4_base_vs_3ep_it1000_{reward,hp_loss}.json`.
+
+### Implications for the next rung
+
+- Self-cloning 18 winning windows re-weights the existing policy but does not add capability; more epochs move val
+  loss, not play. Rung 1 is **exhausted** — go to hinted-rollout SFT (rung 1.5) or Nob-scoped GRPO (rung 2).
+- The 3 hopeless windows are also a GRPO warning: with the cliff reward (all losses = −1.0), K-sample groups there
+  have zero advantage variance → no gradient exactly where competence is missing. Add a within-loss tiebreaker
+  (e.g. fraction of Nob HP removed — still outcome-based/trait-neutral) before running GRPO.
+- Hinting is not yet wired into the local-task lane (the serial runner raises on `hint_cfg`; the vLLM eval path
+  doesn't thread it), but the underlying streaming orchestrator supports it — small glue.

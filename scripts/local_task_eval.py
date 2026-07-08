@@ -11,42 +11,16 @@ from sts_ai.lightspeed import LightspeedHybridEnv
 from sts_ai.local_tasks import base, get_task
 from sts_ai.local_tasks.runner import (
     LocalTaskEnv,
+    inject_local_task_meta,
     replay_task_start,
     run_local_task_episode,
+    window_rollout_indices,
     windows_for_split,
     one_window_per_seed,
 )
 from sts_ai.rollout import current_git_sha
 from sts_ai.seeding import rollout_stem
 from sts_ai.streaming_rollout import run_streaming_rollouts
-
-
-def _add_local_task_meta(meta_path: Path, task, window: dict, result) -> None:
-    if not meta_path.exists():
-        return
-    meta = base.load_json(meta_path)
-    completion = task.completion_reason(result.terminal_state)
-    effective_stopped_reason = completion or result.stopped_reason
-    metrics = task.metrics_from_episode(
-        result.decisions,
-        result.terminal_state,
-        effective_stopped_reason,
-        window,
-    )
-    extra = dict(meta.get("extra") or {})
-    extra["local_task"] = {
-        "task_id": task.task_id,
-        "window_id": window["window_id"],
-        "source_stem": window["source_stem"],
-        "split": window.get("split"),
-        "label": metrics["label"],
-        "reward": metrics["reward"],
-        "metrics": metrics,
-    }
-    meta["extra"] = extra
-    if completion is not None and meta.get("stopped_reason") == "terminal":
-        meta["stopped_reason"] = completion
-    base.write_json(meta_path, meta)
 
 
 def _run_vllm_eval(
@@ -58,10 +32,15 @@ def _run_vllm_eval(
     agent,
 ) -> int:
     by_seed = one_window_per_seed(windows)
-    specs = [
-        (int(window["world_seed"]), int(window.get("ordinal", 0)))
-        for window in windows
-    ]
+    specs = []
+    for window in windows:
+        for rollout_index in window_rollout_indices(window, args.rollouts_per_window):
+            out = args.output_dir / f"{rollout_stem(int(window['world_seed']), rollout_index)}.jsonl"
+            if out.with_suffix(".meta.json").exists():
+                continue  # completed episode from a prior (crashed/resumed) run
+            if out.exists():
+                out.unlink()  # partial episode: meta is written last, so no meta = incomplete
+            specs.append((int(window["world_seed"]), rollout_index))
 
     def make_env(seed: int) -> LocalTaskEnv:
         env = LightspeedHybridEnv(
@@ -83,10 +62,12 @@ def _run_vllm_eval(
         max_retries=args.max_retries,
         run_meta=run_meta,
     )
-    for result in results:
-        window = by_seed[int(result.world_seed)]
-        output_path = args.output_dir / f"{rollout_stem(result.world_seed, result.rollout_index)}.jsonl"
-        _add_local_task_meta(output_path.with_suffix(".meta.json"), task, window, result)
+    # Post-process every expected episode (not just this run's results) so
+    # episodes completed by an earlier crashed process also get task metrics.
+    for window in windows:
+        for rollout_index in window_rollout_indices(window, args.rollouts_per_window):
+            out = args.output_dir / f"{rollout_stem(int(window['world_seed']), rollout_index)}.jsonl"
+            inject_local_task_meta(out.with_suffix(".meta.json"), out, task, window)
     return len(results)
 
 
@@ -118,6 +99,13 @@ def parse_args() -> argparse.Namespace:
         default=True,
     )
     parser.add_argument("--concurrency", type=int, default=12)
+    parser.add_argument(
+        "--rollouts-per-window",
+        type=int,
+        default=1,
+        help="Sample K episodes per task window (policy seed varies with the "
+        "rollout index; use temperature > 0 or all K repeats are identical).",
+    )
     parser.add_argument("--battle-simulations", type=int, default=50)
     parser.add_argument("--max-act", type=int, default=3)
     parser.add_argument("--overwrite", action="store_true")
@@ -164,10 +152,11 @@ def main() -> None:
     if args.backend == "vllm":
         if args.overwrite:
             for window in windows:
-                out = args.output_dir / f"{rollout_stem(int(window['world_seed']), int(window.get('ordinal', 0)))}.jsonl"
-                for path in (out, out.with_suffix(".meta.json"), out.with_suffix(".error.json")):
-                    if path.exists():
-                        path.unlink()
+                for rollout_index in window_rollout_indices(window, args.rollouts_per_window):
+                    out = args.output_dir / f"{rollout_stem(int(window['world_seed']), rollout_index)}.jsonl"
+                    for path in (out, out.with_suffix(".meta.json"), out.with_suffix(".error.json")):
+                        if path.exists():
+                            path.unlink()
         completed = _run_vllm_eval(
             args=args,
             task=task,
@@ -181,35 +170,33 @@ def main() -> None:
     completed = 0
     for window in windows:
         world_seed = int(window["world_seed"])
-        # Local eval outputs identify task windows, not source rollout files.
-        # For Nob this is always r0; future tasks can have multiple windows in
-        # one world seed without overwriting the same `seed_*_r*.jsonl`.
-        rollout_index = int(window.get("ordinal", 0))
-        out = args.output_dir / f"{rollout_stem(world_seed, rollout_index)}.jsonl"
-        if out.with_suffix(".meta.json").exists() and not args.overwrite:
-            continue
-        if args.overwrite:
+        # Local eval outputs identify task windows (and the sample index within
+        # a window), not source rollout files: rollout_index = ordinal * K + k.
+        for rollout_index in window_rollout_indices(window, args.rollouts_per_window):
+            out = args.output_dir / f"{rollout_stem(world_seed, rollout_index)}.jsonl"
+            if out.with_suffix(".meta.json").exists() and not args.overwrite:
+                continue
             for path in (out, out.with_suffix(".meta.json"), out.with_suffix(".error.json")):
                 if path.exists():
                     path.unlink()
-        env = LightspeedHybridEnv(
-            world_seed=world_seed,
-            combat_control="llm",
-            battle_simulations=args.battle_simulations,
-            max_act=args.max_act,
-        )
-        replay_task_start(env, window)
-        run_local_task_episode(
-            task=task,
-            env=env,
-            agent=agent,
-            window=window,
-            max_decisions=args.max_decisions,
-            output_path=out,
-            run_meta=run_meta,
-            rollout_index=rollout_index,
-        )
-        completed += 1
+            env = LightspeedHybridEnv(
+                world_seed=world_seed,
+                combat_control="llm",
+                battle_simulations=args.battle_simulations,
+                max_act=args.max_act,
+            )
+            replay_task_start(env, window)
+            run_local_task_episode(
+                task=task,
+                env=env,
+                agent=agent,
+                window=window,
+                max_decisions=args.max_decisions,
+                output_path=out,
+                run_meta=run_meta,
+                rollout_index=rollout_index,
+            )
+            completed += 1
     print(f"completed local-task eval episodes: {completed}")
 
 

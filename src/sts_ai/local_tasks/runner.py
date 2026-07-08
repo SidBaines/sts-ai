@@ -199,8 +199,65 @@ def run_local_task_episodes(
     return results
 
 
+def inject_local_task_meta(
+    meta_path: Path,
+    jsonl_path: Path,
+    task: Any,
+    window: dict[str, Any],
+) -> bool:
+    """Inject task label/reward/metrics into an episode's meta sidecar.
+
+    Reads the episode trace from disk rather than an in-memory RolloutResult so
+    a resumed eval can also repair metas written by an earlier crashed process
+    (those episodes are skipped on resume and never appear in the new run's
+    results). Idempotent. Returns True if the meta was written.
+    """
+    meta_path = Path(meta_path)
+    if not meta_path.exists():
+        return False
+    meta = base.load_json(meta_path)
+    decisions = base.load_jsonl(jsonl_path) if Path(jsonl_path).exists() else []
+    terminal_state = (decisions[-1].get("after_state") or {}) if decisions else {}
+    completion = task.completion_reason(terminal_state)
+    effective_stopped_reason = completion or str(meta.get("stopped_reason"))
+    metrics = task.metrics_from_episode(
+        decisions,
+        terminal_state,
+        effective_stopped_reason,
+        window,
+    )
+    extra = dict(meta.get("extra") or {})
+    extra["local_task"] = {
+        "task_id": task.task_id,
+        "window_id": window["window_id"],
+        "source_stem": window["source_stem"],
+        "split": window.get("split"),
+        "label": metrics["label"],
+        "reward": metrics["reward"],
+        "metrics": metrics,
+    }
+    meta["extra"] = extra
+    if completion is not None and meta.get("stopped_reason") == "terminal":
+        meta["stopped_reason"] = completion
+    base.write_json(meta_path, meta)
+    return True
+
+
 def windows_for_split(manifest: dict[str, Any], split: str) -> list[dict[str, Any]]:
     return [window for window in manifest["windows"] if window.get("split") == split]
+
+
+def window_rollout_indices(window: dict[str, Any], rollouts_per_window: int) -> list[int]:
+    """Collision-free rollout indices for K samples of one task window.
+
+    ``ordinal * K + k`` keeps distinct windows of the same world seed apart and
+    reduces to the historical ``rollout_index = ordinal`` when K == 1, so K=1
+    output stems stay byte-compatible with pre-K eval dirs.
+    """
+    if rollouts_per_window < 1:
+        raise ValueError("rollouts_per_window must be >= 1")
+    ordinal = int(window.get("ordinal", 0))
+    return [ordinal * rollouts_per_window + k for k in range(rollouts_per_window)]
 
 
 def one_window_per_seed(windows: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:

@@ -5,10 +5,11 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 import json
-import math
 import statistics
 from pathlib import Path
 from typing import Any
+
+from sts_ai.eval_stats import bootstrap_ci, sign_test
 
 
 def _load_metas(root: Path) -> list[dict[str, Any]]:
@@ -61,29 +62,35 @@ def _aggregate(metas: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _by_window(metas: list[dict[str, Any]], metric: str) -> dict[str, float]:
-    return {str(_task(meta).get("window_id")): _metric(meta, metric) for meta in metas}
+def _grouped_by_window(metas: list[dict[str, Any]], metric: str) -> dict[str, list[float]]:
+    """All rollouts of each window, keyed by window_id.
+
+    An eval arm can hold K > 1 sampled rollouts per window; pairing must use
+    the per-window mean, never one arbitrary rollout per window.
+    """
+    grouped: dict[str, list[float]] = {}
+    for meta in metas:
+        grouped.setdefault(str(_task(meta).get("window_id")), []).append(
+            _metric(meta, metric)
+        )
+    return grouped
 
 
-def _sign_test(deltas: list[float]) -> dict[str, Any]:
-    n_pos = sum(1 for delta in deltas if delta > 0)
-    n_neg = sum(1 for delta in deltas if delta < 0)
-    n = n_pos + n_neg
-    if n == 0:
-        p_value = 1.0
-    else:
-        k = min(n_pos, n_neg)
-        p_value = min(1.0, 2.0 * sum(math.comb(n, i) for i in range(k + 1)) / (2**n))
-    return {"n_pos": n_pos, "n_neg": n_neg, "n_zero": len(deltas) - n, "p_value": p_value}
+def _rollout_count_range(grouped: dict[str, list[float]], window_ids: list[str]) -> dict[str, int]:
+    counts = [len(grouped[window_id]) for window_id in window_ids]
+    return {"min": min(counts), "max": max(counts)} if counts else {"min": 0, "max": 0}
 
 
 def build_report(base_dir: Path, trained_dir: Path, *, metric: str) -> dict[str, Any]:
     base = _load_metas(base_dir)
     trained = _load_metas(trained_dir)
-    base_by_window = _by_window(base, metric)
-    trained_by_window = _by_window(trained, metric)
-    paired_ids = sorted(set(base_by_window) & set(trained_by_window))
-    deltas = [trained_by_window[window_id] - base_by_window[window_id] for window_id in paired_ids]
+    base_grouped = _grouped_by_window(base, metric)
+    trained_grouped = _grouped_by_window(trained, metric)
+    paired_ids = sorted(set(base_grouped) & set(trained_grouped))
+    deltas = [
+        statistics.mean(trained_grouped[window_id]) - statistics.mean(base_grouped[window_id])
+        for window_id in paired_ids
+    ]
     return {
         "metric": metric,
         "base_dir": str(base_dir),
@@ -92,7 +99,12 @@ def build_report(base_dir: Path, trained_dir: Path, *, metric: str) -> dict[str,
         "paired": {
             "n": len(paired_ids),
             "mean_delta": statistics.mean(deltas) if deltas else 0.0,
-            "sign_test": _sign_test(deltas),
+            "bootstrap_ci_95": list(bootstrap_ci(deltas)) if deltas else [0.0, 0.0],
+            "sign_test": sign_test(deltas),
+            "rollouts_per_window": {
+                "base": _rollout_count_range(base_grouped, paired_ids),
+                "trained": _rollout_count_range(trained_grouped, paired_ids),
+            },
             "window_ids": paired_ids,
         },
     }

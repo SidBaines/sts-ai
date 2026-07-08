@@ -227,6 +227,85 @@ class GremlinNobTaskTest(unittest.TestCase):
             )
 
 
+class InjectLocalTaskMetaTest(unittest.TestCase):
+    """inject_local_task_meta reads the trace from disk: a resumed eval must be
+    able to repair metas written by an earlier crashed process, whose episodes
+    never appear in the resuming run's in-memory results."""
+
+    def _window(self):
+        return {
+            "window_id": "seed_8_r0_w0",
+            "source_stem": "seed_8_r0",
+            "split": "holdout",
+            "metrics": {"entry_hp": 60},
+        }
+
+    def _write_episode(self, root: Path):
+        won_after = _nob_state(player_hp=50, nob_hp=0, alive=False, turn=3)
+        records = [
+            _record(
+                world_seed=8,
+                decision_index=0,
+                state=_nob_state(player_hp=60, nob_hp=80, turn=1),
+                after_state=_nob_state(player_hp=55, nob_hp=40, turn=2),
+            ),
+            _record(
+                world_seed=8,
+                decision_index=1,
+                state=_nob_state(player_hp=55, nob_hp=40, turn=2),
+                after_state=won_after,
+            ),
+        ]
+        jsonl_path = root / "seed_8_r0.jsonl"
+        jsonl_path.write_text(
+            "".join(json.dumps(record) + "\n" for record in records),
+            encoding="utf-8",
+        )
+        meta_path = root / "seed_8_r0.meta.json"
+        meta_path.write_text(
+            json.dumps({"world_seed": 8, "stopped_reason": "terminal"}),
+            encoding="utf-8",
+        )
+        return meta_path, jsonl_path
+
+    def test_repairs_meta_without_in_memory_result(self):
+        from sts_ai.local_tasks.runner import inject_local_task_meta
+
+        task = GremlinNobTask()
+        with tempfile.TemporaryDirectory() as tmp:
+            meta_path, jsonl_path = self._write_episode(Path(tmp))
+
+            self.assertTrue(
+                inject_local_task_meta(meta_path, jsonl_path, task, self._window())
+            )
+
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            local_task = meta["extra"]["local_task"]
+            self.assertEqual(local_task["window_id"], "seed_8_r0_w0")
+            self.assertEqual(local_task["label"], "convincing")  # 10 HP lost
+            self.assertAlmostEqual(local_task["reward"], 0.75)
+            self.assertTrue(local_task["metrics"]["survived"])
+            self.assertEqual(local_task["metrics"]["hp_loss"], 10)
+            self.assertEqual(meta["stopped_reason"], "task_complete")
+
+    def test_idempotent_and_missing_meta_returns_false(self):
+        from sts_ai.local_tasks.runner import inject_local_task_meta
+
+        task = GremlinNobTask()
+        with tempfile.TemporaryDirectory() as tmp:
+            meta_path, jsonl_path = self._write_episode(Path(tmp))
+            inject_local_task_meta(meta_path, jsonl_path, task, self._window())
+            first = meta_path.read_text(encoding="utf-8")
+            inject_local_task_meta(meta_path, jsonl_path, task, self._window())
+            self.assertEqual(meta_path.read_text(encoding="utf-8"), first)
+
+            self.assertFalse(
+                inject_local_task_meta(
+                    Path(tmp) / "absent.meta.json", jsonl_path, task, self._window()
+                )
+            )
+
+
 class BaseHelpersTest(unittest.TestCase):
     def test_split_for_seed(self):
         self.assertEqual(base.split_for_seed(8, holdout_mod=4, holdout_remainder=0), "holdout")
