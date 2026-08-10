@@ -86,6 +86,25 @@ STATUS_DB: dict[str, tuple[str, str]] = {
     "Spore Cloud": ("when this enemy dies, you gain that much Vulnerable", "magnitude"),
     "Time Warp": ("after you play 12 cards this turn, this enemy takes an extra turn and gains Strength; the number counts cards played", "magnitude"),
     "Painful Stabs": ("whenever this enemy deals unblocked attack damage, it adds a Wound to your discard pile", "magnitude"),
+    "Block Return": ("a simulator status counter reserved for returning Block; current combat logic does not otherwise consume it", "magnitude"),
+    "Choked": ("a one-turn enemy status represented by the simulator; current combat logic clears it at the enemy's next turn without applying another effect", "countdown"),
+    "Corpse Explosion": ("when this enemy dies, deal its max HP times this number as damage to all other enemies", "magnitude"),
+    "Lock On": ("the affected enemy takes 50% more damage from orb attacks", "countdown"),
+    "Mark": ("a Pressure Points damage marker; its number is the accumulated mark", "magnitude"),
+    "Shackled": ("temporary Strength loss that is restored by this amount at the end of the enemy's turn", "magnitude"),
+    "Beat Of Death": ("whenever you play a card, you take that much damage", "magnitude"),
+    "Curiosity": ("marks the Awakened One's Power-play Strength mechanic; the current simulator records the amount but does not apply the trigger", "magnitude"),
+    "Fading": ("this enemy dies when this many remaining attack turns count down to zero", "countdown"),
+    "Generic Strength Up": ("at the end of each round, this enemy gains that much Strength", "per_turn"),
+    "Slow": ("this turn, each card already played makes this enemy take 10% more attack damage; the number is cards played into Slow", "magnitude"),
+    "Thievery": ("when this enemy's stealing attack lands, it steals that much gold", "magnitude"),
+    "Invincible": ("caps total HP loss this enemy can take this turn to the displayed remaining amount; it refreshes next turn", "magnitude"),
+    "Reactive": ("after taking unblocked attack damage, this enemy rerolls its intent; the counter tracks queued rerolls", "magnitude"),
+    "Minion": ("this summoned enemy can disappear when its leader dies and is treated as a minion for kill rewards", "magnitude"),
+    "Minion Leader": ("killing this enemy ends the combat even if its minions remain", "magnitude"),
+    "Regrow": ("when killed while allies remain, this enemy enters a half-dead state and later revives", "magnitude"),
+    "Shifting": ("HP damage temporarily lowers this enemy's Strength by the same amount until the end of its turn", "magnitude"),
+    "Stasis": ("this enemy is holding one of your cards; killing it returns that card", "magnitude"),
 }
 
 
@@ -601,7 +620,19 @@ _KEY_HEADER = "\n\n-- KEY (effects/statuses; numbers are shown next to each abov
 # The "HP <n>/<n>" distinguishes it from a hand line ("[0] Strike (cost 1)").
 _ENEMY_LINE_RE = re.compile(r"^\s*\[\d+\]\s+\S.*\bHP\s+\d+/\d+")
 _INTENT_RE = re.compile(r"\bintent\s+(\S+)")
-_HAND_CARD_RE = re.compile(r"^\s*\[\d+\]\s+(.*?)\s+\(cost\s+\S+?\)\s*$")
+_CARD_TYPE_TAG = r"(?:\s+\[(?:Attack|Skill|Power|Curse|Status)\])?"
+_HAND_CARD_RE = re.compile(
+    rf"^\s*\[\d+\]\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+\S+?\)\s*$"
+)
+_PUBLIC_PILE_LINE_RE = re.compile(
+    r"^(?:Draw|Discard|Exhaust) pile contents \(unordered\):\s*(.*)$"
+)
+_PUBLIC_PILE_CARD_RE = re.compile(
+    rf"(?:^|,\s)(.*?){_CARD_TYPE_TAG}\s+\(cost\s+[^)]*\)(?:\s+x\d+)?(?=,\s|$)"
+)
+_SELECTION_CARD_RE = re.compile(
+    rf"^\s*-\s+select card for \S+:\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+[^)]*\)\s*$"
+)
 _NON_ATTACK_DAMAGE_INTENTS = {"EXPLODER_EXPLODE"}
 
 
@@ -672,9 +703,45 @@ def _hand_card_names(state_text: str) -> list[str]:
     return names
 
 
+def _public_pile_card_names(state_text: str) -> list[str]:
+    """Distinct cards from public unordered pile lines, in stable text order.
+
+    The cost annotation can itself contain commas (``cost 0, base 1``), so a
+    simple comma split would manufacture card names.  The serializer guarantees
+    one balanced parenthesized cost block per aggregated card.
+    """
+    names: list[str] = []
+    for line in state_text.splitlines():
+        match = _PUBLIC_PILE_LINE_RE.match(line.strip())
+        if not match or match.group(1).strip() == "none":
+            continue
+        for card_match in _PUBLIC_PILE_CARD_RE.finditer(match.group(1)):
+            name = card_match.group(1).strip()
+            if name and name not in names:
+                names.append(name)
+    return names
+
+
+def _combat_card_names(state_text: str) -> list[str]:
+    """Every inspectable combat card needing a mechanics definition."""
+    names = _hand_card_names(state_text)
+    for name in _public_pile_card_names(state_text):
+        if name not in names:
+            names.append(name)
+    for line in state_text.splitlines():
+        match = _SELECTION_CARD_RE.match(line)
+        if match:
+            name = match.group(1).strip()
+            if name and name not in names:
+                names.append(name)
+    return names
+
+
 def _card_definition(display_name: str) -> Optional[str]:
-    """CARD_DB lookup tolerant of a trailing '+' upgrade marker."""
-    base = display_name[:-1] if display_name.endswith("+") else display_name
+    """CARD_DB lookup tolerant of upgrade counts and public instance values."""
+    # Examples: Strike+, Searing Blow+4, Rampage=13+, Ritual Dagger=21.
+    base = re.sub(r"\+\d*$", "", display_name)
+    base = re.sub(r"=-?\d+$", "", base)
     desc = CARD_DB.get(base)
     return f"{base}: {desc}" if desc else None
 
@@ -759,29 +826,49 @@ _RELIC_LINE_RE = re.compile(r"^Relics:\s*\{(.*)\}\s*$")
 
 
 def _relic_names(state_text: str) -> list[str]:
-    """Distinct relic names from the `Relics: {Name:0,Name2:1,}` line, dropping the
-    trailing internal `:N` counter (which is not player-meaningful)."""
+    """Distinct relic names from legacy run state or public combat state."""
     names: list[str] = []
     for line in state_text.splitlines():
-        match = _RELIC_LINE_RE.match(line.strip())
-        if not match:
+        stripped = line.strip()
+        if not stripped.startswith("Relics:"):
             continue
-        for token in match.group(1).split(","):
+        match = _RELIC_LINE_RE.match(stripped)
+        body = match.group(1) if match else stripped[len("Relics:"):].strip()
+        if not body or body.lower() == "none":
+            continue
+        for token in body.split(","):
             token = token.strip()
             if not token:
                 continue
-            name = token.rsplit(":", 1)[0].strip() if ":" in token else token
+            if match:
+                # Legacy `{Name:internal_data,}` form.
+                name = token.rsplit(":", 1)[0].strip() if ":" in token else token
+            else:
+                # Public combat `Name [counter N, live]` form. Splitting on
+                # commas also produces the trailing `live]` token, which has no
+                # opening bracket and is ignored.
+                if token.endswith("]") and "[" not in token:
+                    continue
+                name = token.split("[", 1)[0].strip()
             if name and name not in names:
                 names.append(name)
     return names
 
 
 def _potion_names(state_text: str) -> list[str]:
-    """Distinct real potion names from the `Potions: a, b` line (skips `none` and
-    the EMPTY_POTION_SLOT placeholder)."""
+    """Distinct real potions from legacy or indexed public combat slots."""
     names: list[str] = []
     for line in state_text.splitlines():
         stripped = line.strip()
+        if stripped.startswith("Potions (capacity ") and "):" in stripped:
+            body = stripped.split("):", 1)[1].strip()
+            if not body or body.lower() == "none":
+                return names
+            for token in body.split(","):
+                name = re.sub(r"^\[\d+\]\s*", "", token.strip())
+                if name and name.lower() != "empty" and name not in names:
+                    names.append(name)
+            return names
         if stripped.startswith("Potions:"):
             body = stripped[len("Potions:"):].strip()
             if not body or body.lower() == "none":
@@ -975,7 +1062,12 @@ def augment(
             out_lines.append(line)
         body = "\n".join(out_lines)
         notes = _combat_notes(state_text, legal_actions, damage_note=damage_note)
-        key = _build_key(statuses, _hand_card_names(state_text), potion_names=_potion_names(state_text))
+        key = _build_key(
+            statuses,
+            _combat_card_names(state_text),
+            relic_names=_relic_names(state_text),
+            potion_names=_potion_names(state_text),
+        )
         return body + notes + key
     map_block = _render_map(map_graph, legal_actions) if map_graph else ""
     key = _build_key(

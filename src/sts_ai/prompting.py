@@ -8,13 +8,27 @@ NEUTRAL_FRAME = (
     "Use the game state and action descriptions to make the strongest choice you can."
 )
 
+REASONING_ACTION_OUTPUT = "reasoning_action"
+ACTION_ONLY_OUTPUT = "action_only"
+OUTPUT_CONTRACTS = (REASONING_ACTION_OUTPUT, ACTION_ONLY_OUTPUT)
+
+
+def validate_output_contract(output_contract: str) -> None:
+    if output_contract not in OUTPUT_CONTRACTS:
+        raise ValueError(
+            "output_contract must be one of "
+            + ", ".join(repr(value) for value in OUTPUT_CONTRACTS)
+        )
+
 
 def render_action_prompt(
     state_text: str,
     legal_actions: list[LegalAction],
     framing: str = NEUTRAL_FRAME,
     induce_reasoning: bool = False,
+    output_contract: str = REASONING_ACTION_OUTPUT,
 ) -> str:
+    validate_output_contract(output_contract)
     action_lines = "\n".join(
         f"{action.index}: {action.description}" for action in legal_actions
     )
@@ -26,10 +40,18 @@ def render_action_prompt(
         if induce_reasoning
         else ""
     )
+    # Keep the historical default literal in its own branch: this function is a
+    # frozen policy interface, so opting into the compact action-only contract
+    # must not perturb existing prompts by even one byte.
+    output_schema = (
+        '{"reasoning": "brief private reasoning", "action_index": 0}'
+        if output_contract == REASONING_ACTION_OUTPUT
+        else '{"action_index": 0}'
+    )
     return (
         f"{framing}\n\n"
         "Return exactly one JSON object with this schema:\n"
-        '{"reasoning": "brief private reasoning", "action_index": 0}\n\n'
+        f"{output_schema}\n\n"
         f"Valid action_index values are: {valid_indices}. Use only these LEGAL ACTIONS indices; "
         "do not use hand, enemy, deck, or map indices as action_index.\n\n"
         f"{reasoning_instruction}"

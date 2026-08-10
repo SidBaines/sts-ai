@@ -12,7 +12,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from sts_ai.train.sft_format import chat_template_probe_hash, tokenize_example
+from sts_ai.train.sft_format import (
+    chat_template_probe_hash,
+    resolve_loss_mask_mode,
+    tokenize_example,
+)
 
 __all__ = ["train"]
 
@@ -73,6 +77,7 @@ def train(
     manifest_path: Path | None = None,
     wandb_project: str | None = None,
     run_name: str | None = None,
+    loss_mask_mode: str = "auto",
 ) -> Path:
     try:
         import torch
@@ -92,6 +97,10 @@ def train(
     dataset_path = Path(dataset_path)
     out_adapter_dir = Path(out_adapter_dir)
     out_adapter_dir.mkdir(parents=True, exist_ok=True)
+    resolved_loss_mask_mode = resolve_loss_mask_mode(
+        loss_mask_mode,
+        manifest_path=Path(manifest_path) if manifest_path is not None else None,
+    )
 
     ds = load_dataset("json", data_files=str(dataset_path), split="train")
     required_columns = {"prompt", "completion", "advantage"}
@@ -106,17 +115,31 @@ def train(
         _check_manifest(Path(manifest_path), tokenizer=tokenizer, base_model=base_model)
 
     def encode_row(example: dict[str, Any]) -> dict[str, Any]:
-        tokenized = tokenize_example(example, tokenizer)
+        tokenized = tokenize_example(
+            example,
+            tokenizer,
+            loss_mask_mode=resolved_loss_mask_mode,
+        )
         if len(tokenized["input_ids"]) > max_seq_len:
             tokenized["input_ids"] = tokenized["input_ids"][:max_seq_len]
             tokenized["labels"] = tokenized["labels"][:max_seq_len]
+            tokenized["action_mask"] = tokenized["action_mask"][:max_seq_len]
             tokenized["n_completion_tokens"] = sum(
                 1 for label in tokenized["labels"] if label != -100
             )
+        if resolved_loss_mask_mode == "action" and not any(
+            tokenized["action_mask"]
+        ):
+            tokenized["labels"] = [-100] * len(tokenized["labels"])
+            tokenized["n_completion_tokens"] = 0
         tokenized["advantage"] = float(example["advantage"])
         return tokenized
 
-    train_dataset = ds.map(encode_row, remove_columns=ds.column_names)
+    train_dataset = ds.map(encode_row, remove_columns=ds.column_names).filter(
+        lambda row: int(row["n_completion_tokens"]) > 0
+    )
+    if not len(train_dataset):
+        raise ValueError("dataset has no action/completion tokens after truncation")
 
     def data_collator(features: list[dict[str, Any]]) -> dict[str, Any]:
         max_len = max(len(feature["input_ids"]) for feature in features)
@@ -128,6 +151,7 @@ def train(
         )
         labels = torch.full((batch_size, max_len), -100, dtype=torch.long)
         attention_mask = torch.zeros((batch_size, max_len), dtype=torch.long)
+        action_mask = torch.zeros((batch_size, max_len), dtype=torch.bool)
         advantages = torch.empty(batch_size, dtype=torch.float)
 
         for index, feature in enumerate(features):
@@ -137,6 +161,10 @@ def train(
             input_ids[index, :row_len] = ids
             labels[index, :row_len] = row_labels
             attention_mask[index, :row_len] = 1
+            action_mask[index, :row_len] = torch.tensor(
+                feature["action_mask"],
+                dtype=torch.bool,
+            )
             advantages[index] = float(feature["advantage"])
 
         return {
@@ -144,6 +172,7 @@ def train(
             "labels": labels,
             "attention_mask": attention_mask,
             "completion_mask": labels.ne(-100),
+            "action_mask": action_mask,
             "advantages": advantages,
         }
 
@@ -188,6 +217,7 @@ def train(
             attention_mask = inputs["attention_mask"]
             advantages = inputs["advantages"]
             completion_mask = inputs["completion_mask"][:, 1:]
+            action_mask = inputs["action_mask"][:, 1:]
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
             logp_new = selective_logps(outputs.logits, input_ids)
@@ -214,6 +244,10 @@ def train(
                 completion_mask,
                 clip_eps=clip_eps,
                 kl_beta=kl_beta,
+            )
+            metrics["action_token_count"] = float(action_mask.sum().item())
+            metrics["supervised_token_count"] = float(
+                completion_mask.sum().item()
             )
             self.log(metrics)
             if return_outputs:

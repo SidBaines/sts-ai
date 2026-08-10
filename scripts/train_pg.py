@@ -18,6 +18,13 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--base-model", required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, default=None)
+    parser.add_argument(
+        "--loss-mask",
+        choices=("auto", "action", "completion"),
+        default="auto",
+        help="Read the dataset manifest by default; legacy manifests retain "
+        "completion loss.",
+    )
 
     parser.add_argument("--lora-r", type=int, default=16)
     parser.add_argument("--lora-alpha", type=int, default=32)
@@ -61,6 +68,7 @@ def dispatch(args: argparse.Namespace) -> Path:
         manifest_path=args.manifest,
         wandb_project=args.wandb_project,
         run_name=args.run_name,
+        loss_mask_mode=args.loss_mask,
     )
 
 

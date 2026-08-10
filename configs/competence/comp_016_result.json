@@ -1,0 +1,117 @@
+{
+  "experiment_id": "COMP-016",
+  "status": "complete",
+  "completed_at_utc": "2026-07-23T11:40:13Z",
+  "preregistration": {
+    "path": "configs/competence/comp_016_measurement.json",
+    "sha256": "900bf5eec0df697c1d76d2dd9fbbb0553f1032d209e3d8225aa654b11bc5be38"
+  },
+  "artifacts": {
+    "train150_direct": {
+      "path": "data/competence/comp_016/eval/seed0_step1500_train150_direct_actions.json",
+      "sha256": "3f2838569a7d1893d8bfe60786928616d0fdee469a3f20c9e7fb25f844d86351"
+    },
+    "development57_direct_and_cyclic": {
+      "path": "data/competence/comp_016/eval/seed0_step1500_development57_direct_actions_cyclic.json",
+      "sha256": "108baaae95a4a30b8a8fde33424adf0ab415747f03c73f46ee2cc463c94f0fe7"
+    },
+    "control_loss_decomposition": {
+      "path": "data/competence/comp_016/eval/seed0_step1500_control_loss_decomposition.json",
+      "sha256": "969733a342a143dc82e2b00e8d410b1ec5435b0da56f57c617af1ddf0e474aa0"
+    },
+    "augmented_loss_decomposition": {
+      "path": "data/competence/comp_016/eval/seed0_step1500_augmented_loss_decomposition.json",
+      "sha256": "8d51101ee8f8113735ea484b9c1bfe316def4201f81df4f4028fe698721e06db"
+    }
+  },
+  "direct_choice_results": {
+    "control": {
+      "train_correct": 42,
+      "train_total": 150,
+      "train_greedy_correct": 42,
+      "train_top1_position_counts": {
+        "0": 145,
+        "2": 5
+      },
+      "development_correct": 21,
+      "development_total": 57,
+      "development_greedy_correct": 21,
+      "development_top1_position_counts": {
+        "0": 57
+      },
+      "development_mean_candidate_nll": 1.5913706556958755,
+      "development_mean_full_vocabulary_action_nll": 1.5913951271458675,
+      "cyclic_semantic_top1_invariance": 0.0,
+      "cyclic_mean_probability_total_variation": 0.4837858981606706,
+      "cyclic_source_macro_semantic_top1_invariance": 0.0,
+      "cyclic_source_macro_mean_probability_total_variation": 0.4577211532342299
+    },
+    "augmented": {
+      "train_correct": 38,
+      "train_total": 150,
+      "train_greedy_correct": 41,
+      "train_top1_position_counts": {
+        "0": 43,
+        "1": 1,
+        "2": 10,
+        "3": 94,
+        "5": 2
+      },
+      "development_correct": 17,
+      "development_total": 57,
+      "development_greedy_correct": 17,
+      "development_top1_position_counts": {
+        "0": 17,
+        "1": 1,
+        "2": 2,
+        "3": 37
+      },
+      "development_mean_candidate_nll": 1.4801881482055286,
+      "development_mean_full_vocabulary_action_nll": 1.4904254110235917,
+      "cyclic_semantic_top1_invariance": 0.1493212669683258,
+      "cyclic_mean_probability_total_variation": 0.19716793972139396,
+      "cyclic_source_macro_semantic_top1_invariance": 0.18304093567251462,
+      "cyclic_source_macro_mean_probability_total_variation": 0.19280296621195966
+    },
+    "precision_and_validity": {
+      "output_projection": "tied embedding, full vocabulary, hidden state and output weights cast before float32 projection, Gemma final soft-cap in float32",
+      "exact_direct_logit_tie_rate_all_unpermuted_rows": 0.0,
+      "canonical_greedy_json_rate_all_unpermuted_rows": 1.0,
+      "greedy_legal_action_rate_all_unpermuted_rows": 1.0,
+      "direct_and_greedy_development_correct_match_both_arms": true
+    }
+  },
+  "loss_decomposition_results": {
+    "control": {
+      "n_scheduled_rows": 3000,
+      "n_unique_model_forwards": 150,
+      "n_format_tokens": 24000,
+      "n_action_tokens": 3000,
+      "mean_format_token_nll": 0.0,
+      "mean_action_token_nll": 1.293460070292155,
+      "action_fraction_of_measurable_total_nll": 1.0
+    },
+    "augmented": {
+      "n_scheduled_rows": 3000,
+      "n_unique_model_forwards": 730,
+      "n_format_tokens": 24000,
+      "n_action_tokens": 3000,
+      "mean_format_token_nll": 2.3325284322102863e-08,
+      "mean_action_token_nll": 1.4954208399454754,
+      "action_fraction_of_measurable_total_nll": 0.9999998752175666
+    },
+    "zero_interpretation": "The control's reported zero format loss means below the float32 log-sum-exp resolution reached by this scorer, not a mathematical proof of probability exactly one."
+  },
+  "frozen_rule_outcomes": {
+    "measurement_artifact": false,
+    "direct_choice_failure_confirmed": true,
+    "format_dominated_objective_confirmed": true
+  },
+  "conclusion": [
+    "Complete-JSON bfloat16 score ties were a measurement weakness, but they did not create the observed failure: genuine float32 direct digit scoring and exact greedy JSON reproduce the same unpermuted choices and positional shortcuts.",
+    "At step 1500 the JSON scaffold is already essentially solved, while the action digit accounts for effectively all measurable teacher-forced loss in both arms.",
+    "The current unit-weight objective gives eight already-solved format tokens eight times the supervised token mass of the still-poor action choice. A prospective weight-8 action treatment is therefore warranted while retaining the format scaffold that the pure-action control previously showed was useful.",
+    "Cyclic augmentation reduces probability movement but does not approach semantic invariance and regresses unpermuted development choices. No seed-0 behaviour run is permitted."
+  ],
+  "decision": "Proceed with only the fixed step-1500 COMP-015 replications for training seeds 1 and 2, then test a preregistered action-token weight of 8 behind the harder-tiny32 fit gate. Keep the fresh final cohort embargoed."
+}

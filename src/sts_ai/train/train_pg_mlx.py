@@ -8,7 +8,11 @@ import warnings
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
-from sts_ai.train.sft_format import chat_template_probe_hash, tokenize_example
+from sts_ai.train.sft_format import (
+    chat_template_probe_hash,
+    resolve_loss_mask_mode,
+    tokenize_example,
+)
 
 __all__ = ["train"]
 
@@ -55,6 +59,7 @@ def _tokenize_dataset(
     tokenizer: Any,
     *,
     max_seq_len: int,
+    loss_mask_mode: str = "completion",
 ) -> list[dict[str, Any]]:
     examples: list[dict[str, Any]] = []
     for index, record in enumerate(records):
@@ -64,15 +69,23 @@ def _tokenize_dataset(
                 f"dataset record {index} is missing required columns: {missing}"
             )
 
-        tokenized = tokenize_example(record, tokenizer)
+        tokenized = tokenize_example(
+            record,
+            tokenizer,
+            loss_mask_mode=loss_mask_mode,
+        )
         input_ids = list(tokenized["input_ids"])
         labels = list(tokenized["labels"])
+        action_mask = list(tokenized["action_mask"])
         if len(input_ids) > max_seq_len:
             input_ids = input_ids[:max_seq_len]
             labels = labels[:max_seq_len]
+            action_mask = action_mask[:max_seq_len]
 
         n_completion_tokens = sum(1 for label in labels if label != -100)
-        if n_completion_tokens == 0:
+        if n_completion_tokens == 0 or (
+            loss_mask_mode == "action" and not any(action_mask)
+        ):
             continue
 
         examples.append(
@@ -81,6 +94,11 @@ def _tokenize_dataset(
                 "labels": labels,
                 "completion_mask": [label != -100 for label in labels],
                 "n_completion_tokens": n_completion_tokens,
+                "n_action_tokens": sum(bool(value) for value in action_mask),
+                "n_format_tokens": sum(
+                    bool(value)
+                    for value in tokenized["format_mask"][: len(input_ids)]
+                ),
                 "advantage": float(record["advantage"]),
             }
         )
@@ -182,6 +200,7 @@ def train(
     wandb_project: str | None = None,
     run_name: str | None = None,
     num_layers: int | None = None,
+    loss_mask_mode: str = "auto",
 ) -> Path:
     """Train an MLX LoRA adapter with the GRPO-style PG loss.
 
@@ -231,6 +250,10 @@ def train(
     dataset_path = Path(dataset_path)
     out_adapter_dir = Path(out_adapter_dir)
     out_adapter_dir.mkdir(parents=True, exist_ok=True)
+    resolved_loss_mask_mode = resolve_loss_mask_mode(
+        loss_mask_mode,
+        manifest_path=Path(manifest_path) if manifest_path is not None else None,
+    )
 
     model, tokenizer, n_layers, lora_parameters = _load_and_attach_lora(
         mlx_lm=mlx_lm,
@@ -247,6 +270,7 @@ def train(
         _load_jsonl(dataset_path),
         tokenizer,
         max_seq_len=max_seq_len,
+        loss_mask_mode=resolved_loss_mask_mode,
     )
 
     lora_types = (LoRALinear, LoRAEmbedding, LoRASwitchLinear)
@@ -315,6 +339,8 @@ def train(
                 "clip_fraction": float(metrics["clip_fraction"]),
                 "mean_advantage": float(metrics["mean_advantage"]),
                 "step": step,
+                "action_token_count": int(example["n_action_tokens"]),
+                "supervised_token_count": int(example["n_completion_tokens"]),
             }
             log_history.append(entry)
 

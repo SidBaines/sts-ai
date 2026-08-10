@@ -12,6 +12,7 @@ from sts_ai import affordances, glossary, hinting
 from sts_ai.agents import ActionAgent
 from sts_ai.hinting import HintConfig
 from sts_ai.lightspeed import LightspeedHybridEnv
+from sts_ai.provenance import competence_interface_provenance
 from sts_ai.schemas import AgentDecision, DecisionRecord, RolloutMeta, RolloutResult
 from sts_ai.seeding import derive_policy_seed
 
@@ -310,6 +311,16 @@ def build_rollout_meta(
     cfg = getattr(agent, "config", {}) or {}
     term = result.terminal_state or {}
     extra = dict(run_meta.get("extra", {}))
+    combat_observation = str(getattr(env, "combat_observation", "legacy"))
+    # Readable interface identity for competence A/Bs.  The git SHA / simulator
+    # patch fingerprint remains necessary provenance, but this prevents a public
+    # observation run from being mistaken for a byte-compatible legacy run.
+    extra.setdefault("combat_observation", combat_observation)
+    extra.setdefault("competence_interface_version", combat_observation)
+    extra.setdefault(
+        "interface_provenance",
+        competence_interface_provenance(env, agent),
+    )
     budget_truncated = result.stopped_reason == "max_decisions"
     extra["budget_truncated"] = budget_truncated
     if budget_truncated:

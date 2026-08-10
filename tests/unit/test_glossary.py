@@ -51,6 +51,8 @@ class CardDefinitionTest(unittest.TestCase):
         self.assertTrue(_card_definition("Strike").startswith("Strike: "))
         # an upgraded card resolves to its base entry
         self.assertTrue(_card_definition("Defend+").startswith("Defend: "))
+        self.assertTrue(_card_definition("Searing Blow+4").startswith("Searing Blow: "))
+        self.assertTrue(_card_definition("Rampage=13+").startswith("Rampage: "))
 
     def test_unknown_card_is_none(self):
         self.assertIsNone(_card_definition("Totally Made Up Card"))
@@ -150,6 +152,53 @@ class AugmentCombatTest(unittest.TestCase):
         self.assertIn("Bash:", key)
         self.assertIn("Defend:", key)  # Defend+ resolved to base
 
+    def test_public_pile_cards_and_combat_relics_are_defined(self):
+        text = COMBAT_TEXT.replace(
+            "Piles: draw 3, discard 0, exhaust 0\n",
+            "Piles: draw 6, discard 1, exhaust 1\n"
+            "Draw pile contents (unordered): Defend (cost 1) x4, "
+            "Rampage=13+ (cost 0, base 1, free once), Searing Blow+4 (cost 2)\n"
+            "Discard pile contents (unordered): Anger (cost 0)\n"
+            "Exhaust pile contents (unordered): Burn (cost unplayable)\n"
+            "Relics: Burning Blood, Pen Nib [counter 3, live]\n",
+        )
+        out = augment(text, [], "combat")
+        key = out[out.index("-- KEY"):]
+        for card in ("Rampage:", "Searing Blow:", "Anger:", "Burn:"):
+            self.assertIn(card, key)
+        self.assertIn("Burning Blood: At the end of combat, heal 6 HP.", key)
+        self.assertIn("Pen Nib:", key)
+
+    def test_v2_card_type_tags_do_not_pollute_card_names(self):
+        text = COMBAT_TEXT.replace(
+            "[0] Strike (cost 1)",
+            "[0] Strike [Attack] (cost 1)",
+        ).replace(
+            "Piles: draw 3, discard 0, exhaust 0\n",
+            "Piles: draw 3, discard 0, exhaust 0\n"
+            "Draw pile contents (unordered): Defend [Skill] (cost 1), "
+            "Burn [Status] (cost unplayable)\n",
+        )
+        key = augment(text, [], "combat")
+        self.assertIn("Strike: Deal 6 (9) damage.", key)
+        self.assertIn("Defend: Gain 5 (8) Block.", key)
+        self.assertIn("Burn:", key)
+        self.assertNotIn("Strike [Attack]:", key)
+
+    def test_v2_selection_candidates_receive_card_definitions(self):
+        text = (
+            "Battle turn 1\nPlayer powers: none\nEnemies:\n"
+            "  [0] FOE HP 5/5, block 0, intent FOE_WAIT\n"
+            "Hand: empty\nPiles: draw 0, discard 0, exhaust 0\n"
+            "(card select in progress)\nSelection type: DISCOVERY\n"
+            "Selection candidates:\n"
+            "  - select card for DISCOVERY: Shrug It Off [Skill] (cost 1)\n"
+            "  - select card for DISCOVERY: Anger [Attack] (cost 0)\n"
+        )
+        key = augment(text, [], "combat")
+        self.assertIn("Shrug It Off:", key)
+        self.assertIn("Anger:", key)
+
     def test_no_key_when_nothing_recognised(self):
         bare = "Battle turn 0\nPlayer powers: none\nEnemies:\nHand: empty\nPiles: draw 5, discard 0, exhaust 0\nPotions: none\n"
         self.assertNotIn("-- KEY", augment(bare, [], "combat"))
@@ -190,9 +239,15 @@ class EnemyPowerKeyTest(unittest.TestCase):
     def test_new_enemy_powers_have_definitions(self):
         # Every power the binding can emit (kPlayerRelevantEnemyPowers) must have a
         # KEY entry, else the model sees a bare name with no explanation.
-        for name in ("Enrage", "Curl Up", "Malleable", "Mode Shift", "Angry",
-                     "Flight", "Sharp Hide", "Asleep", "Spore Cloud", "Time Warp",
-                     "Painful Stabs"):
+        for name in (
+            "Artifact", "Block Return", "Choked", "Corpse Explosion", "Lock On",
+            "Mark", "Metallicize", "Plated Armor", "Regen", "Shackled", "Angry",
+            "Beat Of Death", "Curiosity", "Curl Up", "Enrage", "Fading", "Flight",
+            "Generic Strength Up", "Intangible", "Malleable", "Mode Shift", "Ritual",
+            "Slow", "Spore Cloud", "Thievery", "Thorns", "Time Warp", "Invincible",
+            "Reactive", "Sharp Hide", "Asleep", "Barricade", "Minion", "Minion Leader",
+            "Painful Stabs", "Regrow", "Shifting", "Stasis",
+        ):
             self.assertIsNotNone(status_definition(name), f"missing STATUS_DB def for {name}")
 
 
@@ -234,6 +289,18 @@ class RelicPotionKeyTest(unittest.TestCase):
         out = augment(combat_text, [], "combat")
         key = out[out.index("-- KEY"):]
         self.assertIn("Fire Potion: Deal 20 damage", key)
+
+    def test_combat_key_defines_indexed_public_potion_slots(self):
+        combat_text = (
+            "Battle turn 1\nPlayer HP: 50/80, block: 0, energy: 3/3\nPlayer powers: none\n"
+            "Enemies:\n  [0] JAW_WORM HP 40/44, block 0, intent JAW_WORM_CHOMP (deal 11)\n"
+            "Hand: empty\nPiles: draw 0, discard 0, exhaust 0\n"
+            "Potions (capacity 3): [0] empty, [1] Fire Potion, [2] Energy Potion\n"
+        )
+        out = augment(combat_text, [], "combat")
+        key = out[out.index("-- KEY"):]
+        self.assertIn("Fire Potion: Deal 20 damage", key)
+        self.assertIn("Energy Potion: Gain 2 energy.", key)
 
 
 class Act23GlossaryCoverageTest(unittest.TestCase):

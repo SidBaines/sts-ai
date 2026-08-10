@@ -1,0 +1,12 @@
+{
+  "action_token_only": false,
+  "expected_schedule_sha256": "f80b069a71e5abe562ba85cced0f13b8748990e1870fbf4ff38aadb96720e30e",
+  "grad_accumulation_steps": 1,
+  "lora_parameters": {
+    "dropout": 0.0,
+    "rank": 8,
+    "scale": 20.0
+  },
+  "preserve_row_order": true,
+  "seed": 0
+}

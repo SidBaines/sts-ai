@@ -155,13 +155,17 @@ def parse_state_text(state_text: str) -> dict[str, Any]:
 
 
 _SIZE_SUFFIXES = {"S", "M", "L"}
-# "[i] Name (cost C)" hand line; cost token is non-greedy so "X" / "-1" survive.
-_HAND_RE = re.compile(r"^\[(\d+)\]\s+(.*?)\s+\(cost\s+(\S+?)\)\s*$")
-# "play Name (cost C)" prefix of a combat action; optional " -> Target" tail and an
+# "[i] Name [Type] (cost C)" hand line. The v2 card-type tag is optional so
+# historical v1 traces remain readable; cost accepts X/unplayable as before.
+_CARD_TYPE_TAG = r"(?:\s+\[(?:Attack|Skill|Power|Curse|Status)\])?"
+_HAND_RE = re.compile(
+    rf"^\[(\d+)\]\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+(\S+?)\)\s*$"
+)
+# "play Name [Type] (cost C)" prefix of a combat action; optional target tail and an
 # optional trailing sim-computed damage annotation ("(deal 9)" / "(deal 10 = 5 x2)")
 # which the binding appends to attack actions — the target group must not swallow it.
 _PLAY_RE = re.compile(
-    r"^play\s+(.*?)\s+\(cost\s+(\S+?)\)"
+    rf"^play\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+(\S+?)\)"
     r"(?:\s*->\s*(.*?))?"
     r"(?:\s*\(deal\s+[^)]*\))?\s*$"
 )

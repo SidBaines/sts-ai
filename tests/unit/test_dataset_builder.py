@@ -12,6 +12,7 @@ from sts_ai.train.sft_format import chat_template_probe_hash
 
 FRAMING = "Test framing: choose the strongest legal action."
 ADDITIVE_MANIFEST_KEYS = {
+    "loss_mask_mode",
     "weighting_mode",
     "rwr_report",
     "n_unique_examples",
@@ -144,6 +145,66 @@ class DiscoverRolloutsTest(unittest.TestCase):
 
 
 class BuildDatasetTest(unittest.TestCase):
+    def test_action_mask_is_manifest_recorded_with_token_accounting(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_rollout(
+                root,
+                _meta(
+                    world_seed=9,
+                    outcome="GameOutcome.VICTORY",
+                    final_act=2,
+                    final_floor=50,
+                ),
+                [_record(world_seed=9, decision_index=1)],
+            )
+            examples, manifest = build_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="fake-tokenizer",
+                min_positives=1,
+                loss_mask_mode="action",
+            )
+            self.assertEqual(len(examples), 1)
+            self.assertEqual(manifest["loss_mask_mode"], "action")
+            accounting = manifest["token_accounting"]
+            self.assertEqual(accounting["n_examples_counted"], 1)
+            self.assertGreater(accounting["totals"]["n_action_tokens"], 0)
+            self.assertEqual(
+                accounting["totals"]["n_supervised_thought_tokens"],
+                0,
+            )
+
+    def test_action_mask_skips_response_that_disagrees_with_recorded_action(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            record = _record(world_seed=9, decision_index=1)
+            record["agent"]["raw_response"] = '{"action_index": 0}'
+            _write_rollout(
+                root,
+                _meta(
+                    world_seed=9,
+                    outcome="GameOutcome.VICTORY",
+                    final_act=2,
+                    final_floor=50,
+                ),
+                [record],
+            )
+            examples, manifest = build_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="fake-tokenizer",
+                min_positives=1,
+                loss_mask_mode="action",
+            )
+            self.assertEqual(examples, [])
+            self.assertEqual(
+                manifest["skipped_record_counts"],
+                {"action_mask_unavailable": 1},
+            )
+
     def test_only_kept_trajectories_contribute_examples_in_strict_mode(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -476,6 +537,7 @@ class BuildDatasetTest(unittest.TestCase):
             self.assertEqual(manifest["reasoning_mode"], "none")
             self.assertFalse(manifest["enable_thinking"])
             self.assertFalse(manifest["induce_reasoning"])
+            self.assertEqual(manifest["loss_mask_mode"], "completion")
             self.assertIn("filter_report", manifest)
             self.assertIn("skipped_record_counts", manifest)
 

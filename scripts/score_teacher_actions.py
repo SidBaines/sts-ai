@@ -1,0 +1,222 @@
+#!/usr/bin/env python
+"""Score action-only teacher targets under a local MLX base model or adapter."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+from typing import Any
+
+from sts_ai.provenance import file_sha256
+from sts_ai.teacher import (
+    AGGREGATED_ROOT_VISITS,
+    PUBLIC_OBSERVATION_VERSION,
+    TEACHER_PRIVILEGE,
+)
+from sts_ai.teacher_action_eval import (
+    ACTION_ONLY_OUTPUT_CONTRACT,
+    MlxCandidateScorer,
+    build_teacher_action_report,
+)
+
+
+EXPECTED_OBSERVATION_VERSION = PUBLIC_OBSERVATION_VERSION
+EXPECTED_TEACHER_SELECTION_RULE = AGGREGATED_ROOT_VISITS
+
+
+def _load_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            if not line.strip():
+                continue
+            value = json.loads(line)
+            if not isinstance(value, dict):
+                raise ValueError(f"{path}:{line_number}: row is not a JSON object")
+            rows.append(value)
+    return rows
+
+
+def _git_head() -> str | None:
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def _adapter_provenance(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    resolved = path.resolve()
+    if not resolved.exists():
+        raise ValueError(f"adapter path does not exist: {resolved}")
+    if resolved.is_file():
+        return {"path": str(resolved), "sha256": file_sha256(resolved)}
+    files: dict[str, str | None] = {}
+    for name in ("adapters.safetensors", "adapter_config.json"):
+        candidate = resolved / name
+        if candidate.is_file():
+            files[name] = file_sha256(candidate)
+    if "adapters.safetensors" not in files:
+        raise ValueError(f"adapter directory has no adapters.safetensors: {resolved}")
+    canonical = json.dumps(files, separators=(",", ":"), sort_keys=True)
+    return {
+        "path": str(resolved),
+        "files": files,
+        "identity_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+    }
+
+
+def _manifest_provenance(path: Path | None) -> dict[str, Any]:
+    if path is None:
+        raise ValueError("teacher scoring requires a dataset manifest")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if value.get("kind") != "search_teacher_sft" or value.get("version") != 3:
+        raise ValueError("teacher manifest must be search_teacher_sft version 3")
+    if value.get("loss_mask_mode") != "action":
+        raise ValueError("teacher manifest loss_mask_mode must be 'action'")
+    if value.get("output_contract") != ACTION_ONLY_OUTPUT_CONTRACT:
+        raise ValueError("teacher manifest output_contract must be 'action_only'")
+    if value.get("enable_thinking") is not False:
+        raise ValueError("action-only teacher manifest must set enable_thinking=false")
+    if value.get("observation_version") != EXPECTED_OBSERVATION_VERSION:
+        raise ValueError(
+            "teacher manifest observation_version must be combat_public_v2"
+        )
+    if value.get("teacher_selection_rule") != EXPECTED_TEACHER_SELECTION_RULE:
+        raise ValueError(
+            "teacher manifest teacher_selection_rule must be aggregated_root_visits"
+        )
+    if value.get("teacher_privilege") != TEACHER_PRIVILEGE:
+        raise ValueError(
+            "teacher manifest teacher_privilege must be simulator_full_state"
+        )
+    source_labels = value.get("source_labels")
+    if not isinstance(source_labels, dict):
+        raise ValueError("teacher manifest must contain source_labels provenance")
+    for name in ("sha256", "manifest_sha256"):
+        digest = source_labels.get(name)
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(char not in "0123456789abcdef" for char in digest)
+        ):
+            raise ValueError(f"teacher manifest source_labels.{name} is invalid")
+    dataset_sha256 = value.get("dataset_sha256")
+    if (
+        not isinstance(dataset_sha256, str)
+        or len(dataset_sha256) != 64
+        or any(char not in "0123456789abcdef" for char in dataset_sha256)
+    ):
+        raise ValueError("teacher manifest dataset_sha256 is invalid")
+    return {
+        "path": str(path.resolve()),
+        "sha256": file_sha256(path),
+        "kind": value.get("kind"),
+        "version": value.get("version"),
+        "tokenizer_id": value.get("tokenizer_id"),
+        "chat_template_hash": value.get("chat_template_hash"),
+        "n_examples": value.get("n_examples"),
+        "enable_thinking": value.get("enable_thinking"),
+        "loss_mask_mode": value.get("loss_mask_mode"),
+        "output_contract": value.get("output_contract"),
+        "observation_version": value.get("observation_version"),
+        "teacher_selection_rule": value.get("teacher_selection_rule"),
+        "teacher_privilege": value.get("teacher_privilege"),
+        "dataset_sha256": dataset_sha256,
+        "source_labels": source_labels,
+    }
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dataset", type=Path)
+    parser.add_argument("--model", default="mlx-community/gemma-4-e4b-it-bf16")
+    parser.add_argument("--adapter-path", type=Path, default=None)
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=None,
+        help="Teacher manifest. If omitted, <dataset stem>.manifest.json is used when present.",
+    )
+    parser.add_argument("--out", type=Path, required=True)
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    manifest_path = args.manifest
+    if manifest_path is None:
+        candidate = args.dataset.with_suffix(".manifest.json")
+        manifest_path = candidate if candidate.exists() else None
+    dataset_sha256 = file_sha256(args.dataset)
+    rows = _load_jsonl(args.dataset)
+    if not rows:
+        raise ValueError("teacher dataset is empty")
+    manifest = _manifest_provenance(manifest_path)
+    if dataset_sha256 != file_sha256(args.dataset):
+        raise RuntimeError("teacher dataset changed while it was loaded")
+    if manifest["n_examples"] != len(rows):
+        raise ValueError(
+            "teacher manifest n_examples disagrees with the dataset row count"
+        )
+    if manifest["dataset_sha256"] != dataset_sha256:
+        raise ValueError("teacher manifest dataset_sha256 disagrees with the dataset")
+    for row_index, row in enumerate(rows):
+        if row.get("observation_version") != EXPECTED_OBSERVATION_VERSION:
+            raise ValueError(
+                f"teacher dataset row {row_index} has invalid observation_version"
+            )
+        if row.get("teacher_selection_rule") != EXPECTED_TEACHER_SELECTION_RULE:
+            raise ValueError(
+                f"teacher dataset row {row_index} has invalid teacher_selection_rule"
+            )
+    adapter = _adapter_provenance(args.adapter_path)
+    scorer = MlxCandidateScorer(
+        args.model,
+        adapter_path=str(args.adapter_path.resolve()) if args.adapter_path else None,
+    )
+    report = build_teacher_action_report(
+        rows,
+        scorer,
+        provenance={
+            "dataset": {
+                "path": str(args.dataset.resolve()),
+                "sha256": dataset_sha256,
+            },
+            "manifest": manifest,
+            "model_id": args.model,
+            "adapter": adapter,
+            "backend": "mlx",
+            "git_head": _git_head(),
+            "evaluator_source_sha256": file_sha256(
+                Path(__file__).resolve().parents[1]
+                / "src/sts_ai/teacher_action_eval.py"
+            ),
+        },
+    )
+    if dataset_sha256 != file_sha256(args.dataset):
+        raise RuntimeError("teacher dataset changed while it was scored")
+    if manifest["sha256"] != file_sha256(manifest["path"]):
+        raise RuntimeError("teacher manifest changed while the dataset was scored")
+    if not report["n_scored_rows"]:
+        raise ValueError(
+            "no teacher rows survived validation: "
+            + json.dumps(report["skipped_record_counts"], sort_keys=True)
+        )
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
+    args.out.write_text(rendered, encoding="utf-8")
+    print(rendered, end="")
+
+
+if __name__ == "__main__":
+    main()

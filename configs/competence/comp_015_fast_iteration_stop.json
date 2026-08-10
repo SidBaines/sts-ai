@@ -1,0 +1,59 @@
+{
+  "experiment_id": "COMP-015",
+  "record_kind": "fast_iteration_stop_decision",
+  "decided_at_utc": "2026-07-23T12:27:25Z",
+  "supersedes_execution_scope_only": {
+    "path": "configs/competence/comp_015_primary_replication.json",
+    "sha256": "fb74ed5e6fd6b9d0e2aebd992b640fe07a6cd3ede4bfbb97560aea773d68efb1"
+  },
+  "does_not_rewrite": [
+    "the original COMP-015 hypothesis or frozen success rule",
+    "the completed seed-0 result",
+    "the preserved seed-1 augmented snapshot",
+    "the completed seed-1 and seed-2 control artifacts"
+  ],
+  "decision": "Stop new COMP-015 training after obtaining the complete seed-1 pair. Score that already-complete pair as a cheap replication, but do not finish the seed-2 augmented treatment. Move back to single-seed screens for new interventions and add training repeats only after a result is promising.",
+  "rationale": [
+    "The project is still selecting and debugging the learning process, so the immediate decision is whether to try the next intervention, not whether to make a publication-grade augmentation claim.",
+    "Seed 0 already makes COMP-015's strict all-three-pair success rule impossible and fails its behaviour gate.",
+    "COMP-016 independently confirms that seed 0's failure is a real move-choice and positional-shortcut failure rather than a complete-JSON scoring artefact.",
+    "A second complete pair now exists and can cheaply test whether seed 0 was grossly idiosyncratic. A third pair has low expected decision value before any promising treatment exists.",
+    "Multiple training seeds remain required before a positive result is treated as robust, used for a final-cohort claim, or promoted as the competence method."
+  ],
+  "preserved_complete_seed1_pair": {
+    "control": {
+      "path": "data/competence/comp_015/checkpoints/seed1_control_identity_step1500_pinned",
+      "identity_sha256": "c3a5cc1addfb9f32ddb936ebe7987fee30012c1d67f40439cd035f19585134af",
+      "weights_sha256": "d74d8d10794285804946b84469a6ea6f0f98412253ffce62cee861b7cacd8d49"
+    },
+    "augmented": {
+      "path": "data/competence/comp_015/checkpoints/seed1_augmented_cyclic_step1500",
+      "identity_sha256": "3cba7ccff7bdcd2408c1d38432153317ef07d203fcbdb61a9a0c0989648bceab",
+      "weights_sha256": "59cbd798e16a94d535ecaec67a89baed67e509116bb189356dbaa54f82a47d44"
+    }
+  },
+  "preserved_unpaired_seed2_control": {
+    "path": "data/competence/comp_015/checkpoints/seed2_control_identity_step1500_pinned",
+    "identity_sha256": "f24dacd8819c5985326eb8b17a5ead8355759514f282e0f684678e61fe27f88f",
+    "weights_sha256": "83fda35323c05375924bc594c795f35cb11b7cad625e6753730ca9578b051e66",
+    "interpretation": "No paired COMP-015 seed-2 conclusion is permitted. This completed control may be reused prospectively only under a separately frozen comparison whose exact schedule and training contract match."
+  },
+  "stopped_seed2_augmented_attempt": {
+    "path": "data/competence/comp_015/adapters/seed2_augmented_cyclic_primary1500_pinned",
+    "process_termination": "SIGTERM after the user challenged the value of further training seeds",
+    "saved_adapter_weights_exist": false,
+    "saved_checkpoint_exists": false,
+    "preparation_report_sha256": "358231e788ac49b3c9223ea063503b8130400fa802eb70fd28742d847598461d",
+    "adapter_config_sha256": "82878d26e8469fb1a123596555b02aa4a7ebf694fd4faeb7c932b84ad2e4b957",
+    "mlx_config_sha256": "bda13fef0e5b51b2a338532832b23a11e90af597de5e674c885a2edf790bdc62",
+    "interpretation": "Preparation provenance only; this is not a trained arm and must not be evaluated or counted."
+  },
+  "sequential_seed_policy": {
+    "fast_screen": "one training seed on the smallest diagnostic that can falsify the idea",
+    "full_development_screen": "one training seed first; stop on a clear failure",
+    "first_replication": "add a second training seed only after a promising or ambiguous first result, or when an already-complete paired artifact makes the check cheap",
+    "robust_claim": "require additional frozen training repeats before final-cohort release or a substantive competence claim",
+    "generation_sampling": "multiple stochastic rollouts per fixed fight answer a different question and may still be needed to estimate play outcomes for one trained model"
+  },
+  "next_action": "Score the complete seed-1 pair with the float32 direct train/development/cyclic battery, document it as a bounded replication, then proceed to the no-native-thinking output comparison and single-seed weight-8 screen."
+}

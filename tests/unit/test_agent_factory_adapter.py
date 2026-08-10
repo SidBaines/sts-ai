@@ -39,6 +39,15 @@ class AgentFactoryAdapterTest(unittest.TestCase):
         self.assertIsNone(fake_agent.call_args.kwargs["adapter_path"])
         self.assertNotIn("preserve_special_tokens", fake_agent.call_args.kwargs)
 
+    def test_output_contract_is_forwarded_to_both_model_backends(self):
+        with patch("sts_ai.agent_factory.MlxQwenJsonAgent") as fake_mlx:
+            build_agent("mlx", model="m", output_contract="action_only")
+        with patch("sts_ai.agent_factory.VllmJsonAgent") as fake_vllm:
+            build_agent("vllm", model="m", output_contract="action_only")
+
+        self.assertEqual(fake_mlx.call_args.kwargs["output_contract"], "action_only")
+        self.assertEqual(fake_vllm.call_args.kwargs["output_contract"], "action_only")
+
 
 if __name__ == "__main__":
     unittest.main()

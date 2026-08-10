@@ -1,0 +1,143 @@
+{
+  "experiment_id": "COMP-010",
+  "stage": "first_per_turn_action_value_only_teacher_sft",
+  "status": "preregistered_before_first_model_load",
+  "frozen_at_utc": "2026-07-23T03:31:19Z",
+  "dependency": {
+    "experiment": "COMP-009",
+    "result": "failed_heldout_action_gate_majority_class_collapse",
+    "result_path": "configs/competence/comp_009_result.json",
+    "result_sha256": "6ff01f0d0688631774084d58146ac8dde904c755d84b9e31113bf9e707345c54"
+  },
+  "hypothesis": "Aligning train and evaluation at the first decision of each turn, while supervising only the policy-bearing action-value token, will prevent COMP-009's action-0 collapse and improve held-out teacher-action choice.",
+  "interventions": {
+    "source_state_selection": "first_per_turn",
+    "selection_applied_before_confidence_filtering": true,
+    "mlx_action_token_only": true,
+    "format_and_terminator_tokens_remain_in_causal_context": true,
+    "format_and_terminator_tokens_receive_loss": false,
+    "unchanged": [
+      "combat_public_v2 interface",
+      "aggregated_root_visits teacher",
+      "50k search budget and consensus filter",
+      "base model and tokenizer revision",
+      "rank-8 eight-layer LoRA",
+      "learning rate",
+      "batch size and seed"
+    ]
+  },
+  "datasets": {
+    "full150": {
+      "path": "data/competence/comp_010/datasets/train_first_per_turn_teacher_action_only.jsonl",
+      "sha256": "132a6640849f3a2015624038871207e224d75298cc0f142fc1c0f7b5effe08d3",
+      "manifest": "data/competence/comp_010/datasets/train_first_per_turn_teacher_action_only.manifest.json",
+      "manifest_sha256": "5ed7f8f540f10fa4e50432df073633c876bc5586bc4ce75f32f9bd7cb399d6e1",
+      "n_source_rows": 652,
+      "n_first_per_turn_rows": 173,
+      "n_examples": 150,
+      "teacher_action_counts": {"0": 43, "1": 43, "2": 44, "3": 19, "4": 1},
+      "end_turn_targets": 3
+    },
+    "tiny32": {
+      "path": "data/competence/comp_010/datasets/tiny32_first_per_turn_teacher_action_only.jsonl",
+      "sha256": "f9ab33b93a4edc0a70d2bb12207eb06434b0f0ffc8589dfa6e4eea1d63211b97",
+      "manifest": "data/competence/comp_010/datasets/tiny32_first_per_turn_teacher_action_only.manifest.json",
+      "manifest_sha256": "9b37f9e41f2e3e7b8ec800a1a06424fcd37fc3edbfcfcd6972b843f30cb07489",
+      "n_examples": 32,
+      "teacher_action_counts": {"0": 7, "1": 7, "2": 12, "3": 5, "4": 1},
+      "selection": "stable_public_state_hash_prefix_after_first_per_turn_and_confidence_filtering"
+    },
+    "heldout57": {
+      "path": "data/competence/comp_008/datasets/holdout_turn_first_teacher_action_only.jsonl",
+      "sha256": "e880e45bb9f9da60343953c89ca4c45cdb09a19666fb72e7afe05ecbcc0569dc",
+      "manifest": "data/competence/comp_008/datasets/holdout_turn_first_teacher_action_only.manifest.json",
+      "manifest_sha256": "fe41e2c6a024d3eb14f8c0a6945f74765fa94b4ecde76cb2e1ca91aab5050142",
+      "n_examples": 57,
+      "teacher_action_counts": {"0": 21, "1": 15, "2": 13, "3": 8}
+    }
+  },
+  "model": {
+    "id": "mlx-community/gemma-4-e4b-it-bf16",
+    "cached_huggingface_revision": "eec12d0899edea9b738ab1009af9159cdfd70d71",
+    "hf_hub_offline": true,
+    "tokenizer_id": "mlx-community/gemma-4-e4b-it-bf16",
+    "chat_template_hash": "d74b50cb2541e519"
+  },
+  "common_training": {
+    "backend": "mlx",
+    "loss_mask_mode_in_manifest": "action",
+    "mlx_action_token_only_override": true,
+    "num_layers": 8,
+    "batch_size": 1,
+    "learning_rate": 0.0001,
+    "max_seq_length": 8192,
+    "validation_fraction": 0.0,
+    "seed": 0,
+    "shuffle_seed": 0,
+    "optimizer": "adam",
+    "lora_rank": 8,
+    "lora_scale": 20.0,
+    "lora_dropout": 0.0,
+    "gradient_accumulation_steps": 1,
+    "checkpoint_rule": "score only each stage's frozen final adapter"
+  },
+  "stage_a_tiny32": {
+    "adapter_output": "data/competence/comp_010/adapters/tiny32_action_token_only",
+    "output_must_not_exist": true,
+    "expected_examples": 32,
+    "iterations": 320,
+    "effective_passes": 10,
+    "steps_per_report": 32,
+    "save_every": 160,
+    "base_report": "data/competence/comp_010/eval/tiny32_base_teacher_actions.json",
+    "adapter_report": "data/competence/comp_010/eval/tiny32_action_token_only_teacher_actions.json",
+    "gate": {
+      "minimum_correct_rows": 31,
+      "minimum_top1_agreement": 0.95,
+      "require_zero_invalid_and_skipped_rows": true,
+      "failure_action": "stop before stage B and diagnose the new token mask"
+    }
+  },
+  "stage_b_full150": {
+    "runs_only_if_stage_a_passes": true,
+    "adapter_output": "data/competence/comp_010/adapters/full150_action_token_only",
+    "output_must_not_exist": true,
+    "expected_examples": 150,
+    "iterations": 750,
+    "effective_passes": 5,
+    "steps_per_report": 75,
+    "save_every": 375,
+    "train_report": "data/competence/comp_010/eval/full150_action_token_only_train_teacher_actions.json",
+    "heldout_report": "data/competence/comp_010/eval/heldout57_action_token_only_teacher_actions.json",
+    "gate_to_behavioural_evaluation": {
+      "minimum_train_correct_rows": 135,
+      "minimum_train_top1_agreement": 0.9,
+      "minimum_heldout_correct_rows": 32,
+      "minimum_heldout_top1_agreement": 0.55,
+      "minimum_heldout_mean_teacher_probability": 0.37216219280078805,
+      "maximum_heldout_mean_teacher_candidate_nll": 1.7769037108772021,
+      "require_nonzero_action_predictions": true,
+      "require_zero_invalid_and_skipped_rows": true,
+      "failure_action": "stop before behavioural evaluation and diagnose remaining capacity, optimization, or teacher-policy generalization limits"
+    }
+  },
+  "code_provenance": {
+    "git_head": "ba0c6b69ec004181b61f9e6c12c6662c38a7f14c",
+    "worktree_was_dirty": true,
+    "teacher_builder_sha256": "34fb63465e93b4af3a6bc880c1469cb51cb54518dac83e86ce44b8b3afe47c77",
+    "train_cli_sha256": "8e18e68e699c24cd96050010308acd6ddd99566d947a62bf98a98571438003a4",
+    "mlx_trainer_sha256": "bd906c70a8c7c684493bc9470d1a8a8d2233da7fea6ff5114acf9e31aefbb65a",
+    "sft_format_sha256": "77074300c00c18e2d679bf39df5ef79c96e4b51c607d9592304793c71bf5e47b",
+    "score_cli_sha256": "355c55629fe04281f61cf6cafcffcae3d713e2110c7db7dc6d1af4ef6f315f71",
+    "teacher_evaluator_sha256": "0e0cf5bd032ff3dd199242f7584c24243626b01c83df37cc774a82d8dee383af"
+  },
+  "software": {
+    "python": "3.12.13",
+    "mlx": "0.31.2",
+    "mlx_lm": "0.31.3",
+    "transformers": "5.12.1",
+    "tokenizers": "0.22.2",
+    "numpy": "2.4.6"
+  },
+  "compute": "local Apple Silicon/Metal only; no RunPod"
+}

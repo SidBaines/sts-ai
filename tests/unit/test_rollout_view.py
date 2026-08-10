@@ -310,6 +310,10 @@ class PlayRegexTest(unittest.TestCase):
         # X-cost token still parses
         m4 = _PLAY_RE.match("play Whirlwind (cost X)")
         self.assertEqual((m4.group(1), m4.group(2)), ("Whirlwind", "X"))
+        # combat_public_v2 adds a human-visible type tag without changing the
+        # card name consumed by rollout analysis.
+        m5 = _PLAY_RE.match("play Bash [Attack] (cost 2) -> Cultist (deal 8)")
+        self.assertEqual((m5.group(1), m5.group(2), m5.group(3)), ("Bash", "2", "Cultist"))
 
 
 if __name__ == "__main__":

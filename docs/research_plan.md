@@ -1,5 +1,96 @@
 # SlayTheSpireAI Research Plan
 
+## Active Priority Override: Competence First
+
+As of 2026-07-22, framing/risk-trait work is paused while the project establishes that a model can learn to play the game well. The active operational source of truth is [`competence_plan.md`](competence_plan.md). It contains the current diagnosis, staged gates, experiment registry, evaluation rules, and next action.
+
+The framing question below remains the long-term scientific goal. Resume it from a frozen competence checkpoint after the competence plan's exit gate, rather than continuing to vary framing while the base policy and learning pipeline are not yet demonstrably capable.
+
+**Progress update (2026-07-23):** a stopped live COMP-002 transcript exposed a
+decision-critical interface defect: combat state/actions omitted the game-visible
+card type, and Gemma consequently classified Attacks as Enrage-triggering Skills
+while treating Defend as safe. COMP-002 was stopped after 71 partial decisions;
+its v1 rollouts and the untrained 493-row COMP-005 dataset are preserved but
+rejected for competence use. `combat_public_v2` now labels Attack/Skill/Power/
+Status/Curse across state, actions, selections, structured cards, and search
+descriptions while preserving legacy/v1 replay switches. Start signatures move
+to schema 2. COMP-004A separately established that displayed-action-aggregated
+root visits are a more reliable search policy than native winning-sequence
+selection (7/10 versus 4/10 completed wins, 3 versus 6 ambiguous stops).
+
+The v2 build and repeated replay validation are complete: current cohorts pass
+43/43 Nob, 43/43 Lagavulin, and 36/36 Sentries. The aggregated-root 50k audit
+accepts 57/60 held-out states, and dense Nob collection produced 600/652 eligible
+micro-actions. E4B and the MLX LoRA path now pass two memorization controls: the
+easy tiny32 at 32/32 and a harder first-per-turn tiny32 at 31/32. A three-pass
+600-row run nevertheless collapsed to predicting display index 0, exposing a
+train/eval state-selection and target-prior problem. A matched mask control then
+showed that required format-plus-action supervision fit the harder set while
+pure action-value-token supervision did not. COMP-012 then used the mixed mask
+for 20 passes over 150 aligned first-per-turn states: it fit 149/150 train but
+only reached 28/57 development top-1 versus base 22/57, below the frozen 32/57
+gate, and worsened NLL from 1.777 to 2.572. Behaviour was correctly not run.
+The step-1,500 checkpoint reaches 27/57 with much better NLL (1.183) but fits
+only 102/150 train, showing that later passes mostly memorize and sharpen
+confidence rather than solve generalization. COMP-014 now finds severe semantic
+sensitivity to cyclic legal-action reordering at both checkpoints: top-1
+invariance is 0.448/0.253 and mean probability TV is 0.400/0.696 at steps
+1,500/3,000. COMP-015 therefore isolates compute-matched cyclic augmentation
+against an unaugmented control. Its seed-0 fixed pair has completed: augmentation
+reduces probability TV 0.487→0.202 and source-macro NLL 4.076→1.501, but semantic
+top-1 invariance remains 0.149 and unpermuted development agreement regresses
+21/57→17/57. Assigned-position accuracy shows that the control's index-0
+shortcut is mostly replaced by an index-3 shortcut, not semantic equivariance.
+The seed-1 step-1,500 pair reverses seed 0 on held-out choices: augmentation
+moves development direct agreement 24/57→31/57 and cyclic invariance
+0.335→0.824, while TV improves 0.432→0.325. It still misses 32/57 by
+one, regresses development NLL slightly, and remains above the 0.20 TV gate.
+That promising but incomplete reversal activated the sequential policy's
+ambiguity trigger. The single matched seed-2 treatment then improves development
+direct agreement 28/57→32/57, cyclic invariance 0.362→0.629, TV
+0.473→0.298, and cyclic source-macro agreement/NLL
+0.371/2.073→0.503/1.262. It passes all prospectively frozen carry
+thresholds, but train fit falls 113/150→81/150 and the treatment remains
+below the standalone invariance/TV behaviour gate. COMP-015 is closed: the
+original strict success rule failed, no behaviour or final data ran, and cyclic
+augmentation is retained only as a possible component after move-choice
+weighting succeeds independently.
+COMP-016 now shows that the shortcut is not a complete-JSON measurement
+artefact. A genuine float32 direct action-digit projection removes exact ties
+but reproduces development choices exactly (21/57 control, 17/57 augmented)
+and retains cyclic invariance 0.000→0.149 with TV 0.484→0.197. Separate
+teacher-forced loss is effectively zero on the eight required-format tokens
+but remains 1.293/1.495 on the one action token. COMP-017 then finds that,
+with native thinking off, immediate
+action JSON is valid/correct on 57/57 and 26/57 development states whereas
+visible JSON reasoning is 55/57 and 19/57, with two truncations and roughly
+eightfold latency; no reasoning fights run. COMP-018 (`5512cc8c…4d54`) then
+rejects fixed action weight 8 at the harder-tiny32 gate: direct and greedy
+agreement remain 7/32 with nearly uniform, state-independent move probabilities,
+despite valid/legal JSON on 32/32. The conditional full150 arm does not run.
+A prospectively frozen same-seed current-code unit control reaches 31/32 and
+reproduces both historical COMP-011 checkpoint files byte-for-byte; token
+alignment, gradient scaling, and compiled numeric-weight checks pass. The
+failure is therefore an adverse optimization path from aggressive weighting,
+not a current trainer regression, dropped action gradient, or tiny-task E4B
+capacity failure. Do not add a seed or sweep weights. During development, add
+training seeds sequentially only after promising or ambiguous signal; require
+independent frozen repeats before any robust positive claim.
+With the cheap output, ordering, and weighting alternatives now isolated, the
+next step is to preregister COMP-019: a matched no-thinking larger-model static
+teacher comparison on the same public prompts and frozen tiny/full datasets.
+If the larger model also fails held-out transfer, prioritize broader
+data/DAgger coverage.
+A fresh 13-window Nob final cohort on world seeds 600–659 has been replayed
+twice without teacher/model queries and is embargoed until a development gate
+passes. Those windows form only 12 independent world-seed clusters, so clustered
+power/inference must be frozen and the cohort extended blindly if necessary
+before release. The historical K=4 COMP-001 result predates
+`combat_public_v2`; a matched v2 base arm is still required by Gate C0.
+This evidence continues to point first at harness, data, and optimization
+choices rather than an established Gemma E4B capacity ceiling. Framing work
+remains paused.
+
 ## Overall Goal
 
 This repo is a research harness for testing how training-time framing changes what an LLM learns from the same or similar reward signal.
@@ -10,7 +101,7 @@ The motivating scientific question is:
 
 For example, if two models see equivalent successful trajectories but one is framed as making "risk-reward tradeoffs" and the other as being "adventurous", do their downstream behaviors generalize differently toward risk-seeking, adventure-seeking, fun-seeking, confidence, impulsivity, or other nearby traits?
 
-The first concrete environment is Slay the Spire through `gamerpuppy/sts_lightspeed`, starting with Qwen3-4B as the initial model target. Slay the Spire is not the cleanest possible scientific environment, but it is a useful ecological testbed because risk is partly emergent: pathing, low-HP campfire choices, elite fights, card rewards, shops, potions, and boss preparation all create real tradeoffs.
+The first concrete environment is Slay the Spire through `gamerpuppy/sts_lightspeed`. Qwen3-4B was the initial historical model target; the current competence student is `mlx-community/gemma-4-e4b-it-bf16`. Slay the Spire is not the cleanest possible scientific environment, but it is a useful ecological testbed because risk is partly emergent: pathing, low-HP campfire choices, elite fights, card rewards, shops, potions, and boss preparation all create real tradeoffs.
 
 The repo should eventually support two complementary experiment arms:
 
@@ -266,12 +357,12 @@ For later thinking-enabled training, allow thinking during generation for capabi
 The forward context should include the reasoning that preceded the action, otherwise the action likelihood is evaluated under a different context than the one that generated it. Reasoning can be masked from the primary action loss initially. Later experiments can compare:
 
 - no-thinking rollouts;
-- thinking in context with action-only loss;
+- thinking in context with the compact-action mixed format+action mask;
 - thinking in context with full trajectory loss.
 
 ### Local Training Is a Benchmark, Not an Assumption
 
-The target model is Qwen3-4B. The MacBook Pro with 48GB unified memory may be enough for some local fine-tuning paths, but the repo should measure before depending on full-parameter local training.
+The historical target model for this section was Qwen3-4B; the active competence student is Gemma E4B. The MacBook Pro with 48GB unified memory may be enough for some local fine-tuning paths, but the repo should measure before depending on full-parameter local training.
 
 Fallback order:
 
@@ -623,8 +714,8 @@ Later scientific metrics:
 
 ## Known Limitations
 
-- Hybrid control means the LLM is not yet learning combat tactics.
-- Built-in combat search may mask some consequences of bad pathing/reward choices.
+- Both hybrid search-resolved combat and full LLM combat control are implemented. Competence experiments must state which mode they use: hybrid mode can mask tactical errors and is an ablation/upper bound, not the final learned-policy target.
+- Built-in combat search may mask some consequences of bad pathing/reward choices and may use internal state unavailable to a human-facing policy; search-derived action labels therefore require the privilege/stability audit in [`competence_plan.md`](competence_plan.md).
 - StS risk is messy and partly subjective; risk proxies must be treated as imperfect.
 - Fixed-rollout action training is not exactly on-policy RL. It controls data and reward while deliberately allowing frame-conditioned gradients.
 - Qwen3-4B local full-parameter training may be slower or tighter than expected; the repo should benchmark rather than assume.
@@ -633,6 +724,8 @@ Later scientific metrics:
 - **`agent.thinking_tokens` counts only the `<think>` span**, so it under-reports reasoning for models that reason without `<think>` tags (e.g. DeepSeek-R1-Distill); use `completion_tokens` as the reasoning-length proxy there.
 
 ## Near-Term Next Steps
+
+> **2026-07-23 priority note:** The historical list below is retained for provenance. Its active ordering is superseded by [`competence_plan.md`](competence_plan.md) until the competence exit gate is met. `combat_public_v2`, current cohorts, aggregated-root 50k teacher data, and E4B tiny-fit controls are complete. COMP-012 fit train but failed development generalization, so no behaviour ran. COMP-014 then established strong cyclic action-order sensitivity at both saved checkpoints. COMP-016 confirms that this is not a scoring artefact and finds solved format tokens but weak move-choice tokens. COMP-015 is closed: seed 0 regresses development, while seeds 1 and 2 improve development choices and invariance. Seed 2 passes all frozen carry thresholds, but still fails the standalone stability gate and worsens train fit; retain augmentation only as a possible later component and run no behaviour. COMP-017 rejects visible JSON reasoning: no-native-thinking immediate action JSON scores 26/57 versus 19/57, is more valid, and is roughly eight times faster, so no reasoning fights ran. COMP-018 rejects fixed action weight 8 at 7/32 on harder tiny32; its exact current unit control reaches 31/32 and reproduces historical checkpoint bytes, so no full150, extra seed, or weight sweep ran. The active next action is to preregister COMP-019, a matched no-thinking larger-model static comparison on the same public prompts and frozen tiny/full datasets; if it also fails held-out transfer, prioritize broader teacher/DAgger coverage. Development-time training seeds remain sequential, and independent frozen repeats remain required before a robust positive claim. A fresh 12-seed/13-window final Nob cohort remains embargoed until a development gate passes and clustered power is frozen. The matched v2 Gate-C0 behavioural baseline, corrected local policy-gradient training, multi-fight, and whole-game competence remain later work.
 
 Done in the 2026-06-14 session:
 

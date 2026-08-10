@@ -1,0 +1,95 @@
+{
+  "experiment_id": "COMP-014",
+  "status": "complete",
+  "completed_at_utc": "2026-07-23T05:44:24Z",
+  "preregistration": {
+    "path": "configs/competence/comp_014.json",
+    "sha256": "f321cc3812660fc929d16a4a60ef360b60b95c98c89b526e85c1ac9e10994276"
+  },
+  "report": {
+    "path": "data/competence/comp_014/eval/cyclic_action_order_step1500_step3000.json",
+    "sha256": "fbdcf176987e15c7371e54ecc24270362ffdf9762b9076c0339ffee295fa55ac",
+    "transformation_set_sha256": "b496251082de9764852d833675c06d69ad43c77dd9970176e8aeb32c0ad59d97"
+  },
+  "health_gate": {
+    "passed": true,
+    "n_source_rows_per_checkpoint": 57,
+    "n_nonzero_rotations_per_checkpoint": 221,
+    "n_candidate_sequence_scores_per_checkpoint": 1134,
+    "input_reference_checkpoint_and_source_hashes_unchanged": true,
+    "partial_output": false
+  },
+  "frozen_rule_result": {
+    "classification": "action_order_sensitive",
+    "primary_rule_triggered": true,
+    "strong_cyclic_stability": false,
+    "mixed_or_borderline": false,
+    "triggered_by_both_checkpoints": true,
+    "next_branch": "compute_matched_permutation_augmented_static_sft"
+  },
+  "checkpoints": {
+    "step1500": {
+      "unpermuted_top1": "27/57",
+      "unpermuted_teacher_nll": 1.1826254680923707,
+      "rotated_top1": "86/221",
+      "rotated_teacher_nll": 2.6341528467845583,
+      "rotated_semantic_top1_invariance": 0.4479638009049774,
+      "rotated_semantic_top_set_invariance": 0.40271493212669685,
+      "mean_semantic_probability_total_variation": 0.40019628659010464,
+      "all_rotations_top1_invariant_sources": "4/57",
+      "unpermuted_top1_tied_count": 4,
+      "rotated_top1_tied_count": 17,
+      "all_variant_teacher_correct_by_assigned_position": {
+        "0": "30/57",
+        "1": "39/57",
+        "2": "34/57",
+        "3": "10/54",
+        "4": "0/35",
+        "5": "0/15",
+        "6": "0/2",
+        "7": "0/1"
+      }
+    },
+    "step3000": {
+      "unpermuted_top1": "28/57",
+      "unpermuted_teacher_nll": 2.571889338141858,
+      "rotated_top1": "70/221",
+      "rotated_teacher_nll": 4.70926156057595,
+      "rotated_semantic_top1_invariance": 0.25339366515837103,
+      "rotated_semantic_top_set_invariance": 0.248868778280543,
+      "mean_semantic_probability_total_variation": 0.6955925545894031,
+      "all_rotations_top1_invariant_sources": "1/57",
+      "unpermuted_top1_tied_count": 3,
+      "rotated_top1_tied_count": 2,
+      "all_variant_teacher_correct_by_assigned_position": {
+        "0": "33/57",
+        "1": "25/57",
+        "2": "32/57",
+        "3": "8/54",
+        "4": "0/35",
+        "5": "0/15",
+        "6": "0/2",
+        "7": "0/1"
+      }
+    }
+  },
+  "interpretation": {
+    "established": [
+      "Both checkpoints fail the frozen sensitivity rule by a wide margin on both top-1 invariance and probability total variation.",
+      "Tie-aware top-set invariance is as poor as top-1 invariance, so deterministic tie-breaking does not explain the result.",
+      "Late training exacerbates the sensitivity: step3000 has lower semantic invariance and much larger probability variation than step1500.",
+      "Accuracy collapses when the same teacher action is assigned positions 3 and above, which is consistent with a learned early-menu-position bias."
+    ],
+    "not_established": [
+      "Cyclic sensitivity does not by itself identify the internal mechanism or prove invariance failure for every arbitrary permutation family.",
+      "The diagnostic does not show that permutation augmentation will improve unpermuted development actions or closed-loop play.",
+      "Residual deck/window coverage and E4B capacity remain open after action-order robustness is isolated."
+    ]
+  },
+  "decision": {
+    "behaviour_evaluation_authorized": false,
+    "fresh_final_cohort_touched": false,
+    "next_experiment": "COMP-015",
+    "next_experiment_requirement": "Compare permutation-augmented and unaugmented static SFT with identical source states, source-row draws, update count, batch size, optimizer family, mixed loss mask, and policy-bearing token exposure. Freeze a prospective checkpoint grid and select by development NLL with a top-1 floor."
+  }
+}

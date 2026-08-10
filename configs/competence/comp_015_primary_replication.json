@@ -1,0 +1,141 @@
+{
+  "experiment_id": "COMP-015",
+  "record_kind": "power_interruption_primary_endpoint_execution_amendment",
+  "status": "preregistered_before_new_replication_training",
+  "frozen_at_utc": "2026-07-23T11:43:31Z",
+  "original_config": {
+    "path": "configs/competence/comp_015.json",
+    "sha256": "303a7cdf3bbae3df8dd9cd4cf0b0d5a853777e4059e8f6e388872eefc92294b6"
+  },
+  "measurement_dependency": {
+    "path": "configs/competence/comp_016_result.json",
+    "sha256": "7fbae99e4eecc3f3bea4fef3755a5bda5bd8497836da60b5aa4ac0a4fc379df9",
+    "decision": "direct float32 scoring confirms the positional shortcut and rejects the complete-JSON measurement-artifact branch"
+  },
+  "reason_for_amendment": [
+    "Host power loss interrupted seed-1 augmented training after its atomic step-1500 snapshot and before steps 2250/3000; optimizer state was not saved, so the old process cannot be resumed faithfully.",
+    "Step 1500 was frozen in the original config as the selection-free primary causal endpoint.",
+    "Seed 0 already makes the strict all-three-pair primary success rule impossible and fails the behaviour gate.",
+    "Completing the later-checkpoint grid would spend compute on a secondary selection analysis that cannot restore the primary claim. This amendment retains the exact primary comparison and transparently retires the later grid."
+  ],
+  "interpretation_boundary": {
+    "original_all_three_pair_success_rule_remains_failed": true,
+    "remaining_runs_estimate_reproducibility_of_the_mechanism_only": true,
+    "no_behaviour_permitted_from_seed0": true,
+    "no_new_teacher_states": true,
+    "no_action_reweighting": true,
+    "no_dagger": true,
+    "no_model_scaling": true,
+    "development57_is_not_fresh_evidence": true,
+    "fresh_final_cohort_remains_embargoed": "configs/competence/nob_fresh_final_cohort_v1.json",
+    "the_interrupted_arm_is_not_called_a_completed_3000_step_run": true
+  },
+  "base_model": {
+    "logical_id": "mlx-community/gemma-4-e4b-it-bf16",
+    "required_cached_revision": "eec12d0899edea9b738ab1009af9159cdfd70d71",
+    "content_identity_sha256": "079614534dd4441ec68f1a16f6493b499590e4755f89aec2ebc32a05b8b0cb58",
+    "offline_only": true,
+    "revision_evidence_for_interrupted_arm": "the local refs/main file moved to this revision before the interrupted checkpoint was created; the historical adapter config itself recorded only the logical ID"
+  },
+  "fixed_training_contract_for_new_arms": {
+    "iterations": 1500,
+    "consumed_schedule": "the exact first 1500 rows of each already-frozen 3000-row COMP-015 dataset",
+    "batch_size": 1,
+    "num_layers": 8,
+    "learning_rate": 0.0001,
+    "max_seq_length": 8192,
+    "loss_mask": "mixed required-format-plus-action",
+    "action_token_only": false,
+    "action_token_weight": 1.0,
+    "preserve_row_order": true,
+    "validation_fraction": 0.0,
+    "lora_rank": 8,
+    "lora_scale": 20.0,
+    "lora_dropout": 0.0,
+    "gradient_accumulation_steps": 1,
+    "optimizer": "Adam",
+    "steps_per_report": 150,
+    "save_every": 750,
+    "retained_steps": [
+      750,
+      1500
+    ],
+    "fresh_base_load_per_arm": true,
+    "warm_start": false,
+    "output_must_not_exist": true
+  },
+  "preserved_interrupted_primary_snapshot": {
+    "arm": "seed1_augmented_cyclic",
+    "path": "data/competence/comp_015/checkpoints/seed1_augmented_cyclic_step1500",
+    "identity_sha256": "3cba7ccff7bdcd2408c1d38432153317ef07d203fcbdb61a9a0c0989648bceab",
+    "weights_sha256": "59cbd798e16a94d535ecaec67a89baed67e509116bb189356dbaa54f82a47d44",
+    "source_dataset_sha256": "16e0580354cc98272e057cca83cc731308857dceebd2a1ed0a6417cc5ae3e24c",
+    "source_manifest_sha256": "700e7d4dd103f9f2b8895b3352520d808496cd8ddce07e30c1d4bbd5f980d8cd",
+    "ordered_step_source_sha256": "1a2b6be100ee5e065beef08973000373239e3889ec5784f44c4bd58226e5a1fc",
+    "source_schedule_sha256": "0e9343758d8d7d0d3809d5336871f83c2cdd0f678b99604aa2b6d649d81dedff"
+  },
+  "new_arms": {
+    "seed1_control_identity": {
+      "seed": 1,
+      "dataset": "data/competence/comp_015/datasets/seed1_control_identity_20pass.jsonl",
+      "dataset_sha256": "115a3fe9969730dd05b7fe0512756f6223bcc8bccda4ba7baae5de94f3c265a4",
+      "manifest": "data/competence/comp_015/datasets/seed1_control_identity_20pass.manifest.json",
+      "manifest_sha256": "d8b4135109285acd542ea15e58e34f4556080a221f500fc26ccddb5d84193c68",
+      "ordered_step_source_sha256": "1a2b6be100ee5e065beef08973000373239e3889ec5784f44c4bd58226e5a1fc",
+      "source_schedule_sha256": "0e9343758d8d7d0d3809d5336871f83c2cdd0f678b99604aa2b6d649d81dedff",
+      "output": "data/competence/comp_015/adapters/seed1_control_identity_primary1500_pinned"
+    },
+    "seed2_control_identity": {
+      "seed": 2,
+      "dataset": "data/competence/comp_015/datasets/seed2_control_identity_20pass.jsonl",
+      "dataset_sha256": "65fff039791c3b1eda67f69a3fbf8b03be8233d7ca47bee8c24d6fc7e8708d98",
+      "manifest": "data/competence/comp_015/datasets/seed2_control_identity_20pass.manifest.json",
+      "manifest_sha256": "24a9845391f2146058f4117fdc52f9b488625be3031f361ad9a377de0e672653",
+      "ordered_step_source_sha256": "716cfece9913bbac9b2bfedca4904023ce638ef70482de7468833a3990816c77",
+      "source_schedule_sha256": "9dcc9f4adb333524b26a2da5558e9c3a12b7e5dc4034bfa0b86e559037df612f",
+      "output": "data/competence/comp_015/adapters/seed2_control_identity_primary1500_pinned"
+    },
+    "seed2_augmented_cyclic": {
+      "seed": 2,
+      "dataset": "data/competence/comp_015/datasets/seed2_augmented_cyclic_20pass.jsonl",
+      "dataset_sha256": "4c5b8c5a223239ca2376651c760c7f55893a0559d670c3006e712c21db6ea5ec",
+      "manifest": "data/competence/comp_015/datasets/seed2_augmented_cyclic_20pass.manifest.json",
+      "manifest_sha256": "f0bffe8067f20a296e7aa6094c27495fd7d991d4e7bf7a0862ed5386463b0c36",
+      "ordered_step_source_sha256": "716cfece9913bbac9b2bfedca4904023ce638ef70482de7468833a3990816c77",
+      "source_schedule_sha256": "9dcc9f4adb333524b26a2da5558e9c3a12b7e5dc4034bfa0b86e559037df612f",
+      "output": "data/competence/comp_015/adapters/seed2_augmented_cyclic_primary1500_pinned"
+    }
+  },
+  "evaluation": {
+    "fixed_checkpoint": 1500,
+    "arms": [
+      "seed1_control_identity",
+      "seed1_augmented_cyclic",
+      "seed2_control_identity",
+      "seed2_augmented_cyclic"
+    ],
+    "required_reports_per_arm": [
+      "unpermuted_train150_complete_json_candidate_score",
+      "unpermuted_development57_complete_json_candidate_score",
+      "all_nonzero_cyclic_development57_complete_json_candidate_score",
+      "unpermuted_train150_float32_direct_action_score",
+      "unpermuted_development57_and_all_nonzero_cyclic_float32_direct_action_score"
+    ],
+    "primary_replication_readout": [
+      "paired change in direct semantic top1 invariance",
+      "paired change in direct probability total variation",
+      "paired change in direct all-variant source-macro teacher agreement and action NLL",
+      "paired change in direct unpermuted development agreement and action NLL",
+      "assigned-position prediction counts"
+    ],
+    "statistics": "the paired training seed is the replication unit; development windows are clusters; rows and rotations are not independent replicates",
+    "behaviour_gate": "unchanged original COMP-015 gate; already impossible for the strict all-three primary claim after seed 0"
+  },
+  "code_provenance": {
+    "git_head": "ba0c6b69ec004181b61f9e6c12c6662c38a7f14c",
+    "worktree_was_dirty": true,
+    "train_cli_sha256": "b516c1ad306795296542e709c4e21fd1522d3735aa4820fbbd6b713c2cdd5cdb",
+    "mlx_trainer_sha256": "4b62aa47747ee88a1d91a52579bc62c559d0a9c781dda3cb78ed57d32823c2f2"
+  },
+  "compute": "local Apple Silicon/Metal only; arms run sequentially; no RunPod"
+}

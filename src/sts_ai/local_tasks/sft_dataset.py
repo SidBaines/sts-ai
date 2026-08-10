@@ -5,7 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from sts_ai.local_tasks import base, get_task
-from sts_ai.train.sft_format import build_example, chat_template_probe_hash
+from sts_ai.train.sft_format import (
+    build_example,
+    chat_template_probe_hash,
+    loss_mask_token_accounting,
+    resolve_loss_mask_mode,
+)
 
 
 def _include_window(window: dict[str, Any], label_mode: str) -> bool:
@@ -46,7 +51,9 @@ def build_local_sft_dataset(
     weighting_mode: str = "rwr",
     require_no_thinking: bool = True,
     require_framing_match: bool = True,
+    loss_mask_mode: str = "completion",
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    loss_mask_mode = resolve_loss_mask_mode(loss_mask_mode, manifest_path=None)
     task = get_task(str(manifest["task_id"]))
     windows = [
         window
@@ -95,13 +102,20 @@ def build_local_sft_dataset(
             if skip is not None:
                 skipped[skip] += 1
                 continue
-            example = build_example(
-                record,
-                framing,
-                tokenizer=tokenizer,
-                enable_thinking=enable_thinking,
-                induce_reasoning=induce_reasoning,
-            )
+            try:
+                example = build_example(
+                    record,
+                    framing,
+                    tokenizer=tokenizer,
+                    enable_thinking=enable_thinking,
+                    induce_reasoning=induce_reasoning,
+                    loss_mask_mode=loss_mask_mode,
+                )
+            except ValueError:
+                if loss_mask_mode != "action":
+                    raise
+                skipped["action_mask_unavailable"] += 1
+                continue
             example.update(
                 {
                     "local_task": str(manifest["task_id"]),
@@ -121,7 +135,7 @@ def build_local_sft_dataset(
                 examples.append(dict(example))
 
     split_windows = [window for window in manifest["windows"] if window.get("split") == split]
-    manifest_out = {
+    manifest_out: dict[str, Any] = {
         "task_id": task.task_id,
         "source_manifest_task_id": manifest["task_id"],
         "source_rollout_dir": manifest["source_rollout_dir"],
@@ -135,6 +149,7 @@ def build_local_sft_dataset(
         "reasoning_mode": reasoning_mode,
         "enable_thinking": enable_thinking,
         "induce_reasoning": induce_reasoning,
+        "loss_mask_mode": loss_mask_mode,
         "split": split,
         "label_mode": label_mode,
         "weighting_mode": weighting_mode,
@@ -148,4 +163,6 @@ def build_local_sft_dataset(
         "multiplicity_histogram": dict(multiplicity_histogram),
         "skipped_record_counts": dict(skipped),
     }
+    if loss_mask_mode == "action":
+        manifest_out["token_accounting"] = loss_mask_token_accounting(examples)
     return examples, manifest_out

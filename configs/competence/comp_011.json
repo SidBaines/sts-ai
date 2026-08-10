@@ -1,0 +1,84 @@
+{
+  "experiment_id": "COMP-011",
+  "stage": "matched_mask_and_pass_count_tiny32_control",
+  "status": "preregistered_before_first_model_load",
+  "frozen_at_utc": "2026-07-23T03:41:07Z",
+  "dependency": {
+    "experiment": "COMP-010",
+    "result": "ten_pass_action_token_only_did_not_fit",
+    "result_path": "configs/competence/comp_010_result.json",
+    "result_sha256": "5c21d5a7d254017ed929f5261eb6be0832155d11a936ad407c15115edc9d219b"
+  },
+  "question": "On the exact harder first-per-turn tiny32, does the previously successful 20-pass schedule fit under the original format-plus-action mask, the action-value-only mask, both, or neither?",
+  "dataset": {
+    "path": "data/competence/comp_010/datasets/tiny32_first_per_turn_teacher_action_only.jsonl",
+    "sha256": "f9ab33b93a4edc0a70d2bb12207eb06434b0f0ffc8589dfa6e4eea1d63211b97",
+    "manifest": "data/competence/comp_010/datasets/tiny32_first_per_turn_teacher_action_only.manifest.json",
+    "manifest_sha256": "9b37f9e41f2e3e7b8ec800a1a06424fcd37fc3edbfcfcd6972b843f30cb07489",
+    "n_examples": 32,
+    "teacher_action_counts": {"0": 7, "1": 7, "2": 12, "3": 5, "4": 1},
+    "base_report": "data/competence/comp_010/eval/tiny32_base_teacher_actions.json",
+    "base_report_sha256": "04734b1ca446d88da9b19884e4f0a7d4ee4aafb107e54b59fb55a45cc3871ec5",
+    "base_correct": 8
+  },
+  "model": {
+    "id": "mlx-community/gemma-4-e4b-it-bf16",
+    "cached_huggingface_revision": "eec12d0899edea9b738ab1009af9159cdfd70d71",
+    "hf_hub_offline": true
+  },
+  "common_training": {
+    "backend": "mlx",
+    "num_layers": 8,
+    "batch_size": 1,
+    "iterations": 640,
+    "effective_passes": 20,
+    "learning_rate": 0.0001,
+    "max_seq_length": 8192,
+    "validation_fraction": 0.0,
+    "seed": 0,
+    "optimizer": "adam",
+    "lora_rank": 8,
+    "lora_scale": 20.0,
+    "lora_dropout": 0.0,
+    "gradient_accumulation_steps": 1,
+    "steps_per_report": 32,
+    "save_every": 320,
+    "checkpoint_rule": "score only each arm's final step-640 adapter"
+  },
+  "arms": {
+    "mixed_format_and_action": {
+      "mlx_action_token_only": false,
+      "supervised_tokens_per_pass": 288,
+      "supervised_action_tokens_per_pass": 32,
+      "supervised_format_tokens_per_pass": 256,
+      "adapter_output": "data/competence/comp_011/adapters/tiny32_mixed_20pass",
+      "score_report": "data/competence/comp_011/eval/tiny32_mixed_20pass_teacher_actions.json"
+    },
+    "action_value_only": {
+      "mlx_action_token_only": true,
+      "supervised_tokens_per_pass": 32,
+      "supervised_action_tokens_per_pass": 32,
+      "supervised_format_tokens_per_pass": 0,
+      "adapter_output": "data/competence/comp_011/adapters/tiny32_action_only_20pass",
+      "score_report": "data/competence/comp_011/eval/tiny32_action_only_20pass_teacher_actions.json"
+    }
+  },
+  "per_arm_gate": {
+    "minimum_correct_rows": 31,
+    "minimum_top1_agreement": 0.95,
+    "require_zero_invalid_and_skipped_rows": true
+  },
+  "decision_matrix": {
+    "both_pass": "Pass count was the immediate fit issue; prefer a weighted format/action objective for the full aligned set.",
+    "mixed_only_passes": "Pure action-only destabilizes format or optimization; keep format supervision and test explicit action upweighting.",
+    "action_only_only_passes": "Invariant format dilution is causal; use action-only with a separate generation-format guardrail.",
+    "neither_passes": "The harder state set exceeds this adapter/schedule; test adapter capacity before blaming the base model."
+  },
+  "code_provenance": {
+    "git_head": "ba0c6b69ec004181b61f9e6c12c6662c38a7f14c",
+    "worktree_was_dirty": true,
+    "train_cli_sha256": "8e18e68e699c24cd96050010308acd6ddd99566d947a62bf98a98571438003a4",
+    "mlx_trainer_sha256": "bd906c70a8c7c684493bc9470d1a8a8d2233da7fea6ff5114acf9e31aefbb65a"
+  },
+  "compute": "local Apple Silicon/Metal only; no RunPod"
+}

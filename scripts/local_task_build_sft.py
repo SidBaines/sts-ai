@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from sts_ai.local_tasks import base
 from sts_ai.local_tasks.sft_dataset import build_local_sft_dataset
@@ -27,7 +27,7 @@ def _load_tokenizer(tokenizer_id: str) -> Any:
     return AutoTokenizer.from_pretrained(tokenizer_id)
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a local-task SFT dataset.")
     parser.add_argument("--task", required=True)
     parser.add_argument("--manifest", type=Path, required=True)
@@ -45,8 +45,15 @@ def parse_args() -> argparse.Namespace:
         default="rwr",
     )
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument(
+        "--loss-mask",
+        choices=("action", "completion"),
+        default="action",
+        help="Competence default is action-only; 'completion' reproduces the "
+        "historical full-response objective.",
+    )
     parser.add_argument("--allow-thinking", action="store_true")
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def main() -> None:
@@ -64,6 +71,7 @@ def main() -> None:
         label_mode=args.label_mode,
         weighting_mode=args.weighting_mode,
         require_no_thinking=not args.allow_thinking,
+        loss_mask_mode=args.loss_mask,
     )
     base.write_jsonl(args.out, examples)
     manifest_path = args.out.with_suffix(".manifest.json")
@@ -76,9 +84,13 @@ def main() -> None:
                 "n_examples": dataset_manifest["n_examples"],
                 "n_unique_examples": dataset_manifest["n_unique_examples"],
                 "n_included_windows": dataset_manifest["n_included_windows"],
+                "loss_mask_mode": dataset_manifest.get(
+                    "loss_mask_mode", "completion"
+                ),
                 "label_counts": dataset_manifest["label_counts"],
                 "multiplicity_histogram": dataset_manifest["multiplicity_histogram"],
                 "skipped_record_counts": dataset_manifest["skipped_record_counts"],
+                "token_accounting": dataset_manifest.get("token_accounting"),
             },
             indent=2,
             sort_keys=True,

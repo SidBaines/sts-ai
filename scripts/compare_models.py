@@ -19,8 +19,10 @@ from typing import Any
 
 from sts_ai.affordances import BLOCK_BASE
 
+_CARD_TYPE_TAG = r"(?:\s+\[(?:Attack|Skill|Power|Curse|Status)\])?"
 _PLAY_RE = re.compile(
-    r"^play\s+(.*?)\s+\(cost\s+(\S+?)\)(?:\s*->\s*(.*?))?(?:\s*\(deal\s+(\d+)[^)]*\))?\s*$"
+    rf"^play\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+(\S+?)\)"
+    r"(?:\s*->\s*(.*?))?(?:\s*\(deal\s+(\d+)[^)]*\))?\s*$"
 )
 
 

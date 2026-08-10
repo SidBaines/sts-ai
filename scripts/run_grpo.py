@@ -222,6 +222,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         "per_device_batch_size": args.per_device_batch_size,
         "grad_accum": args.grad_accum,
         "gradient_checkpointing": args.gradient_checkpointing,
+        "loss_mask_mode": "action",
         "start_iteration": args.start_iteration,
         "resumed": args.resume_adapter is not None,
     }

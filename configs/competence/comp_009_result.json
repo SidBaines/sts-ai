@@ -1,0 +1,58 @@
+{
+  "experiment_id": "COMP-009",
+  "status": "failed_heldout_action_gate",
+  "preregistration": {
+    "path": "configs/competence/comp_009.json",
+    "sha256_at_first_model_load": "f51ef29e4c712ada63a6a864fd5be0d608a72fde3932fc79bc0efcd299ea7ba1"
+  },
+  "training": {
+    "completed_iterations": 1800,
+    "completed_passes": 3,
+    "final_reported_train_loss": 0.106,
+    "best_reported_100_step_train_loss": 0.077,
+    "peak_memory_gb": 21.584,
+    "retained_examples": 600,
+    "skipped_examples": 0,
+    "preparation_report_sha256": "f8ff5a3778c5893122dfb25ba27b9105b32af6680e5cd83e122f0b4d1a5ed4f6"
+  },
+  "adapter": {
+    "path": "data/competence/comp_009/adapters/full600",
+    "weights_sha256": "d8a3d8b29760ca0c2cb91249267f4f447af8c437d313ef6d186a84ae4ade6d5b",
+    "adapter_config_sha256": "115615ee072d9639b92fc75e66293adb44620152f4d604ccd5a02658feed1dad",
+    "identity_sha256": "6f4f75105d063d7ca51575de0e3d4acab101fdb55674d87c33a71d69285ea4a3"
+  },
+  "heldout_teacher_action_score": {
+    "base_report": "data/competence/comp_008/eval/heldout_turn_first_base_teacher_actions.json",
+    "adapter_report": "data/competence/comp_009/eval/heldout_turn_first_adapter_teacher_actions.json",
+    "adapter_report_sha256": "7a3656df7acce84a102539e24f050749bec4d92f7aaffae968b087325a5a6175",
+    "n_states": 57,
+    "base_correct": 22,
+    "adapter_correct": 21,
+    "base_top1": 0.38596491228070173,
+    "adapter_top1": 0.3684210526315789,
+    "base_teacher_probability": 0.37216219280078805,
+    "adapter_teacher_probability": 0.38019668117478156,
+    "base_teacher_candidate_nll": 1.7769037108772021,
+    "adapter_teacher_candidate_nll": 1.5490306083568868,
+    "invalid_or_skipped_rows": 0,
+    "required_correct": 32,
+    "gate_passed": false
+  },
+  "diagnostic": {
+    "full_train_target_counts": {"0": 337, "1": 148, "2": 85, "3": 28, "4": 2},
+    "heldout_target_counts": {"0": 21, "1": 15, "2": 13, "3": 8},
+    "full_adapter_heldout_prediction_counts": {"0": 57},
+    "full_adapter_tiny32_report": "data/competence/comp_009/eval/tiny32_full_adapter_teacher_actions.json",
+    "full_adapter_tiny32_report_sha256": "bb4810684ea2796d7664213749ea99f75eb3970171feb1260236bd302830ab8d",
+    "full_adapter_tiny32_correct": 17,
+    "tiny32_target_zero_count": 17,
+    "first_per_turn_train_projection": {
+      "raw_states": 173,
+      "eligible_states": 150,
+      "target_counts": {"0": 43, "1": 43, "2": 44, "3": 19, "4": 1},
+      "end_turn_targets": 3
+    },
+    "interpretation": "The adapter predicts action 0 on every held-out state and exactly matches the action-0 count on tiny32. The every-micro-action train set is dominated by late-turn action-0/end-turn states, unlike the first-per-turn holdout; eight fixed-format tokens also dilute each one-token policy label. This is a dataset/objective collapse, not evidence that E4B cannot fit the task."
+  },
+  "decision": "Do not run behavioural evaluation. Build a first-per-turn train projection and test an explicit action-value-only MLX loss before changing model size."
+}

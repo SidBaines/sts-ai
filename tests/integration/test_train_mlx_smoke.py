@@ -129,5 +129,77 @@ class MlxTrainSmokeTest(unittest.TestCase):
             load(model_id, adapter_path=str(adapter_dir))
 
 
+@requires_mlx
+class MlxActionMaskTrainSmokeTest(unittest.TestCase):
+    def test_action_masked_adapter_trains_and_loads(self):
+        model_id = os.environ.get("STS_MLX_SMOKE_MODEL")
+        if not model_id:
+            self.skipTest("set STS_MLX_SMOKE_MODEL to a tiny MLX model id")
+
+        from mlx_lm import load
+        from sts_ai.train.sft_format import (
+            assistant_turn_terminator,
+            tokenize_example,
+        )
+        from sts_ai.train.train_mlx import train
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _model, tokenizer = load(model_id)
+            terminator = assistant_turn_terminator(tokenizer)
+            examples = []
+            for index in range(4):
+                example = {
+                    "prompt": f"Choose the best action for state {index}: ",
+                    "completion": (
+                        "<think>private plan</think>"
+                        '{"action_index": 1}'
+                    ),
+                    "target_action_index": 1,
+                    "assistant_turn_terminator": terminator,
+                    "loss_mask_mode": "action",
+                }
+                tokenized = tokenize_example(
+                    example,
+                    tokenizer,
+                    loss_mask_mode="action",
+                )
+                example["token_counts"] = {
+                    key: value
+                    for key, value in tokenized.items()
+                    if key.startswith("n_")
+                }
+                examples.append(example)
+
+            dataset_path = root / "action.jsonl"
+            manifest_path = root / "action.manifest.json"
+            _write_dataset(dataset_path, examples)
+            manifest_path.write_text(
+                json.dumps({"loss_mask_mode": "action"}),
+                encoding="utf-8",
+            )
+            adapter_dir = train(
+                dataset_path,
+                model_id,
+                root / "adapter",
+                iters=2,
+                num_layers=1,
+                valid_fraction=0.0,
+                data_dir=root / "mlx_data",
+                manifest_path=manifest_path,
+                loss_mask_mode="auto",
+                steps_per_report=1,
+                max_seq_length=256,
+            )
+            self.assertTrue((adapter_dir / "adapters.safetensors").exists())
+            report = json.loads(
+                (root / "mlx_data" / "native_mlx_data_report.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(report["loss_mask_mode"], "action")
+            load(model_id, adapter_path=str(adapter_dir))
+
+
 if __name__ == "__main__":
     unittest.main()

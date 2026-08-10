@@ -17,7 +17,7 @@ class _FakeRawAction:
         self._description = description
         self.executed_on = None
 
-    def describe(self, ctx):
+    def describe(self, ctx, include_card_type=False):
         return self._description
 
     def execute(self, ctx):
@@ -28,6 +28,7 @@ def _env(raw, *, combat: bool) -> LightspeedHybridEnv:
     env = object.__new__(LightspeedHybridEnv)
     env.bc = "BATTLE_CTX" if combat else None  # truthy sentinel doubles as the ctx
     env.gc = "GAME_CTX"
+    env.combat_observation = "legacy"
     env.raw_actions = lambda: raw  # stub out advance + native enumeration
     env.advance_to_decision = lambda: 0  # stub out the native engine step
     return env

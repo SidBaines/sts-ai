@@ -16,7 +16,12 @@ from sts_ai.train.dataset_builder import (
     discover_rollouts,
 )
 from sts_ai.train.reward import label_trajectories
-from sts_ai.train.sft_format import build_example, chat_template_probe_hash
+from sts_ai.train.sft_format import (
+    build_example,
+    chat_template_probe_hash,
+    loss_mask_token_accounting,
+    resolve_loss_mask_mode,
+)
 
 __all__ = ["build_pg_dataset"]
 
@@ -35,8 +40,10 @@ def build_pg_dataset(
     require_no_thinking: bool = True,
     require_framing_match: bool = True,
     drop_phases: tuple[str, ...] = (),
+    loss_mask_mode: str = "completion",
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     rollout_dir = Path(rollout_dir)
+    loss_mask_mode = resolve_loss_mask_mode(loss_mask_mode, manifest_path=None)
 
     pairs = discover_rollouts(rollout_dir)
     metas = [_load_json(meta_path) for _jsonl_path, meta_path in pairs]
@@ -100,13 +107,20 @@ def build_pg_dataset(
             if skip_reason is not None:
                 skipped[skip_reason] += 1
                 continue
-            example = build_example(
-                record,
-                framing,
-                tokenizer=tokenizer,
-                enable_thinking=enable_thinking,
-                induce_reasoning=induce_reasoning,
-            )
+            try:
+                example = build_example(
+                    record,
+                    framing,
+                    tokenizer=tokenizer,
+                    enable_thinking=enable_thinking,
+                    induce_reasoning=induce_reasoning,
+                    loss_mask_mode=loss_mask_mode,
+                )
+            except ValueError:
+                if loss_mask_mode != "action":
+                    raise
+                skipped["action_mask_unavailable"] += 1
+                continue
             example["advantage"] = advantage
             example["stem"] = label.stem
             examples.append(example)
@@ -122,6 +136,7 @@ def build_pg_dataset(
         "reasoning_mode": reasoning_mode,
         "enable_thinking": enable_thinking,
         "induce_reasoning": induce_reasoning,
+        "loss_mask_mode": loss_mask_mode,
         "mode": mode,
         "min_act": min_act,
         "n_rollouts_discovered": len(pairs),
@@ -132,6 +147,8 @@ def build_pg_dataset(
         "skipped_record_counts": dict(skipped),
         "label_report": label_report,
     }
+    if loss_mask_mode == "action":
+        manifest["token_accounting"] = loss_mask_token_accounting(examples)
     if mode == "offline":
         manifest["baseline"] = baseline
     else:

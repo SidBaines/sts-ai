@@ -32,6 +32,7 @@ def _load_tokenizer(tokenizer_id: str) -> Any:
 def _print_report(manifest: dict[str, Any]) -> None:
     report = manifest["advantage_report"]
     lines = [
+        f"loss_mask_mode: {manifest.get('loss_mask_mode', 'completion')}",
         f"mode: {manifest['mode']}",
         f"n_examples: {manifest['n_examples']}",
         f"n_trajectories_with_advantage: {manifest['n_trajectories_with_advantage']}",
@@ -41,6 +42,11 @@ def _print_report(manifest: dict[str, Any]) -> None:
         "skipped_record_counts: "
         + json.dumps(manifest["skipped_record_counts"], sort_keys=True),
     ]
+    if manifest.get("token_accounting") is not None:
+        lines.append(
+            "token_accounting: "
+            + json.dumps(manifest["token_accounting"], sort_keys=True)
+        )
     print("\n".join(lines))
 
 
@@ -66,6 +72,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--tokenizer", required=True, help="Hugging Face tokenizer id.")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--framing", default="neutral")
+    parser.add_argument(
+        "--loss-mask",
+        choices=("action", "completion"),
+        default="action",
+        help="Competence default is action-only; 'completion' reproduces the "
+        "historical full-response policy-gradient mask.",
+    )
     parser.add_argument(
         "--mode",
         choices=("offline", "group"),
@@ -110,6 +123,7 @@ def main() -> None:
         min_act=args.min_act,
         require_no_thinking=not args.allow_thinking,
         drop_phases=tuple(args.drop_phase),
+        loss_mask_mode=args.loss_mask,
     )
 
     _print_report(manifest)

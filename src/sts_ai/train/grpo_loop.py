@@ -339,6 +339,7 @@ def run_grpo(
             mode="group",
             std_norm=std_norm,
             eps=eps,
+            loss_mask_mode="action",
         )
         dataset_path = iter_dir / "pg.jsonl"
         manifest_path = _write_dataset(dataset_path, examples, manifest)
@@ -356,6 +357,7 @@ def run_grpo(
             grad_accum=grad_accum,
             gradient_checkpointing=gradient_checkpointing,
             manifest_path=manifest_path,
+            loss_mask_mode="action",
         )
         current_adapter = str(new_adapter)
         agent.set_adapter(current_adapter)

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from pathlib import Path
+import re
 from typing import Any, Callable
 
-from sts_ai.interactive.replay import replay_actions
+from sts_ai.interactive.replay import ReplayError, resolve_action_index
 from sts_ai.local_tasks import base
+from sts_ai.local_tasks.start_state import validate_stored_start_state_signature
 from sts_ai.rollout import (
     append_jsonl,
     build_decision_record,
@@ -41,8 +43,110 @@ class LocalTaskEnv:
         ) is not None
 
 
-def replay_task_start(env: Any, window: dict[str, Any]) -> int:
-    return replay_actions(env, window.get("pre_actions") or [])
+_PUBLIC_CARD_UPGRADE_RE = re.compile(r"\+\d*(?= \(cost|$)")
+_PUBLIC_CARD_VALUE_RE = re.compile(r"=-?\d+(?= \(cost|$)")
+_PUBLIC_CARD_TYPE_RE = re.compile(
+    r" \[(?:Attack|Skill|Power|Curse|Status)\](?= \(cost|$)"
+)
+_GENERATED_OPTION_RE = re.compile(
+    r"^select card for (?P<task>DISCOVERY|CODEX) \(option \d+\)$"
+)
+_POTION_TARGET_SLOT_RE = re.compile(
+    r"^(?P<label>drink potion .+ -> .+) \[enemy \d+\]$"
+)
+
+
+def _without_public_card_adornments(description: str) -> str:
+    """Normalize combat card details absent from historical source traces."""
+    description = _PUBLIC_CARD_TYPE_RE.sub("", description)
+    if description.startswith("select card for "):
+        # v2 selection labels use the full public instance label so same-name
+        # cards with different current cost/free/retain state remain distinct.
+        # Historical traces carried the name only; exact action bits still guard
+        # this migration path before the normalized comparison is accepted.
+        description = re.sub(r" \(cost [^)]*\)$", "", description)
+    description = _PUBLIC_CARD_UPGRADE_RE.sub("", description)
+    description = _PUBLIC_CARD_VALUE_RE.sub("", description)
+    return description.replace("(cost X)", "(cost -1)").replace(
+        "(cost unplayable)", "(cost -2)"
+    )
+
+
+def _generated_option_label_matches(recorded: str, current: str) -> bool:
+    match = _GENERATED_OPTION_RE.fullmatch(recorded)
+    return bool(match and current.startswith(f"select card for {match['task']}:"))
+
+
+def _historical_potion_target_matches(recorded: str, current: str) -> bool:
+    """Match the pre-disambiguation label only when action bits also match."""
+    current_match = _POTION_TARGET_SLOT_RE.fullmatch(current)
+    return bool(current_match and current_match["label"] == recorded)
+
+
+def resolve_task_replay_action(env: Any, action: dict[str, Any]) -> int:
+    """Resolve a historical local-task action without accepting semantic drift."""
+    try:
+        return resolve_action_index(
+            env,
+            action.get("bits"),
+            str(action.get("description", "")),
+            action.get("index"),
+        )
+    except ReplayError:
+        # Historical combat traces used CardInstance::getName(), which omitted
+        # the upgrade marker. Public-state serialization corrected the live
+        # label to e.g. ``play Bash+ (cost 2)`` and now includes public mutable
+        # values on a few cards. Keep old local-task source windows replayable,
+        # but only through an exact-bits match whose text is otherwise identical
+        # after removing those card-label adornments.
+        recorded = _without_public_card_adornments(
+            str(action.get("description", ""))
+        )
+        bits = action.get("bits")
+        candidates = [
+            legal
+            for legal in env.legal_actions()
+            if bits is not None
+            and int(legal.bits) == int(bits)
+            and (
+                _without_public_card_adornments(legal.description) == recorded
+                or _generated_option_label_matches(recorded, legal.description)
+                or _historical_potion_target_matches(recorded, legal.description)
+            )
+        ]
+        if len(candidates) == 1:
+            return candidates[0].index
+        raise
+
+
+# Compatibility for existing callers/tests while the public resolver above is
+# adopted by teacher collection as well as start replay.
+_resolve_task_replay_action = resolve_task_replay_action
+
+
+def replay_task_start(env: Any, window: dict[str, Any], task: Any | None = None) -> int:
+    actions = window.get("pre_actions") or []
+    applied = 0
+    for action in actions:
+        env.advance_to_decision()
+        if env.is_terminal():
+            raise ReplayError(
+                f"env reached a terminal state after {applied} of {len(actions)} "
+                f"replayed local-task actions; cannot apply {action.get('description')!r}"
+            )
+        env.step(resolve_task_replay_action(env, action))
+        applied += 1
+    env.advance_to_decision()
+    if task is not None:
+        validate_start = getattr(task, "validate_start", None)
+        if validate_start is not None:
+            validate_start(env.summary(), window)
+    # Source manifests intentionally remain regeneration-compatible and have no
+    # public signature. Replay-validated manifests do, and every consumer that
+    # enters through this shared helper (eval, teacher collection, GRPO) fails
+    # closed if the complete public start choice has drifted.
+    validate_stored_start_state_signature(env, window)
+    return applied
 
 
 def run_local_task_episode(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sts_ai.agents import FirstLegalAgent, MlxQwenJsonAgent, RandomLegalAgent, SimpleHeuristicAgent, VllmJsonAgent
+from sts_ai.prompting import REASONING_ACTION_OUTPUT
 
 
 def build_agent(
@@ -17,6 +18,7 @@ def build_agent(
     enable_prefix_caching: bool = True,
     adapter_path: str | None = None,
     max_lora_rank: int = 16,
+    output_contract: str = REASONING_ACTION_OUTPUT,
 ):
     if agent_name == "first":
         return FirstLegalAgent()
@@ -32,6 +34,7 @@ def build_agent(
             max_retries=max_retries,
             enable_thinking=thinking,
             adapter_path=adapter_path,
+            output_contract=output_contract,
         )
     if agent_name == "vllm":
         return VllmJsonAgent(
@@ -46,6 +49,7 @@ def build_agent(
             enable_prefix_caching=enable_prefix_caching,
             adapter_path=adapter_path,
             max_lora_rank=max_lora_rank,
+            output_contract=output_contract,
         )
     raise ValueError(f"unknown agent: {agent_name}")
 

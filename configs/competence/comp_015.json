@@ -1,0 +1,270 @@
+{
+  "experiment_id": "COMP-015",
+  "stage": "exact_schedule_cyclic_augmentation_control",
+  "status": "preregistered_before_any_full_arm_training",
+  "frozen_at_utc": "2026-07-23T06:14:21Z",
+  "dependency": {
+    "experiment": "COMP-014",
+    "result": "both_checkpoints_strongly_cyclic_action_order_sensitive",
+    "result_path": "configs/competence/comp_014_result.json",
+    "result_sha256": "e4a21824ad47511bb46c3c35c355f9bc46d09b37914ce235930650729525a484"
+  },
+  "purpose": "Test whether balanced cyclic legal-action augmentation improves semantic action-order robustness and unpermuted development actions, while matching source identity at every optimizer update and holding compute, model, mask, optimizer, and token exposure fixed.",
+  "interpretation_boundary": {
+    "development57_is_not_fresh_evidence": true,
+    "rotations_are_not_independent_observations": true,
+    "three_training_seeds_are_paired_replicates": true,
+    "cyclic_augmentation_does_not_establish_arbitrary_permutation_invariance": true,
+    "comp012_is_historical_not_primary_control": true,
+    "no_new_teacher_states_or_dagger_or_model_scaling": true,
+    "fresh_final_cohort_remains_embargoed": "configs/competence/nob_fresh_final_cohort_v1.json"
+  },
+  "source_datasets": {
+    "train150": {
+      "path": "data/competence/comp_010/datasets/train_first_per_turn_teacher_action_only.jsonl",
+      "sha256": "132a6640849f3a2015624038871207e224d75298cc0f142fc1c0f7b5effe08d3",
+      "manifest": "data/competence/comp_010/datasets/train_first_per_turn_teacher_action_only.manifest.json",
+      "manifest_sha256": "5ed7f8f540f10fa4e50432df073633c876bc5586bc4ce75f32f9bd7cb399d6e1",
+      "n_rows": 150,
+      "source_state_selection": "first_per_turn",
+      "teacher_action_counts": {"0": 43, "1": 43, "2": 44, "3": 19, "4": 1}
+    },
+    "development57": {
+      "path": "data/competence/comp_008/datasets/holdout_turn_first_teacher_action_only.jsonl",
+      "sha256": "e880e45bb9f9da60343953c89ca4c45cdb09a19666fb72e7afe05ecbcc0569dc",
+      "manifest": "data/competence/comp_008/datasets/holdout_turn_first_teacher_action_only.manifest.json",
+      "manifest_sha256": "fe41e2c6a024d3eb14f8c0a6945f74765fa94b4ecde76cb2e1ca91aab5050142",
+      "n_rows": 57,
+      "n_window_clusters": 11,
+      "base_correct": 22,
+      "base_teacher_probability": 0.37216219280078805,
+      "base_teacher_candidate_nll": 1.7769037108772021
+    }
+  },
+  "model": {
+    "id": "mlx-community/gemma-4-e4b-it-bf16",
+    "cached_huggingface_revision": "eec12d0899edea9b738ab1009af9159cdfd70d71",
+    "hf_hub_offline": true,
+    "enable_thinking": false,
+    "chat_template_hash": "d74b50cb2541e519"
+  },
+  "paired_datasets": {
+    "common": {
+      "builder_kind": "paired_cyclic_action_order_sft",
+      "builder_version": 1,
+      "passes": 20,
+      "n_rows_per_arm": 3000,
+      "each_pass_visits_all_150_sources_once_without_replacement": true,
+      "control_order": "identity_on_every_exposure",
+      "treatment_order": "balanced_keyed_cyclic_rotations_including_identity",
+      "maximum_per_source_rotation_count_difference": 1,
+      "paired_source_identity_at_every_step": true,
+      "paired_token_and_batch1_padded_length_mismatches": 0,
+      "prompt_tokens_per_arm": 2769140,
+      "completion_tokens_per_arm": 27000,
+      "supervised_format_tokens_per_arm": 24000,
+      "supervised_action_tokens_per_arm": 3000,
+      "supervised_tokens_per_arm": 27000,
+      "total_model_input_tokens_per_arm": 2796140,
+      "batch1_padded_tokens_per_arm": 2846520
+    },
+    "0": {
+      "source_schedule_sha256": "c5db67b5c24d945595b665ec23613c8b2f1f8a668b093de8e9e11cb4b5d98ffe",
+      "ordered_step_source_sha256": "f80b069a71e5abe562ba85cced0f13b8748990e1870fbf4ff38aadb96720e30e",
+      "control": {
+        "path": "data/competence/comp_015/datasets/seed0_control_identity_20pass.jsonl",
+        "sha256": "b94e59a0f4d8290670337ea63b414cfb6655576dc44c73163118d1b1e28268a2",
+        "manifest": "data/competence/comp_015/datasets/seed0_control_identity_20pass.manifest.json",
+        "manifest_sha256": "e9461403415d130c742f408f3afa14f9573b15615400dac6de5fe4913120958b"
+      },
+      "augmented": {
+        "path": "data/competence/comp_015/datasets/seed0_augmented_cyclic_20pass.jsonl",
+        "sha256": "b131efb90da0a603315b1fc4c06f67c3b9e6f615e6bbac86270f8852daa73b11",
+        "manifest": "data/competence/comp_015/datasets/seed0_augmented_cyclic_20pass.manifest.json",
+        "manifest_sha256": "3bfb7f47081ff16196fff70a2e68f2e29b1096a3e4528751faed908ddba2cee8"
+      }
+    },
+    "1": {
+      "source_schedule_sha256": "0e9343758d8d7d0d3809d5336871f83c2cdd0f678b99604aa2b6d649d81dedff",
+      "ordered_step_source_sha256": "1a2b6be100ee5e065beef08973000373239e3889ec5784f44c4bd58226e5a1fc",
+      "control": {
+        "path": "data/competence/comp_015/datasets/seed1_control_identity_20pass.jsonl",
+        "sha256": "115a3fe9969730dd05b7fe0512756f6223bcc8bccda4ba7baae5de94f3c265a4",
+        "manifest": "data/competence/comp_015/datasets/seed1_control_identity_20pass.manifest.json",
+        "manifest_sha256": "d8b4135109285acd542ea15e58e34f4556080a221f500fc26ccddb5d84193c68"
+      },
+      "augmented": {
+        "path": "data/competence/comp_015/datasets/seed1_augmented_cyclic_20pass.jsonl",
+        "sha256": "16e0580354cc98272e057cca83cc731308857dceebd2a1ed0a6417cc5ae3e24c",
+        "manifest": "data/competence/comp_015/datasets/seed1_augmented_cyclic_20pass.manifest.json",
+        "manifest_sha256": "700e7d4dd103f9f2b8895b3352520d808496cd8ddce07e30c1d4bbd5f980d8cd"
+      }
+    },
+    "2": {
+      "source_schedule_sha256": "9dcc9f4adb333524b26a2da5558e9c3a12b7e5dc4034bfa0b86e559037df612f",
+      "ordered_step_source_sha256": "716cfece9913bbac9b2bfedca4904023ce638ef70482de7468833a3990816c77",
+      "control": {
+        "path": "data/competence/comp_015/datasets/seed2_control_identity_20pass.jsonl",
+        "sha256": "65fff039791c3b1eda67f69a3fbf8b03be8233d7ca47bee8c24d6fc7e8708d98",
+        "manifest": "data/competence/comp_015/datasets/seed2_control_identity_20pass.manifest.json",
+        "manifest_sha256": "24a9845391f2146058f4117fdc52f9b488625be3031f361ad9a377de0e672653"
+      },
+      "augmented": {
+        "path": "data/competence/comp_015/datasets/seed2_augmented_cyclic_20pass.jsonl",
+        "sha256": "4c5b8c5a223239ca2376651c760c7f55893a0559d670c3006e712c21db6ea5ec",
+        "manifest": "data/competence/comp_015/datasets/seed2_augmented_cyclic_20pass.manifest.json",
+        "manifest_sha256": "f0bffe8067f20a296e7aa6094c27495fd7d991d4e7bf7a0862ed5386463b0c36"
+      }
+    }
+  },
+  "training": {
+    "backend": "mlx",
+    "replicate_seeds": [0, 1, 2],
+    "arms": ["control_identity", "augmented_cyclic"],
+    "execution_order": [
+      "seed0_control_identity", "seed0_augmented_cyclic",
+      "seed1_augmented_cyclic", "seed1_control_identity",
+      "seed2_control_identity", "seed2_augmented_cyclic"
+    ],
+    "fresh_base_load_per_arm": true,
+    "warm_start": false,
+    "loss_mask_mode": "action",
+    "mlx_action_token_only": false,
+    "mlx_preserve_row_order": true,
+    "expected_examples": 3000,
+    "num_layers": 8,
+    "batch_size": 1,
+    "iterations": 3000,
+    "learning_rate": 0.0001,
+    "max_seq_length": 8192,
+    "validation_fraction": 0.0,
+    "optimizer": "adam",
+    "lora_rank": 8,
+    "lora_scale": 20.0,
+    "lora_dropout": 0.0,
+    "gradient_accumulation_steps": 1,
+    "steps_per_report": 150,
+    "save_every": 750,
+    "saved_checkpoints": [750, 1500, 2250, 3000],
+    "output_must_not_exist": true,
+    "output_pattern": "data/competence/comp_015/adapters/seed{seed}_{arm}_exact_schedule"
+  },
+  "trainer_determinism_smoke": {
+    "evidence_only_for_trainer_health": true,
+    "excluded_from_all_comp015_metrics": true,
+    "dataset": "seed0_control_identity_20pass",
+    "iterations": 5,
+    "runs": 2,
+    "identical_final_and_step5_adapter_sha256": "7c4c8e61bad7ebe89eb7e63df03f11c161d74acab510867ef4811415c7e0c9ea",
+    "identical_preparation_report_sha256": "ad9bea2f1af59e2989d125cc4a20d803643754062b97d3df155fb6f4a564954a",
+    "reported_loss_both_runs": 0.739,
+    "peak_memory_gb_both_runs": 21.044,
+    "path_bearing_adapter_configs_expected_to_differ": true
+  },
+  "evaluation": {
+    "fixed_primary_checkpoint": 1500,
+    "fixed_primary_reason": "Ten source exposures cover every observed cyclic position; this endpoint is selection-free and avoids making the COMP013-overfit final pass primary.",
+    "fixed_primary_reports_per_arm": [
+      "unpermuted_train150_teacher_actions",
+      "unpermuted_development57_teacher_actions",
+      "all_nonzero_cyclic_development57"
+    ],
+    "cyclic_source_dataset": "development57_original_57_rows_not_scheduled_3000_rows",
+    "checkpoint_selection_grid": [750, 1500, 2250, 3000],
+    "checkpoint_selection_rule": {
+      "minimum_development_correct": 28,
+      "select": "lowest_development_teacher_candidate_nll",
+      "tie_break": "earlier_checkpoint",
+      "none_eligible": "run_has_no_selected_checkpoint"
+    },
+    "analysis_output": "data/competence/comp_015/eval/paired_analysis.json",
+    "analysis_config_to_create_after_reports": "configs/competence/comp_015_analysis.json"
+  },
+  "primary_causal_rule_fixed_before_training": {
+    "required_direction_in_each_of_three_pairs": {
+      "semantic_top1_invariance": "augmented_greater_than_control",
+      "mean_semantic_probability_total_variation": "augmented_less_than_control",
+      "all_variants_source_macro_top1_agreement": "augmented_greater_than_control",
+      "all_variants_source_macro_teacher_nll": "augmented_less_than_control",
+      "unpermuted_development_correct": "augmented_at_least_control",
+      "unpermuted_development_nll": "augmented_at_most_control"
+    },
+    "minimum_pairs_ceasing_comp014_sensitivity": 2,
+    "ceases_sensitivity_if": {
+      "semantic_top1_invariance_min": 0.75,
+      "mean_semantic_probability_total_variation_max": 0.2
+    },
+    "minimum_mean_paired_deltas": {
+      "semantic_top1_invariance": 0.2,
+      "mean_semantic_probability_total_variation": -0.2,
+      "all_variants_source_macro_top1_agreement": 0.1,
+      "all_variants_source_macro_teacher_nll": -0.25
+    },
+    "strong_stability_report_only": {
+      "semantic_top1_invariance_min": 0.9,
+      "mean_semantic_probability_total_variation_max": 0.1
+    }
+  },
+  "gate_to_development_behaviour": {
+    "minimum_qualifying_augmented_seeds": 2,
+    "per_selected_augmented_seed": {
+      "minimum_unpermuted_train_correct": 135,
+      "minimum_unpermuted_development_correct": 32,
+      "minimum_development_teacher_probability": 0.37216219280078805,
+      "maximum_development_teacher_candidate_nll": 1.7769037108772021,
+      "minimum_semantic_top1_invariance": 0.75,
+      "maximum_mean_semantic_probability_total_variation": 0.2,
+      "require_non_degenerate_predictions": true,
+      "require_zero_invalid_and_skipped_rows": true,
+      "same_step_control_advantage": "development correct and NLL must both be no worse, with at least one strictly better"
+    },
+    "deployment_adapter_tie_break": [
+      "lowest_development_nll", "highest_development_correct", "lowest_training_seed"
+    ],
+    "if_gate_passes": "Run base vs selected augmented vs its same-seed/same-step control on non-final v2 development Nob windows at K>=8 before any final-cohort release.",
+    "if_order_metrics_pass_but_action_gate_fails": "Cyclic bias was real but insufficient; prioritize broader teacher-window coverage or DAgger.",
+    "if_healthy_train_fit_but_order_metrics_fail": "A matched adapter-capacity or larger-model arm using the same augmented schedule is warranted.",
+    "if_direct_action_gate_passes_but_behaviour_is_null": "Prioritize closed-loop coverage, turn planning, or DAgger rather than more static epochs."
+  },
+  "statistics": {
+    "primary_unit": "paired_training_seed_replicate",
+    "state_cluster": "development_window_id",
+    "n_training_seed_pairs": 3,
+    "n_development_window_clusters": 11,
+    "rotations_and_states_not_independent": true,
+    "secondary_hierarchical_bootstrap": {
+      "outer_resample": "three paired training seeds",
+      "inner_resample": "eleven development window clusters within sampled seed",
+      "n_resamples": 10000,
+      "seed": 0,
+      "alpha": 0.05
+    }
+  },
+  "code_provenance": {
+    "git_head": "ba0c6b69ec004181b61f9e6c12c6662c38a7f14c",
+    "worktree_was_dirty": true,
+    "paired_builder_core_sha256": "d860ef74bed247149b3e1303bd4b14067a8ba8497dd3e49dc6af0c984e64e6a4",
+    "paired_builder_cli_sha256": "76c057762d0fb2dadbdffea253e7e59c6a8d8d44ed21c3148aba295013c71f72",
+    "paired_builder_test_sha256": "614936b9425a3bc12912cf01e9fa5f38f57baadb4c2ed0cae3bb1918c3e5e38d",
+    "mlx_trainer_sha256": "81a51f5bb14767a5dd8fc77a2088fc0feff16ff198fc9a7bdc42d89d42398474",
+    "train_cli_sha256": "01376fc6ab89d12b779fe2762aee1f03f32c95cd83f9596d9f572db42be9928d",
+    "cyclic_diagnostic_core_sha256": "af430fe481b3344114a4b1099859d139a24df20252cb256ea7c8a1a35e77a09f",
+    "cyclic_diagnostic_cli_sha256": "7a0e1e21289324b6530e2b56316febb8026d214ed685aee62669a99bb13891f6",
+    "candidate_evaluator_sha256": "0e0cf5bd032ff3dd199242f7584c24243626b01c83df37cc774a82d8dee383af",
+    "candidate_evaluator_cli_sha256": "355c55629fe04281f61cf6cafcffcae3d713e2110c7db7dc6d1af4ef6f315f71",
+    "paired_analysis_core_sha256": "0ce1058795eb0752309d66762dba950921b658382d546866923c141206d15aca",
+    "paired_analysis_cli_sha256": "d34d06e7c21cb3fc6359c25655eb6ccae26d32180820a30a39d8204b5bb3409f",
+    "paired_analysis_test_sha256": "95b300fdd35dbf33eb82e93f5a6445a49838ec9e7d638de2a857eac82292a254",
+    "paired_analysis_schema_doc_sha256": "381a651633360e776ba905348662e349bfd983123a43bf4186d505e75c41cc55"
+  },
+  "verification_before_full_arm_training": {
+    "builder_and_trainer_focused_tests": "38 passed",
+    "analysis_focused_tests": "5 passed",
+    "full_suite_after_all_comp015_code_landed": "595 passed, 11 skipped",
+    "random_smoke_rollout": "passed",
+    "three_real_paired_dataset_builds": "3000/3000 rows per arm; all strict-v3 and exact-schedule validations passed",
+    "real_seed0_pretokenization": "3000/3000 retained in both arms with identical token and padded-token totals",
+    "five_step_duplicate_determinism_smoke": "byte-identical adapter weights and preparation reports"
+  },
+  "compute": "local Apple Silicon/Metal only; no RunPod"
+}

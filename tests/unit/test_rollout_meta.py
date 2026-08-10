@@ -65,6 +65,17 @@ class BuildRolloutMetaTest(unittest.TestCase):
         self.assertEqual(self.meta.framing, "RISK-FRAMING-TEXT")  # the study's IV, captured
         self.assertTrue(self.meta.thinking)
         self.assertEqual(self.meta.git_sha, "abc123")
+        self.assertEqual(self.meta.extra["combat_observation"], "legacy")
+        self.assertEqual(self.meta.extra["competence_interface_version"], "legacy")
+        self.assertEqual(
+            self.meta.extra["interface_provenance"]["combat_observation"],
+            "legacy",
+        )
+        self.assertEqual(
+            self.meta.extra["interface_provenance"]["output_contract"],
+            "reasoning_action",
+        )
+        self.assertIn("prompt_probe_sha256", self.meta.extra["interface_provenance"])
         self.assertEqual(self.meta.combat_control, "llm")
         self.assertEqual(self.meta.schema_version, SCHEMA_VERSION)
         self.assertEqual(self.meta.world_seed, 7)

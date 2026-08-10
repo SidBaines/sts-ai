@@ -75,6 +75,12 @@ class AffordanceHelperTest(unittest.TestCase):
         self.assertTrue(
             action_contributes_block({"description": "play Defend (cost 1)"}, state_text)
         )
+        self.assertTrue(
+            action_contributes_block(
+                {"description": "play Defend [Skill] (cost 1)"},
+                state_text.replace("Defend (cost 1)", "Defend [Skill] (cost 1)"),
+            )
+        )
         self.assertFalse(
             action_contributes_block(
                 {"description": "play Strike (cost 1) -> JAW_WORM (deal 6)"},

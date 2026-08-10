@@ -19,9 +19,25 @@ class LightspeedHybridEnv:
         max_act: int = 3,
         combat_control: str = "search",
         build_dir: str | None = None,
+        combat_observation: str = "legacy",
+        public_combat_state: bool | None = None,
     ) -> None:
         if combat_control not in ("search", "llm"):
             raise ValueError(f"combat_control must be 'search' or 'llm', got {combat_control!r}")
+        if public_combat_state is not None:
+            alias_observation = "combat_public_v1" if public_combat_state else "legacy"
+            if combat_observation != "legacy" and combat_observation != alias_observation:
+                raise ValueError(
+                    "public_combat_state conflicts with combat_observation="
+                    f"{combat_observation!r}"
+                )
+            combat_observation = alias_observation
+        if combat_observation not in ("legacy", "combat_public_v1", "combat_public_v2"):
+            raise ValueError(
+                "combat_observation must be 'legacy', 'combat_public_v1', or "
+                "'combat_public_v2', "
+                f"got {combat_observation!r}"
+            )
         self.sts = import_lightspeed(build_dir)
         self.world_seed = world_seed
         self.ascension = ascension
@@ -29,10 +45,15 @@ class LightspeedHybridEnv:
         # "search": battles auto-resolved by the built-in C++ search agent (hybrid).
         # "llm": each in-combat decision is surfaced to the agent (full control).
         self.combat_control = combat_control
+        # Explicit versioned switch. v1 is retained for artifact replay only; v2
+        # also exposes the human-visible card type needed for type-based triggers.
+        self.combat_observation = combat_observation
         # Live combat state when an in-combat decision is pending; None otherwise.
         # Its presence is what distinguishes a combat decision from an out-of-combat
         # one (see `phase`).
         self.bc: Any | None = None
+        self._combat_history_turn: int | None = None
+        self._combat_recent_actions: list[str] = []
         # Sticky: set if any combat evoked simulator UB. `exit_battle` clears
         # `self.bc`, so a UB flag raised by a battle-ending action would otherwise be
         # lost before the after-state is recorded; latch it here so `summary()`
@@ -80,11 +101,13 @@ class LightspeedHybridEnv:
                 bc = self.sts.BattleContext()
                 bc.init(self.gc)
                 self.bc = bc
+                self._sync_combat_history()
             if self.bc.outcome != self.sts.BattleOutcome.UNDECIDED:
                 if bool(self.bc.undefined_behavior_evoked):
                     self._undefined_behavior_evoked = True
                 self.bc.exit_battle(self.gc)
                 self.bc = None
+                self._sync_combat_history()
                 resolved += 1
                 continue
             # An in-combat player decision is pending; yield it to the agent.
@@ -100,7 +123,14 @@ class LightspeedHybridEnv:
     def raw_actions(self) -> list[Any]:
         self.advance_to_decision()
         if self.bc is not None:
-            return list(self.bc.legal_actions())
+            return list(
+                self.bc.legal_actions(
+                    include_card_type=(
+                        getattr(self, "combat_observation", "legacy")
+                        == "combat_public_v2"
+                    )
+                )
+            )
         return list(self.gc.legal_actions())
 
     def _action_views(self) -> tuple[list[Any], list[LegalAction], list[int]]:
@@ -125,7 +155,16 @@ class LightspeedHybridEnv:
         display_to_raw: list[int] = []
         seen: set[str] = set()
         for i, action in enumerate(raw):
-            description = action.describe(ctx)
+            if self.bc is not None:
+                description = action.describe(
+                    ctx,
+                    include_card_type=(
+                        getattr(self, "combat_observation", "legacy")
+                        == "combat_public_v2"
+                    ),
+                )
+            else:
+                description = action.describe(ctx)
             if dedup and description in seen:
                 continue
             seen.add(description)
@@ -139,8 +178,102 @@ class LightspeedHybridEnv:
 
     def describe_state(self) -> str:
         if self.bc is not None:
-            return str(self.bc.describe_state())
+            public = self.combat_observation in (
+                "combat_public_v1",
+                "combat_public_v2",
+            )
+            state = str(
+                self.bc.describe_state(
+                    public_state=public,
+                    include_card_type=self.combat_observation == "combat_public_v2",
+                )
+            )
+            if public:
+                self._sync_combat_history()
+                recent = " -> ".join(self._combat_recent_actions) or "none"
+                state += f"\nRecent actions this turn: {recent}"
+            return state
         return str(self.gc.describe_state())
+
+    def _sync_combat_history(self) -> None:
+        """Reset the public recent-action trace at combat/turn boundaries."""
+        # A few pure unit tests construct the env through `object.__new__` with a
+        # lightweight battle sentinel; tolerate that compatibility fixture.
+        if not hasattr(self, "_combat_recent_actions"):
+            self._combat_recent_actions = []
+        if not hasattr(self, "_combat_history_turn"):
+            self._combat_history_turn = None
+        if self.bc is None:
+            self._combat_history_turn = None
+            self._combat_recent_actions.clear()
+            return
+        if not hasattr(self.bc, "turn"):
+            return
+        turn = int(self.bc.turn)
+        if turn != self._combat_history_turn:
+            self._combat_history_turn = turn
+            self._combat_recent_actions.clear()
+
+    def public_combat_cards(self) -> dict[str, Any]:
+        """Return the structured public card view for the pending combat choice.
+
+        Draw/discard/exhaust entries are sorted aggregates: no pile order or RNG
+        state crosses this API boundary.
+        """
+        self.advance_to_decision()
+        if self.bc is None:
+            raise RuntimeError("public_combat_cards requires a pending combat decision")
+        return dict(
+            self.bc.public_cards(
+                include_card_type=self.combat_observation == "combat_public_v2"
+            )
+        )
+
+    def public_combat_player(self) -> dict[str, Any]:
+        """Return public player resources, named powers, stance, and counters."""
+        self.advance_to_decision()
+        if self.bc is None:
+            raise RuntimeError("public_combat_player requires a pending combat decision")
+        return dict(self.bc.public_player())
+
+    def public_combat_relics(self) -> list[dict[str, Any]]:
+        """Return relic ownership copied from GameContext plus public counters."""
+        self.advance_to_decision()
+        if self.bc is None:
+            raise RuntimeError("public_combat_relics requires a pending combat decision")
+        return [dict(relic) for relic in self.bc.public_relics()]
+
+    def public_combat_potions(self) -> dict[str, Any]:
+        """Return human-visible potion capacity and stable indexed slots."""
+        self.advance_to_decision()
+        if self.bc is None:
+            raise RuntimeError("public_combat_potions requires a pending combat decision")
+        return dict(self.bc.public_potions())
+
+    def search_best_combat_action(
+        self,
+        simulations: int,
+        *,
+        search_seed: int | None = None,
+        draw_order_seed: int | None = None,
+    ) -> dict[str, Any]:
+        """Run the privileged search teacher without mutating live combat state.
+
+        ``draw_order_seed`` is a teacher-only intervention: it shuffles the cloned
+        hidden draw order before search so label stability across public-equivalent
+        states can be measured. It never changes or appears in the model state.
+        """
+        self.advance_to_decision()
+        if self.bc is None:
+            raise RuntimeError("search_best_combat_action requires a pending combat decision")
+        return dict(
+            self.bc.search_best_action(
+                simulations,
+                search_seed=search_seed,
+                draw_order_seed=draw_order_seed,
+                include_card_type=self.combat_observation == "combat_public_v2",
+            )
+        )
 
     def map_graph(self) -> dict[str, Any] | None:
         """Structured act map for the current MAP_SCREEN decision, else None.
@@ -168,7 +301,15 @@ class LightspeedHybridEnv:
         ctx = self._action_context()
         selected = display[action_index]
         raw[display_to_raw[action_index]].execute(ctx)
+        if self.bc is not None:
+            # Record only successfully executed actions. `_sync_combat_history`
+            # below keeps the action if the next choice is in the same turn and
+            # clears it when this action advances the turn or ends the battle.
+            if not hasattr(self, "_combat_recent_actions"):
+                self._combat_recent_actions = []
+            self._combat_recent_actions.append(selected.description)
         self.advance_to_decision()
+        self._sync_combat_history()
         return selected
 
     def summary(self) -> dict[str, Any]:
@@ -184,6 +325,7 @@ class LightspeedHybridEnv:
             "max_hp": int(self.gc.max_hp),
             "gold": int(self.gc.gold),
             "phase": self.phase(),
+            "combat_observation": self.combat_observation,
             # Latched across the run (see __init__); also OR in the live battle so an
             # in-progress combat that has evoked UB reports it immediately.
             "undefined_behavior_evoked": bool(
@@ -201,9 +343,27 @@ class LightspeedHybridEnv:
                 "player_max_hp": int(self.bc.player_max_hp),
                 "player_block": int(self.bc.player_block),
                 "player_energy": int(self.bc.player_energy),
+                "player_energy_per_turn": int(self.bc.player_energy_per_turn),
                 "undefined_behavior_evoked": bool(self.bc.undefined_behavior_evoked),
                 "enemies": list(self.bc.enemies()),
             }
+            if self.combat_observation in ("combat_public_v1", "combat_public_v2"):
+                self._sync_combat_history()
+                data["combat"].update(
+                    {
+                        "recent_actions": list(self._combat_recent_actions),
+                        "player": dict(self.bc.public_player()),
+                        "cards": dict(
+                            self.bc.public_cards(
+                                include_card_type=(
+                                    self.combat_observation == "combat_public_v2"
+                                )
+                            )
+                        ),
+                        "relics": [dict(relic) for relic in self.bc.public_relics()],
+                        "potions": dict(self.bc.public_potions()),
+                    }
+                )
         return data
 
     @staticmethod

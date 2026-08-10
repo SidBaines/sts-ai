@@ -6,7 +6,12 @@ import statistics
 from typing import Any
 
 from sts_ai.local_tasks import base
-from sts_ai.train.sft_format import build_example, chat_template_probe_hash
+from sts_ai.train.sft_format import (
+    build_example,
+    chat_template_probe_hash,
+    loss_mask_token_accounting,
+    resolve_loss_mask_mode,
+)
 
 
 def _discover_pairs(rollout_dir: Path) -> list[tuple[Path, Path]]:
@@ -105,7 +110,9 @@ def build_local_pg_dataset(
     eps: float = 1e-6,
     require_no_thinking: bool = True,
     require_framing_match: bool = True,
+    loss_mask_mode: str = "completion",
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    loss_mask_mode = resolve_loss_mask_mode(loss_mask_mode, manifest_path=None)
     pairs = _discover_pairs(Path(rollout_dir))
     metas = [base.load_json(meta_path) for _jsonl_path, meta_path in pairs]
     reasoning_mode = _one_value(
@@ -148,13 +155,20 @@ def build_local_pg_dataset(
             if skip is not None:
                 skipped[skip] += 1
                 continue
-            example = build_example(
-                record,
-                framing,
-                tokenizer=tokenizer,
-                enable_thinking=enable_thinking,
-                induce_reasoning=induce_reasoning,
-            )
+            try:
+                example = build_example(
+                    record,
+                    framing,
+                    tokenizer=tokenizer,
+                    enable_thinking=enable_thinking,
+                    induce_reasoning=induce_reasoning,
+                    loss_mask_mode=loss_mask_mode,
+                )
+            except ValueError:
+                if loss_mask_mode != "action":
+                    raise
+                skipped["action_mask_unavailable"] += 1
+                continue
             example.update(
                 {
                     "advantage": float(advantage),
@@ -166,7 +180,7 @@ def build_local_pg_dataset(
             )
             examples.append(example)
 
-    manifest = {
+    manifest: dict[str, Any] = {
         "tokenizer_id": tokenizer_id,
         "chat_template_hash": chat_template_probe_hash(
             tokenizer,
@@ -177,6 +191,7 @@ def build_local_pg_dataset(
         "reasoning_mode": reasoning_mode,
         "enable_thinking": enable_thinking,
         "induce_reasoning": induce_reasoning,
+        "loss_mask_mode": loss_mask_mode,
         "mode": mode,
         "std_norm": std_norm,
         "eps": eps,
@@ -186,4 +201,6 @@ def build_local_pg_dataset(
         "advantage_report": advantage_report,
         "skipped_record_counts": dict(skipped),
     }
+    if loss_mask_mode == "action":
+        manifest["token_accounting"] = loss_mask_token_accounting(examples)
     return examples, manifest

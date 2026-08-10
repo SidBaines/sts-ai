@@ -1,0 +1,129 @@
+{
+  "experiment_id": "COMP-015",
+  "record_kind": "sequential_seed_ambiguity_trigger",
+  "status": "preregistered_before_restarted_seed2_treatment_training",
+  "frozen_at_utc": "2026-07-23T13:20:05Z",
+  "supersedes_next_action_only": {
+    "path": "configs/competence/comp_015_fast_iteration_stop.json",
+    "sha256": "88755f50944d4a0c9b4543e5f089c81cca215e8bd157734750f654096f929774"
+  },
+  "does_not_rewrite": [
+    "the original COMP-015 hypothesis or strict all-three-pair success rule",
+    "the rational decision to stop new seeds before the already-complete seed-1 pair was scored",
+    "the completed seed-0 and seed-1 results",
+    "the fact that the earlier seed-2 treatment process was terminated before saving weights"
+  ],
+  "new_information": {
+    "train150_direct_report": {
+      "path": "data/competence/comp_016/eval/seed1_step1500_train150_direct_actions.json",
+      "sha256": "eade4f355eb42843114ccaf5faedf01c3bf72277b45f0349dc77bf92d256cfef"
+    },
+    "development57_direct_and_cyclic_report": {
+      "path": "data/competence/comp_016/eval/seed1_step1500_development57_direct_actions_cyclic.json",
+      "sha256": "d397d0b29e827c9243bba3d43745a763fe9a3438dcd936e62bcae58ecaa6d0d2"
+    },
+    "seed1_control_to_augmented": {
+      "train_direct_correct": "99/150 to 91/150",
+      "development_direct_correct": "24/57 to 31/57",
+      "development_greedy_correct": "23/57 to 31/57",
+      "development_direct_nll": "1.312863 to 1.353955",
+      "cyclic_semantic_top1_invariance": "0.334842 to 0.823529",
+      "cyclic_probability_total_variation": "0.431810 to 0.324847",
+      "cyclic_source_macro_teacher_agreement": "0.378112 to 0.564411",
+      "cyclic_source_macro_nll": "2.173288 to 1.342069",
+      "sources_invariant_under_all_rotations": "1/57 to 32/57",
+      "summary": "Five of six directional measures improve and unpermuted development gains sharply, but development NLL regresses slightly, train fit falls, TV remains above 0.20, and the 32/57 action gate is missed by one."
+    },
+    "contrast_with_seed0": "Seed 0 substantially reduced probability movement but regressed development agreement and replaced an index-0 shortcut with an index-3 shortcut. Seed 1 instead improves development choices and semantic invariance. The treatment effect is therefore genuinely training-seed-heterogeneous rather than a clear repeated failure."
+  },
+  "decision": "The seed-1 result meets the sequential policy's promising-or-genuinely-ambiguous trigger. Train only the already-matched seed-2 augmented arm through the fixed step-1500 endpoint, then score the same direct train/development/cyclic battery and close COMP-015. Do not add further seeds.",
+  "decision_value": "Seed 2 will decide whether cyclic augmentation is carried into a separately frozen move-choice-weighting combination or dropped as unstable. It cannot restore the original strict success claim or authorize behaviour.",
+  "interpretation_boundary": {
+    "strict_original_all_three_pair_success_already_failed": true,
+    "no_behaviour_from_COMP015": true,
+    "development57_is_reused_development_data": true,
+    "no_final_cohort_access": true,
+    "no_new_teacher_queries": true,
+    "no_action_reweighting_in_this_arm": true,
+    "no_more_than_this_one_new_treatment_arm": true,
+    "seed2_control_was_completed_before_this_result": true
+  },
+  "matched_control": {
+    "path": "data/competence/comp_015/checkpoints/seed2_control_identity_step1500_pinned",
+    "identity_sha256": "f24dacd8819c5985326eb8b17a5ead8355759514f282e0f684678e61fe27f88f",
+    "weights_sha256": "83fda35323c05375924bc594c795f35cb11b7cad625e6753730ca9578b051e66"
+  },
+  "treatment": {
+    "seed": 2,
+    "dataset": "data/competence/comp_015/datasets/seed2_augmented_cyclic_20pass.jsonl",
+    "dataset_sha256": "4c5b8c5a223239ca2376651c760c7f55893a0559d670c3006e712c21db6ea5ec",
+    "manifest": "data/competence/comp_015/datasets/seed2_augmented_cyclic_20pass.manifest.json",
+    "manifest_sha256": "f0bffe8067f20a296e7aa6094c27495fd7d991d4e7bf7a0862ed5386463b0c36",
+    "ordered_step_source_sha256": "716cfece9913bbac9b2bfedca4904023ce638ef70482de7468833a3990816c77",
+    "source_schedule_sha256": "9dcc9f4adb333524b26a2da5558e9c3a12b7e5dc4034bfa0b86e559037df612f",
+    "output": "data/competence/comp_015/adapters/seed2_augmented_cyclic_ambiguity1500_pinned",
+    "output_must_not_exist": true
+  },
+  "training_contract": {
+    "base_model": "mlx-community/gemma-4-e4b-it-bf16",
+    "required_cached_revision": "eec12d0899edea9b738ab1009af9159cdfd70d71",
+    "base_model_identity_sha256": "079614534dd4441ec68f1a16f6493b499590e4755f89aec2ebc32a05b8b0cb58",
+    "iterations": 1500,
+    "consumed_schedule": "the exact first 1500 rows of the already-frozen 3000-row seed-2 augmented dataset",
+    "batch_size": 1,
+    "num_layers": 8,
+    "learning_rate": 0.0001,
+    "max_seq_length": 8192,
+    "loss_mask": "mixed required-format-plus-action",
+    "action_token_only": false,
+    "action_token_weight": 1.0,
+    "loss_weight_representation": "historical boolean mask",
+    "preserve_row_order": true,
+    "validation_fraction": 0.0,
+    "lora_rank": 8,
+    "lora_scale": 20.0,
+    "lora_dropout": 0.0,
+    "gradient_accumulation_steps": 1,
+    "optimizer": "Adam",
+    "steps_per_report": 150,
+    "save_every": 750,
+    "retained_steps": [
+      750,
+      1500
+    ],
+    "fresh_base_load": true,
+    "warm_start": false
+  },
+  "unit_weight_compatibility_audit": {
+    "historical_preparation_file": "data/competence/comp_015/adapters/seed2_augmented_cyclic_primary1500_pinned/mlx_data_kzbvbng7/train.jsonl",
+    "regenerated_current_preparation_matches_byte_for_byte": true,
+    "prepared_file_sha256": "91177b9bec9b0480e2ff6996ca1ccf6596131fbc3715aef5270b02f41b5ffad3",
+    "prepared_file_size_bytes": 56566350,
+    "n_rows": 3000,
+    "equivalence": "Tokens, boolean masks, serialized row order, fixed source schedule, batch size, padding, loss operation, optimizer construction, and iteration order match the historical unit-weight path. New adapter/config provenance fields do not enter model or optimizer computation.",
+    "limitation": "The treatment adapter directory cannot be byte-identical to a historical run because its provenance files explicitly record the current source and weighting support."
+  },
+  "evaluation": {
+    "fixed_step": 1500,
+    "train150_direct_and_greedy": "data/competence/comp_016/eval/seed2_step1500_train150_direct_actions.json",
+    "development57_direct_greedy_and_all_nonzero_cyclic": "data/competence/comp_016/eval/seed2_step1500_development57_direct_actions_cyclic.json",
+    "require_zero_exact_direct_ties": true,
+    "require_canonical_and_legal_greedy_json": true,
+    "final_cohort_queried": false
+  },
+  "close_decision_rule": {
+    "carry_cyclic_augmentation_forward_if": "Relative to the matched seed-2 control, treatment does not regress unpermuted direct development agreement, improves semantic top-1 invariance by at least 0.20, reduces probability total variation by at least 0.10, improves cyclic source-macro teacher agreement by at least 0.10, and reduces cyclic source-macro NLL by at least 0.25.",
+    "drop_cyclic_augmentation_if": "Treatment regresses unpermuted development agreement or fails at least two of the four cyclic improvement thresholds.",
+    "mixed_if": "Development does not regress and exactly three of the four cyclic thresholds pass; report the residual ambiguity, do not add seeds, and defer any combination until weight 8 independently passes.",
+    "regardless": "Close COMP-015 after this pair. No COMP-015 behaviour or final-cohort release is permitted."
+  },
+  "code_provenance": {
+    "train_cli_sha256": "fac1dc05e9443566ad941792281122ae5c7ef7953627a1e321f0ade74464d8d7",
+    "mlx_trainer_sha256": "ff6c5b7412f03fb1b8dec7e984ac31aa4e425a618f5de94a55d46e42a3c8b8b1",
+    "mlx_data_tests_sha256": "e2b8cb0753be3dfd65a2fa696726d63c363a94a90b643e083538d64d02434860",
+    "focused_weight_and_compatibility_tests": "43 passed before the explicit mixed-representation test; 35/35 trainer-data tests passed after it",
+    "full_suite": "648 passed, 11 skipped",
+    "random_smoke": "5 decisions, expected clean max_decisions stop"
+  },
+  "compute": "Local Apple Silicon/Metal only; no RunPod."
+}

@@ -20,6 +20,13 @@ class ParseJsonActionTest(unittest.TestCase):
         self.assertEqual(decision.action_index, 1)
         self.assertEqual(decision.reasoning, "take second")
 
+    def test_parses_action_only_json_without_inventing_reasoning(self):
+        decision = parse_json_action('{"action_index": 1}', self.actions)
+
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 1)
+        self.assertEqual(decision.reasoning, "")
+
     def test_falls_back_on_invalid_index(self):
         decision = parse_json_action('{"reasoning": "bad", "action_index": 99}', self.actions)
         self.assertFalse(decision.valid)
@@ -170,6 +177,19 @@ class RandomLegalAgentSeedTest(unittest.TestCase):
 
 
 class MlxQwenJsonAgentRetryTest(unittest.TestCase):
+    def test_config_records_action_only_output_contract(self):
+        agent = object.__new__(MlxQwenJsonAgent)
+        agent.model_id = "model"
+        agent.framing = NEUTRAL_FRAME
+        agent.temperature = 0.2
+        agent.max_tokens = 64
+        agent.enable_thinking = False
+        agent.max_retries = 1
+        agent.adapter_path = None
+        agent.output_contract = "action_only"
+
+        self.assertEqual(agent.config["output_contract"], "action_only")
+
     def test_retries_after_invalid_json(self):
         actions = [LegalAction(index=0, bits=1, description="first")]
         agent = object.__new__(MlxQwenJsonAgent)
@@ -187,6 +207,28 @@ class MlxQwenJsonAgentRetryTest(unittest.TestCase):
         self.assertEqual(decision.reasoning, "fixed")
         self.assertEqual(decision.retries, 1)
         self.assertGreaterEqual(decision.latency_s, 0.0)  # timing populated
+
+    def test_choose_action_uses_action_only_prompt_contract(self):
+        actions = [LegalAction(index=0, bits=1, description="first")]
+        agent = object.__new__(MlxQwenJsonAgent)
+        agent.framing = NEUTRAL_FRAME
+        agent.output_contract = "action_only"
+        agent.max_retries = 0
+        agent.max_tokens = 64
+        agent._apply_chat_template = lambda prompt: prompt
+        agent._count_tokens = lambda text: 0
+        seen = {}
+
+        def generate(prompt):
+            seen["prompt"] = prompt
+            return '{"action_index":0}'
+
+        agent._generate_chat = generate
+        decision = agent.choose_action("state", actions)
+
+        self.assertTrue(decision.valid)
+        self.assertIn('{"action_index": 0}', seen["prompt"])
+        self.assertNotIn('"reasoning"', seen["prompt"])
 
     def test_prompt_override_bypasses_render_action_prompt(self):
         # The Interactive Studio advanced-template path: choose_action must send
@@ -319,6 +361,19 @@ class VllmJsonAgentTest(unittest.TestCase):
         agent._native_thinking = False
         prompt = agent._render_prompt("state", self.actions)
         self.assertNotIn("<think>...</think>", prompt)
+
+    def test_render_prompt_uses_action_only_contract(self):
+        agent = object.__new__(VllmJsonAgent)
+        agent.framing = NEUTRAL_FRAME
+        agent.output_contract = "action_only"
+        agent.enable_thinking = False
+        agent._native_thinking = False
+        agent._apply_chat_template = lambda prompt: prompt
+
+        prompt = agent._render_prompt("state", self.actions)
+
+        self.assertIn('{"action_index": 0}', prompt)
+        self.assertNotIn('"reasoning"', prompt)
 
     def test_choose_actions_batch_fails_soft_when_generate_raises(self):
         class FakeSamplingParams:
@@ -520,8 +575,10 @@ class VllmJsonAgentTest(unittest.TestCase):
         agent.dtype = "auto"
         agent.gpu_memory_utilization = 0.9
         agent.adapter_path = None
+        agent.output_contract = "action_only"
 
         self.assertTrue(agent.config["preserve_special_tokens"])
+        self.assertEqual(agent.config["output_contract"], "action_only")
 
     def test_stream_poll_reports_submit_to_finish_latency(self):
         # Streaming path: stream_submit records submit time; stream_poll reports the

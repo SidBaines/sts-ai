@@ -44,6 +44,10 @@ class TrainMlxCommandTest(unittest.TestCase):
                 "0.0002",
                 "--max-seq-length",
                 "8192",
+                "--seed",
+                "0",
+                "--grad-accumulation-steps",
+                "1",
                 "--mask-prompt",
             ],
         )
@@ -107,6 +111,28 @@ class TrainMlxCommandTest(unittest.TestCase):
         )
 
         self.assertEqual(cmd[cmd.index("--max-seq-length") + 1], "1234")
+
+    def test_explicit_seed_grad_accum_and_persistent_config(self):
+        cmd = build_lora_cmd(
+            python_exe="python",
+            base_model="base/model",
+            data_dir=Path("data"),
+            out_adapter_dir=Path("adapter"),
+            num_layers=4,
+            iters=9,
+            batch_size=2,
+            learning_rate=0.0002,
+            seed=7,
+            grad_accumulation_steps=3,
+            config_path=Path("adapter/mlx_lora_config.json"),
+        )
+
+        self.assertEqual(cmd[cmd.index("--seed") + 1], "7")
+        self.assertEqual(cmd[cmd.index("--grad-accumulation-steps") + 1], "3")
+        self.assertEqual(
+            cmd[cmd.index("--config") + 1],
+            "adapter/mlx_lora_config.json",
+        )
 
 
 if __name__ == "__main__":

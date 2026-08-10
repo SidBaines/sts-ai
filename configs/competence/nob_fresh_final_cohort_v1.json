@@ -1,0 +1,67 @@
+{
+  "cohort_id": "nob_fresh_final_cohort_v1",
+  "frozen_at_utc": "2026-07-23T04:59:00Z",
+  "purpose": "Fresh final Nob behavioural cohort, isolated before further checkpoint, regularization, DAgger, or model-capacity decisions.",
+  "source": {
+    "rollout_dir": "data/eval_iter1/base/vllm_gemma_4_E4B_it_thinking_8192",
+    "world_seed_range": [600, 659],
+    "n_source_rollouts": 60,
+    "n_source_files_with_nob_windows": 30,
+    "source_content_set_sha256": "32a1178010d1318f523fdabaaffbe3780d8f10346c76c01dbbf2f897b867ebd9"
+  },
+  "split": {
+    "rule": "world_seed modulo 2; remainder 0 is holdout",
+    "n_windows": 31,
+    "train_windows": 18,
+    "holdout_windows": 13,
+    "holdout_window_ids": [
+      "seed_604_r0_w0",
+      "seed_604_r0_w1",
+      "seed_606_r0_w0",
+      "seed_614_r0_w0",
+      "seed_618_r0_w0",
+      "seed_624_r0_w0",
+      "seed_632_r0_w0",
+      "seed_634_r0_w0",
+      "seed_636_r0_w0",
+      "seed_640_r0_w0",
+      "seed_644_r0_w0",
+      "seed_648_r0_w0",
+      "seed_650_r0_w0"
+    ],
+    "grouping_note": "both windows from world seed 604 remain in the same holdout split"
+  },
+  "manifests": {
+    "source": {
+      "path": "data/local_curricula/gremlin_nob/manifests/fresh_final_source_600_659.json",
+      "sha256": "e0a3acc507a9d898f83bdb4bc435e6f8723510ab1e2e14bfeda48bcd5192bb5b"
+    },
+    "validated_primary": {
+      "path": "data/local_curricula/gremlin_nob/manifests/fresh_final_source_600_659.validated_v1.json",
+      "sha256": "b35b9aa71774194a5c852e9cf15fc6b5795635ad42aadcdcb639175cd1f2bd4a"
+    },
+    "validated_repeat": {
+      "path": "data/local_curricula/gremlin_nob/manifests/fresh_final_source_600_659.validated_repeat_v1.json",
+      "sha256": "9b1a8eb7fa4d896bccd3a2a466068176b91b10289262efc900ea8a258ba1cb6e"
+    },
+    "validation_report_primary_sha256": "ae37ac0959813893c81230fb773d8fb1234f6563a56cf70c1aa6997c05b6d3b3",
+    "validation_report_repeat_sha256": "959295c964a0ac6f8496cc7be7496a5271537f1c8941feeef740a53cc62fd2fb"
+  },
+  "replay_validation": {
+    "runs_per_window": 2,
+    "primary_success": "31/31",
+    "repeat_success": "31/31",
+    "all_public_start_signatures_equal": true,
+    "signature_schema": 2,
+    "combat_observation": "combat_public_v2",
+    "simulator_patch_sha256": "5e504a5b1b297c05b628fe09d980d892c72d302b0ef53a5f10da5c3a5f73b749",
+    "simulator_binary_sha256": "fde8de9366bacc8c1b5e7248a7149461bcc30b368cf8123156dd19c5cd0daf53"
+  },
+  "embargo": {
+    "teacher_queries_on_holdout": false,
+    "teacher_action_scoring_on_holdout": false,
+    "model_rollouts_on_holdout": false,
+    "may_use_train_windows_for_future_data_collection": true,
+    "release_condition": "one preregistered matched C1 behavioural comparison after development gates pass"
+  }
+}

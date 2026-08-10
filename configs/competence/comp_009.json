@@ -1,0 +1,102 @@
+{
+  "experiment_id": "COMP-009",
+  "stage": "combat_public_v2_full_teacher_sft",
+  "status": "preregistered_before_first_model_load",
+  "frozen_at_utc": "2026-07-23T02:56:33Z",
+  "dependency": {
+    "experiment": "COMP-008",
+    "result": "tiny32_positive_control_passed",
+    "result_path": "configs/competence/comp_008_result.json",
+    "result_sha256": "1687da7a521449a415639dabfd1912978fc43763fa3b415d76234153d8f7de05"
+  },
+  "hypothesis": "Three deterministic passes of action-masked LoRA over all 600 high-confidence v2 Nob teacher states will improve first-per-turn teacher-action generalization enough to justify matched behavioural evaluation.",
+  "dataset": {
+    "path": "data/competence/comp_008/datasets/train_teacher_action_only.jsonl",
+    "sha256": "92f04d36fcdd38ed765b38e8347af790b6bbe482fb0a79b44bf82a45a45702cf",
+    "manifest": "data/competence/comp_008/datasets/train_teacher_action_only.manifest.json",
+    "manifest_sha256": "ce2f4215a9f3424190c4428d254051738b35a73fe631ab34f882f84108ece9ca",
+    "manifest_version": 3,
+    "n_examples": 600,
+    "observation_version": "combat_public_v2",
+    "teacher_selection_rule": "aggregated_root_visits",
+    "teacher_simulations": 50000,
+    "loss_mask_mode": "action",
+    "output_contract": "action_only",
+    "thinking": false
+  },
+  "heldout": {
+    "path": "data/competence/comp_008/datasets/holdout_turn_first_teacher_action_only.jsonl",
+    "sha256": "e880e45bb9f9da60343953c89ca4c45cdb09a19666fb72e7afe05ecbcc0569dc",
+    "manifest": "data/competence/comp_008/datasets/holdout_turn_first_teacher_action_only.manifest.json",
+    "manifest_sha256": "fe41e2c6a024d3eb14f8c0a6945f74765fa94b4ecde76cb2e1ca91aab5050142",
+    "n_examples": 57,
+    "base_report": "data/competence/comp_008/eval/heldout_turn_first_base_teacher_actions.json",
+    "base_report_sha256": "386f1a239229d64487b1f93d9068df7bbafe8f75a61c24d2ec69638742b9df34",
+    "base_top1_correct": 22,
+    "base_top1_agreement": 0.38596491228070173,
+    "base_mean_teacher_probability": 0.37216219280078805,
+    "base_mean_teacher_candidate_nll": 1.7769037108772021
+  },
+  "model": {
+    "id": "mlx-community/gemma-4-e4b-it-bf16",
+    "cached_huggingface_revision": "eec12d0899edea9b738ab1009af9159cdfd70d71",
+    "hf_hub_offline": true,
+    "tokenizer_id": "mlx-community/gemma-4-e4b-it-bf16",
+    "chat_template_hash": "d74b50cb2541e519"
+  },
+  "training": {
+    "backend": "mlx",
+    "adapter_output": "data/competence/comp_009/adapters/full600",
+    "output_must_not_exist": true,
+    "expected_input_examples": 600,
+    "expected_retained_examples": 600,
+    "num_layers": 8,
+    "batch_size": 1,
+    "iterations": 1800,
+    "effective_passes_if_retained_count_matches": 3,
+    "learning_rate": 0.0001,
+    "max_seq_length": 8192,
+    "validation_fraction": 0.0,
+    "seed": 0,
+    "shuffle_seed": 0,
+    "optimizer": "adam",
+    "lora_rank": 8,
+    "lora_scale": 20.0,
+    "lora_dropout": 0.0,
+    "gradient_accumulation_steps": 1,
+    "steps_per_report": 100,
+    "save_every": 600,
+    "checkpoint_rule": "use final iteration 1800 without inspecting intermediate accuracy"
+  },
+  "evaluation": {
+    "adapter_heldout_report": "data/competence/comp_009/eval/heldout_turn_first_adapter_teacher_actions.json",
+    "score_only_final_adapter": true,
+    "matched_candidate_sets": true
+  },
+  "gate_to_behavioural_evaluation": {
+    "primary_metric": "top1_teacher_action_agreement_on_57_heldout_first_per_turn_states",
+    "minimum_correct_rows": 32,
+    "minimum_top1_agreement": 0.55,
+    "minimum_mean_teacher_probability": 0.37216219280078805,
+    "maximum_mean_teacher_candidate_nll": 1.7769037108772021,
+    "require_zero_invalid_and_skipped_rows": true,
+    "failure_action": "stop before behavioural evaluation and diagnose generalization, action-token weighting, data coverage, or adapter capacity"
+  },
+  "code_provenance": {
+    "git_head": "ba0c6b69ec004181b61f9e6c12c6662c38a7f14c",
+    "worktree_was_dirty": true,
+    "train_cli_sha256": "e39433f2777d55a0ce012d356aa1202d5f841bbe3cbd5fd69618e715f3ea4e2e",
+    "mlx_trainer_sha256": "11135dced89fc105c67cbf1ba167da8238389677d1e83570d5ae3e00bcb9a7c1",
+    "score_cli_sha256": "355c55629fe04281f61cf6cafcffcae3d713e2110c7db7dc6d1af4ef6f315f71",
+    "teacher_evaluator_sha256": "0e0cf5bd032ff3dd199242f7584c24243626b01c83df37cc774a82d8dee383af"
+  },
+  "software": {
+    "python": "3.12.13",
+    "mlx": "0.31.2",
+    "mlx_lm": "0.31.3",
+    "transformers": "5.12.1",
+    "tokenizers": "0.22.2",
+    "numpy": "2.4.6"
+  },
+  "compute": "local Apple Silicon/Metal only; no RunPod"
+}

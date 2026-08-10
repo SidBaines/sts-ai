@@ -7,7 +7,12 @@ import time
 from dataclasses import asdict
 from typing import Protocol
 
-from sts_ai.prompting import NEUTRAL_FRAME, render_action_prompt
+from sts_ai.prompting import (
+    NEUTRAL_FRAME,
+    REASONING_ACTION_OUTPUT,
+    render_action_prompt,
+    validate_output_contract,
+)
 from sts_ai.schemas import AgentDecision, LegalAction
 
 
@@ -130,6 +135,7 @@ class MlxQwenJsonAgent:
         max_retries: int = 1,
         enable_thinking: bool = False,
         adapter_path: str | None = None,
+        output_contract: str = REASONING_ACTION_OUTPUT,
     ) -> None:
         try:
             from mlx_lm import generate, load
@@ -150,6 +156,8 @@ class MlxQwenJsonAgent:
         self.max_retries = max_retries
         self.enable_thinking = enable_thinking
         self.adapter_path = adapter_path
+        validate_output_contract(output_contract)
+        self.output_contract = output_contract
         try:
             from mlx_lm import batch_generate
         except (ImportError, ModuleNotFoundError):
@@ -184,6 +192,9 @@ class MlxQwenJsonAgent:
             "reasoning_mode": "native" if self.enable_thinking else "none",
             "max_retries": self.max_retries,
             "adapter_path": self.adapter_path,
+            "output_contract": getattr(
+                self, "output_contract", REASONING_ACTION_OUTPUT
+            ),
         }
 
     def sleep(self, level: int = 1) -> None:
@@ -231,7 +242,14 @@ class MlxQwenJsonAgent:
         base_prompt = (
             prompt_override
             if prompt_override is not None
-            else render_action_prompt(state_text, legal_actions, self.framing)
+            else render_action_prompt(
+                state_text,
+                legal_actions,
+                self.framing,
+                output_contract=getattr(
+                    self, "output_contract", REASONING_ACTION_OUTPUT
+                ),
+            )
         )
         last_decision: AgentDecision | None = None
         start = time.perf_counter()
@@ -282,7 +300,14 @@ class MlxQwenJsonAgent:
         base_prompt = (
             prompt_override
             if prompt_override is not None
-            else render_action_prompt(state_text, legal_actions, self.framing)
+            else render_action_prompt(
+                state_text,
+                legal_actions,
+                self.framing,
+                output_contract=getattr(
+                    self, "output_contract", REASONING_ACTION_OUTPUT
+                ),
+            )
         )
         chat_prompt = self._apply_chat_template(base_prompt)
         kwargs: dict = {"max_tokens": self.max_tokens}
@@ -341,7 +366,14 @@ class MlxQwenJsonAgent:
             retry_flags = [False] * len(items)
         prompts = []
         for (state_text, legal_actions), retry in zip(items, retry_flags):
-            prompt = render_action_prompt(state_text, legal_actions, self.framing)
+            prompt = render_action_prompt(
+                state_text,
+                legal_actions,
+                self.framing,
+                output_contract=getattr(
+                    self, "output_contract", REASONING_ACTION_OUTPUT
+                ),
+            )
             if retry:
                 prompt += (
                     "\n\nYour previous response was invalid. Return only one JSON object "
@@ -434,6 +466,7 @@ class VllmJsonAgent:
         dtype: str = "auto",
         gpu_memory_utilization: float = 0.90,
         seed: int = 0,
+        output_contract: str = REASONING_ACTION_OUTPUT,
     ) -> None:
         try:
             from vllm import LLM, SamplingParams
@@ -456,6 +489,8 @@ class VllmJsonAgent:
         self.dtype = dtype
         self.gpu_memory_utilization = gpu_memory_utilization
         self._seed = seed
+        validate_output_contract(output_contract)
+        self.output_contract = output_contract
 
         llm_kwargs = {
             "model": model_id,
@@ -507,6 +542,9 @@ class VllmJsonAgent:
             "dtype": self.dtype,
             "gpu_memory_utilization": self.gpu_memory_utilization,
             "adapter_path": self.adapter_path,
+            "output_contract": getattr(
+                self, "output_contract", REASONING_ACTION_OUTPUT
+            ),
         }
 
     @property
@@ -574,6 +612,9 @@ class VllmJsonAgent:
             legal_actions,
             self.framing,
             induce_reasoning=(self.reasoning_mode == "prompted"),
+            output_contract=getattr(
+                self, "output_contract", REASONING_ACTION_OUTPUT
+            ),
         )
 
     def _render_prompt(self, state_text: str, legal_actions: list[LegalAction]) -> str:
@@ -766,7 +807,14 @@ class VllmJsonAgent:
         prompts = []
         for (state_text, legal_actions), retry in zip(items, retry_flags):
             if retry:
-                base = render_action_prompt(state_text, legal_actions, self.framing)
+                base = render_action_prompt(
+                    state_text,
+                    legal_actions,
+                    self.framing,
+                    output_contract=getattr(
+                        self, "output_contract", REASONING_ACTION_OUTPUT
+                    ),
+                )
                 base += (
                     "\n\nYour previous response was invalid. Return only one JSON object "
                     "with a legal integer action_index from the listed actions. Do not include "

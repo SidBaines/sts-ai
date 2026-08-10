@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 
 from sts_ai.train.pg_dataset import build_pg_dataset
+from sts_ai.train.train_pg_mlx import _tokenize_dataset
+from tests.unit.test_sft_format import OffsetCharTokenizer
 
 
 FRAMING = "Test framing: choose the strongest legal action."
@@ -113,6 +115,58 @@ def _write_rollout(root: Path, meta: dict, records: list[dict]) -> Path:
 
 
 class BuildPgDatasetTest(unittest.TestCase):
+    def test_action_mask_is_recorded_for_pg_data(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_rollout(
+                root,
+                _meta(world_seed=7, final_floor=50),
+                [_record(world_seed=7, decision_index=1)],
+            )
+            examples, manifest = build_pg_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="fake-tokenizer",
+                loss_mask_mode="action",
+            )
+            self.assertEqual(len(examples), 1)
+            self.assertEqual(manifest["loss_mask_mode"], "action")
+            self.assertEqual(
+                manifest["token_accounting"]["totals"][
+                    "n_supervised_thought_tokens"
+                ],
+                0,
+            )
+
+    def test_mlx_pg_action_mask_excludes_thought_and_requires_untruncated_action(self):
+        tokenizer = OffsetCharTokenizer()
+        record = {
+            "prompt": "prompt",
+            "completion": "<think>private</think>{\"action_index\": 1}",
+            "target_action_index": 1,
+            "assistant_turn_terminator": "<turn>",
+            "advantage": 1.0,
+        }
+        examples = _tokenize_dataset(
+            [record],
+            tokenizer,
+            max_seq_len=256,
+            loss_mask_mode="action",
+        )
+        self.assertEqual(len(examples), 1)
+        self.assertLess(
+            examples[0]["n_completion_tokens"],
+            len(record["completion"]),
+        )
+        with self.assertRaisesRegex(ValueError, "no completion tokens"):
+            _tokenize_dataset(
+                [record],
+                tokenizer,
+                max_seq_len=len(record["prompt"]) + 4,
+                loss_mask_mode="action",
+            )
+
     def test_offline_advantages_are_broadcast_to_all_kept_decisions(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -306,6 +360,7 @@ class BuildPgDatasetTest(unittest.TestCase):
             self.assertEqual(manifest["reasoning_mode"], "none")
             self.assertFalse(manifest["enable_thinking"])
             self.assertFalse(manifest["induce_reasoning"])
+            self.assertEqual(manifest["loss_mask_mode"], "completion")
             self.assertIn("advantage_report", manifest)
             self.assertIn("label_report", manifest)
 

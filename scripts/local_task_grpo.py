@@ -26,6 +26,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-tokens", type=int, default=4096)
     parser.add_argument("--max-seq-len", type=int, default=1024)
     parser.add_argument("--max-decisions", type=int, default=80)
+    parser.add_argument(
+        "--combat-observation",
+        choices=("legacy", "combat_public_v1", "combat_public_v2"),
+        default="legacy",
+    )
     parser.add_argument("--battle-simulations", type=int, default=50)
     parser.add_argument("--max-act", type=int, default=3)
     parser.add_argument("--clip-eps", type=float, default=0.2)
@@ -96,10 +101,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         env = LightspeedHybridEnv(
             world_seed=seed,
             combat_control="llm",
+            combat_observation=args.combat_observation,
             battle_simulations=args.battle_simulations,
             max_act=args.max_act,
         )
-        replay_task_start(env, windows_by_seed[int(seed)])
+        replay_task_start(env, windows_by_seed[int(seed)], task)
         return env
 
     run_fn = functools.partial(
@@ -139,6 +145,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             "local_task": task.task_id,
             "source_manifest": str(args.manifest),
             "backend": args.backend,
+            "combat_observation": args.combat_observation,
             "train_split": args.train_split,
             "num_train_windows": len(train_seeds),
             "init_adapter": args.init_adapter,

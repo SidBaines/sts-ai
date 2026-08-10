@@ -53,12 +53,15 @@ BLOCK_BASE: dict[str, tuple[int, int]] = {
     "Panic Button": (30, 40),
 }
 
+_CARD_TYPE_TAG = r"(?:\s+\[(?:Attack|Skill|Power|Curse|Status)\])?"
 _PLAY_RE = re.compile(
-    r"^play\s+(.*?)\s+\(cost\s+(\S+?)\)"
+    rf"^play\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+(\S+?)\)"
     r"(?:\s*->\s*(.*?))?"
     r"(?:\s*\(deal\s+(\d+)[^)]*\))?\s*$"  # leading number = total damage; anchor forces full match
 )
-_HAND_RE = re.compile(r"^\[(\d+)\]\s+(.*?)\s+\(cost\s+(\S+?)\)\s*$")
+_HAND_RE = re.compile(
+    rf"^\[(\d+)\]\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+(\S+?)\)\s*$"
+)
 _DEX_RE = re.compile(r"\bDexterity\s+(-?\d+)")
 _PLAYER_BLOCK_RE = re.compile(r"\bblock:\s*(-?\d+)\b")
 _ENEMY_INDEX_SUFFIX_RE = re.compile(r"\s*\[enemy (\d+)\]$")

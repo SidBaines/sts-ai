@@ -1,0 +1,55 @@
+{
+  "experiment_id": "COMP-013",
+  "status": "checkpoint_diagnostic_complete_no_sufficient_early_stop",
+  "preregistration": {
+    "path": "configs/competence/comp_013.json",
+    "sha256_at_first_step1500_model_load": "8b6dbcbe4858a4087bcabf29ca3abc36d4594b0fa890a0eecdb75d4394060aaa"
+  },
+  "checkpoint": {
+    "updates": 1500,
+    "passes": 10,
+    "source_weights_sha256": "875c6b2b5b542d6e785c6da097d0112d71bd34fcf3cf1b059dce5d530da7a62c",
+    "derived_adapter_identity_sha256": "ebb6fef1e8ba303d4eef8e625458f651687b63b7fdcc3915e4f14edc5c35356c"
+  },
+  "train150": {
+    "report": "data/competence/comp_013/eval/step1500_train150_teacher_actions.json",
+    "report_sha256": "8132a3fb7bfec29d997de259fbe27d99858fbcab7bfd016a34aeb6148d34ef49",
+    "correct": 102,
+    "top1": 0.68,
+    "mean_teacher_probability": 0.4304987455243471,
+    "mean_teacher_candidate_nll": 0.9226251379449341,
+    "prediction_counts": {"0": 28, "1": 57, "2": 56, "3": 9},
+    "top1_ties": 7,
+    "invalid_or_skipped_rows": 0
+  },
+  "development57": {
+    "report": "data/competence/comp_013/eval/step1500_development57_teacher_actions.json",
+    "report_sha256": "93762ad07c571118be9003af3c4e80f9195bfb8f77fd0995791751d9f81e6953",
+    "correct": 27,
+    "top1": 0.47368421052631576,
+    "mean_teacher_probability": 0.3590367606410307,
+    "mean_teacher_candidate_nll": 1.1826254680923707,
+    "prediction_counts": {"0": 17, "1": 22, "2": 15, "3": 3},
+    "top1_ties": 4,
+    "invalid_or_skipped_rows": 0
+  },
+  "comparison_to_step3000": {
+    "additional_updates": 1500,
+    "additional_passes": 10,
+    "train_correct_delta": 47,
+    "development_correct_delta": 1,
+    "development_nll_delta": 1.3892638700494872,
+    "development_probability_delta": 0.12022220547573756,
+    "interpretation": "The second ten passes memorize 47 additional train rows but add only one development top-1 choice. They also sharpen probability enough to worsen development NLL by 1.389, despite raising mean teacher probability. Late overfitting/overconfidence is real, but the earlier checkpoint is not a sufficient policy solution."
+  },
+  "frozen_rule_outcome": {
+    "strong_late_overfit_rule_passed": false,
+    "partial_late_overfit_rule_passed": false,
+    "reason": "Step 1500 has better-than-base NLL but only 27 correct, below the required 28 for either rule.",
+    "classification": "coverage_or_representation_dominates_under_frozen_rule_with_late_overconfidence_as_secondary_failure"
+  },
+  "behavioural_evaluation": {
+    "status": "not_run_diagnostic_only"
+  },
+  "decision": "Do not select either checkpoint for behaviour. Run the separately preregistered cyclic action-order audit next; then isolate permutation/regularization from expanded coverage rather than combining them."
+}

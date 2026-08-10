@@ -1,0 +1,52 @@
+{
+  "experiment_id": "COMP-005",
+  "stage": "tiny32_overfit_positive_control",
+  "status": "rejected_before_model_load_missing_card_type",
+  "rejection": {
+    "reason": "all combat_public_v1 prompts omitted human-visible card type",
+    "model_loaded_or_scored": false,
+    "training_started": false,
+    "superseded_by": "COMP-008 v2 recollection"
+  },
+  "model": "mlx-community/gemma-4-e4b-it-bf16",
+  "backend": "mlx",
+  "output_contract": "action_only",
+  "thinking": false,
+  "loss_mask_mode": "action",
+  "teacher": {
+    "search_simulations": 50000,
+    "search_seeds": [1, 2, 3],
+    "draw_order_seeds": [100, 101],
+    "min_consensus": 0.6666666666666666,
+    "require_hidden_consensus_same_action": true,
+    "raw_train_rows": 652,
+    "eligible_train_rows": 493
+  },
+  "dataset": {
+    "path": "data/competence/comp_005_v1_invalid_missing_card_type/datasets/tiny32_teacher_action_only.jsonl",
+    "sha256": "6da8b38838ccc01a907cf0c816bf95b7068f174e17abcd50c84b0d16ef9528b7",
+    "manifest": "data/competence/comp_005_v1_invalid_missing_card_type/datasets/tiny32_teacher_action_only.manifest.json",
+    "manifest_sha256": "ff260cd85c183dea8decf71e087c02977225bf56e368556e2f80b58958058bd2",
+    "n_examples": 32,
+    "selection": "stable_public_state_hash_prefix_after_filtering_and_dedup"
+  },
+  "training": {
+    "num_layers": 8,
+    "batch_size": 1,
+    "iterations": 640,
+    "effective_passes": 20,
+    "learning_rate": 0.0001,
+    "max_seq_length": 8192,
+    "validation_fraction": 0.0,
+    "shuffle_seed": 0,
+    "steps_per_report": 32,
+    "save_every": 64,
+    "checkpoint_rule": "use final iteration 640 without inspecting intermediate accuracy"
+  },
+  "gate": {
+    "metric": "top1_teacher_action_agreement_on_all_32_training_rows",
+    "pass_threshold": 0.95,
+    "failure_action": "stop before full-data training and diagnose masking, gradients, and adapter capacity"
+  },
+  "compute": "local Apple Silicon MPS only"
+}

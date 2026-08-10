@@ -33,6 +33,7 @@ def _load_tokenizer(tokenizer_id: str) -> Any:
 def _print_report(manifest: dict[str, Any]) -> None:
     report = manifest["filter_report"]
     lines = [
+        f"loss_mask_mode: {manifest.get('loss_mask_mode', 'completion')}",
         f"n_rollouts_discovered: {manifest['n_rollouts_discovered']}",
         f"n_missing_meta: {manifest['n_missing_meta']}",
         f"n_kept_trajectories: {manifest['n_kept_trajectories']}",
@@ -48,6 +49,11 @@ def _print_report(manifest: dict[str, Any]) -> None:
         "skipped_record_counts: "
         + json.dumps(manifest["skipped_record_counts"], sort_keys=True),
     ]
+    if manifest.get("token_accounting") is not None:
+        lines.append(
+            "token_accounting: "
+            + json.dumps(manifest["token_accounting"], sort_keys=True)
+        )
     if manifest.get("weighting_mode") == "rwr":
         rwr_report = manifest["rwr_report"]
         lines.extend(
@@ -98,6 +104,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--rwr-max-multiplier", type=int, default=8)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument(
+        "--loss-mask",
+        choices=("action", "completion"),
+        default="action",
+        help="Primary loss target. Competence runs default to action-only; use "
+        "'completion' to reproduce the historical full-response objective.",
+    )
     parser.add_argument("--allow-fallback", action="store_true")
     parser.add_argument(
         "--allow-thinking",
@@ -131,6 +144,7 @@ def main() -> None:
         rwr_max_multiplier=args.rwr_max_multiplier,
         require_no_thinking=not args.allow_thinking,
         drop_phases=tuple(args.drop_phase),
+        loss_mask_mode=args.loss_mask,
     )
 
     _print_report(manifest)

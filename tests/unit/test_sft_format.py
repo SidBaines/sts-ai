@@ -1,13 +1,18 @@
 """Unit tests for skew-free SFT prompt/completion formatting."""
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from sts_ai.train.sft_format import (
+    assistant_turn_terminator,
     assistant_turn_content,
     build_example,
     completion_text,
     reconstruct_prompt,
+    resolve_loss_mask_mode,
     tokenize_example,
     user_content,
 )
@@ -93,6 +98,57 @@ class LegacyEncodingTokenizer:
     def encode(self, text):
         self.encode_calls.append({"text": text})
         return text.split()
+
+
+class OffsetCharTokenizer:
+    eos_token = "<eos>"
+
+    def encode(self, text, add_special_tokens=True):
+        prefix = [999_999] if add_special_tokens else []
+        return prefix + [ord(char) for char in text]
+
+    def __call__(self, text, add_special_tokens=False, return_offsets_mapping=False):
+        if add_special_tokens:
+            raise AssertionError("completion tokenization must not add special tokens")
+        if not return_offsets_mapping:
+            raise AssertionError("action masking must request offsets")
+        return {
+            "input_ids": [ord(char) for char in text],
+            "offset_mapping": [(index, index + 1) for index in range(len(text))],
+        }
+
+    def apply_chat_template(
+        self,
+        messages,
+        tokenize=False,
+        add_generation_prompt=False,
+        enable_thinking=None,
+    ):
+        del tokenize, enable_thinking
+        rendered = f"<user>{messages[0]['content']}<turn><model>"
+        if len(messages) == 2:
+            rendered += messages[1]["content"] + "<turn>"
+        elif not add_generation_prompt:
+            rendered = f"<user>{messages[0]['content']}<turn>"
+        return rendered
+
+
+class ThoughtBoundaryMergingTokenizer(OffsetCharTokenizer):
+    def __init__(self):
+        self.offsets = []
+
+    def __call__(self, text, add_special_tokens=False, return_offsets_mapping=False):
+        del add_special_tokens, return_offsets_mapping
+        reasoning_start = text.index('"secret"')
+        merged_end = reasoning_start + len('"sec')
+        offsets = [(index, index + 1) for index in range(reasoning_start)]
+        offsets.append((reasoning_start, merged_end))
+        offsets.extend((index, index + 1) for index in range(merged_end, len(text)))
+        self.offsets = offsets
+        return {
+            "input_ids": list(range(10_000, 10_000 + len(offsets))),
+            "offset_mapping": offsets,
+        }
 
 
 class ChannelAwareFakeTokenizer:
@@ -431,6 +487,187 @@ class SftFormatTest(unittest.TestCase):
             tokenizer.encode_calls,
             [{"text": "prompt token"}, {"text": "completion token"}],
         )
+
+    def test_action_mask_preserves_native_markers_action_and_turn_end(self):
+        tokenizer = OffsetCharTokenizer()
+        completion = (
+            "<|channel>thought\nprivate plan\n<channel|>"
+            '{"action_index": 12}'
+        )
+        tokenized = tokenize_example(
+            {
+                "prompt": "prompt",
+                "completion": completion,
+                "target_action_index": 12,
+                "assistant_turn_terminator": "<turn>",
+            },
+            tokenizer,
+            loss_mask_mode="action",
+        )
+
+        completion_ids = tokenized["input_ids"][tokenized["n_prompt_tokens"] :]
+        completion_labels = tokenized["labels"][tokenized["n_prompt_tokens"] :]
+        rendered = "".join(chr(token_id) for token_id in completion_ids)
+        supervised = "".join(
+            chr(token_id) if label != -100 else "·"
+            for token_id, label in zip(completion_ids, completion_labels)
+        )
+        self.assertEqual(rendered, completion + "<turn>")
+        self.assertIn("<|channel>thought", supervised)
+        self.assertIn("<channel|>", supervised)
+        self.assertIn('·······', supervised)
+        self.assertNotIn("private plan", supervised)
+        self.assertIn('"action_index"', supervised)
+        self.assertIn("12", supervised)
+        self.assertTrue(supervised.endswith("<turn>"))
+        self.assertEqual(tokenized["n_supervised_thought_tokens"], 0)
+        self.assertGreater(tokenized["n_supervised_format_tokens"], 0)
+        self.assertEqual(tokenized["n_supervised_action_tokens"], 2)
+
+    def test_action_mask_excludes_reasoning_inside_nonthinking_json(self):
+        tokenizer = OffsetCharTokenizer()
+        completion = (
+            '{"reasoning": "do not imitate me", "confidence": 0.9, '
+            '"action_index": 3}'
+        )
+        tokenized = tokenize_example(
+            {
+                "prompt": "prompt",
+                "completion": completion,
+                "target_action_index": 3,
+                "assistant_turn_terminator": "<turn>",
+            },
+            tokenizer,
+            loss_mask_mode="action",
+        )
+        start = tokenized["n_prompt_tokens"]
+        completion_ids = tokenized["input_ids"][start:]
+        completion_labels = tokenized["labels"][start:]
+        supervised = "".join(
+            chr(token_id) if label != -100 else "·"
+            for token_id, label in zip(completion_ids, completion_labels)
+        )
+        self.assertNotIn("do not imitate me", supervised)
+        self.assertNotIn("0.9", supervised)
+        self.assertNotIn("confidence", supervised)
+        self.assertNotIn("reasoning", supervised)
+        self.assertIn('"action_index": 3', supervised)
+        self.assertEqual(tokenized["n_supervised_thought_tokens"], 0)
+        self.assertEqual(tokenized["n_supervised_action_tokens"], 1)
+
+    def test_token_straddling_reasoning_and_json_syntax_is_masked(self):
+        tokenizer = ThoughtBoundaryMergingTokenizer()
+        completion = '{"reasoning": "secret", "action_index": 3}'
+        tokenized = tokenize_example(
+            {
+                "prompt": "prompt",
+                "completion": completion,
+                "target_action_index": 3,
+                "assistant_turn_terminator": "<turn>",
+            },
+            tokenizer,
+            loss_mask_mode="action",
+        )
+        merged_offset = (completion.index('"secret"'), completion.index('"secret"') + 4)
+        merged_index = tokenizer.offsets.index(merged_offset)
+        completion_labels = tokenized["labels"][tokenized["n_prompt_tokens"] :]
+        self.assertEqual(completion_labels[merged_index], -100)
+
+    def test_action_mask_supports_think_blocks_and_markdown_fence(self):
+        tokenizer = OffsetCharTokenizer()
+        completion = (
+            "<think>private</think>\n```json\n"
+            '{"action_index": 0}\n```'
+        )
+        tokenized = tokenize_example(
+            {
+                "prompt": "prompt",
+                "completion": completion,
+                "target_action_index": 0,
+                "assistant_turn_terminator": "<turn>",
+            },
+            tokenizer,
+            loss_mask_mode="action",
+        )
+        self.assertGreater(tokenized["n_format_tokens"], 0)
+        self.assertGreater(tokenized["n_thought_tokens"], 0)
+        self.assertEqual(tokenized["n_action_tokens"], 1)
+        self.assertEqual(tokenized["n_supervised_thought_tokens"], 0)
+
+    def test_action_mask_rejects_missing_malformed_or_mismatched_action(self):
+        tokenizer = OffsetCharTokenizer()
+        base = {
+            "prompt": "prompt",
+            "assistant_turn_terminator": "<turn>",
+        }
+        for completion, target in (
+            ("no object", 0),
+            ('{"action_index":', 0),
+            ('{"action_index": true}', 1),
+            ('{"action_index": 2}', 1),
+        ):
+            with self.subTest(completion=completion):
+                with self.assertRaises(ValueError):
+                    tokenize_example(
+                        {
+                            **base,
+                            "completion": completion,
+                            "target_action_index": target,
+                        },
+                        tokenizer,
+                        loss_mask_mode="action",
+                    )
+
+    def test_build_action_example_records_auditable_counts_and_terminator(self):
+        tokenizer = OffsetCharTokenizer()
+        record = _record(
+            agent={
+                "action_index": 1,
+                "raw_response": (
+                    "<|channel>thought\nthink\n<channel|>"
+                    '{"action_index": 1}'
+                ),
+            }
+        )
+        example = build_example(
+            record,
+            FRAMING,
+            tokenizer=tokenizer,
+            enable_thinking=True,
+            loss_mask_mode="action",
+        )
+        self.assertEqual(example["loss_mask_mode"], "action")
+        self.assertEqual(example["target_action_index"], 1)
+        self.assertEqual(example["assistant_turn_terminator"], "<turn>")
+        self.assertGreater(example["token_counts"]["n_action_tokens"], 0)
+        self.assertEqual(
+            example["token_counts"]["n_supervised_thought_tokens"],
+            0,
+        )
+
+    def test_assistant_turn_terminator_is_derived_from_template(self):
+        self.assertEqual(assistant_turn_terminator(OffsetCharTokenizer()), "<turn>")
+
+    def test_loss_mask_auto_preserves_legacy_and_enforces_new_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            legacy = root / "legacy.json"
+            action = root / "action.json"
+            legacy.write_text("{}", encoding="utf-8")
+            action.write_text(
+                json.dumps({"loss_mask_mode": "action"}),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                resolve_loss_mask_mode("auto", manifest_path=legacy),
+                "completion",
+            )
+            self.assertEqual(
+                resolve_loss_mask_mode("auto", manifest_path=action),
+                "action",
+            )
+            with self.assertRaisesRegex(ValueError, "disagrees"):
+                resolve_loss_mask_mode("completion", manifest_path=action)
 
 
 if __name__ == "__main__":

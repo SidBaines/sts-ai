@@ -1,0 +1,115 @@
+{
+  "experiment_id": "COMP-017",
+  "stage": "no_native_thinking_output_contract_screen",
+  "status": "preregistered_before_model_inference",
+  "frozen_at_utc": "2026-07-23T13:03:30Z",
+  "purpose": "Test whether the unadapted Gemma base model chooses better search-teacher actions when native thinking remains disabled but a brief visible reasoning field is generated before action_index.",
+  "dependency": {
+    "experiment": "COMP-016",
+    "result": "The current action-only training objective solves required JSON-format tokens while move-choice loss remains high.",
+    "result_config": "configs/competence/comp_016_result.json",
+    "result_config_sha256": "7fbae99e4eecc3f3bea4fef3755a5bda5bd8497836da60b5aa4ac0a4fc379df9"
+  },
+  "interpretation_boundary": {
+    "fast_development_screen": true,
+    "base_model_only": true,
+    "reason": "Existing adapters were trained only on the action-only prompt and completion contract; including them would confound the output-contract comparison with a train-versus-inference prompt shift.",
+    "development57_is_not_fresh_evidence": true,
+    "static_teacher_agreement_is_not_game_play": true,
+    "no_final_cohort_access": true,
+    "no_new_teacher_queries": true,
+    "no_training": true,
+    "no_native_or_private_thinking": true,
+    "visible_reasoning_has_no_expert_reasoning_target": true
+  },
+  "intervention": {
+    "control": "{\"action_index\": 0}",
+    "treatment": "{\"reasoning\": \"brief private reasoning\", \"action_index\": 0}",
+    "only_changed_input": "The requested JSON schema line changes from action_only to reasoning_action. State, legal actions, order, neutral framing, model, chat template, and paired generation seed remain fixed.",
+    "note": "The field name says private because it is model scratch work, but its contents are visible generated JSON rather than a hidden or native thinking channel."
+  },
+  "dataset": {
+    "path": "data/competence/comp_008/datasets/holdout_turn_first_teacher_action_only.jsonl",
+    "sha256": "e880e45bb9f9da60343953c89ca4c45cdb09a19666fb72e7afe05ecbcc0569dc",
+    "manifest": "data/competence/comp_008/datasets/holdout_turn_first_teacher_action_only.manifest.json",
+    "manifest_sha256": "fe41e2c6a024d3eb14f8c0a6945f74765fa94b4ecde76cb2e1ca91aab5050142",
+    "n_rows": 57,
+    "n_window_clusters": 11,
+    "role": "reused development data",
+    "historical_base_candidate_score_reference": {
+      "path": "data/competence/comp_008/eval/heldout_turn_first_base_teacher_actions.json",
+      "sha256": "386f1a239229d64487b1f93d9068df7bbafe8f75a61c24d2ec69638742b9df34",
+      "top1_teacher_agreement": "22/57",
+      "comparison_limit": "This reference ranks fixed canonical candidates; COMP-017 generates text. The contemporaneous action-only generation arm, not the historical score, is the primary control."
+    }
+  },
+  "embargo": {
+    "path": "configs/competence/nob_fresh_final_cohort_v1.json",
+    "sha256": "2dd1bbd0dc6927ec38513a6cbcda0034ba67e5ffccfaba29c327e42a07f14a99",
+    "final_cohort_must_remain_unqueried": true
+  },
+  "model": {
+    "logical_id": "mlx-community/gemma-4-e4b-it-bf16",
+    "exact_snapshot": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+    "revision": "eec12d0899edea9b738ab1009af9159cdfd70d71",
+    "snapshot_identity_sha256": "293aa3001717494565712ceaaaa9f97193f4dc1b460dfccf53a7217542d34bf2",
+    "adapter": null,
+    "native_thinking": false,
+    "offline_only": true
+  },
+  "generation": {
+    "backend": "mlx",
+    "temperature": 0.0,
+    "top_p": 0.0,
+    "top_k": 0,
+    "max_tokens": 512,
+    "master_seed": 0,
+    "samples_per_row": 1,
+    "paired_seed_rule": "master_seed + row_index; reset to the same value before each output contract",
+    "max_retries": 0,
+    "n_total_generations": 114,
+    "max_tokens_reason": "Avoid interpreting a truncated otherwise-useful reasoning answer as evidence against visible reasoning; greedy generation still stops at EOS."
+  },
+  "metrics": {
+    "primary": "treatment minus control count of generated outputs whose parsed legal action equals the fixed search-teacher action",
+    "guardrails": [
+      "harness action validity",
+      "exact output-contract validity",
+      "native-thinking evidence",
+      "number of development windows containing a net treatment gain"
+    ],
+    "descriptive": [
+      "completion tokens",
+      "visible reasoning characters",
+      "latency",
+      "per-window agreement"
+    ],
+    "invalid_outputs_count_as_teacher_disagreement": true
+  },
+  "decision_rule": {
+    "pass_static_and_prepare_fights_if": "The reasoning treatment is harness-valid on at least 56/57 rows, exact-contract-valid on at least 55/57 rows, contains native-thinking evidence on 0/57 rows, and gains at least 4 net teacher-correct states over action-only spanning at least 3 of 11 windows.",
+    "ambiguous_if": "All validity guardrails pass and the net gain is +1 to +3 states; do not run fights now, record the weak signal, and continue to the move-choice-weighting screen.",
+    "fail_if": "Any validity guardrail fails or the reasoning treatment has no positive net teacher-agreement gain; do not run reasoning fights and retain immediate action-only JSON as the default.",
+    "static_pass_is_not_success_claim": true,
+    "positive_claim_requires_later_frozen_evidence": true
+  },
+  "conditional_fight_screen": {
+    "allowed_only_after_static_pass": true,
+    "sample": "the same 11 non-final development windows",
+    "paired_rollouts_per_window": 4,
+    "arms": [
+      "base answer-only no-native-thinking",
+      "base brief-visible-reasoning no-native-thinking"
+    ],
+    "implementation_precondition": "Add output_contract as the sole explicit permitted intervention in the strict local-task comparator and cover it with regression tests.",
+    "interpretation": "Fast development diagnostic only. K=8 or greater and fresh frozen evidence remain necessary before a positive competence claim."
+  },
+  "output": "data/competence/comp_017/static/base_answer_only_vs_visible_reasoning.json",
+  "code_provenance": {
+    "compare_cli_sha256": "f82d643d3a81f5968d230967f5269b24c90c81dbecff91090899d5a3fc37c155",
+    "evaluator_sha256": "c12a3ed1bfd73af96110572867ca97167d620722e50519646dc5fc71d9c0ddeb",
+    "prompting_sha256": "c0033311d7214149fcdcf1c799d17a9588e1062168f5d7a9b2d00cfc0207761a",
+    "parser_sha256": "05030fe97e7ec2ae1876e4c309350bd744890250770b0eb7af3f12100f86abdc",
+    "menu_parser_sha256": "af430fe481b3344114a4b1099859d139a24df20252cb256ea7c8a1a35e77a09f"
+  }
+}
