@@ -5,9 +5,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
-from typing import Any
+import tempfile
+from typing import Any, Sequence
 
 from sts_ai.provenance import file_sha256
 from sts_ai.teacher import (
@@ -37,6 +39,34 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
                 raise ValueError(f"{path}:{line_number}: row is not a JSON object")
             rows.append(value)
     return rows
+
+
+def _publish_fresh(path: Path, contents: bytes) -> None:
+    if path.exists() or path.is_symlink():
+        raise ValueError(f"output_must_be_fresh:{path}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            handle.write(contents)
+            handle.flush()
+            os.fsync(handle.fileno())
+            temporary = Path(handle.name)
+        os.link(temporary, path)
+        temporary.unlink()
+        temporary = None
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink()
+            except OSError:
+                pass
 
 
 def _git_head() -> str | None:
@@ -136,7 +166,7 @@ def _manifest_provenance(path: Path | None) -> dict[str, Any]:
     }
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dataset", type=Path)
     parser.add_argument("--model", default="mlx-community/gemma-4-e4b-it-bf16")
@@ -148,11 +178,27 @@ def parse_args() -> argparse.Namespace:
         help="Teacher manifest. If omitted, <dataset stem>.manifest.json is used when present.",
     )
     parser.add_argument("--out", type=Path, required=True)
-    return parser.parse_args()
+    parser.add_argument(
+        "--per-row-out",
+        type=Path,
+        default=None,
+        help="Optional fresh JSONL sidecar containing each scored row.",
+    )
+    args = parser.parse_args(argv)
+    if (
+        args.per_row_out is not None
+        and args.per_row_out.resolve(strict=False) == args.out.resolve(strict=False)
+    ):
+        parser.error("--per-row-out and --out must be distinct")
+    return args
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: Sequence[str] | None = None) -> None:
+    args = parse_args(argv)
+    if args.per_row_out is not None and (
+        args.per_row_out.exists() or args.per_row_out.is_symlink()
+    ):
+        raise ValueError(f"output_must_be_fresh:{args.per_row_out}")
     manifest_path = args.manifest
     if manifest_path is None:
         candidate = args.dataset.with_suffix(".manifest.json")
@@ -212,6 +258,18 @@ def main() -> None:
             "no teacher rows survived validation: "
             + json.dumps(report["skipped_record_counts"], sort_keys=True)
         )
+    if args.per_row_out is not None:
+        per_row_payload = "".join(
+            json.dumps(
+                row,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n"
+            for row in report["rows"]
+        ).encode("utf-8")
+        _publish_fresh(args.per_row_out, per_row_payload)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
     args.out.write_text(rendered, encoding="utf-8")

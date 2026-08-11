@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+from contextlib import redirect_stdout
+import hashlib
+import io
 import json
 import math
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
-from scripts.score_teacher_actions import _adapter_provenance, _manifest_provenance
+from scripts.score_teacher_actions import (
+    _adapter_provenance,
+    _manifest_provenance,
+    main as score_main,
+)
 from sts_ai.teacher_action_eval import (
     CandidateSequenceScore,
     MlxCandidateScorer,
@@ -285,6 +293,72 @@ class ScoringProvenanceTest(unittest.TestCase):
             path.write_text(json.dumps(value), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "source_labels"):
                 _manifest_provenance(path)
+
+
+class ScoreTeacherActionsCliTest(unittest.TestCase):
+    def test_writes_requested_per_row_jsonl_and_refuses_overwrite(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = root / "teacher.jsonl"
+            manifest = root / "teacher.manifest.json"
+            output = root / "report.json"
+            per_row = root / "rows.jsonl"
+            row = {
+                **_row(),
+                "observation_version": "combat_public_v2",
+                "teacher_selection_rule": "aggregated_root_visits",
+            }
+            dataset.write_text(json.dumps(row) + "\n", encoding="utf-8")
+            dataset_sha256 = hashlib.sha256(dataset.read_bytes()).hexdigest()
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "kind": "search_teacher_sft",
+                        "version": 3,
+                        "loss_mask_mode": "action",
+                        "output_contract": "action_only",
+                        "enable_thinking": False,
+                        "tokenizer_id": "fake/model",
+                        "observation_version": "combat_public_v2",
+                        "teacher_selection_rule": "aggregated_root_visits",
+                        "teacher_privilege": "simulator_full_state",
+                        "n_examples": 1,
+                        "dataset_sha256": dataset_sha256,
+                        "source_labels": {
+                            "sha256": "a" * 64,
+                            "manifest_sha256": "b" * 64,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            values = {
+                action_completion(index): -float(index) for index in range(3)
+            }
+            argv = [
+                str(dataset),
+                "--manifest",
+                str(manifest),
+                "--out",
+                str(output),
+                "--per-row-out",
+                str(per_row),
+            ]
+            with mock.patch(
+                "scripts.score_teacher_actions.MlxCandidateScorer",
+                return_value=FakeScorer(values),
+            ), redirect_stdout(io.StringIO()):
+                score_main(argv)
+
+            report = json.loads(output.read_text(encoding="utf-8"))
+            per_row_values = [
+                json.loads(line)
+                for line in per_row.read_text(encoding="utf-8").splitlines()
+            ]
+            self.assertEqual(per_row_values, report["rows"])
+
+            with self.assertRaisesRegex(ValueError, "output_must_be_fresh"):
+                score_main(argv)
 
 
 if __name__ == "__main__":
