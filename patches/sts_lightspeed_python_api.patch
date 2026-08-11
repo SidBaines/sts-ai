@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..96cc334 100644
+index a9afe35..3ab3f98 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1310 @@
+@@ -9,24 +9,1380 @@
 
  #include <sstream>
  #include <algorithm>
@@ -90,23 +90,23 @@ index a9afe35..96cc334 100644
 +    return roomStrings[static_cast<int>(r)];
 +}
 +
-+// Number of times a single-target attack hits the chosen enemy. The engine encodes
-+// this inline in BattleContext::playCard (no table), so we mirror it here — the
-+// static twin of Cards::getBaseDamage. Default 1. Ironclad-scoped; keep in sync
-+// with the card pool (Sword Boomerang is excluded: it targets randomly, so it never
-+// reaches the targeted-attack annotation path).
++// Number of times an attack hits the annotated enemy. The engine encodes this
++// inline in BattleContext::useAttackCard (no table), so we mirror it here — the static
++// twin of Cards::getBaseDamage. Default 1. Ironclad-scoped; keep in sync with the
++// card pool. Sword Boomerang is only annotated when its random targeting is
++// deterministic because exactly one monster is alive.
 +int getHitCount(CardId id, bool upgraded) {
 +    switch (id) {
-+        case CardId::TWIN_STRIKE: return 2;
-+        case CardId::PUMMEL:      return upgraded ? 5 : 4;
-+        default:                  return 1;
++        case CardId::TWIN_STRIKE:     return 2;
++        case CardId::PUMMEL:          return upgraded ? 5 : 4;
++        case CardId::SWORD_BOOMERANG: return upgraded ? 4 : 3;
++        default:                      return 1;
 +    }
 +}
 +
-+// Attacks whose real damage is NOT calculateCardDamage(base): they apply a
-+// card-specific formula inline in playCard (block-based, strength-scaled, growing,
-+// or hand-size-based). We skip the "(deal N)" annotation for these rather than
-+// print a misleading number. Ironclad-scoped; keep in sync with the card pool.
++// Attacks whose real base is not the static getBaseDamage table: they apply a
++// card-specific formula inline in useAttackCard (block-based, strength-scaled, growing,
++// or hand-size-based). Ironclad-scoped; keep in sync with the card pool.
 +bool hasSpecialDamageFormula(CardId id) {
 +    switch (id) {
 +        case CardId::BODY_SLAM:        // damage = current block
@@ -118,6 +118,49 @@ index a9afe35..96cc334 100644
 +            return true;
 +        default:
 +            return false;
++    }
++}
++
++// Base damage for the targeted special-formula cards that the computed-damage
++// opt-in supports. These expressions deliberately mirror BattleContext::useAttackCard
++// before passing through calculateCardDamage, including Heavy Blade's additional
++// Strength applications. FIEND_FIRE remains unsupported because its hit count is
++// determined by the hand after card-play triggers resolve.
++int getSpecialDamageBase(const BattleContext &bc, const CardInstance &card) {
++    const bool upgraded = card.isUpgraded();
++    switch (card.getId()) {
++        case CardId::BODY_SLAM:
++            return bc.player.block;
++        case CardId::HEAVY_BLADE:
++            return 14 + (upgraded ? 4 : 2) * bc.player.getStatus<PS::STRENGTH>();
++        case CardId::PERFECTED_STRIKE:
++            return 6 + bc.cards.strikeCount * (upgraded ? 3 : 2);
++        case CardId::RAMPAGE:
++            return 8 + card.specialData;
++        case CardId::SEARING_BLOW: {
++            const int n = card.getUpgradeCount();
++            return n * (n + 7) / 2 + 12;
++        }
++        default:
++            return -1;
++    }
++}
++
++// Base damage for every non-X, untargeted ATTACK implemented by the Ironclad
++// BattleContext::useAttackCard path. The engine folds Vigor into the queued base,
++// then removes the status before the queued action calculates damage. An annotation
++// is computed before card use, so calculateCardDamage sees the live Vigor and these
++// bases must exclude it to match the engine's single application.
++int getUntargetedDamageBase(const CardInstance &card) {
++    const bool upgraded = card.isUpgraded();
++    switch (card.getId()) {
++        case CardId::CLEAVE:             return upgraded ? 11 : 8;
++        case CardId::DRAMATIC_ENTRANCE:  return upgraded ? 12 : 8;
++        case CardId::IMMOLATE:           return upgraded ? 28 : 21;
++        case CardId::REAPER:             return upgraded ? 5 : 4;
++        case CardId::SWORD_BOOMERANG:    return 3;
++        case CardId::THUNDERCLAP:        return upgraded ? 7 : 4;
++        default:                         return -1;
 +    }
 +}
 +
@@ -279,7 +322,8 @@ index a9afe35..96cc334 100644
 +std::string describeCardSelectChoice(
 +    const BattleContext &bc, const search::Action &a, bool includeCardType=false);
 +std::string describeBattleAction(
-+    const BattleContext &bc, const search::Action &a, bool includeCardType=false);
++    const BattleContext &bc, const search::Action &a, bool includeCardType=false,
++    bool includeComputedDamage=false);
 +
 +pybind11::dict publicCards(const BattleContext &bc, bool includeCardType=false) {
 +    pybind11::dict result;
@@ -841,7 +885,8 @@ index a9afe35..96cc334 100644
 +// enrichment principle: spell out card/potion/target names rather than bare
 +// indices. Card-select actions delegate to the engine's printDesc.
 +std::string describeBattleAction(
-+        const BattleContext &bc, const search::Action &a, bool includeCardType) {
++        const BattleContext &bc, const search::Action &a, bool includeCardType,
++        bool includeComputedDamage) {
 +    std::ostringstream os;
 +    switch (a.getActionType()) {
 +        case search::ActionType::CARD: {
@@ -876,26 +921,51 @@ index a9afe35..96cc334 100644
 +                }
 +            }
 +            // Sim-computed attack damage (target-correct, pre-block, multi-hit aware).
-+            // Only for plain ATTACK cards with a base-damage table entry; X-cost and
-+            // special-formula cards are skipped (not mis-reported). Format mirrors the
-+            // enemy intent line. If this trailing "(deal ...)" format changes, update
-+            // _PLAY_RE in src/sts_ai/rollout_view.py, which parses this description.
-+            if (dealTarget >= 0
-+                    && c.getType() == CardType::ATTACK
-+                    && !c.isXCost()
-+                    && !hasSpecialDamageFormula(c.getId())) {
-+                const int base = getBaseDamage(c.getId(), c.isUpgraded());
-+                if (base >= 0) {
-+                    const int per = bc.calculateCardDamage(c, dealTarget, base);
-+                    const int hits = getHitCount(c.getId(), c.isUpgraded());
-+                    os << " (deal ";
-+                    if (hits > 1) {
-+                        os << (per * hits) << " = " << per << " x" << hits;
-+                    } else {
-+                        os << per;
++            // Existing targeted, table-based annotations remain unconditional for
++            // byte compatibility. The opt-in additionally covers supported special
++            // formulas and untargeted attacks when a sole living enemy makes their
++            // target deterministic. X-cost and Fiend Fire remain unannotated. If
++            // this trailing format changes, update _PLAY_RE in rollout_view.py.
++            int base = -1;
++            if (c.getType() == CardType::ATTACK && !c.isXCost()) {
++                if (dealTarget >= 0) {
++                    // v2's unconditional static-table annotations for Ritual Dagger
++                    // and Mind Blast are known pre-existing defects preserved for
++                    // flag-off byte stability. v3 overrides them only under the opt-in.
++                    if (includeComputedDamage && c.getId() == CardId::RITUAL_DAGGER) {
++                        base = c.specialData;
++                    } else if (includeComputedDamage && c.getId() == CardId::MIND_BLAST) {
++                        base = static_cast<int>(bc.cards.drawPile.size());
++                    } else if (!hasSpecialDamageFormula(c.getId())) {
++                        base = getBaseDamage(c.getId(), c.isUpgraded());
++                    } else if (includeComputedDamage) {
++                        base = getSpecialDamageBase(bc, c);
 +                    }
-+                    os << ")";
++                } else if (includeComputedDamage && !c.requiresTarget()) {
++                    int livingTarget = -1;
++                    int livingCount = 0;
++                    for (int mi = 0; mi < bc.monsters.monsterCount; ++mi) {
++                        if (!bc.monsters.arr[mi].isDeadOrEscaped()) {
++                            livingTarget = mi;
++                            ++livingCount;
++                        }
++                    }
++                    if (livingCount == 1) {
++                        dealTarget = livingTarget;
++                        base = getUntargetedDamageBase(c);
++                    }
 +                }
++            }
++            if (dealTarget >= 0 && base >= 0) {
++                const int per = bc.calculateCardDamage(c, dealTarget, base);
++                const int hits = getHitCount(c.getId(), c.isUpgraded());
++                os << " (deal ";
++                if (hits > 1) {
++                    os << (per * hits) << " = " << per << " x" << hits;
++                } else {
++                    os << per;
++                }
++                os << ")";
 +            }
 +            break;
 +        }
@@ -1313,7 +1383,7 @@ index a9afe35..96cc334 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +1327,173 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -41,6 +1397,175 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
          .def("playout", &search::ScumSearchAgent2::playout);
 
@@ -1376,9 +1446,11 @@ index a9afe35..96cc334 100644
 +        .def("is_valid", &search::Action::isValidAction)
 +        .def("execute", &search::Action::execute, "apply the action to the BattleContext (throws on an invalid action)")
 +        .def("describe", [](const search::Action &a, const BattleContext &bc,
-+                            bool includeCardType) {
-+            return describeBattleAction(bc, a, includeCardType);
-+        }, pybind11::arg("context"), pybind11::arg("include_card_type") = false)
++                            bool includeCardType, bool includeComputedDamage) {
++            return describeBattleAction(
++                bc, a, includeCardType, includeComputedDamage);
++        }, pybind11::arg("context"), pybind11::arg("include_card_type") = false,
++           pybind11::arg("include_computed_damage") = false)
 +        .def("__repr__", [](const search::Action &a) {
 +            std::ostringstream oss;
 +            oss << "<slaythespire.BattleAction bits=" << a.bits << ">";
@@ -1487,7 +1559,16 @@ index a9afe35..96cc334 100644
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
          .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -75,6 +1528,43 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1580,8 @@ PYBIND11_MODULE(slaythespire, m) {
+              [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
+              "add a card to the deck"
+         )
++        .def("obtain_relic", &GameContext::obtainRelic,
++             "add a relic to the inventory, applying its normal acquisition effects")
+         .def("remove_card",
+             [](GameContext &gc, int idx) {
+                 if (idx < 0 || idx >= gc.deck.size()) {
+@@ -75,6 +1602,43 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
@@ -1531,7 +1612,7 @@ index a9afe35..96cc334 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -836,5 +2326,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +2400,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
