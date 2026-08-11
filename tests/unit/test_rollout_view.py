@@ -314,6 +314,9 @@ class PlayRegexTest(unittest.TestCase):
         # card name consumed by rollout analysis.
         m5 = _PLAY_RE.match("play Bash [Attack] (cost 2) -> Cultist (deal 8)")
         self.assertEqual((m5.group(1), m5.group(2), m5.group(3)), ("Bash", "2", "Cultist"))
+        # v3 also annotates untargeted AoE attacks.
+        m6 = _PLAY_RE.match("play Cleave [Attack] (cost 1) (deal 8)")
+        self.assertEqual((m6.group(1), m6.group(2), m6.group(3)), ("Cleave", "1", None))
 
 
 if __name__ == "__main__":

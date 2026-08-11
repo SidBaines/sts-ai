@@ -90,6 +90,15 @@ class ComputeTest(unittest.TestCase):
         self.assertEqual(a["max_single_target_damage"], 12)
         self.assertTrue(a["single_target_lethal_available"])  # 12 >= 10+0
 
+    def test_untargeted_aoe_deal_is_parsed_but_not_single_target_lethal(self):
+        enemies = [{"name": "FOE", "cur_hp": 8, "block": 0, "alive": True,
+                    "intent_damage": 0, "intent_hits": -1}]
+        state, text = _combat(enemies, ["[0] Cleave [Attack] (cost 1)"])
+        legal = [{"description": "play Cleave [Attack] (cost 1) (deal 8)"}]
+        a = compute(state, text, legal, "combat")
+        self.assertEqual(a["max_single_target_damage"], 8)
+        self.assertFalse(a["single_target_lethal_available"])
+
     def test_not_lethal_when_blocked(self):
         enemies = [{"name": "FOE", "cur_hp": 10, "block": 5, "alive": True,
                     "intent_damage": 0, "intent_hits": -1}]

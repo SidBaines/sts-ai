@@ -350,7 +350,8 @@ new-format cases.
 - Accept `combat_observation="combat_public_v3"` everywhere `combat_public_v2`
   is accepted in `lightspeed.py` (update the validation error message). v3
   implies `include_card_type=True` and `include_computed_damage=True` on
-  action/state describe calls (Task C flag).
+  action describe calls (Task C flag; the state describe carries no such flag —
+  annotations live on actions only).
 - `teacher.py`: `PUBLIC_OBSERVATION_VERSION` stays `combat_public_v2` as the
   default; add an explicit parameter so future collection can request v3.
 - New pure module `src/sts_ai/turn_math.py`:
@@ -371,11 +372,13 @@ def turn_math_lines(inputs: TurnMathInputs) -> list[str]
   Exact line wording (frozen):
   - `End-turn projection: you would take X damage (incoming I - block B - Metallicize M; minimum 0).`
   - `Max attack damage playable this turn (using shown deal values, current modifiers only): X.` —
-    append ` Unannotated attacks excluded: NameA, NameB.` when any hand attack
-    lacks a deal value.
-  - Only when exactly one living enemy:
-    `Lethal check vs NAME (HP h): lethal available this turn.` or
-    `Lethal check vs NAME (HP h): not lethal this turn.`
+    append ` Excluded from this total: NameA, NameB.` when any hand attack did
+    not contribute (no deal value, X-cost, or no playable action right now).
+  - Only when exactly one living enemy (threshold counts the enemy's block):
+    `Lethal check vs NAME (HP h, block b): lethal available this turn.` or
+    `Lethal check vs NAME (HP h, block b): not lethal this turn.`
+  - Emitted only in the PLAYER_NORMAL battle input state (never during
+    card-select decisions).
 - Max-damage computation: bounded knapsack over hand attack cards (integer
   costs; X-cost and unannotated attacks excluded from the sum and listed as
   excluded), respecting card multiplicity in HAND (the legal-action menu is

@@ -85,9 +85,19 @@ def prepare_decision(env: LightspeedHybridEnv) -> tuple[str, dict[str, Any] | No
     legal_action_dicts = [env.action_dict(action) for action in legal_actions]
     # Fold the static effect/status reference into what the agent sees + records.
     # On a MAP_SCREEN, env.map_graph() supplies the act DAG so glossary renders a
-    # neutral per-choice path summary (None elsewhere -> no-op).
+    # neutral per-choice path summary (None elsewhere -> no-op). v3 arithmetic is
+    # passed separately so glossary can place it without scraping raw state text.
+    turn_math_lines = (
+        env._turn_math_lines()
+        if getattr(env, "combat_observation", "legacy") == "combat_public_v3"
+        else None
+    )
     state_text = glossary.augment(
-        env.describe_state(), legal_action_dicts, phase, map_graph=env.map_graph()
+        env.describe_state(),
+        legal_action_dicts,
+        phase,
+        map_graph=env.map_graph(),
+        turn_math_lines=turn_math_lines,
     )
     return "ok", {
         "phase": phase,

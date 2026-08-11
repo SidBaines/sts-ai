@@ -20,7 +20,7 @@ from sts_ai.local_tasks.validation import (
 def _add_replay_settings(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--combat-observation",
-        choices=("legacy", "combat_public_v1", "combat_public_v2"),
+        choices=("legacy", "combat_public_v1", "combat_public_v2", "combat_public_v3"),
         default="legacy",
     )
     parser.add_argument("--battle-simulations", type=int, default=50)

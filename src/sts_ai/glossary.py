@@ -1039,6 +1039,7 @@ def augment(
     phase: str,
     map_graph: Optional[dict] = None,
     damage_note: bool = True,
+    turn_math_lines: Optional[list[str]] = None,
 ) -> str:
     """Fold the effect/status reference into `state_text`.
 
@@ -1062,6 +1063,18 @@ def augment(
             out_lines.append(line)
         body = "\n".join(out_lines)
         notes = _combat_notes(state_text, legal_actions, damage_note=damage_note)
+        if turn_math_lines:
+            note_lines = notes.removeprefix("\n").splitlines()
+            insert_at = next(
+                (
+                    index + 1
+                    for index, line in enumerate(note_lines)
+                    if line.startswith("Incoming attack damage this turn:")
+                ),
+                len(note_lines),
+            )
+            note_lines[insert_at:insert_at] = turn_math_lines
+            notes = "\n" + "\n".join(note_lines)
         key = _build_key(
             statuses,
             _combat_card_names(state_text),

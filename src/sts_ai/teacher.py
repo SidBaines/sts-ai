@@ -26,6 +26,7 @@ def validate_search_teacher_rows(
     rows: Iterable[dict[str, Any]],
     *,
     expected_selection_rule: str | None = None,
+    observation_version: str = PUBLIC_OBSERVATION_VERSION,
 ) -> str:
     """Validate one homogeneous, current-interface teacher collection.
 
@@ -41,10 +42,10 @@ def validate_search_teacher_rows(
     rules: set[str] = set()
     for row_index, row in enumerate(values):
         observation = row.get("observation_version")
-        if observation != PUBLIC_OBSERVATION_VERSION:
+        if observation != observation_version:
             raise ValueError(
                 f"teacher row {row_index} observation_version={observation!r}; "
-                f"expected {PUBLIC_OBSERVATION_VERSION!r}"
+                f"expected {observation_version!r}"
             )
         if row.get("teacher_privilege") != TEACHER_PRIVILEGE:
             raise ValueError(
@@ -96,13 +97,14 @@ def validate_search_teacher_manifest(
     *,
     n_rows: int,
     selection_rule: str,
+    observation_version: str = PUBLIC_OBSERVATION_VERSION,
 ) -> None:
     """Fail closed when a detached label manifest disagrees with its JSONL."""
 
     expected = {
         "kind": "search_teacher_labels",
         "version": SEARCH_TEACHER_LABEL_VERSION,
-        "observation_version": PUBLIC_OBSERVATION_VERSION,
+        "observation_version": observation_version,
         "teacher_privilege": TEACHER_PRIVILEGE,
         "teacher_selection_rule": selection_rule,
         "n_rows": n_rows,

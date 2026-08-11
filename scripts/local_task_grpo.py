@@ -28,7 +28,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-decisions", type=int, default=80)
     parser.add_argument(
         "--combat-observation",
-        choices=("legacy", "combat_public_v1", "combat_public_v2"),
+        choices=("legacy", "combat_public_v1", "combat_public_v2", "combat_public_v3"),
         default="legacy",
     )
     parser.add_argument("--battle-simulations", type=int, default=50)

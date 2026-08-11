@@ -115,6 +115,25 @@ class AugmentCombatTest(unittest.TestCase):
         self.assertIn("already includes each attacker's Strength, Weak, and Vulnerable", self.out)
         self.assertIn("do not add those again", self.out)
 
+    def test_turn_math_lines_are_inserted_after_incoming_without_blank_line(self):
+        turn_math = [
+            "End-turn projection: test.",
+            "Max attack damage playable this turn (test): 6.",
+        ]
+        baseline = augment(COMBAT_TEXT, [], "combat")
+        out = augment(COMBAT_TEXT, [], "combat", turn_math_lines=turn_math)
+        lines = out.splitlines()
+        incoming_index = next(
+            index
+            for index, line in enumerate(lines)
+            if line.startswith("Incoming attack damage this turn:")
+        )
+        self.assertEqual(lines[incoming_index + 1:incoming_index + 3], turn_math)
+        self.assertEqual(
+            "\n".join(line for line in lines if line not in turn_math),
+            baseline,
+        )
+
     def test_damage_note_clause_can_be_disabled(self):
         # The A/B harness reconstructs the pre-fix wording via damage_note=False.
         legacy = augment(COMBAT_TEXT, [], "combat", damage_note=False)

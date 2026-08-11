@@ -1,10 +1,22 @@
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import asdict
+import re
 from typing import Any
 
 from sts_ai.lightspeed_import import import_lightspeed
 from sts_ai.schemas import LegalAction
+from sts_ai.turn_math import HandAttack, TurnMathInputs, turn_math_lines
+
+
+_PUBLIC_COMBAT_OBSERVATIONS = (
+    "combat_public_v1",
+    "combat_public_v2",
+    "combat_public_v3",
+)
+_TYPED_COMBAT_OBSERVATIONS = ("combat_public_v2", "combat_public_v3")
+_DEAL_RE = re.compile(r"\(deal\s+(\d+)")
 
 
 class LightspeedHybridEnv:
@@ -32,10 +44,10 @@ class LightspeedHybridEnv:
                     f"{combat_observation!r}"
                 )
             combat_observation = alias_observation
-        if combat_observation not in ("legacy", "combat_public_v1", "combat_public_v2"):
+        if combat_observation not in ("legacy", *_PUBLIC_COMBAT_OBSERVATIONS):
             raise ValueError(
-                "combat_observation must be 'legacy', 'combat_public_v1', or "
-                "'combat_public_v2', "
+                "combat_observation must be 'legacy', 'combat_public_v1', "
+                "'combat_public_v2', or 'combat_public_v3', "
                 f"got {combat_observation!r}"
             )
         self.sts = import_lightspeed(build_dir)
@@ -46,7 +58,8 @@ class LightspeedHybridEnv:
         # "llm": each in-combat decision is surfaced to the agent (full control).
         self.combat_control = combat_control
         # Explicit versioned switch. v1 is retained for artifact replay only; v2
-        # also exposes the human-visible card type needed for type-based triggers.
+        # adds the human-visible card type, and v3 adds opt-in computed damage plus
+        # arithmetic derived only from the displayed/structured public values.
         self.combat_observation = combat_observation
         # Live combat state when an in-combat decision is pending; None otherwise.
         # Its presence is what distinguishes a combat decision from an out-of-combat
@@ -125,10 +138,9 @@ class LightspeedHybridEnv:
         if self.bc is not None:
             return list(
                 self.bc.legal_actions(
-                    include_card_type=(
-                        getattr(self, "combat_observation", "legacy")
-                        == "combat_public_v2"
-                    )
+                    include_card_type=getattr(
+                        self, "combat_observation", "legacy"
+                    ) in _TYPED_COMBAT_OBSERVATIONS
                 )
             )
         return list(self.gc.legal_actions())
@@ -156,13 +168,18 @@ class LightspeedHybridEnv:
         seen: set[str] = set()
         for i, action in enumerate(raw):
             if self.bc is not None:
-                description = action.describe(
-                    ctx,
-                    include_card_type=(
-                        getattr(self, "combat_observation", "legacy")
-                        == "combat_public_v2"
-                    ),
-                )
+                observation = getattr(self, "combat_observation", "legacy")
+                if observation == "combat_public_v3":
+                    description = action.describe(
+                        ctx,
+                        include_card_type=True,
+                        include_computed_damage=True,
+                    )
+                else:
+                    description = action.describe(
+                        ctx,
+                        include_card_type=observation in _TYPED_COMBAT_OBSERVATIONS,
+                    )
             else:
                 description = action.describe(ctx)
             if dedup and description in seen:
@@ -178,14 +195,13 @@ class LightspeedHybridEnv:
 
     def describe_state(self) -> str:
         if self.bc is not None:
-            public = self.combat_observation in (
-                "combat_public_v1",
-                "combat_public_v2",
-            )
+            public = self.combat_observation in _PUBLIC_COMBAT_OBSERVATIONS
             state = str(
                 self.bc.describe_state(
                     public_state=public,
-                    include_card_type=self.combat_observation == "combat_public_v2",
+                    include_card_type=(
+                        self.combat_observation in _TYPED_COMBAT_OBSERVATIONS
+                    ),
                 )
             )
             if public:
@@ -194,6 +210,88 @@ class LightspeedHybridEnv:
                 state += f"\nRecent actions this turn: {recent}"
             return state
         return str(self.gc.describe_state())
+
+    def _turn_math_lines(self) -> list[str]:
+        """Compose v3 arithmetic inputs without reimplementing simulator rules."""
+        if (
+            self.bc is None
+            or self.bc.input_state != self.sts.InputState.PLAYER_NORMAL
+        ):
+            return []
+
+        cards = dict(self.bc.public_cards(include_card_type=True))
+        player = dict(self.bc.public_player())
+        enemies = [dict(enemy) for enemy in self.bc.enemies()]
+        living = [enemy for enemy in enemies if bool(enemy.get("alive"))]
+        incoming = sum(
+            int(enemy.get("intent_damage", 0)) * int(enemy.get("intent_hits", -1))
+            for enemy in living
+            if int(enemy.get("intent_hits", -1)) > 0
+        )
+
+        shown_damage: dict[tuple[str, int], int] = {}
+        for action in self.bc.legal_actions(include_card_type=True):
+            description = str(
+                action.describe(
+                    self.bc,
+                    include_card_type=True,
+                    include_computed_damage=True,
+                )
+            )
+            match = _DEAL_RE.search(description)
+            if match is None:
+                continue
+            for card in cards.get("hand", []):
+                if str(card.get("type")) != "Attack":
+                    continue
+                name = str(card.get("name", ""))
+                cost_for_turn = int(card.get("cost_for_turn", -1))
+                cost_label = "X" if cost_for_turn < 0 else str(cost_for_turn)
+                prefix = f"play {name} [Attack] (cost {cost_label})"
+                if description.startswith(prefix):
+                    key = (name, cost_for_turn)
+                    shown_damage[key] = max(
+                        shown_damage.get(key, 0),
+                        int(match.group(1)),
+                    )
+
+        grouped: Counter[tuple[str, int, bool]] = Counter()
+        for card in cards.get("hand", []):
+            if str(card.get("type")) == "Attack":
+                grouped[
+                    (
+                        str(card.get("name", "")),
+                        int(card.get("cost_for_turn", -1)),
+                        bool(card.get("free_to_play_once", False)),
+                    )
+                ] += 1
+        attacks: list[HandAttack] = []
+        for (name, raw_cost, free_once), copies in grouped.items():
+            cost = None if raw_cost < 0 else (0 if free_once else raw_cost)
+            attacks.append(
+                (name, cost, shown_damage.get((name, raw_cost)), copies)
+            )
+
+        powers = player.get("powers", {})
+        metallicize = (
+            int(powers.get("Metallicize", 0)) if isinstance(powers, dict) else 0
+        )
+        inputs = TurnMathInputs(
+            incoming_damage=incoming,
+            player_block=int(player.get("block", 0)),
+            player_metallicize=metallicize,
+            energy=int(player.get("energy", 0)),
+            hand_attacks=attacks,
+            living_enemies=[
+                (
+                    str(enemy.get("name", "")),
+                    int(enemy.get("cur_hp", 0)),
+                    int(enemy.get("block", 0)),
+                )
+                for enemy in living
+            ],
+        )
+        return turn_math_lines(inputs)
 
     def _sync_combat_history(self) -> None:
         """Reset the public recent-action trace at combat/turn boundaries."""
@@ -225,7 +323,9 @@ class LightspeedHybridEnv:
             raise RuntimeError("public_combat_cards requires a pending combat decision")
         return dict(
             self.bc.public_cards(
-                include_card_type=self.combat_observation == "combat_public_v2"
+                include_card_type=(
+                    self.combat_observation in _TYPED_COMBAT_OBSERVATIONS
+                )
             )
         )
 
@@ -271,7 +371,9 @@ class LightspeedHybridEnv:
                 simulations,
                 search_seed=search_seed,
                 draw_order_seed=draw_order_seed,
-                include_card_type=self.combat_observation == "combat_public_v2",
+                include_card_type=(
+                    self.combat_observation in _TYPED_COMBAT_OBSERVATIONS
+                ),
             )
         )
 
@@ -347,7 +449,7 @@ class LightspeedHybridEnv:
                 "undefined_behavior_evoked": bool(self.bc.undefined_behavior_evoked),
                 "enemies": list(self.bc.enemies()),
             }
-            if self.combat_observation in ("combat_public_v1", "combat_public_v2"):
+            if self.combat_observation in _PUBLIC_COMBAT_OBSERVATIONS:
                 self._sync_combat_history()
                 data["combat"].update(
                     {
@@ -356,7 +458,8 @@ class LightspeedHybridEnv:
                         "cards": dict(
                             self.bc.public_cards(
                                 include_card_type=(
-                                    self.combat_observation == "combat_public_v2"
+                                    self.combat_observation
+                                    in _TYPED_COMBAT_OBSERVATIONS
                                 )
                             )
                         ),

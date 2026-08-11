@@ -4,10 +4,13 @@ import unittest
 
 from sts_ai.schemas import LegalAction
 from sts_ai.teacher import (
+    AGGREGATED_ROOT_VISITS,
     consensus_summary,
     displayed_action_index,
     public_observation_hash,
     teacher_label,
+    validate_search_teacher_manifest,
+    validate_search_teacher_rows,
 )
 
 
@@ -132,6 +135,35 @@ class TeacherBoundaryTest(unittest.TestCase):
                     {"public_state_hash": "b", "teacher_action_index": 0},
                 ]
             )
+
+    def test_validation_can_explicitly_request_future_observation_version(self):
+        query = {
+            "observation_version": "combat_public_v3",
+            "teacher_selection_rule": AGGREGATED_ROOT_VISITS,
+            "teacher_privilege": "simulator_full_state",
+        }
+        row = {
+            **query,
+            "teacher_queries": [query],
+        }
+        rule = validate_search_teacher_rows(
+            [row],
+            observation_version="combat_public_v3",
+        )
+        self.assertEqual(rule, AGGREGATED_ROOT_VISITS)
+        validate_search_teacher_manifest(
+            {
+                "kind": "search_teacher_labels",
+                "version": 2,
+                "observation_version": "combat_public_v3",
+                "teacher_privilege": "simulator_full_state",
+                "teacher_selection_rule": AGGREGATED_ROOT_VISITS,
+                "n_rows": 1,
+            },
+            n_rows=1,
+            selection_rule=rule,
+            observation_version="combat_public_v3",
+        )
 
 
 if __name__ == "__main__":
