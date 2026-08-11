@@ -206,6 +206,34 @@ These are the facts this plan is designed around. Update them only when a method
   but not the cause of the policy failure. Result config:
   `configs/competence/comp_016_result.json` (SHA `7fbae99e…9df9`).
 
+### Semantic retargeting result on 2026-08-11 (COMP-020)
+
+- **Independent diagnostics on the frozen artifacts** reframed the failure: a
+  25-line rule policy (lethal > Vulnerable-applier > max-damage > defend)
+  scores 32/57 on development — exactly the frozen gate, above every trained
+  index-target model; teacher per-query vote agreement with the hidden-order
+  consensus is 81.8%, capping any single-search clone near 46–48/57; ~16/59
+  development rows are near-ties whose first-action label is order noise over
+  a stable turn set; and the phantom-power simulator UB contaminates 3/11 dev
+  windows (17/60 states) versus 2/32 train windows (8/150) — the dev split is
+  systematically weirder than train. Quarantine sidecar:
+  `configs/competence/state_sanity_quarantine_v1.json`.
+- **Metrics reset:** development choice is now scored by visit-share regret,
+  tie-aware top-set (τ=0.8), and turn-set membership (from stored
+  `best_sequence` plans), reported for all and quarantine-clean splits, via
+  `scripts/rescore_teacher_report.py`. Rescored baselines: base 0.421 top-1 /
+  0.237 regret; COMP-012 step-3000 0.509 / 0.183.
+- **COMP-020 headline:** identical 150 states, model, LoRA, and schedule as
+  COMP-012, with the target changed from `{"action_index":N}` to the exact
+  legal-action text. Early-stopped step-750 checkpoint: 0.614 top-1 / 0.143
+  regret / 0.667 top-set (clean 0.641/0.141/0.692), 36/57 on the legacy
+  frozen-target metric, and 0.596 top-1 under free generation with 100%
+  valid JSON. Interface fixes shipped alongside (combat_public_v3: computed
+  damage annotations for all attack types via the C++ oracle-tested path,
+  plus TURN MATH derived lines) are NOT yet in the training prompts — the
+  comparison isolates the target representation alone. One training seed;
+  replication is the registered next action.
+
 ### Decisive interface diagnostic discovered on 2026-07-23
 
 - COMP-002 was stopped after 71 recorded decisions, before either arm completed,
@@ -826,7 +854,8 @@ Historical entries establish context. New experiments should be appended with li
 | COMP-016 | complete | Are COMP-015's shortcut and 8:1 supervision concern real at the move digit, or artefacts of quantized complete-JSON scoring? | Tie-free float32 direct scoring exactly reproduces development greedy choices (21/57 control, 17/57 augmented) and cyclic failure. Format/action token NLL is 0.0/1.293 and 2.3e-8/1.495. Frozen config/result `900bf5ee…be38` / `7fbae99e…9df9`. | Measurement artefact rejected; test one weight-8 action treatment behind the harder-tiny32 gate after COMP-015 closes. |
 | COMP-017 | complete — failed gate | Does brief visible JSON reasoning improve teacher actions when native thinking remains disabled? | Immediate action-only is valid/correct on 57/57 and 26/57; visible reasoning is 55/57 and 19/57, hits the 512-token cap twice, and takes 8.37s versus 1.04s per answer. Frozen config/result `1ebb217a…f124` / `0934aefd…fdbd`. | Do not run fights. Retain no-native-thinking immediate action JSON as the default. |
 | COMP-018 | complete — failed tiny gate | Does move-choice weight 8 preserve the useful format scaffold while improving action fit and development choices? | Weight 8 stays at 7/32 and near-uniform move probabilities from steps 320→640, despite reaching valid/legal JSON 32/32. The exact current unit-weight control reaches 31/32 and reproduces historical checkpoints byte-for-byte; gradient/alignment audits pass. Config/result `5512cc8c…4d54` / `configs/competence/comp_018_result.json`. | Reject fixed weight 8; do not run full150, add a seed, or sweep weights. Preserve unit mixed supervision. |
-| COMP-019 | not started — **next action** | Is E4B's full150→development gap a model-capacity ceiling or a data-coverage problem? | Pending matched no-thinking larger-model static comparison on the same public prompts, tiny/full datasets, masks, and action metrics. | Preregister model/revision, comparable adapter budget, tiny fit gate, full-data schedule, and E4B-vs-larger decision rule before any model load. |
+| COMP-019 | not started | Is E4B's full150→development gap a model-capacity ceiling or a data-coverage problem? | Pending matched no-thinking larger-model static comparison — now to be run on the semantic action_text task (COMP-020), not the index task. | Preregister model/revision, comparable adapter budget, tiny fit gate, full-data schedule, and E4B-vs-larger decision rule before any model load. |
+| COMP-020 | complete — promising, replicate | Does retargeting SFT from menu indices to semantic action text / turn plans improve development teacher actions on the exact COMP-012 states and recipe? | action_text (consensus targets) at the early-stopped step-750 checkpoint: development top-1 0.614 vs COMP-012's best 0.509, visit-share regret 0.143 vs 0.183 (clean 0.141 vs 0.198), tie-aware top-set 0.667 vs 0.579; legacy frozen-target view 36/57 — the first artifact past the historical 32/57 gate. Free generation: 100% valid JSON, 94.7% legal, top-1 0.596. Later checkpoints decay monotonically as train memorizes (textbook early-stopping curve). turn_plan (consensus-anchored plans, 130/150 states) is weaker on first-action choice (best 0.526/0.162) but generates 100% legal plans. Plan `docs/comp020_semantic_retarget_plan.md`; result `configs/competence/comp_020_result.json`. | **Next action:** replicate action_text with training seeds 1 and 2 under the frozen recipe; then a +combat_public_v3 prompt arm; then visit_sampled soft targets; then a behaviour calibration run on train windows. Single seed so far — promising, not confirmed. |
 
 ## Standard experiment record
 

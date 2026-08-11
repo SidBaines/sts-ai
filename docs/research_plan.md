@@ -6,6 +6,24 @@ As of 2026-07-22, framing/risk-trait work is paused while the project establishe
 
 The framing question below remains the long-term scientific goal. Resume it from a frozen competence checkpoint after the competence plan's exit gate, rather than continuing to vary framing while the base policy and learning pipeline are not yet demonstrably capable.
 
+**Progress update (2026-08-11, COMP-020):** the first clearly positive
+generalization result on this task. Independent diagnostics on the frozen
+artifacts showed a 25-line rule policy matching the frozen 32/57 development
+gate (above every trained model), ~25% of the strict top-1 metric being
+teacher order-noise on near-ties, and phantom-power simulator UB contaminating
+the dev split at ~5× the train rate. In response: metrics moved to visit-share
+regret / tie-aware top-set with a quarantine-clean split; the observation
+gained `combat_public_v3` (sim-oracle-verified computed damage annotations for
+all attack types + TURN MATH derived lines); and SFT targets were retargeted
+from menu indices to semantic action text. On the exact COMP-012 states,
+model, and recipe, the action_text arm's early-stopped checkpoint reaches
+0.614 development top-1 / 0.143 regret versus COMP-012's best 0.509 / 0.183 —
+36/57 on the legacy metric, the first artifact past the historical 32/57
+gate — with 0.596 top-1 under free generation (100% valid JSON). One training
+seed; replication with seeds 1/2 is the registered next action. Plan:
+[`comp020_semantic_retarget_plan.md`](comp020_semantic_retarget_plan.md);
+result: `configs/competence/comp_020_result.json`.
+
 **Progress update (2026-07-23):** a stopped live COMP-002 transcript exposed a
 decision-critical interface defect: combat state/actions omitted the game-visible
 card type, and Gemma consequently classified Attacks as Enrage-triggering Skills

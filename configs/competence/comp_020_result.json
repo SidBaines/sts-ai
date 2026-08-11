@@ -1,0 +1,288 @@
+{
+ "adapters": {
+  "action_text_best": {
+   "path": "data/competence/comp_020/adapters/action_text_consensus/0000750_adapters.safetensors",
+   "sha256": "b213ad8e818534cc948079a4febff4b64b92b9a91940664e71ecd5ed50156461",
+   "step": 750
+  },
+  "turn_plan_best": {
+   "path": "data/competence/comp_020/adapters/turn_plan_consensus/0001950_adapters.safetensors",
+   "sha256": "cf9f1be08a226ac78cbbd0118dcd5071da9091149c74a5c859b96883b61ae3b5",
+   "step": 1950
+  }
+ },
+ "baselines_rescored": {
+  "base": {
+   "all": {
+    "mean_regret_visit_share": 0.23698254543313274,
+    "n": 57,
+    "strict_top1_rate": 0.42105263157894735,
+    "top_set_rate": 0.49122807017543857,
+    "turn_set_rate": 0.7894736842105263
+   },
+   "clean": {
+    "mean_regret_visit_share": 0.2270439613178966,
+    "n": 39,
+    "strict_top1_rate": 0.48717948717948717,
+    "top_set_rate": 0.5384615384615384,
+    "turn_set_rate": 0.7948717948717948
+   }
+  },
+  "comp012_step1500": {
+   "all": {
+    "mean_regret_visit_share": 0.19007307093804723,
+    "n": 57,
+    "strict_top1_rate": 0.49122807017543857,
+    "top_set_rate": 0.5614035087719298,
+    "turn_set_rate": 0.9298245614035088
+   },
+   "clean": {
+    "mean_regret_visit_share": 0.1955848805798459,
+    "n": 39,
+    "strict_top1_rate": 0.5384615384615384,
+    "top_set_rate": 0.5897435897435898,
+    "turn_set_rate": 0.9487179487179487
+   }
+  },
+  "comp012_step3000": {
+   "all": {
+    "mean_regret_visit_share": 0.18299022493414857,
+    "n": 57,
+    "strict_top1_rate": 0.5087719298245614,
+    "top_set_rate": 0.5789473684210527,
+    "turn_set_rate": 0.8947368421052632
+   },
+   "clean": {
+    "mean_regret_visit_share": 0.1975860859272051,
+    "n": 39,
+    "strict_top1_rate": 0.5384615384615384,
+    "top_set_rate": 0.5897435897435898,
+    "turn_set_rate": 0.9230769230769231
+   }
+  }
+ },
+ "branch": "feat/semantic-turn-targets",
+ "datasets": {
+  "dev57_action_text": {
+   "n": 57,
+   "path": "data/competence/comp_020/datasets/dev57_action_text.jsonl",
+   "sha256": "fd114ca86fe83ac7ac737a104f97209e01b4276293ded672be16e0057f1aec16"
+  },
+  "dev57_turn_plan": {
+   "n": 52,
+   "path": "data/competence/comp_020/datasets/dev57_turn_plan.jsonl",
+   "sha256": "d4116e073f6531622cf2278e5eb03c089667dcc99c5689153a2df12fd5c557d9"
+  },
+  "state_identity": "train/dev state hash sets and order verified equal to the frozen COMP-012 train150/dev57 sets; teacher indices identical on all 150",
+  "train150_action_text": {
+   "n": 150,
+   "path": "data/competence/comp_020/datasets/train150_action_text.jsonl",
+   "sha256": "c85cdb59656feb5311e500c69395b9fdd9b54f2b08639e26761994ed04374c91"
+  },
+  "train_turn_plan": {
+   "n": 130,
+   "path": "data/competence/comp_020/datasets/train_turn_plan.jsonl",
+   "sha256": "41c05701c841e80f586e5c02935f16921a86a8a6af4f005435f7315de6444a5f"
+  }
+ },
+ "date": "2026-08-11",
+ "decision": "Semantic action-text targets beat the matched index-target control decisively at the early-stopped checkpoint: dev57 top-1 0.614 vs 0.509, mean visit-share regret 0.143 vs 0.183 (clean 0.141 vs 0.198), top-set 0.667 vs 0.579, legacy-view 36/57 vs 28/57 (first artifact past the historical 32/57 gate). Improvement exceeds the preregistered promising bar on both splits; single seed, so status is promising-replicate, not confirmed. turn_plan is weaker on first-action choice (best 0.526/0.162) but generates 100% legal plans; treat as secondary. Next: replicate action_text with training seeds 1/2; then the +combat_public_v3 prompt arm; then visit_sampled soft targets; then a behavior calibration run on train windows.",
+ "design": {
+  "caveats": [
+   "single training seed",
+   "dev57-clean is 39 rows (low power)",
+   "turn_plan trains on 130/150 states (consensus-anchoring skips 20)"
+  ],
+  "metrics": "visit-share regret / tie-aware top-set (tau=0.8) / turn-set / strict top-1 vs aggregated-root-visit consensus, all+clean splits (quarantine configs/competence/state_sanity_quarantine_v1.json); both arms scored on the same 57-row action_text dev protocol",
+  "model": {
+   "id": "mlx-community/gemma-4-e4b-it-bf16",
+   "revision": "eec12d0899edea9b738ab1009af9159cdfd70d71"
+  },
+  "prompts": "combat_public_v2 (byte-comparable with COMP-012); only instruction block + completion changed",
+  "recipe": "COMP-012-matched: LoRA rank 8 scale 20 dropout 0, 8 layers, lr 1e-4, batch 1, seed 0, eval_fraction 0; action_text 3000 iters (20 passes x 150 rows, ckpts 750/1500/2250/3000); turn_plan 2600 iters (20 passes x 130 rows, ckpts 650/1300/1950/2600)"
+ },
+ "experiment_id": "COMP-020",
+ "generative_dev57": {
+  "action_text_750": {
+   "matched_rate": 0.9473684210526315,
+   "n": 57,
+   "top1_rate": 0.5964912280701754,
+   "valid_json_rate": 1.0
+  },
+  "turn_plan_1950_own_contract": {
+   "matched_rate": 1.0,
+   "n": 52,
+   "top1_rate": 0.5961538461538461,
+   "valid_json_rate": 1.0
+  }
+ },
+ "kind": "comp020_result",
+ "legacy_view": {
+  "action_text_750_nll": 1.673,
+  "action_text_750_top1": 0.631578947368421,
+  "comp012_best_top1": 0.49122807017543857,
+  "note": "candidate-report top1 against frozen SFT targets (COMP-012's historical metric; frozen gate was 32/57=0.561)"
+ },
+ "question": "Does retargeting teacher-SFT from menu indices to semantic action text (and turn plans) improve held-out teacher-action choice on the same 150 states, model, and recipe as COMP-012?",
+ "results_dev57": {
+  "action_text": {
+   "1500": {
+    "all": {
+     "mean_regret_visit_share": 0.15545345561456922,
+     "n": 57,
+     "strict_top1_rate": 0.5789473684210527,
+     "top_set_rate": 0.6140350877192983,
+     "turn_set_rate": 0.9473684210526315
+    },
+    "clean": {
+     "mean_regret_visit_share": 0.1420757934458826,
+     "n": 39,
+     "strict_top1_rate": 0.6153846153846154,
+     "top_set_rate": 0.6666666666666666,
+     "turn_set_rate": 0.9743589743589743
+    }
+   },
+   "2250": {
+    "all": {
+     "mean_regret_visit_share": 0.1595739384455784,
+     "n": 57,
+     "strict_top1_rate": 0.5263157894736842,
+     "top_set_rate": 0.5789473684210527,
+     "turn_set_rate": 0.9473684210526315
+    },
+    "clean": {
+     "mean_regret_visit_share": 0.15517276911978134,
+     "n": 39,
+     "strict_top1_rate": 0.5641025641025641,
+     "top_set_rate": 0.6153846153846154,
+     "turn_set_rate": 0.9487179487179487
+    }
+   },
+   "3000": {
+    "all": {
+     "mean_regret_visit_share": 0.18579102496529648,
+     "n": 57,
+     "strict_top1_rate": 0.49122807017543857,
+     "top_set_rate": 0.543859649122807,
+     "turn_set_rate": 0.8947368421052632
+    },
+    "clean": {
+     "mean_regret_visit_share": 0.19349004941783088,
+     "n": 39,
+     "strict_top1_rate": 0.5128205128205128,
+     "top_set_rate": 0.5641025641025641,
+     "turn_set_rate": 0.8717948717948718
+    }
+   },
+   "750": {
+    "all": {
+     "mean_regret_visit_share": 0.1425038236617184,
+     "n": 57,
+     "strict_top1_rate": 0.6140350877192983,
+     "top_set_rate": 0.6666666666666666,
+     "turn_set_rate": 0.9824561403508771
+    },
+    "clean": {
+     "mean_regret_visit_share": 0.1405389546351085,
+     "n": 39,
+     "strict_top1_rate": 0.6410256410256411,
+     "top_set_rate": 0.6923076923076923,
+     "turn_set_rate": 0.9743589743589743
+    }
+   }
+  },
+  "turn_plan": {
+   "1300": {
+    "all": {
+     "mean_regret_visit_share": 0.16791053313743623,
+     "n": 57,
+     "strict_top1_rate": 0.49122807017543857,
+     "top_set_rate": 0.5614035087719298,
+     "turn_set_rate": 0.8947368421052632
+    },
+    "clean": {
+     "mean_regret_visit_share": 0.15764515570755253,
+     "n": 39,
+     "strict_top1_rate": 0.5641025641025641,
+     "top_set_rate": 0.6153846153846154,
+     "turn_set_rate": 0.8974358974358975
+    }
+   },
+   "1950": {
+    "all": {
+     "mean_regret_visit_share": 0.16179796003802105,
+     "n": 57,
+     "strict_top1_rate": 0.5263157894736842,
+     "top_set_rate": 0.5964912280701754,
+     "turn_set_rate": 0.8947368421052632
+    },
+    "clean": {
+     "mean_regret_visit_share": 0.15515764748927507,
+     "n": 39,
+     "strict_top1_rate": 0.5897435897435898,
+     "top_set_rate": 0.6410256410256411,
+     "turn_set_rate": 0.8974358974358975
+    }
+   },
+   "2600": {
+    "all": {
+     "mean_regret_visit_share": 0.17877565534466372,
+     "n": 57,
+     "strict_top1_rate": 0.47368421052631576,
+     "top_set_rate": 0.543859649122807,
+     "turn_set_rate": 0.9122807017543859
+    },
+    "clean": {
+     "mean_regret_visit_share": 0.18273051621598996,
+     "n": 39,
+     "strict_top1_rate": 0.5128205128205128,
+     "top_set_rate": 0.5641025641025641,
+     "turn_set_rate": 0.8974358974358975
+    }
+   },
+   "650": {
+    "all": {
+     "mean_regret_visit_share": 0.20851534645277586,
+     "n": 57,
+     "strict_top1_rate": 0.47368421052631576,
+     "top_set_rate": 0.5263157894736842,
+     "turn_set_rate": 0.8421052631578947
+    },
+    "clean": {
+     "mean_regret_visit_share": 0.20501443030759636,
+     "n": 39,
+     "strict_top1_rate": 0.5128205128205128,
+     "top_set_rate": 0.5641025641025641,
+     "turn_set_rate": 0.8205128205128205
+    }
+   }
+  }
+ },
+ "results_train_fit": {
+  "action_text_2250": {
+   "mean_margin": 0.49001227407407405,
+   "mean_regret_visit_share": 0.003756281481481482,
+   "n": 150,
+   "strict_top1_rate": 0.9466666666666667,
+   "top_set_rate": 0.9866666666666667,
+   "turn_set_rate": 0.9133333333333333
+  },
+  "action_text_750": {
+   "mean_margin": 0.49001227407407405,
+   "mean_regret_visit_share": 0.0771565925925926,
+   "n": 150,
+   "strict_top1_rate": 0.7733333333333333,
+   "top_set_rate": 0.8266666666666667,
+   "turn_set_rate": 0.9266666666666666
+  },
+  "turn_plan_2600": {
+   "mean_margin": 0.48077472649572645,
+   "mean_regret_visit_share": 0.006663948717948717,
+   "n": 130,
+   "strict_top1_rate": 0.9307692307692308,
+   "top_set_rate": 0.9692307692307692,
+   "turn_set_rate": 0.9923076923076923
+  }
+ },
+ "version": 1
+}
