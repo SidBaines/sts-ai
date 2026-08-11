@@ -19,8 +19,10 @@ from menu indices to semantic action text. On the exact COMP-012 states,
 model, and recipe, the action_text arm's early-stopped checkpoint reaches
 0.614 development top-1 / 0.143 regret versus COMP-012's best 0.509 / 0.183 —
 36/57 on the legacy metric, the first artifact past the historical 32/57
-gate — with 0.596 top-1 under free generation (100% valid JSON). One training
-seed; replication with seeds 1/2 is the registered next action. Plan:
+gate — with 0.596 top-1 under free generation (100% valid JSON). Same-day
+replication with training seeds 1/2 confirms it: at the fixed step-1500
+endpoint all three seeds beat COMP-012's best on both metrics
+(`configs/competence/comp_020_replication_result.json`). Plan:
 [`comp020_semantic_retarget_plan.md`](comp020_semantic_retarget_plan.md);
 result: `configs/competence/comp_020_result.json`.
 
