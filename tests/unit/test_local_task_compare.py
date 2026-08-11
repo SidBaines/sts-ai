@@ -105,7 +105,7 @@ def _write_meta(
                 "combat_observation": combat_observation,
                 "competence_interface_version": combat_observation,
                 "prompt_probe_sha256": "1" * 64,
-                "chat_template_probe_hash": "2" * 64,
+                "chat_template_probe_hash": "2" * 16,
                 "simulator_binary_sha256": "3" * 64,
                 "python_serializer_sha256": "4" * 64,
                 "glossary_sha256": "5" * 64,

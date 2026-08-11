@@ -101,7 +101,7 @@ def _meta(config: dict) -> dict:
                 "competence_interface_version": config["combat_observation"],
                 "output_contract": config["output_contract"],
                 "prompt_probe_sha256": "1" * 64,
-                "chat_template_probe_hash": "2" * 64,
+                "chat_template_probe_hash": "2" * 16,
                 "python_serializer_sha256": "3" * 64,
                 "glossary_sha256": "4" * 64,
                 "prompting_sha256": "5" * 64,

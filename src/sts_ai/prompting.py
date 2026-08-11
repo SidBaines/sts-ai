@@ -33,12 +33,46 @@ TURN_PLAN_INSTRUCTION = (
 )
 
 
+RETRY_INSTRUCTION = (
+    "\n\nYour previous response was invalid. Return only one JSON object "
+    "with a legal integer action_index from the listed actions. Do not include "
+    "a <think> block, markdown fence, or any other text."
+)
+ACTION_TEXT_RETRY_INSTRUCTION = (
+    "\n\nYour previous response was invalid. Return only one JSON object of the "
+    'form {"action": "<the exact text of one legal action>"}, with the action '
+    "text copied exactly from LEGAL ACTIONS. Do not include a <think> block, "
+    "markdown fence, or any other text."
+)
+TURN_PLAN_RETRY_INSTRUCTION = (
+    "\n\nYour previous response was invalid. Return only one JSON object of the "
+    'form {"plan": ["<action text>", "..."], "action": "<the first entry of '
+    'plan>"}, with every action text copied exactly from LEGAL ACTIONS. Do not '
+    "include a <think> block, markdown fence, or any other text."
+)
+
+
 def validate_output_contract(output_contract: str) -> None:
     if output_contract not in OUTPUT_CONTRACTS:
         raise ValueError(
             "output_contract must be one of "
             + ", ".join(repr(value) for value in OUTPUT_CONTRACTS)
         )
+
+
+def retry_instruction(output_contract: str = REASONING_ACTION_OUTPUT) -> str:
+    """Contract-appropriate invalid-response repair suffix.
+
+    The default literal is the frozen historical retry prompt and must stay
+    byte-identical for the index contracts; the semantic contracts get schema-
+    matched wording instead of the misleading ``action_index`` phrasing.
+    """
+    validate_output_contract(output_contract)
+    if output_contract == ACTION_TEXT_OUTPUT:
+        return ACTION_TEXT_RETRY_INSTRUCTION
+    if output_contract == TURN_PLAN_OUTPUT:
+        return TURN_PLAN_RETRY_INSTRUCTION
+    return RETRY_INSTRUCTION
 
 
 def render_action_prompt(

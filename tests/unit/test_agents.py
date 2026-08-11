@@ -3,7 +3,7 @@ import types
 import unittest
 
 from sts_ai.agents import MlxQwenJsonAgent, RandomLegalAgent, VllmJsonAgent, parse_json_action
-from sts_ai.prompting import NEUTRAL_FRAME
+from sts_ai.prompting import NEUTRAL_FRAME, retry_instruction
 from sts_ai.schemas import LegalAction
 
 
@@ -153,6 +153,136 @@ class ParseJsonActionTest(unittest.TestCase):
         decision = parse_json_action('{"reasoning": "ok", "action_index": 0}', self.actions)
         self.assertTrue(decision.valid)
         self.assertEqual(decision.thinking, "")
+
+
+class ParseSemanticActionTest(unittest.TestCase):
+    """Live-play resolution for the semantic output contracts."""
+
+    def setUp(self):
+        self.actions = [
+            LegalAction(index=0, bits=1, description="play Strike (cost 1) -> Gremlin Nob (deal 9)"),
+            LegalAction(index=1, bits=2, description="play Defend (cost 1)"),
+            LegalAction(index=2, bits=4, description="end turn"),
+        ]
+
+    def test_action_text_exact_match_resolves_index(self):
+        decision = parse_json_action(
+            '{"action": "play Defend (cost 1)"}',
+            self.actions,
+            output_contract="action_text",
+        )
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 1)
+        self.assertEqual(decision.metadata["legal_action"]["description"], "play Defend (cost 1)")
+
+    def test_action_text_unmatched_text_is_invalid(self):
+        decision = parse_json_action(
+            '{"action": "drink potion Fire Potion"}',
+            self.actions,
+            output_contract="action_text",
+        )
+        self.assertFalse(decision.valid)
+        self.assertEqual(decision.metadata["parse_error"], "unmatched action text")
+
+    def test_action_text_unique_prefix_resolves(self):
+        decision = parse_json_action(
+            '{"action": "play Strike (cost 1)"}',
+            self.actions,
+            output_contract="action_text",
+        )
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 0)
+        self.assertEqual(decision.metadata["semantic_match"], "unique_prefix")
+
+    def test_action_text_ambiguous_prefix_is_invalid(self):
+        actions = [
+            LegalAction(index=0, bits=1, description="play Strike (cost 1) -> Sentry [enemy 0]"),
+            LegalAction(index=1, bits=2, description="play Strike (cost 1) -> Sentry [enemy 2]"),
+        ]
+        decision = parse_json_action(
+            '{"action": "play Strike (cost 1)"}', actions, output_contract="action_text"
+        )
+        self.assertFalse(decision.valid)
+
+    def test_action_text_empty_string_is_invalid(self):
+        decision = parse_json_action(
+            '{"action": ""}', self.actions, output_contract="action_text"
+        )
+        self.assertFalse(decision.valid)
+
+    def test_action_text_tolerates_extra_keys(self):
+        decision = parse_json_action(
+            '{"reasoning": "block", "action": "play Defend (cost 1)"}',
+            self.actions,
+            output_contract="action_text",
+        )
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 1)
+        self.assertEqual(decision.reasoning, "block")
+
+    def test_action_text_falls_back_to_valid_action_index(self):
+        decision = parse_json_action(
+            '{"action_index": 2}',
+            self.actions,
+            output_contract="action_text",
+        )
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 2)
+        self.assertEqual(decision.metadata["semantic_fallback"], "action_index")
+
+    def test_action_text_rejects_bool_action_index_fallback(self):
+        decision = parse_json_action(
+            '{"action_index": true}',
+            self.actions,
+            output_contract="action_text",
+        )
+        self.assertFalse(decision.valid)
+
+    def test_turn_plan_resolves_action_and_keeps_plan(self):
+        decision = parse_json_action(
+            '{"plan": ["play Defend (cost 1)", "end turn"], "action": "play Defend (cost 1)"}',
+            self.actions,
+            output_contract="turn_plan",
+        )
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 1)
+        self.assertEqual(decision.metadata["plan"], ["play Defend (cost 1)", "end turn"])
+
+    def test_default_contract_still_rejects_action_text_payload(self):
+        decision = parse_json_action('{"action": "play Defend (cost 1)"}', self.actions)
+        self.assertFalse(decision.valid)
+        self.assertEqual(decision.metadata["parse_error"], "invalid action_index")
+
+    def test_duplicate_descriptions_resolve_to_first_position(self):
+        actions = [
+            LegalAction(index=0, bits=1, description="end turn"),
+            LegalAction(index=1, bits=2, description="end turn"),
+        ]
+        decision = parse_json_action(
+            '{"action": "end turn"}', actions, output_contract="action_text"
+        )
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 0)
+
+
+class RetryInstructionTest(unittest.TestCase):
+    def test_default_contract_keeps_frozen_literal(self):
+        self.assertEqual(
+            retry_instruction("reasoning_action"),
+            "\n\nYour previous response was invalid. Return only one JSON object "
+            "with a legal integer action_index from the listed actions. Do not include "
+            "a <think> block, markdown fence, or any other text.",
+        )
+        self.assertEqual(retry_instruction("action_only"), retry_instruction("reasoning_action"))
+
+    def test_semantic_contracts_name_their_schema(self):
+        self.assertIn('{"action": ', retry_instruction("action_text"))
+        self.assertNotIn("action_index", retry_instruction("action_text"))
+        self.assertIn('"plan"', retry_instruction("turn_plan"))
+
+    def test_unknown_contract_rejected(self):
+        with self.assertRaises(ValueError):
+            retry_instruction("bogus")
 
 
 class RandomLegalAgentSeedTest(unittest.TestCase):

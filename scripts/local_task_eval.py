@@ -278,12 +278,16 @@ def validate_resume_meta(
     else:
         for name in REQUIRED_INTERFACE_DIGESTS:
             digest = interface.get(name)
-            if (
-                not isinstance(digest, str)
-                or re.fullmatch(r"[0-9a-f]{64}", digest) is None
-            ):
+            # chat_template_probe_hash is sft_format's short 16-hex probe
+            # digest by design; the rest are full SHA-256 file digests.
+            pattern = (
+                r"[0-9a-f]{16}"
+                if name == "chat_template_probe_hash"
+                else r"[0-9a-f]{64}"
+            )
+            if not isinstance(digest, str) or re.fullmatch(pattern, digest) is None:
                 problems.append(
-                    f"extra.interface_provenance.{name}: missing/invalid SHA-256"
+                    f"extra.interface_provenance.{name}: missing/invalid digest"
                 )
         interface_expected = {
             "combat_observation": expected_eval_config["combat_observation"],

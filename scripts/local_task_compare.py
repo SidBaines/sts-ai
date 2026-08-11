@@ -334,12 +334,14 @@ def _generation_config(meta: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("rollout meta is missing extra.interface_provenance")
     for key in REQUIRED_INTERFACE_DIGESTS:
         digest = interface.get(key)
-        if (
-            not isinstance(digest, str)
-            or re.fullmatch(r"[0-9a-f]{64}", digest) is None
-        ):
+        # chat_template_probe_hash is sft_format's short 16-hex probe digest
+        # by design; the rest are full SHA-256 file digests.
+        pattern = (
+            r"[0-9a-f]{16}" if key == "chat_template_probe_hash" else r"[0-9a-f]{64}"
+        )
+        if not isinstance(digest, str) or re.fullmatch(pattern, digest) is None:
             raise ValueError(
-                f"extra.interface_provenance.{key} must be a SHA-256 digest"
+                f"extra.interface_provenance.{key} must be a valid digest"
             )
     for key, expected in {
         "output_contract": extra.get("output_contract"),

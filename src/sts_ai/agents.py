@@ -8,9 +8,12 @@ from dataclasses import asdict
 from typing import Protocol
 
 from sts_ai.prompting import (
+    ACTION_TEXT_OUTPUT,
     NEUTRAL_FRAME,
     REASONING_ACTION_OUTPUT,
+    TURN_PLAN_OUTPUT,
     render_action_prompt,
+    retry_instruction,
     validate_output_contract,
 )
 from sts_ai.schemas import AgentDecision, LegalAction
@@ -258,9 +261,9 @@ class MlxQwenJsonAgent:
             prompt = base_prompt
             if attempt > 0:
                 prompt += (
-                    "\n\nYour previous response was invalid. Return only one JSON object "
-                    "with a legal integer action_index from the listed actions. Do not include "
-                    "a <think> block, markdown fence, or any other text."
+                    retry_instruction(
+                        getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
+                    )
                 )
 
             chat_prompt = self._apply_chat_template(prompt)
@@ -271,6 +274,7 @@ class MlxQwenJsonAgent:
                 legal_actions,
                 completion_tokens=completion_tokens,
                 max_tokens=getattr(self, "max_tokens", None),
+                output_contract=getattr(self, "output_contract", REASONING_ACTION_OUTPUT),
             )
             decision.retries = attempt
             decision.prompt_tokens = self._count_tokens(chat_prompt)
@@ -322,7 +326,11 @@ class MlxQwenJsonAgent:
         full = "".join(pieces)
         completion_tokens = self._count_tokens(full)
         decision = parse_json_action(
-            full, legal_actions, completion_tokens=completion_tokens, max_tokens=self.max_tokens
+            full,
+            legal_actions,
+            completion_tokens=completion_tokens,
+            max_tokens=self.max_tokens,
+            output_contract=getattr(self, "output_contract", REASONING_ACTION_OUTPUT),
         )
         decision.retries = 0
         decision.prompt_tokens = self._count_tokens(chat_prompt)
@@ -376,9 +384,9 @@ class MlxQwenJsonAgent:
             )
             if retry:
                 prompt += (
-                    "\n\nYour previous response was invalid. Return only one JSON object "
-                    "with a legal integer action_index from the listed actions. Do not include "
-                    "a <think> block, markdown fence, or any other text."
+                    retry_instruction(
+                        getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
+                    )
                 )
             prompts.append(self._apply_chat_template(prompt))
         prompt_ids = [self.tokenizer.encode(p) for p in prompts]
@@ -398,6 +406,7 @@ class MlxQwenJsonAgent:
                 legal_actions,
                 completion_tokens=completion_tokens,
                 max_tokens=getattr(self, "max_tokens", None),
+                output_contract=getattr(self, "output_contract", REASONING_ACTION_OUTPUT),
             )
             decision.retries = 0
             decision.prompt_tokens = self._count_tokens(prompt)
@@ -657,9 +666,9 @@ class VllmJsonAgent:
         base = self._base_prompt(state_text, legal_actions)
         if retry:
             base += (
-                "\n\nYour previous response was invalid. Return only one JSON object "
-                "with a legal integer action_index from the listed actions. Do not include "
-                "a <think> block, markdown fence, or any other text."
+                retry_instruction(
+                    getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
+                )
             )
         prompt = self._apply_chat_template(base)
         params = self._SamplingParams(
@@ -729,6 +738,7 @@ class VllmJsonAgent:
             legal_actions,
             completion_tokens=completion_tokens,
             max_tokens=getattr(self, "max_tokens", None),
+            output_contract=getattr(self, "output_contract", REASONING_ACTION_OUTPUT),
         )
         decision.retries = 0
         decision.prompt_tokens = prompt_tokens
@@ -757,9 +767,9 @@ class VllmJsonAgent:
             prompt = base_prompt
             if attempt > 0:
                 prompt += (
-                    "\n\nYour previous response was invalid. Return only one JSON object "
-                    "with a legal integer action_index from the listed actions. Do not include "
-                    "a <think> block, markdown fence, or any other text."
+                    retry_instruction(
+                        getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
+                    )
                 )
 
             chat_prompt = self._apply_chat_template(prompt)
@@ -779,6 +789,7 @@ class VllmJsonAgent:
                     legal_actions,
                     completion_tokens=result["completion_tokens"],
                     max_tokens=getattr(self, "max_tokens", None),
+                    output_contract=getattr(self, "output_contract", REASONING_ACTION_OUTPUT),
                 )
                 decision.prompt_tokens = result["prompt_tokens"]
                 decision.completion_tokens = result["completion_tokens"]
@@ -816,9 +827,9 @@ class VllmJsonAgent:
                     ),
                 )
                 base += (
-                    "\n\nYour previous response was invalid. Return only one JSON object "
-                    "with a legal integer action_index from the listed actions. Do not include "
-                    "a <think> block, markdown fence, or any other text."
+                    retry_instruction(
+                        getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
+                    )
                 )
                 prompts.append(self._apply_chat_template(base))
             else:
@@ -855,12 +866,59 @@ class VllmJsonAgent:
         return decisions
 
 
+def _resolve_semantic_action(
+    parsed: dict,
+    legal_actions: list[LegalAction],
+) -> tuple[int | None, dict[str, object]]:
+    """Map a semantic-contract JSON object to a legal-action list position.
+
+    Mirrors ``teacher_action_eval.evaluate_generated_action``'s exact-text
+    matching (byte-exact membership, first matching position) but is
+    deliberately laxer about the surrounding schema: live play executes the
+    model's clearly-stated intent, so extra keys are tolerated and a valid
+    integer ``action_index`` is accepted as a fallback when no ``action`` text
+    matches (the menu still displays indices). The static scorer remains the
+    strict measurement surface.
+    """
+    metadata: dict[str, object] = {}
+    plan = parsed.get("plan")
+    if isinstance(plan, list):
+        metadata["plan"] = plan
+    action = parsed.get("action")
+    if isinstance(action, str):
+        descriptions = [legal.description for legal in legal_actions]
+        if action in descriptions:
+            return descriptions.index(action), metadata
+        # A truncated-but-unambiguous copy (e.g. dropping the appended
+        # "-> TARGET (deal N)" annotation) resolves iff it prefixes exactly
+        # one legal description; any ambiguity stays invalid.
+        if action.strip():
+            prefix_hits = [
+                position
+                for position, description in enumerate(descriptions)
+                if description.startswith(action)
+            ]
+            if len(prefix_hits) == 1:
+                metadata["semantic_match"] = "unique_prefix"
+                return prefix_hits[0], metadata
+    fallback = parsed.get("action_index")
+    if (
+        isinstance(fallback, int)
+        and not isinstance(fallback, bool)
+        and 0 <= fallback < len(legal_actions)
+    ):
+        metadata["semantic_fallback"] = "action_index"
+        return fallback, metadata
+    return None, metadata
+
+
 def parse_json_action(
     response: str,
     legal_actions: list[LegalAction],
     *,
     completion_tokens: int | None = None,
     max_tokens: int | None = None,
+    output_contract: str = REASONING_ACTION_OUTPUT,
 ) -> AgentDecision:
     extracted = _extract_json_with_span(response)
     parsed = extracted[0] if extracted is not None else None
@@ -884,8 +942,33 @@ def parse_json_action(
             metadata=base_metadata,
         )
 
-    action_index = parsed.get("action_index")
     reasoning = str(parsed.get("reasoning", ""))
+    if output_contract in (ACTION_TEXT_OUTPUT, TURN_PLAN_OUTPUT):
+        resolved, semantic_metadata = _resolve_semantic_action(parsed, legal_actions)
+        base_metadata.update(semantic_metadata)
+        base_metadata["parsed"] = parsed
+        if resolved is None:
+            base_metadata["error"] = "unmatched action text"
+            base_metadata["parse_error"] = "unmatched action text"
+            return AgentDecision(
+                action_index=0,
+                raw_response=response,
+                reasoning=reasoning,
+                thinking=thinking,
+                valid=False,
+                metadata=base_metadata,
+            )
+        base_metadata["legal_action"] = asdict(legal_actions[resolved])
+        return AgentDecision(
+            action_index=resolved,
+            raw_response=response,
+            reasoning=reasoning,
+            thinking=thinking,
+            valid=True,
+            metadata=base_metadata,
+        )
+
+    action_index = parsed.get("action_index")
     if not isinstance(action_index, int) or action_index < 0 or action_index >= len(legal_actions):
         base_metadata["error"] = "invalid action_index"
         base_metadata["parse_error"] = "invalid action_index"
