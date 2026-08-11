@@ -11,7 +11,7 @@ from typing import Sequence
 # Make the repo root importable so ``from scripts.run_until import ...`` resolves
 # regardless of how this entrypoint is launched. Running ``python scripts/run_grpo.py``
 # only puts ``scripts/`` (not the repo root) on sys.path, and ``PYTHONPATH=src``
-# (per docs/grpo_dryrun_checklist.md and runpod/run_grpo.sh) does not add the repo
+# (used by the documented dry-run command and runpod/run_grpo.sh) does not add the repo
 # root either — so the ``scripts`` namespace package would otherwise be unfindable.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:

@@ -6,7 +6,7 @@ the combat step-loop works end to end: the env surfaces in-combat decisions
 results back (the run reaches REWARDS), and no illegal action reaches the sim.
 
 Run in a child process with a timeout to contain the residual seed-class UB hang
-(see docs/simulator_issue_handoff.md and tests/integration/test_battle_search.py).
+(see the CLAUDE.md UB gotcha and tests/integration/test_battle_search.py).
 Gated with @requires_simulator. See tests/CLAUDE.md.
 """
 from __future__ import annotations

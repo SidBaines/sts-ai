@@ -139,7 +139,7 @@ class BattleSearchRegressionTest(unittest.TestCase):
         payload = json.loads(completed.stdout)
         # NOTE: we deliberately do NOT assert the replay reaches the floor-12 battle.
         # Seed 2's path is corrupted by build-/layout-dependent uninitialized-memory
-        # UB (see docs/simulator_issue_handoff.md): across runs it may hang in the
+        # UB (see the uninitialized-memory gotcha in CLAUDE.md): across runs it may hang in the
         # battle (handled by the timeout above), replay fully and resolve, or diverge
         # earlier and stop before floor 12. The headroom in max_decisions ensures the
         # battle IS entered whenever the path does reach the map node, but reaching it

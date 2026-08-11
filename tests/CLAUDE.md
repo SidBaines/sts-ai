@@ -33,10 +33,10 @@ PYTHONPATH=src .venv/bin/python -m unittest discover -s tests/integration -t .
   tests **skip with a reason** so the unit tier stays green. Set
   `STS_REQUIRE_SIMULATOR=1` (e.g. in CI) to make them **run and fail** instead, so
   a missing build can't silently pass the gate — fail-closed, matching the
-  simulator-fault policy in `docs/research_plan.md`.
+  simulator fault policy in `README.md`.
 - **New test needs the binary? Put it in `integration/` and decorate it with
   `@requires_simulator`.** Don't construct `LightspeedHybridEnv` in `unit/`.
 - **Be wary of asserting exact simulator output for a fixed seed.** The simulator
-  has build-/layout-dependent UB (see `docs/simulator_issue_handoff.md`), so prefer
+  has build-/layout-dependent UB (see the gotcha in the top-level `CLAUDE.md`), so prefer
   structural assertions (e.g. "an EVENT_SCREEN option exists") over brittle
   exact-state checks where practical.

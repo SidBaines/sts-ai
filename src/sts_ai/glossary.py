@@ -799,7 +799,7 @@ def _combat_notes(state_text: str, legal_actions: list[dict], damage_note: bool 
 
     `damage_note` gates the "already includes Strength/Weak/Vulnerable" clarifier
     (Tier-1 comprehension fix: the model was reading `deal N` and then adding the
-    enemy's Strength again — see docs/gemma_performance_analysis_2026-07-06.md). The
+    enemy's Strength again). The
     toggle exists so an A/B harness can reconstruct the pre-fix wording."""
     notes: list[str] = []
     if _has_enemies(state_text):
@@ -911,7 +911,7 @@ def _build_key(
 
 # ---------------------------------------------------------------------------
 # Map rendering. The simulator's ASCII map (Map::toString) is not reliably
-# parseable by LLMs (see docs/map_representation_handoff.md), so the binding now
+# parseable by LLMs (see the map notes in src/sts_ai/CLAUDE.md), so the binding now
 # exposes the act map as a graph (GameContext.map_graph) and we render a compact,
 # neutral per-choice textual summary here instead. Pure: graph data in, text out.
 #
@@ -920,7 +920,7 @@ def _build_key(
 # least one path). This deliberately drops the branch structure (which downstream
 # rooms are mutually exclusive). We may revisit a structure-preserving
 # representation -- route planning may be part of what we want models to reason
-# about -- see docs/map_representation_handoff.md.
+# about -- design rationale in git history.
 # ---------------------------------------------------------------------------
 
 # Player-facing room names. Kept factual and balanced -- where a room carries a

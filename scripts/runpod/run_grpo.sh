@@ -5,8 +5,8 @@
 # new adapter into the resident vLLM engine — repeating for --num-iterations. Then
 # a paired eval of base vs the final adapter on the frozen eval split.
 #
-# DRY-RUN FIRST: docs/grpo_dryrun_checklist.md §5 (1 iter, 2 seeds x G=2, tiny model)
-# — the in-process vLLM-sleep <-> trainer GPU hand-off is the #1 thing to validate.
+# DRY-RUN FIRST: use a tiny model and at least 2 iterations to exercise the
+# in-process vLLM-sleep <-> trainer GPU hand-off and wake-after-train transition.
 #
 # Env in: MODEL, OUT (artifact root), CONCURRENCY, K (eval rollouts/seed),
 #         ITERS, GROUP_SIZE, SEEDS_PER_ITER, KL_BETA, CLIP_EPS, LR, REPO_DIR.

@@ -4,13 +4,9 @@
 
 A research harness for testing **how training-time framing changes what an LLM learns from the same reward signal**. The motivating question: when a model is reinforced along a graded axis like risk-taking, does the *framing* of the training context (e.g. "risk-reward tradeoffs" vs. "adventurous") decide which broader latent trait absorbs the update?
 
-The first environment is Slay the Spire via `gamerpuppy/sts_lightspeed`, targeting Qwen3-4B. The current slice is a **hybrid harness**: Python controls out-of-combat decisions (Neow, pathing, rewards, shops, events, card select, campfires) while the built-in Lightspeed search agent resolves combats. Full LLM combat control is a later task.
+The first environment is Slay the Spire via `gamerpuppy/sts_lightspeed`. The default **hybrid harness** gives Python control of out-of-combat decisions (Neow, pathing, rewards, shops, events, card select, campfires) while the built-in Lightspeed search agent resolves combats; full LLM combat control is also available.
 
-**Source of truth for goals, design commitments, and what to work on next: [`docs/research_plan.md`](docs/research_plan.md).** Read it before starting substantive work — it carries the staged roadmap and the current near-term ordering.
-
-## Project status: competence data collection
-
-The harness is still being hardened, but the first replay-validated competence cohorts and search-teacher data have now been frozen. Reproducibility and schema-stability rules are therefore active for any retained competence artifact.
+**Source of truth for goals, design commitments, and current state: [`docs/research_plan.md`](docs/research_plan.md).** Read it before starting substantive work.
 
 ## Coding guidelines
 
@@ -29,15 +25,15 @@ When you surface something **non-obvious** during a session (a gotcha, a hidden 
 - **Repo-wide** (affects agents working anywhere in the repo) → the Gotchas list below.
 - **Area-specific** (only relevant to one part) → the nearest subfolder `CLAUDE.md` (e.g. [`src/sts_ai/CLAUDE.md`](src/sts_ai/CLAUDE.md), [`scripts/CLAUDE.md`](scripts/CLAUDE.md)) or a README if more appropriate.
 
-When you complete substantive work that changes project status or the next-step ordering, update [`docs/research_plan.md`](docs/research_plan.md) (its status section and near-term steps).
+When you complete substantive work that changes project status or design commitments, update [`docs/research_plan.md`](docs/research_plan.md).
 
 ## Pointers
 
-- [`docs/research_plan.md`](docs/research_plan.md) — goals, design commitments, staged roadmap, current priorities.
+- [`docs/research_plan.md`](docs/research_plan.md) — research question, design commitments, architecture, and current state.
+- [`docs/experiment_history.md`](docs/experiment_history.md) — concise record of past experiments and open empirical items.
 - [`README.md`](README.md) — setup, build, and run commands.
 - [`src/sts_ai/CLAUDE.md`](src/sts_ai/CLAUDE.md) — harness internals and area-specific gotchas.
-- [`scripts/CLAUDE.md`](scripts/CLAUDE.md) — CLI entry points and build script.
-- [`docs/throughput_benchmarks.md`](docs/throughput_benchmarks.md) — measured per-model rollout speeds (decisions/sec, time-to-run) for planning experiments.
+- [`scripts/CLAUDE.md`](scripts/CLAUDE.md) — CLI entry points, build script, and run-planning notes (throughput, backends, pod discipline).
 
 ## Gotchas (repo-wide)
 
@@ -45,5 +41,5 @@ When you complete substantive work that changes project status or the next-step 
 - **The simulator must be built before any rollout.** Run `scripts/build_lightspeed.sh`. The built module lives in `external/sts_lightspeed/build/` and is located by `lightspeed_import.py`. `external/` and build outputs are gitignored — they are **not present on a fresh clone**.
 - **The Python↔C++ binding is maintained as a patch**, `patches/sts_lightspeed_python_api.patch`, applied to the upstream clone by the build script. To change the binding, **edit the patch and rebuild** — do not edit `external/sts_lightspeed/` directly, as that clone is untracked and your changes won't be versioned. After editing `external/` for a real change, **regenerate the patch — scoped to the source dirs** (`cd external/sts_lightspeed && git diff -- bindings include src > ../../patches/sts_lightspeed_python_api.patch`) and verify it applies to a fresh clone — the build script's apply step is skipped when the binding is already present, so a stale patch won't be caught locally. **Scope it:** a bare `git diff` also captures the `pybind11` **submodule pointer bump** the build script applies (it checks out v2.13.6 separately), and that extra hunk makes `git apply` fail on a fresh clone. Sanity-check the regenerated patch with `git apply --check --reverse` (must report clean) and `grep` it for `pybind11 b/pybind11` (must be absent). A regenerated nested diff can also add literal one-space blank context lines that the *outer* repo flags as trailing whitespace; normalize lines matching exactly `^ $` to empty, then repeat both fresh-apply and reverse-apply checks (`git apply` accepts the normalized form).
 - **The simulator is built in Release, so `assert()` is a no-op.** Any upstream guard written as `assert(false)` does nothing in our builds — an overflow/`while(true)` guard like that will hang instead of bailing. Defensive guards that must fire in production have to **throw**, not assert (see `BattleContext::executeActions` in the patch).
-- **The upstream simulator has uninitialized-memory UB** (default-constructed `GameContext`/`BattleContext` had uninitialized `potions`). Symptoms are build-/layout-dependent (a given seed may crash on one build and hang on another), which breaks naive cross-build reproducibility. If you see a seed behave differently after an unrelated rebuild, suspect UB, not your change. Background: `docs/simulator_issue_handoff.md`.
+- **The upstream simulator has uninitialized-memory UB** (default-constructed `GameContext`/`BattleContext` had uninitialized `potions`). Symptoms are build-/layout-dependent (a given seed may crash on one build and hang on another), which breaks naive cross-build reproducibility. If you see a seed behave differently after an unrelated rebuild, suspect UB, not your change. A second open bug in the same family produces impossible "phantom" enemy/player powers in saved combat states; affected windows are quarantined in `configs/competence/state_sanity_quarantine_v1.json` (detector: `scripts/audit_state_sanity.py`). Detailed write-ups live in git history (`docs/simulator_issue_handoff.md`).
 - **Native search seeds `0` and `1` are the same RNG stream on libc++.** `BattleScumSearcher2` uses `std::default_random_engine`, whose seed normalization makes 0 alias 1 on this build. Never count both as independent consensus votes; `collect_search_teacher.py` rejects that pair and defaults to empirically distinct seeds `1,2,3`.

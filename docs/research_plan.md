@@ -1,826 +1,125 @@
 # SlayTheSpireAI Research Plan
 
-## Active Priority Override: Competence First
-
-As of 2026-07-22, framing/risk-trait work is paused while the project establishes that a model can learn to play the game well. The active operational source of truth is [`competence_plan.md`](competence_plan.md). It contains the current diagnosis, staged gates, experiment registry, evaluation rules, and next action.
-
-The framing question below remains the long-term scientific goal. Resume it from a frozen competence checkpoint after the competence plan's exit gate, rather than continuing to vary framing while the base policy and learning pipeline are not yet demonstrably capable.
-
-**Progress update (2026-08-11, COMP-020):** the first clearly positive
-generalization result on this task. Independent diagnostics on the frozen
-artifacts showed a 25-line rule policy matching the frozen 32/57 development
-gate (above every trained model), ~25% of the strict top-1 metric being
-teacher order-noise on near-ties, and phantom-power simulator UB contaminating
-the dev split at ~5× the train rate. In response: metrics moved to visit-share
-regret / tie-aware top-set with a quarantine-clean split; the observation
-gained `combat_public_v3` (sim-oracle-verified computed damage annotations for
-all attack types + TURN MATH derived lines); and SFT targets were retargeted
-from menu indices to semantic action text. On the exact COMP-012 states,
-model, and recipe, the action_text arm's early-stopped checkpoint reaches
-0.614 development top-1 / 0.143 regret versus COMP-012's best 0.509 / 0.183 —
-36/57 on the legacy metric, the first artifact past the historical 32/57
-gate — with 0.596 top-1 under free generation (100% valid JSON). Same-day
-replication with training seeds 1/2 confirms it: at the fixed step-1500
-endpoint all three seeds beat COMP-012's best on both metrics
-(`configs/competence/comp_020_replication_result.json`). Plan:
-[`comp020_semantic_retarget_plan.md`](comp020_semantic_retarget_plan.md);
-result: `configs/competence/comp_020_result.json`.
-
-**Progress update (2026-07-23):** a stopped live COMP-002 transcript exposed a
-decision-critical interface defect: combat state/actions omitted the game-visible
-card type, and Gemma consequently classified Attacks as Enrage-triggering Skills
-while treating Defend as safe. COMP-002 was stopped after 71 partial decisions;
-its v1 rollouts and the untrained 493-row COMP-005 dataset are preserved but
-rejected for competence use. `combat_public_v2` now labels Attack/Skill/Power/
-Status/Curse across state, actions, selections, structured cards, and search
-descriptions while preserving legacy/v1 replay switches. Start signatures move
-to schema 2. COMP-004A separately established that displayed-action-aggregated
-root visits are a more reliable search policy than native winning-sequence
-selection (7/10 versus 4/10 completed wins, 3 versus 6 ambiguous stops).
-
-The v2 build and repeated replay validation are complete: current cohorts pass
-43/43 Nob, 43/43 Lagavulin, and 36/36 Sentries. The aggregated-root 50k audit
-accepts 57/60 held-out states, and dense Nob collection produced 600/652 eligible
-micro-actions. E4B and the MLX LoRA path now pass two memorization controls: the
-easy tiny32 at 32/32 and a harder first-per-turn tiny32 at 31/32. A three-pass
-600-row run nevertheless collapsed to predicting display index 0, exposing a
-train/eval state-selection and target-prior problem. A matched mask control then
-showed that required format-plus-action supervision fit the harder set while
-pure action-value-token supervision did not. COMP-012 then used the mixed mask
-for 20 passes over 150 aligned first-per-turn states: it fit 149/150 train but
-only reached 28/57 development top-1 versus base 22/57, below the frozen 32/57
-gate, and worsened NLL from 1.777 to 2.572. Behaviour was correctly not run.
-The step-1,500 checkpoint reaches 27/57 with much better NLL (1.183) but fits
-only 102/150 train, showing that later passes mostly memorize and sharpen
-confidence rather than solve generalization. COMP-014 now finds severe semantic
-sensitivity to cyclic legal-action reordering at both checkpoints: top-1
-invariance is 0.448/0.253 and mean probability TV is 0.400/0.696 at steps
-1,500/3,000. COMP-015 therefore isolates compute-matched cyclic augmentation
-against an unaugmented control. Its seed-0 fixed pair has completed: augmentation
-reduces probability TV 0.487→0.202 and source-macro NLL 4.076→1.501, but semantic
-top-1 invariance remains 0.149 and unpermuted development agreement regresses
-21/57→17/57. Assigned-position accuracy shows that the control's index-0
-shortcut is mostly replaced by an index-3 shortcut, not semantic equivariance.
-The seed-1 step-1,500 pair reverses seed 0 on held-out choices: augmentation
-moves development direct agreement 24/57→31/57 and cyclic invariance
-0.335→0.824, while TV improves 0.432→0.325. It still misses 32/57 by
-one, regresses development NLL slightly, and remains above the 0.20 TV gate.
-That promising but incomplete reversal activated the sequential policy's
-ambiguity trigger. The single matched seed-2 treatment then improves development
-direct agreement 28/57→32/57, cyclic invariance 0.362→0.629, TV
-0.473→0.298, and cyclic source-macro agreement/NLL
-0.371/2.073→0.503/1.262. It passes all prospectively frozen carry
-thresholds, but train fit falls 113/150→81/150 and the treatment remains
-below the standalone invariance/TV behaviour gate. COMP-015 is closed: the
-original strict success rule failed, no behaviour or final data ran, and cyclic
-augmentation is retained only as a possible component after move-choice
-weighting succeeds independently.
-COMP-016 now shows that the shortcut is not a complete-JSON measurement
-artefact. A genuine float32 direct action-digit projection removes exact ties
-but reproduces development choices exactly (21/57 control, 17/57 augmented)
-and retains cyclic invariance 0.000→0.149 with TV 0.484→0.197. Separate
-teacher-forced loss is effectively zero on the eight required-format tokens
-but remains 1.293/1.495 on the one action token. COMP-017 then finds that,
-with native thinking off, immediate
-action JSON is valid/correct on 57/57 and 26/57 development states whereas
-visible JSON reasoning is 55/57 and 19/57, with two truncations and roughly
-eightfold latency; no reasoning fights run. COMP-018 (`5512cc8c…4d54`) then
-rejects fixed action weight 8 at the harder-tiny32 gate: direct and greedy
-agreement remain 7/32 with nearly uniform, state-independent move probabilities,
-despite valid/legal JSON on 32/32. The conditional full150 arm does not run.
-A prospectively frozen same-seed current-code unit control reaches 31/32 and
-reproduces both historical COMP-011 checkpoint files byte-for-byte; token
-alignment, gradient scaling, and compiled numeric-weight checks pass. The
-failure is therefore an adverse optimization path from aggressive weighting,
-not a current trainer regression, dropped action gradient, or tiny-task E4B
-capacity failure. Do not add a seed or sweep weights. During development, add
-training seeds sequentially only after promising or ambiguous signal; require
-independent frozen repeats before any robust positive claim.
-With the cheap output, ordering, and weighting alternatives now isolated, the
-next step is to preregister COMP-019: a matched no-thinking larger-model static
-teacher comparison on the same public prompts and frozen tiny/full datasets.
-If the larger model also fails held-out transfer, prioritize broader
-data/DAgger coverage.
-A fresh 13-window Nob final cohort on world seeds 600–659 has been replayed
-twice without teacher/model queries and is embargoed until a development gate
-passes. Those windows form only 12 independent world-seed clusters, so clustered
-power/inference must be frozen and the cohort extended blindly if necessary
-before release. The historical K=4 COMP-001 result predates
-`combat_public_v2`; a matched v2 base arm is still required by Gate C0.
-This evidence continues to point first at harness, data, and optimization
-choices rather than an established Gemma E4B capacity ceiling. Framing work
-remains paused.
-
-## Overall Goal
-
-This repo is a research harness for testing how training-time framing changes what an LLM learns from the same or similar reward signal.
-
-The motivating scientific question is:
-
-> When a model is reinforced for behavior along a graded axis such as risk-taking, does the framing of the training context determine which broader latent concept absorbs the update?
-
-For example, if two models see equivalent successful trajectories but one is framed as making "risk-reward tradeoffs" and the other as being "adventurous", do their downstream behaviors generalize differently toward risk-seeking, adventure-seeking, fun-seeking, confidence, impulsivity, or other nearby traits?
-
-The first concrete environment is Slay the Spire through `gamerpuppy/sts_lightspeed`. Qwen3-4B was the initial historical model target; the current competence student is `mlx-community/gemma-4-e4b-it-bf16`. Slay the Spire is not the cleanest possible scientific environment, but it is a useful ecological testbed because risk is partly emergent: pathing, low-HP campfire choices, elite fights, card rewards, shops, potions, and boss preparation all create real tradeoffs.
-
-The repo should eventually support two complementary experiment arms:
-
-- **Fixed-rollout arm:** generate neutral trajectories once, then train framing variants on the same states/actions/rewards. This best isolates interpretation effects: same data, different frame.
-- **On-policy arm:** generate trajectories under each framing. This captures the full effect of framing on both interpretation and visited data distribution.
-
-The MVP prioritizes the fixed-rollout arm because it is cheaper, cleaner, and better suited to debugging the pipeline.
-
-## Current Implementation Status
-
-The first working slice is a hybrid Slay the Spire rollout harness.
-
-Current behavior:
-
-- `sts_lightspeed` is cloned and built locally.
-- A pybind patch exposes out-of-combat `GameAction`s to Python.
-- Python can list legal out-of-combat actions, describe the state, execute selected actions, and record decisions as JSONL.
-- Combats are resolved by the built-in Lightspeed search agent.
-- The Python policy controls Neow choices, pathing, rewards, shops, events, card select screens, treasure rooms, and campfires.
-- MLX/Qwen inference has been smoke-tested with `mlx-community/Qwen3-4B-4bit`; no-thinking mode produces valid structured actions on short rollouts.
-- Simulator error handling is now strict: invalid battle actions and unknown potion values raise errors, batch rollouts write `.error.json` sidecars, and optional per-seed subprocess timeouts keep slow or faulty seeds isolated.
-- **(2026-06-15)** Optional **full LLM combat control** (`combat_control="llm"`) with sim-computed combat info + an effect/status glossary shown to the model; an **eval harness** (per-rollout meta with framing/provenance, `affordances`, per-decision timing/tokens); a **batched multi-rollout orchestrator** + `run_sweep.py`/`compare_models.py`. See the 2026-06-15 block under Near-Term Next Steps. Hybrid (search-resolved combat) remains the default.
-- **(2026-06-15) ⚠ BREAKING — `SCHEMA_VERSION` 1→2: world-seed / policy-seed separation.** A rollout is now identified by `(world_seed, rollout_index)`; the on-disk field `seed` was **renamed `world_seed`** and `policy_seed`/`rollout_index` added. **Older single-`seed` `data/` traces (v1) do not load/compare against v2 unchanged — this is the intentional reason pre-2026-06-15 results no longer reproduce field-for-field.** Done deliberately while pre-data-collection. Details in the 2026-06-15 Done block below; concepts in [`rl_and_framing_design.md`](rl_and_framing_design.md) §2c.
-- **(2026-06-27) Interactive Rollout Studio for failure-mode diagnosis.** A FastAPI backend + offline browser UI (`scripts/interactive_app.py`, `src/sts_ai/interactive/`) to interactively drive agents: from any checkpoint, sample N decisions per turn from any method (`user`/`first`/`random`/`heuristic`/`model`), view/edit the LLM framing + full prompt template (with saved templates, framing-only path byte-identical to the harness), branch to explore alternatives, and stream the model's thinking tokens live. Combats are steppable (`combat_control="llm"`) or auto-resolved (`search`). **No schema change** — sessions cache as canonical `decisions.jsonl` (+ a `session.json` lineage sidecar), so existing analysis tools work on Studio output. Branch/load replay from `(world_seed, action sequence)` since the C++ state is opaque; replay determinism is verified for both combat modes. Directly serves the "inspect failure modes" near-term goal. Runs fully offline with a cached MLX model (verified). See [`src/sts_ai/interactive/CLAUDE.md`](../src/sts_ai/interactive/CLAUDE.md).
-- **(2026-06-17) Map representation rewritten — ASCII grid → structured per-choice summary.** The unparseable full-act ASCII map (which made map choices blind guesses for small models and caused fatal reasoning loops → truncated JSON → dead rollouts on gemma-4-12B-it-thinking) is replaced. The binding now exposes the act DAG via `GameContext.map_graph()` and `glossary` renders a neutral per-choice summary (immediate room + downstream *reachable* room composition toward the boss + a room-type legend); the old `Map:` ASCII is removed from `state_text`. **Trace-shape change** on map screens (pre-freeze, allowed); action labels and `risk_proxies` are unchanged. v1 uses aggregate reachability and may be revisited (route structure / forced-vs-optional). Validated locally (unit + integration + smoke rollout); the **gemma-4-12B GPU regression rerun remains gated** (needs a CUDA H100). Full writeup: [`map_representation_handoff.md`](map_representation_handoff.md) §9.
-
-### Latest Stage 1 Run Notes
-
-Baseline pass:
-
-- Dataset directory: `data/baseline_rollouts_100`.
-- Agents: `first`, `random`, `heuristic`.
-- Seeds: `2-51`.
-- Settings: `max_decisions=200`, `battle_simulations=100`, `seed_timeout_seconds=30`.
-- Summary CSV: `data/baseline_rollouts_100/summary.csv`.
-
-Observed baseline reliability:
-
-- `first`: 46/50 clean seeds; timeout seeds `11, 17, 22, 48`.
-- `random`: 47/50 clean seeds; timeout seeds `11, 25, 48`.
-- `heuristic`: 46/50 clean seeds; timeout seeds `11, 17, 22, 48`.
-- Clean intersection across all three agents: 45 seeds.
-- First 10 clean intersection seeds used for Qwen smoke: `2, 3, 4, 5, 6, 7, 8, 9, 10, 12`.
-
-The earlier `500` battle-simulation setting is useful as a simulator stress test but too slow/flaky for fast Stage 1 iteration. Seed `1` should be kept as a diagnostic regression seed, not included in the initial frozen dev/eval set.
-
-Serializer audit on the clean baseline traces found no raw screen numbers, unknown potion names, fallback action labels, or missing major screen coverage. Covered screen types include Neow/events, map, rewards, shops, campfires, card select, treasure rooms, and boss relic rewards.
-
-Qwen no-thinking smoke:
-
-- Dataset directory: `data/qwen_smoke_100/mlx_Qwen3_4B_4bit_nothinking_128`.
-- Model: `mlx-community/Qwen3-4B-4bit`.
-- Seeds: `2, 3, 4, 5, 6, 7, 8, 9, 10, 12`.
-- Settings: `max_decisions=20`, `battle_simulations=100`, `max_tokens=128`, `temperature=0`, `max_retries=1`, no thinking mode.
-- Result: 10/10 seed files completed, 200 total decisions, no simulator error sidecars.
-- Valid action rate: 98.0%.
-- Retry count: 29/200 decisions used one retry.
-- Invalid action count: 4/200 decisions. All observed invalids were truncated JSON after verbose reasoning, falling back to action `0`.
-- Mean final floor after 20 decisions: 5.1.
-- One run reached low HP by the cutoff: seed `6` ended at 15/80 HP on floor 5.
-
-Before a larger Qwen batch, decide between:
-
-- increasing the no-thinking output budget from `128` to `256`; or
-- tightening the prompt/schema so the model emits very short reasoning or only the final action JSON.
-
-Follow-up token-budget comparison:
-
-- Same first five seeds: `2, 3, 4, 5, 6`.
-- `128` tokens: 100 decisions, 98 valid, 14 decisions needed one retry.
-- `256` tokens: 100 decisions, 100 valid, 1 decision needed one retry.
-- No simulator error sidecars in either comparison.
-
-This suggests `256` tokens is a better near-term no-thinking rollout budget if we keep the current JSON schema with a `reasoning` field. A stricter short-reasoning prompt may recover some of the throughput while keeping parse reliability high.
-
-Thinking-mode comparison (2026-06-14):
-
-- Dataset: `data/qwen_thinking_2048_cmp/mlx_Qwen3_4B_4bit_thinking_2048`, seeds `3, 4, 5`, `max_decisions=12`, `battle_simulations=100`, `max_tokens=2048`, `temperature=0`, `max_retries=1`, thinking mode, `--seed-timeout-seconds=1200`.
-- Result: 36 decisions, **32 valid (88.9%)**, 9 retries; all 4 invalids were `no json object` — the model exhausted the 2048-token budget mid-`<think>` and never emitted the final JSON (the single retry also truncated).
-- Throughput: ~11.5 min wall for 36 decisions ≈ **~19 s/decision** (incl. battle resolution), vs the sub-2 s/decision no-thinking arm.
-- Same seeds under no-thinking `256` were **100% valid (60/60), 0 retries**.
-- Takeaway: at 2048 tokens thinking mode is both slower and *less* reliable than no-thinking `256` on these states, because verbose reasoning truncates before the JSON. For a viable thinking comparison arm, either raise the budget (≥4096) or use a "think briefly, then emit JSON" prompt. This confirms no-thinking `256` as the Stage-1 high-throughput primary arm and leaves thinking mode as a still-unsettled comparison arm.
-
-Stage 4 Qwen evaluation (2026-06-14):
-
-- Dataset: `data/qwen_eval_dev10/mlx_Qwen3_4B_4bit_nothinking_256`, smoke seeds `3-13`, no-thinking `256`, `max_decisions=60`, `battle_simulations=100`. 10/10 completed, **100% valid, 0 error sidecars**.
-- Compared to `random`/`heuristic` on the same seeds (from `data/baseline_rollouts_300`) via `risk_proxies`:
-
-  | metric | qwen_256 | random | heuristic |
-  | --- | --- | --- | --- |
-  | campfire rest @ low HP | 1.00 | 0.25 | 1.00 |
-  | campfire rest @ high HP | 1.00 | 0.14 | 0.00 |
-  | Neow drawback rate | 0.30 | 0.50 | 0.00 |
-  | shop buy rate / spend | 0.70 / 1510 | 0.56 / 709 | 0.64 / 794 |
-  | mean final floor | 13.3 | 14.4 | 16.2 |
-  | mean final HP | 37.1 | 16.0 | 49.2 |
-
-- Readouts: Qwen is **clearly non-random** and HP-conservative — it rests at low HP like the heuristic and preserves much more HP than random (37 vs 16). But it **over-rests at high HP** (1.0 vs heuristic 0.0), forgoing smiths/upgrades; a clear risk-aversion signal and a good candidate behavior for the framing experiments to try to move. It spends the most in shops.
-- **Go/no-go: GO.** All Stage 4 go criteria met — valid actions reliable (100%), behavior non-random on several metrics, throughput ~2 s/decision, serializer failures not dominating. Remaining Stage 4 nicety: the compact-vs-verbose serializer comparison on matched states.
-
-Fresh seed-2 check (2026-06-14):
-
-- A current rerun of `mlx_Qwen3_4B_4bit_nothinking_256`, seed `2`, with `max_decisions=80`, `battle_simulations=100`, `temperature=0`, and `max_retries=1` again reached the old boundary: 48 decisions, then the floor-12 battle after the Entropic Brew path.
-- On this build the child process pinned inside the native `slaythespire` extension rather than returning a Python-visible simulator error. The run was manually terminated and recorded under `data/qwen_rerun_100_256_current/.../seed_2.error.json`.
-- The old `tests/integration/test_battle_search.py` replay stopped on the map before entering that battle (its `max_decisions` equalled the replayed decision count, so the battle-resolving `advance_to_decision()` never ran — it passed in ~40ms without exercising the bug). It now appends the map action *and* gives the rollout headroom past it so the floor-12 battle is actually entered whenever the path reaches the map node, and runs the replay in a subprocess with a timeout, matching the operational containment strategy in `scripts/run_batch.py`.
-- The seed-2 path is non-deterministic across runs on this build (observed: >90s native hang, clean resolve, and early divergence before floor 12), so the test asserts only build-portable containment invariants (no hard crash, no garbage-potion `invalid battle action` regression), not that the battle is reached.
-- Treat seed-2-class trajectories as unresolved simulator-search failures. Do not run long Qwen batches in-process; use `--seed-timeout-seconds`, and do not freeze seed `2` into an initial dev/eval set until this native battle-search issue is root-caused or explicitly accepted as an excluded seed.
-
-Do not silently change this policy because output budget and reasoning verbosity affect rollout cost, parse reliability, and the training data distribution.
-
-### Frozen Seed Policy (frozen 2026-06-14)
-
-Frozen splits live in `configs/frozen_seeds.json` (tracked). Derived from the
-`data/baseline_rollouts_300` batch (seeds 2-151, agents `first`/`random`/`heuristic`,
-`max_decisions=200`, `battle_simulations=100`, `seed_timeout=30s`) generated under
-the **rebuilt serializer**.
-
-Exclusion policy:
-
-- **Errored seeds** (any agent wrote an `.error.json` sidecar in this batch): `11, 17, 22, 48, 99, 110, 132, 134`. Excluded. (Note the errored set is timeout-/UB-sensitive and shifts between batches — e.g. seed `25` errored in the older `2-51` batch but is clean here — which is itself evidence the residual UB is not yet root-caused.)
-- **Seed `2`**: clean for the non-LLM agents (they path around it) but a known seed-2-class native battle-search hang on the Qwen LLM path (floor-12 Entropic Brew). Excluded from any LLM split.
-- **Seed `1`**: diagnostic regression seed only; never in dev/eval.
-
-Clean intersection across all three baseline agents: **142 seeds**; removing seed `2` leaves **141 LLM-safe seeds**. Frozen disjoint splits:
-
-- **Smoke (10):** `3, 4, 5, 6, 7, 8, 9, 10, 12, 13`.
-- **Dev (31):** `14-46` minus the holes (`17, 22` errored).
-- **Eval (100):** `47-151` minus errored/holes.
-
-(Exact lists in `configs/frozen_seeds.json`.) The **train split (200-500 seeds) is not yet frozen** — it needs a larger baseline batch (e.g. seeds `2-600`).
-
-Caveat: **UB reproducibility.** Cross-machine identical traces are not guaranteed while the seed-2-class uninitialized-memory UB is only contained, not root-caused (`docs/simulator_issue_handoff.md`). A single-machine freeze is usable now; cross-machine reproducibility is not.
-
-Caveat: **Act-1-derived (2026-06-17).** These splits were selected from Act-1 baseline reliability (clean intersection of the baseline agents at `max_act=1`). Now that full-game (Acts 1–3) runs are the default, exclusion criteria may differ deeper in a run; a full-game re-freeze is deferred (the `run_until.py` "exactly-M fresh seeds" model makes it non-blocking for initial full-game testing). See [`full_game_rollouts_plan.md`](full_game_rollouts_plan.md).
-
-This hybrid approach is deliberate. The existing upstream Python binding does not expose combat micro-actions. Letting Lightspeed resolve battles gets us useful Act 1 trajectories and risk-relevant decisions quickly, while full combat control remains a later C++ binding task.
-
-Tracked implementation pieces:
-
-- `scripts/build_lightspeed.sh` builds the local simulator binding.
-- `patches/sts_lightspeed_python_api.patch` adds the Python API needed by the harness.
-- `src/sts_ai/lightspeed.py` wraps the simulator.
-- `src/sts_ai/agents.py` defines baseline agents and the optional MLX/Qwen JSON agent.
-- `src/sts_ai/rollout.py` records structured rollout traces.
-- `scripts/run_rollout.py` runs one rollout from the CLI.
-
-Generated/local artifacts are intentionally untracked: `.venv`, `external/sts_lightspeed`, build outputs, and rollout JSONL files.
-
-## Review-Driven Priority Update
-
-A first external review of the harness found that the simulator/control architecture is sound, but also identified several fixes that should happen before collecting any frozen seed dataset.
-
-Immediate changes to make before Stage 1 batch rollouts:
-
-- Make state/action serialization human-judgeable:
-  - use screen names instead of raw integer screen codes;
-  - fix reward labels, especially Singing Bowl max-HP choices;
-  - remove cosmetic Neow labels such as empty trailing drawback slashes;
-  - improve map/shop/campfire/reward descriptions before freezing seeds.
-- Harden the LLM JSON action path:
-  - use the model chat template for Qwen/MLX inference;
-  - handle Qwen3 `<think>...</think>` output when extracting final JSON;
-  - support modern MLX-LM sampling APIs;
-  - implement retry-on-invalid output.
-- Add regression tests for:
-  - JSON extraction with think blocks, braces, and multiple objects;
-  - invalid action stop behavior;
-  - known risk-relevant action labels;
-  - Act 1 boundary behavior.
-
-Updated near-term ordering:
-
-1. Fix serializer/action labels. Done.
-2. Harden JSON extraction and retry behavior. Done.
-3. Smoke-test one real Qwen3/MLX decision. Done with `mlx-community/Qwen3-4B-4bit` in no-thinking mode.
-4. Add batch rollout and metrics tooling.
-5. Harden battle-search robustness against uninitialized-memory UB (seed-2 Entropic
-   Brew crash/hang). Done — contained, not fully root-caused; see
-   `docs/simulator_issue_handoff.md`.
-6. Only then freeze dev/eval seeds. (Note: the residual UB is build-/layout-dependent,
-   so frozen-seed reproducibility across toolchains is not yet guaranteed — resolve
-   the deeper UB before depending on cross-machine identical traces.)
-
-## Design Commitments
-
-> RL method choices, the per-rollout-reward / Markovian-context analysis, and the
-> interplay between RL and the framing manipulation (including the
-> behaviour-selection comparison arm and its confounds) are worked through in
-> [`rl_and_framing_design.md`](rl_and_framing_design.md) (Sid × Claude design
-> discussion, 2026-06-15). The commitments below are the durable headlines; that
-> doc carries the reasoning and the open questions for Stages 6–9.
-
-### Model Adapter Modularity
-
-The simulator and rollout recorder should never depend directly on a model provider, tokenizer, or chat template.
-
-The stable boundary is:
-
-```text
-state_text + legal_actions -> ActionAgent.choose_action(...) -> AgentDecision
-```
-
-Provider-specific concerns live inside agent adapters:
-
-- tokenizer and chat template handling;
-- thinking-mode controls;
-- sampling parameters;
-- retry behavior;
-- raw response parsing;
-- model-specific metadata.
-
-This lets the repo add future adapters for other MLX models, Transformers models, hosted APIs, vLLM/OpenAI-compatible servers, or non-LLM policies without changing the simulator wrapper or rollout schema.
-
-### Markovian State Prompting
-
-The default policy input should be a canonical current-state serialization, not the full episode transcript.
-
-This is standard RL practice when the observation contains all decision-relevant state. For Slay the Spire, the simulator state should encode the consequences of history: HP, deck, relics, potions, map position, current screen, reward state, and other run variables.
-
-The risk is not Markovian prompting itself; the risk is an incomplete serializer. Before training, run a state sufficiency audit:
-
-- inspect prompts for several screen types;
-- compare decisions under compact and verbose state serializers;
-- confirm risk-relevant fields are present;
-- add missing fields before collecting fixed rollout data.
-
-### Fixed Rollouts First
-
-The first scientific arm should use neutral-frame rollouts and then train framing variants from the same stored trajectories.
-
-This controls the data and reward, but not the gradient. The gradient remains frame-conditioned because token probabilities differ under different prefixes. That is part of the mechanism being tested.
-
-Neutral rollout data should avoid framing leakage in reasoning. If Qwen reasoning is used, it should be generated under a neutral frame and audited for frame-specific language before reuse in framed training conditions.
-
-### Thinking Policy
-
-For the next Qwen rollout stage, use a two-arm policy:
-
-- **High-throughput arm:** no-thinking mode with a small output budget for baseline rollout collection.
-- **Comparison arm:** thinking mode with `2048` output tokens on a smaller seed set.
-
-The benchmark motivating this choice was:
-
-- no-thinking, `128` tokens: 3/3 valid decisions, 0 retries, about 1.9 seconds/decision;
-- thinking, `512` and `1024` tokens: failed to emit final JSON in the tested cases;
-- thinking, `2048` tokens: 4/4 valid decisions across tested runs, 1 retry total, about 27 seconds/decision in a 3-decision run;
-- thinking, `4096` tokens: 1/1 valid, similar one-decision latency to `2048`.
-
-This is not a permanent decision. It is the working policy for Stage 1/3 de-risking so we can collect enough no-thinking data while preserving a smaller thinking-mode comparison.
-
-For later thinking-enabled training, allow thinking during generation for capability, but keep the primary supervised/action loss on the final structured action tokens.
-
-The forward context should include the reasoning that preceded the action, otherwise the action likelihood is evaluated under a different context than the one that generated it. Reasoning can be masked from the primary action loss initially. Later experiments can compare:
-
-- no-thinking rollouts;
-- thinking in context with the compact-action mixed format+action mask;
-- thinking in context with full trajectory loss.
-
-### Local Training Is a Benchmark, Not an Assumption
-
-The historical target model for this section was Qwen3-4B; the active competence student is Gemma E4B. The MacBook Pro with 48GB unified memory may be enough for some local fine-tuning paths, but the repo should measure before depending on full-parameter local training.
-
-Fallback order:
-
-1. local inference plus rollout collection;
-2. local LoRA or tiny-slice training smoke tests;
-3. smaller Qwen model for end-to-end validation;
-4. cloud GPU for full-parameter RL or large SFT-style runs if local training is too slow.
-
-### Simulator Fault Handling
-
-Research traces should fail closed. A simulator warning is not safe to ignore, because a bad battle-search action can change the state distribution that the LLM later trains on.
-
-Current policy:
-
-- reject invalid battle actions in release builds before executing them;
-- reject unknown potion enum values instead of indexing name/effect tables out of range;
-- initialize `potions` arrays in `GameContext`/`BattleContext` and guard the battle
-  search against transiently-corrupt potion slots / non-terminating playouts where
-  the native code returns (see `docs/simulator_issue_handoff.md` for the
-  unresolved seed-2-class native hang);
-- convert the simulator's internal `while(true)`/overflow guards from `assert(false)`
-  to thrown exceptions, since asserts are compiled out in release builds and would
-  otherwise hang instead of failing closed;
-- record recoverable simulator failures as `stopped_reason=simulator_error`;
-- record batch failures and timeouts as `seed_<n>.error.json` sidecars;
-- use `--seed-timeout-seconds` for larger non-LLM baseline batches so each seed runs in a subprocess and can be killed independently.
-
-Hard C++ asserts remain useful for local debugging, but they are not the default batch mechanism because an abort tears down the whole Python interpreter. **They are also no-ops in our release builds**, so any guard that must fire in production has to throw, not assert. Python-visible exceptions plus subprocess timeouts give cleaner failure accounting. Some seed-2-class paths still require the subprocess timeout; they are not yet cleanly recoverable inside a single Python process.
-
-## Roadmap
-
-### Stage 0: Reproducible Simulator Harness
-
-Goal: make the local simulator importable and controllable from Python.
-
-Done:
-
-- clone `sts_lightspeed`;
-- initialize submodules;
-- build local pybind extension;
-- expose legal out-of-combat actions;
-- expose battle-only resolution helper;
-- record JSONL decisions.
-
-Acceptance criteria:
-
-- `scripts/build_lightspeed.sh` completes on the local machine;
-- `PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -t .` passes (the
-  `tests/unit` tier runs without a build; `tests/integration` needs the simulator —
-  see `tests/CLAUDE.md`);
-- `scripts/run_rollout.py --agent first` writes a valid JSONL trace.
-
-### Stage 1: Baseline Rollout Dataset
-
-Goal: produce reliable fixed-seed baseline trajectories before involving an LLM.
-
-Tasks:
-
-- add a batch rollout CLI for seed ranges; done;
-- run `first`, `random`, and `heuristic` agents on a frozen Act 1 seed set;
-- summarize floor reached, outcome, HP, gold, number of decisions, and decision screen distribution;
-- track `stopped_reason` and error sidecars separately from successful rollouts;
-- inspect sampled traces manually for bad action descriptions or missing state fields;
-- decide which seeds become the frozen dev/eval sets.
-
-Acceptance criteria:
-
-- no harness crashes across at least 100 seeds with a non-LLM agent;
-- rollout JSONL schema is stable enough to consume in training/eval scripts;
-- all common screen types have readable state and action descriptions;
-- battle resolution returns control to Python after combat rewards.
-
-### Stage 2: State Serialization and Risk-Proxies
-
-Goal: make the prompts and measurements good enough for the research question.
-
-Tasks:
-
-- improve state text for map, rewards, shops, campfires, and events;
-- add structured risk tags where they are clear and non-invasive;
-- compute initial risk proxies:
-  - campfire rest vs smith under low/medium/high HP;
-  - elite pathing when current HP is low;
-  - potion use and purchase patterns;
-  - skip/take decisions for high-variance or self-damage cards;
-  - Neow choices with obvious downside/reward tradeoffs;
-  - shop spending vs saving before known threats.
-- add a rollout summarizer that turns JSONL into CSV or JSON metrics.
-
-Status (2026-06-14): risk-proxy code landed (`src/sts_ai/risk_proxies.py`, `scripts/compute_risk_proxies.py`, unit tests) — deterministic, documented, and computed from stored traces. Remaining Stage 2 work: structured in-serializer risk tags, and richer map/shop/campfire/event state text where the human-judgeability audit flags gaps.
-
-Status (2026-06-16): **prompt-comprehension hardening pass** landed, from an independent audit of rendered prompts + a scan of ~74k recorded decisions. All changes are strategy-neutral (comprehension only; no objective/risk language, which stays the framing variable). Fixes:
-- **Enemy intents** now spell out their effect (`glossary.INTENT_DB`, source-grounded): the misleading `(no attack)` became e.g. `(no damage; applies 1 Weak to you)`, and attacks show riders (`(also: adds 1 Slimed card …)`).
-- **0-energy / nothing-playable trap** (11k combat states; the dominant `agent_invalid`/out-of-range cause now that invalid output stops a rollout) gets an explicit "you cannot play any card right now" note.
-- **Duplicate combat actions** (36% of combat decisions) are de-duplicated in `lightspeed` (combat-only; display→raw index map in `_action_views`/`step`), after the binding disambiguates same-named targets (`-> NAME [enemy i]`).
-- **Player stats labelled** `Your HP:` (was misread as the boss's HP) and the act boss relabelled `end-of-act boss`.
-- **Card-select purpose** surfaced out of combat (`cardSelectPurpose` reads `gc.info.selectScreenType`): "Choose a card to REMOVE/UPGRADE/TRANSFORM/…".
-- **Relic + potion effect text** added to the KEY (`glossary.RELIC_DB`/`POTION_DB`; potions complete, relics a confident curated subset, long tail skipped).
-- **Incoming attack damage** aggregated into a combat note (the model sums intents poorly).
-Note: combat trace shape/reproducibility intentionally changed (deduped action list + new state text); out-of-combat action indexing is unchanged. Deferred (P2, optional, would touch the reasoning contract): system/user prompt split + mechanics primer, and de-anchoring the example `action_index`. (The structured map representation — formerly listed here — was done 2026-06-17; see the Current Implementation Status entry and [`map_representation_handoff.md`](map_representation_handoff.md) §9.)
-
-Acceptance criteria:
-
-- fixed-state prompts include enough context for a human to judge the listed actions;
-- risk proxy code is deterministic and documented; **met**;
-- baseline metrics can be computed from existing traces without re-running rollouts; **met**.
-
-### Stage 3: Qwen3-4B Local Inference Loop
-
-Goal: replace baseline agents with a local Qwen3-4B JSON-action agent.
-
-Tasks:
-
-- install optional `mlx-lm` dependency;
-- run Qwen3-4B on a handful of states;
-- enforce strict JSON final action format;
-- add retry-on-invalid behavior;
-- log raw response, reasoning, parsed action, validity, retries, and token counts if available;
-- tune prompt enough to reach high action validity.
-
-Acceptance criteria:
-
-- Qwen action parsing is valid on >95% of decisions after one retry;
-- a short fixed-seed rollout completes without harness crashes;
-- generated JSONL records contain enough prompt/response metadata for later training;
-- throughput is measured in decisions/minute and tokens/decision.
-
-### Stage 4: Qwen Baseline Evaluation
-
-Goal: determine whether Qwen3-4B can play the hybrid task well enough to train on.
-
-Tasks:
-
-- run Qwen3-4B on the frozen dev seed set;
-- compare against random and heuristic baselines;
-- inspect failure modes:
-  - invalid actions;
-  - obviously poor path choices;
-  - pathological reward choices;
-  - repeated format drift;
-  - state misunderstanding.
-- run a compact-vs-verbose serializer comparison on matched states.
-
-Go/no-go criteria for training:
-
-- Qwen produces valid actions reliably; **met (100% on smoke seeds)**;
-- behavior is non-random on at least some metrics; **met (HP-conservative; rest@lowHP 1.0 vs random 0.25)**;
-- rollout throughput is adequate for hundreds of decisions overnight; **met (~2 s/decision)**;
-- state serializer failures are not dominating choices; **met (no errors)**.
-
-Status (2026-06-14): **GO** on the 10-seed smoke set (see "Stage 4 Qwen evaluation" under Latest Stage 1 Run Notes). Still outstanding: run on the full frozen dev set at Act-1 depth, and the compact-vs-verbose serializer comparison.
-
-If these fail, improve prompt/serializer first or add a small SFT warm start from heuristic/search trajectories.
-
-### Stage 5: Fixed Neutral Rollout Collection
-
-Goal: create the shared data for the first framing experiment.
-
-Tasks:
-
-- choose fixed train/dev/eval seed splits;
-- generate neutral-frame Qwen trajectories;
-- store complete decision records;
-- audit reasoning for frame leakage;
-- filter or flag malformed examples;
-- compute rewards and risk proxy labels after the fact.
-
-Setup (2026-06-14): the collection path is wired and tested; the run itself awaits a free GPU.
-
-- **Reasoning mode: thinking** (`<think>...</think>` chain-of-thought, "option 2"). The agent now captures the chain-of-thought into a dedicated `AgentDecision.thinking` field (separate from the brief JSON `reasoning`), including partial text from a truncated/unclosed `<think>` block. Stored in every record's `agent.thinking`.
-- **Framing: the existing neutral block in the user turn** (no system message), unchanged for the first runs.
-- `scripts/run_batch.py` gained `--seeds-config configs/frozen_seeds.json --split {smoke,dev,eval}` to draw seeds from the frozen splits.
-- Canonical first command (neutral, thinking, smoke split):
-
-  ```bash
-  PYTHONPATH=src .venv/bin/python scripts/run_batch.py \
-    --agent mlx --thinking --model mlx-community/Qwen3-4B-4bit \
-    --max-tokens 4096 --temperature 0 --max-retries 1 \
-    --seeds-config configs/frozen_seeds.json --split smoke \
-    --max-decisions 200 --battle-simulations 100 \
-    --seed-timeout-seconds 7200 \
-    --output-dir data/stage5_neutral
-  ```
-
-  Notes: `max_tokens=4096` (up from the 2048 that truncated 11% of decisions); thinking mode is slow (~tens of seconds/decision, so a full-Act-1 seed can take ~1-2h) — consider starting with 1-2 seeds / lower `--max-decisions` as a sanity check before the full smoke set. `temperature=0` is used for fixed-rollout reproducibility; if thinking quality looks degraded, Qwen's recommended thinking sampling (temp ~0.6) is the tuning lever (the agent currently sets only temperature, not top_p).
-- After collection: audit `agent.thinking`/`agent.reasoning` for framing leakage, run `scripts/compute_risk_proxies.py`, and attach a reward label (final floor/HP/outcome) per trajectory.
-
-Recommended initial dataset:
-
-- small smoke set: 10 seeds;
-- dev set: 50 seeds;
-- first train set: 200-500 seeds, depending on throughput;
-- frozen eval set: 100 seeds.
-
-Acceptance criteria:
-
-- train/dev/eval splits are fixed and documented;
-- trajectory records are deterministic enough to replay or inspect;
-- all framing conditions can consume the same records.
-
-### Stage 6: Training Feasibility Benchmark
-
-> **Pipeline scaffolding implemented 2026-06-17** (offline filtered-BC / expert
-> iteration) — see the Near-Term "Done" entry below. The data builder, both LoRA
-> trainers behind a `--backend {mlx,trl}` toggle, adapter-aware eval, and the
-> skew guards are in place and unit-tested; the GPU train→eval run is the
-> remaining step.
-
-Goal: establish what training is practical on the Mac before designing expensive runs around it.
-
-Tasks:
-
-- convert rollout JSONL into a simple action-training dataset;
-- build loss masking:
-  - no loss on prompt/state tokens;
-  - no primary action loss on reasoning tokens;
-  - loss on final structured action tokens;
-- run a tiny local training smoke test;
-- measure memory, tokens/sec, checkpoint size, and wall-clock time;
-- compare full-parameter vs LoRA feasibility if tooling supports both.
-
-Acceptance criteria:
-
-- one tiny training job completes;
-- trained checkpoint can be loaded for inference;
-- action likelihood changes on held-out examples in the expected direction;
-- local full-parameter training is either validated or ruled out pragmatically.
-
-### Stage 7: Initial Three-Frame Experiment
-
-Goal: test whether different framing blocks produce different generalization from the same neutral rollout data.
-
-Initial frames:
-
-- neutral;
-- risk-reward;
-- adventurous.
-
-Training setup:
-
-- same base checkpoint;
-- same fixed rollout records;
-- same action targets and reward-derived weights;
-- only the framing instruction block changes;
-- compare at matched update count and, if feasible, matched KL from the base model.
-
-Primary readouts:
-
-- action likelihood shifts on held-out fixed states;
-- rollout performance on frozen eval seeds;
-- changes in risk proxy behavior;
-- KL from base model;
-- invalid-action and format-drift rates;
-- optional reasoning-style classifier scores.
-
-Acceptance criteria:
-
-- all three variants train and evaluate through the same pipeline;
-- eval uses frozen seeds and fixed prompts;
-- results distinguish performance changes from risk-proxy changes;
-- any apparent framing effect survives a basic sanity check for KL/update-size mismatch.
-
-### Stage 8: Stronger Measurement
-
-Goal: separate capability changes from motivational or preference-like generalization.
-
-Tasks:
-
-- build matched-state probes for risk-relevant decisions;
-- sample multiple responses per state to estimate action propensity;
-- add non-StS preference probes about risk, adventure, fun, safety, and prudence;
-- optionally add utility-elicitation or pairwise preference prompts;
-- compare before/after training for each frame.
-
-Acceptance criteria:
-
-- measurements are fixed before major training runs;
-- probes include both in-domain StS decisions and out-of-domain generalization prompts;
-- results can answer whether framing redirects generalization, not merely whether it improves gameplay.
-
-### Stage 9: On-Policy Framing Arm
-
-Goal: measure the combined effect of framing on data distribution and interpretation.
-
-Tasks:
-
-- run separate rollouts under neutral, risk-reward, and adventurous frames;
-- train each condition on its own on-policy data;
-- compare against the fixed-rollout arm;
-- measure whether each framing visits different states before training and after training.
-
-Interpretation:
-
-- fixed-rollout differences estimate interpretation effects;
-- on-policy differences estimate interpretation plus data-distribution effects;
-- the gap between them is evidence about mediation through visited trajectories.
-
-### Stage 10: Full Combat Control
-
-> **Reprioritized 2026-06-14 to be the immediate next step** (ahead of scaling
-> Stage 5 collection). Implementation handoff: [`NextStep.md`](../NextStep.md).
-> The stage number is kept for continuity; the ordering is not.
->
-> **Milestone 1 + LLM wiring delivered 2026-06-14.** The LLM can now play full
-> combats through Python control (`combat_control="llm"`); hybrid remains the
-> default. **2026-06-15:** the combat **board is rendered** in the rollout viewer,
-> and the model is now shown **sim-computed combat info** (intent/card damage,
-> statuses) + an effect/status **glossary**. Remaining follow-up: in-combat risk
-> proxies (see Near-Term Steps).
-
-Goal: let the LLM control every meaningful StS decision, including card play.
-
-Tasks:
-
-- expose `BattleContext` and combat `Action`s through pybind; **done** (`BattleContext`, `BattleAction`, `enumerate_battle_actions`/`legal_actions`, `BattleOutcome`/`InputState` enums in the binding patch);
-- serialize combat state: hand, draw/discard/exhaust piles, enemies, intents, powers, block, energy, potions, turn counters, and legal card targets; **done** (`describeBattleState`/`describeBattleAction`);
-- add combat action parsing and execution; **done** (combat step-loop in `LightspeedHybridEnv`, `combat_control="llm"`);
-- decide whether each card play is a separate decision or whether one turn is a macro-action; **done — micro** (one `Action` per decision);
-- update rollout schema to distinguish combat and out-of-combat decisions; **done** (additive `DecisionRecord.phase`; combat-specific state in `state["combat"]`).
-
-Acceptance criteria:
-
-- LLM can complete at least one full combat through Python control; **met** (scripted-agent integration test resolves a battle to a terminal `Outcome` and rewards);
-- legal combat actions are complete and valid (enumerated via the engine's own searcher; `execute` throws on any illegal action); **met**;
-- hybrid and full-control modes are both supported for ablations; **met** (`combat_control` flag; hybrid regression test asserts zero combat decisions).
-
-## Evaluation Philosophy
-
-The repo should avoid treating "beats Act 1" as the first success criterion. The first success criterion is a reliable measurement and training harness.
-
-Early de-risking metrics:
-
-- simulator build and import success;
-- rollout stability;
-- action validity;
-- decisions/minute;
-- prompt length;
-- state serializer sufficiency;
-- frozen-seed reproducibility;
-- clear risk proxy extraction.
-
-Later scientific metrics:
-
-- performance-adjusted risk behavior;
-- matched-state action propensities;
-- out-of-domain preference shifts;
-- KL-matched framing comparisons;
-- fixed-rollout vs on-policy differences.
-
-## Known Limitations
-
-- Both hybrid search-resolved combat and full LLM combat control are implemented. Competence experiments must state which mode they use: hybrid mode can mask tactical errors and is an ablation/upper bound, not the final learned-policy target.
-- Built-in combat search may mask some consequences of bad pathing/reward choices and may use internal state unavailable to a human-facing policy; search-derived action labels therefore require the privilege/stability audit in [`competence_plan.md`](competence_plan.md).
-- StS risk is messy and partly subjective; risk proxies must be treated as imperfect.
-- Fixed-rollout action training is not exactly on-policy RL. It controls data and reward while deliberately allowing frame-conditioned gradients.
-- Qwen3-4B local full-parameter training may be slower or tighter than expected; the repo should benchmark rather than assume.
-- **Affordance block math (`src/sts_ai/affordances.py`) is best-effort for 3 cards.** Exact for vanilla block cards (Defend, Shrug It Off, …) incl. Dexterity/Frail, but approximate for Iron Wave (engine double-applies `calculateCardBlock`), Entrench (doubles *current* Block; play-order dependent), and Second Wind (OMITTED — Block scales with hand composition) — so `full_block_possible` can under-count in the rare hands holding them. A dry-run (clone/play/read Block delta) would make it exact.
-- **Batched rollouts (`parallel_rollout`) left-pad**, so per-decision token outputs can differ bit-for-bit from the serial single-prompt path — pin the batch size for any frozen-seed dataset.
-- **`agent.thinking_tokens` counts only the `<think>` span**, so it under-reports reasoning for models that reason without `<think>` tags (e.g. DeepSeek-R1-Distill); use `completion_tokens` as the reasoning-length proxy there.
-
-## Near-Term Next Steps
-
-> **2026-07-23 priority note:** The historical list below is retained for provenance. Its active ordering is superseded by [`competence_plan.md`](competence_plan.md) until the competence exit gate is met. `combat_public_v2`, current cohorts, aggregated-root 50k teacher data, and E4B tiny-fit controls are complete. COMP-012 fit train but failed development generalization, so no behaviour ran. COMP-014 then established strong cyclic action-order sensitivity at both saved checkpoints. COMP-016 confirms that this is not a scoring artefact and finds solved format tokens but weak move-choice tokens. COMP-015 is closed: seed 0 regresses development, while seeds 1 and 2 improve development choices and invariance. Seed 2 passes all frozen carry thresholds, but still fails the standalone stability gate and worsens train fit; retain augmentation only as a possible later component and run no behaviour. COMP-017 rejects visible JSON reasoning: no-native-thinking immediate action JSON scores 26/57 versus 19/57, is more valid, and is roughly eight times faster, so no reasoning fights ran. COMP-018 rejects fixed action weight 8 at 7/32 on harder tiny32; its exact current unit control reaches 31/32 and reproduces historical checkpoint bytes, so no full150, extra seed, or weight sweep ran. The active next action is to preregister COMP-019, a matched no-thinking larger-model static comparison on the same public prompts and frozen tiny/full datasets; if it also fails held-out transfer, prioritize broader teacher/DAgger coverage. Development-time training seeds remain sequential, and independent frozen repeats remain required before a robust positive claim. A fresh 12-seed/13-window final Nob cohort remains embargoed until a development gate passes and clustered power is frozen. The matched v2 Gate-C0 behavioural baseline, corrected local policy-gradient training, multi-fight, and whole-game competence remain later work.
-
-Done in the 2026-06-14 session:
-
-- Serializer audit + fixes: removed the `bits=` action-description prefix (now on `LegalAction.bits` only) and render the Neow/event `room INVALID` header as `room none`. Binding rebuilt, patch regenerated, tests updated (`test_action_descriptions_omit_bits_prefix`, `test_state_room_label_is_not_invalid`).
-- Thinking-mode `2048` comparison run (seeds 3-5): 88.9% valid, truncation-limited; no-thinking `256` remains the high-throughput primary arm (see Thinking-mode comparison above).
-- Fixed the `tests/integration/test_battle_search.py` off-by-one that let it pass without entering the floor-12 battle; documented seed-2 non-determinism and the containment-only invariants.
-- **Larger baseline batch** `data/baseline_rollouts_300` (seeds 2-151, three agents) under the rebuilt serializer: mean final floor 14.94, 100% valid; clearing the Stage 1 "≥100 clean seeds" criterion (142 clean intersection).
-- **Stage 2 risk proxies implemented:** `src/sts_ai/risk_proxies.py` + `scripts/compute_risk_proxies.py` + unit tests. Deterministic, computed from stored traces, robust to the legacy `bits=` prefix. On baseline data they discriminate policies as expected (low-HP campfire rest rate: `first`/`heuristic` 1.0 vs `random` 0.39).
-- **Hard-froze dev/eval seeds** in `configs/frozen_seeds.json` (smoke 10 / dev 31 / eval 100).
-- **Stage 4 Qwen evaluation: GO** (see Stage 4 Qwen evaluation above) — Qwen no-thinking `256` is reliable (100% valid), non-random, and HP-conservative on the smoke seeds.
-
-Also done in the 2026-06-14 session:
-
-- **In-battle (full combat) LLM control — Milestone 1 + LLM wiring (Stage 10).** Bound `BattleContext` + combat `Action` + a legal-action enumerator through the pybind patch; added `describeBattleState`/`describeBattleAction`; added the combat step-loop to `LightspeedHybridEnv` behind `combat_control="search"|"llm"` (hybrid kept as default); added the additive `DecisionRecord.phase` field and recorded it in `rollout.py`; added the `--combat-control` flag to `run_rollout.py`; unit test for phase plumbing/back-compat + subprocess-contained integration test playing a full battle to victory/rewards. Verified: `combat_control="llm"` surfaces in-combat decisions and completes battles; `"search"` is unchanged (zero combat decisions).
-
-Done in the 2026-06-15 session:
-
-- **Combat info shown to the model + an effect/status glossary.** Binding-side sim-computed enrichment: enemy intent damage (pre-block, multi-hit aware) + statuses, target-correct card attack damage (`(deal N)`), out-of-combat card type/rarity tags. Plus pure-Python `src/sts_ai/glossary.py` folding a static effect/status reference into `state_text` at rollout time (inline `(no attack)` labels on non-attacking intents + a `-- KEY --` block defining cards-in-play and active statuses with duration semantics). Measured: hallucinated defense (blocking a non-attacking intent) dropped ~21%→7% on Qwen3-4B llm-combat seeds. The combat **board is now rendered** in the viewer.
-- **Eval-grade logging (`SCHEMA_VERSION=1`, first kept-data version; all additive).** Per-rollout `*.meta.json` sidecar (outcome/stopped_reason/UB/HP-trajectory + model/config/**framing**/git provenance — framing was previously recorded nowhere); per-decision `latency_s` + prompt/completion/thinking token counts; `DecisionRecord.affordances` (`full_block_possible`, `single_target_lethal_available`, …; pure Python, no rebuild).
-- **Cross-rollout batched throughput.** `src/sts_ai/parallel_rollout.py` runs K independent rollouts in lockstep, batching via `mlx_lm.batch_generate` (trace-identical to serial under a deterministic agent). `scripts/run_sweep.py` (models × {thinking,no-think} × seeds) + `scripts/compare_models.py` (per-model report). Per-model speeds: [`docs/throughput_benchmarks.md`](throughput_benchmarks.md).
-- **First multi-model baseline sweep** (no-thinking, seeds 3/4/5/7): **Qwen3-4B strongest** (≈act-1 boss) > Qwen3-1.7B ≈ Llama-3.2-3B; nobody wins (RL headroom). Directional only (n=4).
-- **`max_tokens` default 256→4096** (agents/factory/all run scripts) + prominent docs — a small cap truncates reasoning mid-thought → no JSON → `agent_invalid` after retries in current traces. The old fallback policy produced degenerate thinking/R1 sweep arms. Harmless for no-think (stops at EOS).
-- **RL & framing design discussion** captured in [`rl_and_framing_design.md`](rl_and_framing_design.md).
-- **World-seed / policy-seed separation (⚠ BREAKING: `SCHEMA_VERSION` 1→2).** A rollout is identified by `(world_seed, rollout_index)` with `policy_seed = derive_policy_seed(world_seed, rollout_index)` (new pure `src/sts_ai/seeding.py`, also `derive_batch_seed`/`expand_specs`/`rollout_stem`). Agents gained `reseed(policy_seed)` (MLX → `mx.random.seed`, gating-probe-verified reproducible; random → reseeded RNG; deterministic agents no-op); `run_rollout` reseeds once per rollout. **On-disk break:** field `seed` → `world_seed` and `policy_seed`/`rollout_index` added to `DecisionRecord`/`RolloutResult`/`RolloutMeta`; pre-v2 `data/` traces do not load/compare unchanged (intentional, pre-data-collection). `run_sweep.py`/`run_batch.py` gained `--rollouts-per-seed K` (files `seed_{world}_r{idx}.jsonl`); the batched orchestrator keys on `(world_seed, rollout_index)` and reseeds per batch. **Reproducibility:** serial path is bit-reproducible per `(world_seed, policy_seed)`; batched path is re-run-deterministic given a fixed `batch_size` (not bitwise-equal to serial). Implemented via codex-driven-development (Codex builder + Claude spec/quality review); 105 tests pass. Deferred: seeding the C++ combat-search RNG (hybrid combat is held fixed across same-world rollouts). When-to-use guide: [`rl_and_framing_design.md`](rl_and_framing_design.md) §2c.
-
-Done in the 2026-06-16 session:
-
-- **vLLM/CUDA inference backend + multi-model A40 sweep tooling.** New `VllmJsonAgent` (NVIDIA/CUDA) mirrors `MlxQwenJsonAgent`'s surface, so it's a drop-in for the serial and batched loops. A general **`reasoning_mode`** (`none`/`native`/`prompted`) lets *any* model have a reasoning arm: it probes whether the chat template honours `enable_thinking` (Qwen3 → native `<think>`) and otherwise **induces** reasoning via the prompt (Gemma/Llama → `render_action_prompt(induce_reasoning=True)`), both routed through `<think>` tags so one parser captures them. Generation is fail-soft (a model crash → invalid decisions, not an aborted sweep). `run_sweep.py` gained `--backend {mlx,vllm}`; `build_rollout_meta` now records the agent's full config (incl. `reasoning_mode`/`backend`) under `meta.extra["agent_config"]` (no schema change). `scripts/runpod/` adds the overnight two-A40 orchestration (one model per process, crash-resilient rsync, runbook). `pip install -e '.[vllm]'` extra; lazy import keeps the unit tier dependency-free. 116 tests pass. **This unblocks the GPU-gated items below** (reasoning rerun, robust baseline, Stage 5). Implemented via codex-driven-development. Pending: real-GPU validation + A40 throughput numbers (see `docs/throughput_benchmarks.md`).
-
-Done in the 2026-06-17 session:
-
-- **Full-game rollouts (Acts 1–3) — cap lifted, default depth changed, orchestration + serializer coverage.** The harness was Act-1-capped via `LightspeedHybridEnv.max_act` (default 1); the C++ sim already plays all acts, so this was the only Python-side gate. Changes (full plan + progress tracker: [`full_game_rollouts_plan.md`](full_game_rollouts_plan.md)):
-  - **`max_act` default 1→3** (full game = beat the Act 3 boss; Act 4 only if all 3 keys, rare). `--max-act` threaded through `run_rollout.py`/`run_batch.py` (incl. its per-seed subprocess); `run_sweep.py` default 1→3. (commit `e84459c`)
-  - **Decision budget:** CLI `--max-decisions` defaults 200→1500 (a 3-act LLM-combat game is ~450–700+ decisions; the old 200 silently truncated); library/orchestrator function defaults stay 200. `build_rollout_meta` now records `extra["budget_truncated"]` + a `RuntimeWarning` so a budget cut-off is never mistaken for a real ending. (`e84459c`)
-  - **`scripts/run_until.py`** (commit `22a07f6`): launches **exactly M** fresh rollouts (ascending seeds, skipping exclusions/on-disk), keeps **N** live, runs them through the existing streaming/parallel orchestrator. Stopping rule is on **starts, not completions** — stopping at M completions would bias the sample toward fast-failing runs (failures finish before wins); we accept some idle GPU on the tail for an unbiased sample. (The streaming orchestrator already drains any finite spec list, so no orchestrator change was needed.) Prints an outcome histogram. A per-request watchdog was deliberately **deferred** (LLM combat bypasses the C++ combat-search hang; vLLM generation is `max_tokens`-bounded).
-  - **Glossary coverage extended to Acts 2–3** (commit `86e37d0`): `INTENT_DB` +73 move clauses, `RELIC_DB` +13 relics, `STATUS_DB` +Constricted, + an Exploder formatter exception. All keys verified verbatim against `MonsterMoves.h`/`Relics.h`; effects source-grounded in `MonsterSpecific.cpp` + helpers; **strategy-neutral** (comprehension only, per the prompt-neutrality invariant). Long-tail / unimplemented relics (e.g. Wing Boots) and non-serialized enemy powers deliberately skipped.
-  - **Metrics verified act-agnostic** (no code change): `summarize_rollouts.py`/`compute_risk_proxies.py`/`compare_models.py` read `final_act`/`final_floor`/`outcome` from traces with no Act-1 caps; validated end-to-end on a real multi-act trace (heuristic+search seed 4 reached the Act-2 boss, floor 33).
-  - Implemented via codex-driven-development (Codex builder + Claude spec/quality/source-grounding review). **Pending (GPU):** full-game throughput numbers for `docs/throughput_benchmarks.md`, and the acceptance replay of Gemma seed 4 with `--max-act 3`. The frozen seed splits below remain **Act-1-derived**; a full-game re-freeze is deferred (the run_until M/new-seeds model makes it non-blocking for initial full-game testing).
-
-- **Offline filtered-BC / expert-iteration training pipeline (Stage 6 scaffolding).** New `src/sts_ai/train/` package + scripts implement the offline arm end-to-end *minus the GPU run*: `reward.py` (binary act-boss-clear label via a monotonic milestone rule — `final_act > min_act` or VICTORY, not gated on `stopped_reason` — with a `min_positives` sparsity guardrail + top-floor-quantile fallback and a transparent report); `sft_format.py` (skew-free `{prompt, completion}` reconstruction mirroring the agent's `render_action_prompt` + chat-template path; completion = verbatim `raw_response`); `dataset_builder.py` + `scripts/build_sft_dataset.py` (reward-join → filter → dataset + manifest; derives `enable_thinking`/`induce_reasoning` from `reasoning_mode`, skips retry-augmented/invalid/terminal records, refuses a floor-quantile fallback dataset without `--allow-fallback`); LoRA adapter loading for eval in both agents + `run_until.py --adapter-path` (no-adapter path unchanged); `train_mlx.py` / `train_trl.py` behind `scripts/train_policy.py --backend {mlx,trl}` (`[train-mlx]` / `[train-cuda]` extras, lazy-imported so the core stays dep-free). A single shared `sft_format.chat_template_probe_hash` guards build↔train tokenizer/template skew (regression-tested). Provisional disjoint `train` split (seeds 200–499) added to `configs/frozen_seeds.json`. Then `wandb`/periodic-eval wiring + the `mlx-lm` `0.29.1→0.31.2` bump (first Gemma‑4‑capable mlx-lm). Full suite tests green (gated MLX smoke skips without mlx). Implemented via codex-driven-development (Codex builder + Claude orchestrator/spec/quality/cross-task review). **Pending the GPU run:** generate base Gemma‑E4B rollouts (full LLM combat, Acts 1–3, no-thinking) → `build_sft_dataset` → `train_policy` LoRA → eval base-vs-adapter on the frozen eval split (report win/act-boss-clear/floor **beside** the invalid rate). **Model/runtime (verified 2026‑06‑18):** the non-quantized **`mlx-community/gemma-4-e4b-it-bf16`** is the local MLX build; `mlx-lm` ≥0.31.2 ships a native `gemma4_text` decoder, so our `mlx_lm`-based agent/trainer load E4B for text (no `mlx-vlm` path needed — that's only for vision). Two on-Mac smokes still gate local use: (a) `mlx_lm.generate` loads the bf16 repo; (b) `mlx_lm.lora` trains the PLE arch (the gated `test_train_mlx_smoke`). CUDA/TRL (bf16 `google/gemma-4-E4B-it`, no quantization) is the primary real-E4B training+eval path.
-
-Done in the 2026-06-18 session (training levers — branch `feat/rwr-and-hinted-rollouts`):
-
-- **RWR weighting + hinted-rollout-with-laundering + native-thinking-format fix — implemented (pending the GPU run).** Built via codex-driven-development (Codex builder + Claude spec/quality/cross-task review; 7 commits, full suite 264 OK, 2 gated skips). Three toggles, all default = current behavior:
-  - **Native-thinking-format fix (Step 0).** `VllmJsonAgent.preserve_special_tokens` (default = native) threads `skip_special_tokens=not preserve` into both `_generate` and `stream_submit`, so Gemma‑4's `<|channel|>thought…` markers survive into `raw_response` (no longer the lossy stripped transcript from the 2026‑06‑18 training run §6). The SFT target round-trips it via `sft_format.assistant_turn_content` (passthrough today; the single round-trip-gated home for any future marker normalization). `--preserve-special-tokens {auto,on,off}` on `run_until`.
-  - **RWR (Feature A).** `reward.rwr_multiplicities` (per-trajectory `clamp(round(exp((floor−baseline)/β)),0,max)`, median baseline, sim-error excluded) + a `dataset_builder` resampling branch that **broadens the pool past the act-boss-clear filter** (winners AND losers, weighted) and replicates examples deterministically — backend-agnostic (no trainer change). `build_sft_dataset --weighting-mode rwr --rwr-beta/--rwr-baseline/--rwr-max-multiplier`; the sparsity-fallback refusal is gated to filter mode.
-  - **Hinted rollouts + reasoning laundering (Feature B).** Pure `src/sts_ai/hinting.py` (HintConfig, `detect_mistake` on the lethal-not-taken / full-block-not-taken-under-heavy-incoming **tactical-truth** affordances, `finalize_hinted_decision`, `mistake_kind_for`) + public `affordances.action_is_single_target_lethal`/`action_contributes_block`. Wired into the **serial** loop (`rollout._apply_serial_hint`) and the **streaming** orchestrator (a per-slot `NORMAL→HINTED→LAUNDER` stage machine; stage-suffixed request_ids + `seeding.derive_stage_seed`, both gated on `enabled` so hints-off is byte-identical; `commit` is the single decision_index-advance/slot-reset point; 1:1 slot↔in-flight; retries NORMAL-only). The recorded `state_text` stays un-hinted and the completion is the laundered `raw_response` (kept `valid`/`retries=0` so the SFT builder keeps it); provenance under `metadata["hint"]`; additive `DecisionRecord.hint_applied`. `--hints {off,on}` on `run_until` (errors under `--backend mlx`). Serial↔streaming structural parity asserted by a `@requires_simulator` integration test. Hints must stay tactical-truth (no risk/strategy language — the prompt-neutrality invariant), so the data stays frame-reusable.
-  - **Next (GPU):** generate native-thinking full-LLM-combat rollouts on the `train` split with `--hints on` → `build_sft_dataset --weighting-mode rwr --allow-thinking` → `train_policy` LoRA → eval base-vs-trained on the frozen **eval** split, reporting the **paired** per-seed floor delta + sign test beside the `agent_invalid` rate. Also gate competence iteration on a **lower-variance eval** (K rollouts/seed): the first run's +1.15 floor was ~1 SE / sign-test p≈0.55 at N=60 single-sample.
-
-Done in the 2026-06-19 session (GRPO-readiness toolchain — branch `feat/rwr-and-hinted-rollouts`):
-
-- **GRPO-readiness build — implemented + tested (pending the GPU run).** Built via codex-driven-development (Codex builder + Claude spec/quality/cross-task review; 11 commits, full unit+integration suite 311 OK, 8 gated skips — torch/vllm/mlx). Scoped from [`grpo_readiness_handoff.md`](grpo_readiness_handoff.md). The RL ladder's measurement + algorithm pieces:
-  - **Paired offline-result analysis (deliv. 1).** `src/sts_ai/eval_stats.py` (dependency-free sign test + bootstrap CI) + `scripts/compare_paired.py`: base-vs-trained over `seed_*_r*.meta.json` dirs → **paired per-seed floor delta + sign test + bootstrap CI, beside per-arm `agent_invalid`/budget-truncated/decisions-per-run** hack signals. Recurses into the agent-label subdir and fails loud on an empty arm. This is the go/no-go reporter for the offline run.
-  - **Lower-variance eval (deliv. 2).** `run_until.py` gains `--rollouts-per-seed K` and `--seeds-config/--split` (K rollouts/seed on a frozen split via the streaming orchestrator; pair-granularity skip). FRESH K=1 is byte-identical to before (the iter2 pipeline is unaffected).
-  - **Advantage + clipped/KL PG trainer (deliv. 3 + the GRPO core).** `train/advantage.py` (offline `floor−baseline` + group-relative `(floor−mean)/std`); `train/pg_dataset.py` + `scripts/build_pg_dataset.py` (per-decision `{prompt,completion,advantage}` from **raw rollouts + final_floor**, reusing dataset_builder's discovery/skip-rules — NOT the built SFT dataset); `train/pg_loss.py` (TRL's GRPO formula verbatim — clipped surrogate + Schulman-k3 KL, completion-masked) + `train/train_pg_trl.py` (transformers.Trainer + PEFT, μ=1) + `scripts/train_pg.py`. Loss math executed in a throwaway CPU-torch venv (the dep-free `.venv` has no torch). **Decision (spike, [`grpo_trainer_choice.md`](grpo_trainer_choice.md)): own the loss** — TRL GRPOTrainer's G-completions-per-prompt data model mismatches our trajectory-broadcast advantages and its external-rollout hook is experimental.
-  - **GRPO outer loop (deliv. 4).** `train/grpo_loop.py` + `scripts/run_grpo.py`: the locked **in-process** design — one process holds vLLM (`enable_lora`+`enable_sleep_mode`), regenerates K rollouts/train-seed at temp>0 (streaming orchestrator), computes group-relative advantage, runs the clipped+KL update, and **hot-swaps the new adapter** (sleep frees the KV cache during training). Control flow is fake-tested without a GPU; the vLLM sleep/wake/swap is dry-run-validated.
-  - **Reward spec + anti-hacking (deliv. 5).** [`reward_spec.md`](reward_spec.md) (trait-neutral final-floor reward + failure-mode table) + `src/sts_ai/eval_metrics.py` (decision-level stall/degenerate-loop proxy).
-  - **Validation discipline (deliv. 6).** [`grpo_dryrun_checklist.md`](grpo_dryrun_checklist.md): per-GPU-script flag-exact dry-run commands (copy production, shrink numbers, change nothing — the rule that would have caught the lost launch) + the additive runpod stages `scripts/runpod/{eval_paired,run_offline_pg,run_grpo}.sh`.
-  - **Next (GPU, Sid):** dry-run each GPU script per the checklist; land + interpret the offline RWR result via `compare_paired`; run the offline signed-advantage PG vs RWR/base (deliv. 3 decision); then the GRPO iterations, watching KL/advantage/length/`agent_invalid` and eval ≥ the offline baseline. mu>1 batch-reuse (old-logp snapshot) + in-loop eval are documented follow-ups.
-
-Done in the 2026-07-06 session (E4B competence — Gremlin Nob):
-
-- **Tier-1 serializer fixes + Gremlin Nob analysis** (see [`gemma_performance_analysis_2026-07-06.md`](gemma_performance_analysis_2026-07-06.md), [`tier1_serializer_fixes_2026-07-06.md`](tier1_serializer_fixes_2026-07-06.md)). Key finding from the 100 base E4B rollouts: the winning Nob policy is **attack-forward** (races Enrage down); the model loses by turtling behind Block. 43 Nob fights (23 won / 20 lost / 9 convincing).
-- **Fight-focused training capability assessment** (parked; candidate work) → [`nob_curriculum_next_steps_2026-07-06.md`](nob_curriculum_next_steps_2026-07-06.md). We *can* start a Nob-focused curriculum: rollouts+seeds already on disk, offline reconstruction is skew-free (`sft_format.build_example`), and both RWR/SFT and local GRPO now have MPS paths. The old gaps were a per-fight reward and fight-scoped episode; the local-curriculum lane below implements them without wiring Nob into the main full-run path.
-- **2026-07-07 update — detachable local-curriculum lane implemented.** New `src/sts_ai/local_tasks/` package and `scripts/local_task_{prepare,build_sft,eval,compare,grpo}.py` keep local competence fixes separate from the main full-run reward/eval path. Gremlin Nob is the first task: extracted fight windows from the 100 E4B base traces (43 fights; default local split 32 train / 11 holdout), task-local HP-loss reward + RWR multiplicities, replay-to-fight eval, task-reward PG dataset builder, and MLX-only GRPO entrypoint. Main runs consume any resulting skill adapter only through existing `--adapter-path`; no Nob logic is hard-coded into `train/reward.py` or `run_until.py`.
-- **2026-07-08 update — Nob RWR/SFT rung closed as a null result.** Retrained the corrected native-thinking adapter to its val-loss optimum (1400 iters; best val 0.396 @ iter 1000 vs 0.475 for the 200-iter run; fused iter-1000) and replaced the underpowered greedy holdout eval (temp 0.0, N=11, 6 deterministic ties) with a sampled one: `local_task_eval.py --rollouts-per-window 4` at temp 0.7, 44 episodes/arm, paired per-window means with bootstrap CI (`local_task_compare.py` K>1 averaging bug fixed; episode task-metrics injection made disk-based/resume-safe). Result: adapter ≈ base (paired reward delta +0.003, 95% CI [−0.16, +0.18]) — filtered-BC/RWR on the model's own 18 winning windows re-weights but does not add capability. Next rung: hinted-rollout SFT or Nob GRPO with a within-loss reward tiebreaker (3 of 11 holdout windows are 0/4 for both arms → zero group-advantage signal under the cliff reward). Full report: [`nob_rwr_retrain_sampled_eval_2026-07-08.md`](nob_rwr_retrain_sampled_eval_2026-07-08.md).
-- **2026-07-07 update — first Nob RWR/SFT result and fix.** Trained a local MLX LoRA on the Gremlin Nob train split only: 18 won/convincing train windows, 343 unique combat decisions, RWR-resampled to 461 examples; no losses, non-Nob decisions, out-of-combat decisions, or holdout windows. Training was supervised behavior cloning with RWR replication (`mlx_lm lora`, 200 iters, bs=1), not policy-gradient RL. Direct vLLM-metal LoRA eval is unsupported, but fusing the adapter with `mlx_lm fuse` produced a standalone model loadable by `local_task_eval.py --backend vllm` (continuous-batching path). The first holdout result vs base vLLM on the same 11 windows was negative: mean reward -0.116 → -0.359, win rate 7/11 → 6/11, convincing wins 4/11 → 1/11, mean HP loss 41.4 → 48.0, invalid rate 0 for both, paired reward delta -0.243 (sign test: 2 positive / 5 negative / 4 tied, p=0.453). Root cause: the MLX training conversion fed `messages` to `mlx_lm`'s stock `ChatDataset`; Gemma 4's chat template stripped native `<|channel>thought...<channel|>` text from assistant content, so the adapter was trained on compact JSON completions (median supervised completion 86 tokens) instead of the intended native-thinking completions (median 924 tokens). The fix is a native-safe MLX path (`prepare_native_mlx_data`) that pre-tokenizes `prompt + completion + "<turn|>\n"`, keeps the thought channel, defaults `max_seq_length=8192`, and drops/counts records whose thought would be cut off. The corrected run (`rwr_sft_won_native8k_stop`) kept 461/461 training examples, fused cleanly, emitted Gemma thought tokens in vLLM smoke, and on holdout matched base win rate while slightly improving reward/HP loss: mean reward -0.116 → -0.086, win rate 7/11 → 7/11, convincing wins 4/11 → 4/11, mean HP loss 41.4 → 36.5, invalid rate 0 for both, paired reward delta +0.030 (sign test: 3 positive / 2 negative / 6 tied, p=1.0). This is directionally acceptable but too small-N to treat as evidence of a robust competence gain.
-
-Remaining (re-ordered 2026-06-15):
-
-1. **Reasoning rerun at `max_tokens=4096`.** Rerun the thinking + R1 sweep arms (the 256 run was degenerate under the old fallback policy: ~100% invalid, action-0 fallback) for the real thinking-vs-no-thinking comparison. Note a prior full-depth thinking run still truncated ~6% at 4096 — handle stragglers with an "out of budget, emit JSON now" re-prompt and/or higher budget. ⚠ **Read outcome next to the `agent_invalid`/`unexecuted` rate:** rollouts now *stop* on an unrecoverable invalid decision, so a thinking arm that truncates more often will lose floor/win-rate for format reasons, not policy reasons — a raw outcome gap is uninterpretable without the invalid rate beside it (see [`rl_and_framing_design.md`](rl_and_framing_design.md) §gotcha 1).
-2. **Robust baseline (more seeds).** The model sweep is only 4 seeds (directional). Run the frozen dev/eval splits via `run_sweep.py` before any model/RL decision rests on it.
-3. **Stage 5 — fixed neutral rollout collection** on the frozen splits — now runnable at **full-game (Acts 1–3) depth** (`run_until.py`, or `run_sweep.py --max-act 3`; pass `--max-act 1` to retain the cheaper Act-1 slice); audit reasoning for frame leakage; attach reward + risk-proxy labels. The eval harness (meta/affordances/timing), the 4096 default, and full-game support are now in place.
-4. **RL scoping → implementation** per [`rl_and_framing_design.md`](rl_and_framing_design.md) (offline filtered-BC/RWR first, then GRPO/RLOO; trait-neutral reward). **Offline filtered-BC AND RWR are now implemented** (`src/sts_ai/train/`; see the 2026-06-17 and 2026-06-18 Done entries), as is the **hinted-rollout-with-laundering** support-expander (serial + streaming) for breaking the 0-win filtered-BC ceiling. Awaiting their first GPU train→eval run. The **on-policy GRPO arm is now built + tested too** (clipped+KL PG loss/trainer, group-relative advantage, the in-process hot-swap loop, lower-variance paired eval, reward spec + dry-run discipline — see the 2026-06-19 Done entry below), pending its first GPU dry-run + run. The seed/multi-rollout infra for GRPO/RLOO groups (K reproducible rollouts per world seed at temp>0) is now in place (§2c). **On-policy rollout generation must use the non-blocking streaming orchestrator** (vLLM `run_streaming_rollouts`/`run_until.py`), not the MLX lockstep path — a durable commitment (rl_and_framing_design.md §2b "Generation path"); lockstep would idle the GPU on each group's slowest straggler. Needs the GPU path — local training remains a benchmark, not an assumption.
-5. **In-combat risk proxies (Stage 10 follow-up).** Combat *board* is rendered now; still pending: extend `risk_proxies.py` with in-combat aggression metrics keyed off `phase`/`state["combat"]` and the new `affordances`.
-6. Freeze a train split (200-500 seeds): larger baseline batch (e.g. seeds `2-600`).
-7. Root-cause the seed-2-class native battle-search hang before depending on cross-machine reproducibility (accepted-and-excluded).
-8. Stage 2 extensions (structured in-serializer risk tags; expand self-damage/high-variance card coverage) + Stage 4 nicety (compact-vs-verbose serializer comparison).
+## Research question
+
+This repository tests how training-time framing changes what a language model
+learns from the same reward signal. The motivating question is:
+
+> When a model is reinforced for behaviour along a graded axis such as
+> risk-taking, does the framing of the training context determine which broader
+> latent concept absorbs the update?
+
+For example, equivalent successful trajectories could be presented as
+"risk-reward tradeoffs" or as "adventurous" behaviour. The eventual evaluation
+asks whether those otherwise matched training conditions generalize differently
+to nearby traits such as risk-seeking, adventure-seeking, confidence, or
+impulsivity.
+
+Slay the Spire is the first environment. Its pathing, elite fights, low-HP
+campfires, card rewards, shops, potions, and boss preparation provide graded,
+interacting tradeoffs rather than a single explicit risk control.
+
+## Active priority: competence first
+
+Competence work precedes the framing experiment. A framing comparison is not
+interpretable until the student can learn a useful policy through the current
+interface and training pipeline. Resume framing work from a frozen competence
+checkpoint, rather than varying framing while basic policy learning remains
+unsettled. Past competence experiments and remaining limitations are summarized
+in [`experiment_history.md`](experiment_history.md).
+
+## Design commitments
+
+- **Prompt neutrality.** Base observations and instructions describe facts and
+  legal actions without strategic advice. Framing is an explicit experimental
+  variable, not an accidental property of the serializer or reward.
+- **Matched data for the primary arm.** Generate neutral trajectories once and
+  train framing variants on the same states, actions, and rewards. This
+  fixed-rollout arm is the cleanest test of interpretation effects.
+- **On-policy follow-up.** A later arm may generate trajectories separately under
+  each framing to measure the combined effect of interpretation and visited-state
+  distribution.
+- **Trait-neutral reward.** Reward game progress and outcomes, not words or
+  proxies that encode the target framing. Keep reward logic identical across
+  framing conditions.
+- **Markovian public observations.** Each decision receives a fresh,
+  self-contained, human-visible state and legal-action list. Private simulator
+  state and search rollouts must not enter the policy prompt.
+- **Explicit seed identity.** World seed, rollout index, and policy seed are
+  distinct. Comparisons use frozen splits and paired identities where applicable.
+- **Reproducible, schema-stable artifacts.** Frozen traces are immutable inputs;
+  derived corrections use sidecars. Interface, schema, simulator, model,
+  tokenizer, and adapter identities are recorded, and incompatible artifacts fail
+  closed rather than being silently reinterpreted.
+- **Outcome and validity together.** Policy quality is always read beside invalid
+  output, timeout, and simulator-error rates. Partial asynchronous batches are not
+  compared as if they were complete cohorts.
+
+## Harness architecture
+
+The environment is `gamerpuppy/sts_lightspeed`, built locally with a versioned
+Python-binding patch. `LightspeedHybridEnv` exposes legal actions, public state,
+and deterministic trace recording.
+
+The default hybrid mode gives Python control of Neow, pathing, rewards, shops,
+events, card selection, treasure rooms, and campfires while the built-in
+Lightspeed search agent resolves combat. Full-control mode instead exposes each
+combat micro-action to the policy. Both modes use the same agent protocol and
+JSONL decision schema.
+
+Serial rollouts support smoke tests and diagnosis. MLX lockstep batching supports
+local generation, while the vLLM streaming path keeps multiple rollouts in flight
+for higher-throughput evaluation and future on-policy training. Training code
+supports filtered behavioural cloning, search-teacher SFT, offline policy
+gradient, and an on-policy GRPO loop; optional ML dependencies remain separated
+from the dependency-free core.
+
+Public combat observations are versioned. The current `combat_public_v3` surface
+extends card-type-complete v2 observations with simulator-computed attack damage
+and derived turn arithmetic. Search-teacher queries operate on cloned simulator
+state and remain privileged labels, not policy observations.
+
+## RL design notes (for the framing experiment)
+
+- Run the offline, matched-data arm first (filtered BC → reward-weighted
+  regression on shared neutral rollouts); it is the cleanest isolation of the
+  framing effect. On-policy follows.
+- For on-policy, prefer group-relative methods (GRPO/RLOO) over PPO — no critic
+  network fits local hardware. Groups need `temperature > 0`: at temperature 0
+  all rollouts of a seed are identical and group advantages are zero.
+- Hybrid combat control masks the consequences of out-of-combat choices (the
+  search agent absorbs mistakes), so start RL on the out-of-combat action
+  space — those are the risk-relevant decisions — before full-combat RL.
+- An unrecoverable invalid decision ends the episode, so outcome metrics mix
+  format compliance with policy quality: always report `agent_invalid` rate
+  beside every outcome comparison, and give errored/truncated episodes a
+  defined reward rather than scoring them as ordinary losses.
+- Whether the gradient flows through reasoning tokens is an experimental
+  choice, not a default: framing may act through reasoning style, so keep it a
+  logged, switchable flag.
+
+## Frozen seed splits
+
+[`configs/frozen_seeds.json`](../configs/frozen_seeds.json) records the world
+seeds used for evaluation splits, with erroring seeds excluded (its `excluded.*`
+lists carry the reasons). Seed 2 is excluded from LLM splits (crash-class
+failure) and seed 1 is diagnostic-only; the clean intersection is 142 seeds and
+the LLM-safe set is 141. The training split is not yet frozen. Seed behaviour
+can differ across machines/builds because of the simulator's known
+uninitialized-memory bug, and the splits derive from Act-1-era runs.
+Regenerate with `scripts/run_batch.py` plus the exclusion lists in the config.
+
+## Current state
+
+The harness, replay validation, search-teacher collection, semantic teacher
+targets, quarantine-aware metrics, local/pod inference, and training paths are
+implemented. Frozen competence artifacts exist (replay-validated cohorts,
+teacher label files, and the embargoed final Nob cohort), so the
+schema-stability and reproducibility rules in `CLAUDE.md` are active — treat
+`state_text`/action-text changes as versioned interface changes, not free
+edits. The strongest static result so far comes from semantic action-text
+targets on a small Gremlin Nob dataset, but no behavioural improvement has yet
+been established from that static agreement result. Coverage is limited to one
+encounter and the simulator still has an unresolved phantom-power bug. See
+[`experiment_history.md`](experiment_history.md) for the concise evidence record
+and open items.

@@ -10,7 +10,7 @@ auto-resolved by the C++ search agent — determinism there is the same assumpti
 as the repo's frozen-seed contract).
 
 Run in a child process with a timeout to contain the residual seed-class UB hang
-(see docs/simulator_issue_handoff.md, tests/integration/test_battle_search.py).
+(see the CLAUDE.md UB gotcha, tests/integration/test_battle_search.py).
 Structural comparisons are between two runs in the *same* build/process, which is
 exactly what determinism means — not brittle cross-build value assertions.
 """
