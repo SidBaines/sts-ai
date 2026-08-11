@@ -15,7 +15,13 @@ from scripts.build_teacher_sft import (
     build_teacher_examples,
     main,
 )
-from sts_ai.prompting import ACTION_ONLY_OUTPUT, NEUTRAL_FRAME, render_action_prompt
+from sts_ai.prompting import (
+    ACTION_ONLY_OUTPUT,
+    ACTION_TEXT_OUTPUT,
+    NEUTRAL_FRAME,
+    TURN_PLAN_OUTPUT,
+    render_action_prompt,
+)
 from sts_ai.schemas import LegalAction
 
 
@@ -75,6 +81,38 @@ def _teacher_row(state_hash: str, action_index: int) -> dict:
         "reference": {
             "consensus_action_index": action_index,
             "consensus_fraction": 1.0,
+        },
+    }
+
+
+def _teacher_query(
+    action_index: int,
+    *,
+    evaluation: float,
+    search_seed: int,
+    draw_order_seed: int | None,
+    sequence: list[tuple[str, int]],
+    abstained: bool = False,
+) -> dict:
+    return {
+        "observation_version": "combat_public_v2",
+        "teacher_privilege": "simulator_full_state",
+        "teacher_selection_rule": "aggregated_root_visits",
+        "query": {
+            "search_seed": search_seed,
+            "draw_order_seed": draw_order_seed,
+        },
+        "teacher_vote": {
+            "action_index": action_index,
+            "abstained": abstained,
+            "displayed_action_visits": {"0": 70, "1": 30},
+        },
+        "search": {
+            "best_evaluation": evaluation,
+            "best_sequence": [
+                {"bits": index, "description": description, "turn": turn}
+                for index, (description, turn) in enumerate(sequence)
+            ],
         },
     }
 
@@ -141,6 +179,224 @@ class TeacherSftOutputContractTest(unittest.TestCase):
         self.assertEqual(manifest["n_examples_before_limit"], 1)
         self.assertIsNone(manifest["max_examples"])
         self.assertEqual(manifest["n_examples"], 1)
+
+    def test_action_text_target_is_canonical_consensus_description(self):
+        row = _teacher_row("semantic-state", 0)
+
+        examples, manifest = build_teacher_examples(
+            [row],
+            tokenizer=_OffsetCharTokenizer(),
+            tokenizer_id="fake/tokenizer",
+            enable_thinking=False,
+            min_consensus=2 / 3,
+            require_hidden_consensus=False,
+            output_contract=ACTION_TEXT_OUTPUT,
+        )
+
+        self.assertEqual(examples[0]["completion"], '{"action":"play Strike -> NOB"}')
+        self.assertEqual(
+            examples[0]["messages"][1]["content"],
+            examples[0]["completion"],
+        )
+        self.assertEqual(examples[0]["target_action_index"], 0)
+        self.assertEqual(
+            examples[0]["target_action_description"],
+            "play Strike -> NOB",
+        )
+        self.assertEqual(examples[0]["target_source"], {"kind": "consensus"})
+        self.assertEqual(manifest["output_contract"], ACTION_TEXT_OUTPUT)
+
+    def test_turn_plan_tie_break_is_deterministic_and_appends_end_turn(self):
+        row = _teacher_row("plan-state", 0)
+        row["legal_actions"].insert(
+            1,
+            {"index": 2, "bits": 4, "description": "play Defend"},
+        )
+        queries = [
+            _teacher_query(
+                2,
+                evaluation=100.0,
+                search_seed=0,
+                draw_order_seed=None,
+                sequence=[
+                    ("play Strike -> NOB", 0),
+                    ("losing non-eligible query", 0),
+                ],
+            ),
+            _teacher_query(
+                0,
+                evaluation=20.0,
+                search_seed=4,
+                draw_order_seed=None,
+                sequence=[("play Strike -> NOB", 0), ("losing draw tie", 0)],
+            ),
+            _teacher_query(
+                0,
+                evaluation=20.0,
+                search_seed=3,
+                draw_order_seed=9,
+                sequence=[("play Strike -> NOB", 0), ("losing seeded draw", 0)],
+            ),
+            _teacher_query(
+                0,
+                evaluation=20.0,
+                search_seed=3,
+                draw_order_seed=None,
+                sequence=[
+                    ("play Strike -> NOB", 0),
+                    ("play Defend", 0),
+                    ("future turn", 1),
+                ],
+            ),
+            _teacher_query(
+                0,
+                evaluation=19.0,
+                search_seed=1,
+                draw_order_seed=None,
+                sequence=[("play Strike -> NOB", 0), ("losing evaluation", 0)],
+            ),
+        ]
+        # Visit dictionaries must cover the expanded legal menu.
+        for query in queries:
+            query["teacher_vote"]["displayed_action_visits"] = {
+                "0": 70,
+                "1": 20,
+                "2": 10,
+            }
+
+        completions = []
+        for ordered_queries in (queries, list(reversed(queries))):
+            candidate = copy.deepcopy(row)
+            candidate["teacher_queries"] = ordered_queries
+            examples, manifest = build_teacher_examples(
+                [candidate],
+                tokenizer=_OffsetCharTokenizer(),
+                tokenizer_id="fake/tokenizer",
+                enable_thinking=False,
+                min_consensus=2 / 3,
+                require_hidden_consensus=False,
+                output_contract=TURN_PLAN_OUTPUT,
+            )
+            completions.append(examples[0]["completion"])
+            self.assertEqual(examples[0]["plan_source"], "eligible_query")
+            self.assertEqual(manifest["output_contract"], TURN_PLAN_OUTPUT)
+            self.assertEqual(
+                manifest["turn_plan_skips"],
+                {
+                    "n_skipped": 0,
+                    "reason_counts": {},
+                    "skipped_public_state_hashes": [],
+                },
+            )
+
+        self.assertEqual(completions[0], completions[1])
+        self.assertEqual(
+            completions[0],
+            '{"plan":["play Strike -> NOB","play Defend","end turn"],'
+            '"action":"play Strike -> NOB"}',
+        )
+
+    def test_turn_plan_falls_back_to_non_eligible_anchored_query(self):
+        row = _teacher_row("fallback-plan-hash", 0)
+        row["teacher_queries"] = [
+            _teacher_query(
+                0,
+                evaluation=100.0,
+                search_seed=1,
+                draw_order_seed=None,
+                sequence=[("end turn", 0)],
+            ),
+            _teacher_query(
+                1,
+                evaluation=2.0,
+                search_seed=3,
+                draw_order_seed=None,
+                sequence=[("play Strike -> NOB", 0), ("end turn", 0)],
+            ),
+            _teacher_query(
+                1,
+                evaluation=3.0,
+                search_seed=4,
+                draw_order_seed=None,
+                sequence=[("play Strike -> NOB", 0), ("fallback winner", 0)],
+            ),
+        ]
+
+        examples, manifest = build_teacher_examples(
+            [row],
+            tokenizer=_OffsetCharTokenizer(),
+            tokenizer_id="fake/tokenizer",
+            enable_thinking=False,
+            min_consensus=2 / 3,
+            require_hidden_consensus=False,
+            output_contract=TURN_PLAN_OUTPUT,
+        )
+
+        self.assertEqual(
+            examples[0]["completion"],
+            '{"plan":["play Strike -> NOB","fallback winner","end turn"],'
+            '"action":"play Strike -> NOB"}',
+        )
+        self.assertEqual(examples[0]["plan_source"], "non_eligible_query")
+        self.assertEqual(manifest["turn_plan_skips"]["n_skipped"], 0)
+
+    def test_turn_plan_unanchorable_states_are_skipped_and_manifested(self):
+        anchorable = _teacher_row("m-anchorable", 0)
+        anchorable["teacher_queries"] = [
+            _teacher_query(
+                0,
+                evaluation=1.0,
+                search_seed=1,
+                draw_order_seed=None,
+                sequence=[("play Strike -> NOB", 0), ("end turn", 0)],
+            )
+        ]
+        mismatch = _teacher_row("z-mismatch", 0)
+        mismatch["teacher_queries"] = [
+            _teacher_query(
+                0,
+                evaluation=2.0,
+                search_seed=1,
+                draw_order_seed=None,
+                sequence=[("end turn", 0)],
+            )
+        ]
+        empty_this_turn = _teacher_row("a-empty-this-turn", 0)
+        empty_this_turn["teacher_queries"] = [
+            _teacher_query(
+                0,
+                evaluation=3.0,
+                search_seed=1,
+                draw_order_seed=None,
+                sequence=[("future turn", 1)],
+            )
+        ]
+
+        examples, manifest = build_teacher_examples(
+            [mismatch, anchorable, empty_this_turn],
+            tokenizer=_OffsetCharTokenizer(),
+            tokenizer_id="fake/tokenizer",
+            enable_thinking=False,
+            min_consensus=2 / 3,
+            require_hidden_consensus=False,
+            output_contract=TURN_PLAN_OUTPUT,
+        )
+
+        self.assertEqual(
+            [example["public_state_hash"] for example in examples],
+            ["m-anchorable"],
+        )
+        self.assertEqual(
+            manifest["turn_plan_skips"],
+            {
+                "n_skipped": 2,
+                "reason_counts": {"no_candidate_query": 2},
+                "skipped_public_state_hashes": [
+                    "a-empty-this-turn",
+                    "z-mismatch",
+                ],
+            },
+        )
 
     def test_hidden_order_majority_must_match_unmodified_teacher_action(self):
         row = _teacher_row("public-hash", 0)

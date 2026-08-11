@@ -221,10 +221,9 @@ Semantics (all fail closed with ValueError on malformed input):
 
 ### B2. Per-row output for the existing scorer (additive only)
 
-- `build_teacher_action_report(...)` in `teacher_action_eval.py` gains
-  `include_rows: bool = False`; when true the report dict also contains
-  `"rows": [<score_teacher_row results>]`. Default-off path must be
-  byte-identical to today (existing report SHAs are frozen artifacts).
+- The pre-existing report builder already emits `"rows"` (discovered during
+  implementation), so no `include_rows` parameter is needed; the requirement
+  reduces to: default report output stays byte-identical (frozen SHAs), and
 - `scripts/score_teacher_actions.py` gains `--per-row-out <path.jsonl>`
   (optional): writes one JSON line per scored row (the `score_teacher_row`
   result). Refuses existing path. No change to the main report when the flag
@@ -498,17 +497,33 @@ repo balance), `tests/unit/test_teacher_sft_output_contract.py` (extend),
 - action_text targets: the consensus displayed action's description (resolved
   from the row's `legal_actions` by the same consensus index used today).
 - turn_plan targets, derived per row from `teacher_queries`:
-  - Eligible queries: non-abstaining AND `teacher_vote.action_index ==`
-    consensus index.
-  - Select the eligible query with maximum `search.best_evaluation`; ties →
-    lowest `query.search_seed`, then lowest `query.draw_order_seed` with
-    `None` ordered first. Document the tie-break in a docstring.
+  - Candidate queries are non-abstaining queries whose non-empty this-turn
+    `best_sequence` line opens with the consensus displayed action's exact
+    description (byte match).
+  - Prefer candidate queries whose `teacher_vote.action_index` equals the
+    consensus index (`eligible`). Within the preferred pool select maximum
+    `search.best_evaluation`; ties → lowest `query.search_seed`, then lowest
+    `query.draw_order_seed` with `None` ordered first. If there is no eligible
+    candidate, apply the same tie-break to any candidate and record
+    `plan_source="non_eligible_query"` on the row; preferred rows record
+    `plan_source="eligible_query"`.
   - `plan` = descriptions of `search.best_sequence` entries whose `turn` ==
     the row's `turn`, in order; append `"end turn"` if not already the final
     entry.
-  - HARD requirement: `plan[0]` must byte-match the consensus displayed
-    action's description (they come from the same describe call); mismatch →
-    raise with the offending hash (fail closed, no skip).
+  - If no candidate query exists, omit the state rather than emitting a
+    partial or mismatched plan. Record these omissions in the manifest under
+    `turn_plan_skips` with `n_skipped`, `reason_counts`, and sorted
+    `skipped_public_state_hashes`, and print a one-line build summary.
+  - This deliberately anchors every retained `plan[0]` and completion action
+    to the aggregated-root-visits consensus, the empirically better online
+    policy from COMP-004A, rather than substituting a raw winning/best-line
+    first action.
+  - Real-data caveat accepted for COMP-020: the consensus differs from
+    `best_sequence[0]` on about 48% of the 150 frozen COMP-012 train states.
+    The obsolete eligible/max-evaluation rule built 78/150; 130/150 have some
+    stored query anchored to consensus and 20/150 have none. The resulting
+    turn-plan train set is therefore approximately 130 states, with the
+    approximately 20 omissions explicitly recorded in the manifest.
 - `--passes N` (default 1) + `--schedule-seed S`: emit an N-pass expanded
   dataset with `pass_index` and `schedule_step` fields. Reuse/mirror the
   identity-arm scheduling semantics from `src/sts_ai/permutation_sft.py`
@@ -539,15 +554,27 @@ repo balance), `tests/unit/test_teacher_sft_output_contract.py` (extend),
   quarantine sidecar in `configs/competence/`. Per-row rescoring of existing
   checkpoints (base, COMP-012 step-1500/3000) with `score_teacher_actions
   --per-row-out` + `rescore_teacher_report` → regret baselines.
-- **R1**: build datasets (v2 prompts): train150 action_text consensus
-  20-pass; train150 turn_plan consensus 20-pass; dev57 single-pass eval sets
-  per contract. (Later: action_text visit_sampled arm.)
+- **R1**: build datasets (v2 prompts) with the COMP-012-matched flags
+  `--state-selection first_per_turn --require-hidden-consensus` (train labels)
+  / `--state-selection every --require-hidden-consensus` (dev audit labels):
+  train150 action_text consensus single-pass (trainer supplies the 20 passes
+  via iterations, as COMP-012 did); train turn_plan consensus single-pass
+  (yields 130 rows — 20 states skipped by the consensus-anchoring policy);
+  dev57 eval sets per contract (57 action_text / 52 turn_plan). (Later:
+  action_text visit_sampled 20-pass expanded arm.)
 - **R2**: train E4B LoRA (rank 8, scale 20, dropout 0, seed 0,
   grad_accum 1 — the exact COMP-012 recipe from
   `configs/competence/comp_012.json`), 3000 updates, checkpoints
   {750, 1500, 2250, 3000}, one run per arm.
 - **R3**: eval each checkpoint: candidate scoring + generative eval on dev57
-  and train150; regret reports (all/clean). Compare against rescored COMP-012.
+  and the train sets; regret reports (all/clean; note dev57-clean is only 39
+  rows — low power). Score BOTH arms on the same 57-row action_text dev set
+  (the turn_plan→action_text instruction re-render is byte-identical to the
+  native action_text prompt on every shared state), so the cross-arm and
+  COMP-012 comparisons share one denominator. The turn_plan arm trains for
+  2600 iterations (130 rows × 20 passes, checkpoints 650/1300/1950/2600) to
+  match COMP-012's pass count rather than its update count. Base-model
+  generative valid/matched rates measure format compliance, not policy.
 - **R4**: record COMP-020 result config + registry entry; update
   `docs/research_plan.md` status.
 

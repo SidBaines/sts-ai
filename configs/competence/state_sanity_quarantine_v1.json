@@ -1,0 +1,677 @@
+{
+  "findings": [
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "04fe36cbcfe5a2026a8b88f84d27889044176e9fbd16b85601621c2553159891",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "06d8d3c9e7c77e8ed121fedf2cb6bc50fde74f7fb03ad2ad504ccfad9017a185",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "0b31c4f25a7cadc60d30a57801c84baa895c69296b96360f53f8682aa870d9be",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "0c907332c643c5c58793626019d59ca78bdf474df164795e8386e6f55b60ca09",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "1538ca37a41be41848f2e74ea523f634e83f637c5b914428caf4e1f9f6874920",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "2334fd438c27fd19b94eaacedd655d4f1913ee3acac5186444c34b7d77d44010",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "235c6cc982fa02f3e82560581c0d9b83b26d00d8381623422704e34d3a7ac5f8",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "3f3d2c03b064996b76933e12f2aa30d1f04a78e1660910e7092abc78d3f86e41",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "4b9cb2ba1858b612695ec1edf312b9b1ccc1df8377e37d8eab94789f92b76a95",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "559074d126a455dec76d705e93c1dda7f66805f06e677e9ca7401a7e5d1cbbef",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "5cff9fbfb79bdd4f62b98fc3b61d6f623fb0e6922fcf9d2107de444b2d27e420",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "761dd4c5d3ef97e757913fb656bc43b0126590e624097f7fe37ec714539448fc",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "88a5b1cea7329072f3ddafb91769578ff1792d4510977ce76caab644410310d3",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "94fc5c055a1d7e9a89614ae818d04e3da4e2b45a76d3a51bcf8cc022bea1b5cd",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "95d3eebe317f6a2d84f7517f11c81d78a3f0d6cad616f984827cb1e573643ce7",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "a68d8bfafd6ffc3d755d1f56dda73fcf1c0830f6be13b0b7df39b19ac541ded3",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "b1accc231a37b8062838a290ae6d02e630783482bb9a2ee6ebf1a5f4f4bc7598",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "c18af0383c5e0da523001fc0c84202638642dd6ce4d472265abee377316a4339",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "d5b2437d1efc195280ca7685b2df099ee2984a1a79a6832dd7633344ca4446d1",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "eb3e210bc2c5f5ae4c3fa75f8435b2e21c7868d6f9af3bd1248107802f75a354",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "f960d5ea5370f09e36a5a365326a221883a2b9c26e22ed39d391cab47ccab07f",
+      "window_id": "seed_103_r0_w0",
+      "world_seed": 103
+    },
+    {
+      "findings": [
+        {
+          "amount": 4,
+          "power": "Metallicize",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "06d1a7151a60cb2094088a4dcbeb97fe1cdcd54a4d5676787e036a876a94153f",
+      "window_id": "seed_104_r0_w0",
+      "world_seed": 104
+    },
+    {
+      "findings": [
+        {
+          "amount": 4,
+          "power": "Metallicize",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "39b18806b577479bc69aa7d55f409b220448bb50c5fcdaa12c49172fb6ea9820",
+      "window_id": "seed_104_r0_w0",
+      "world_seed": 104
+    },
+    {
+      "findings": [
+        {
+          "amount": 4,
+          "power": "Metallicize",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "785d082ee983ca18c088fe602339e9eee71fed44e6103219d0994dedc2fe2554",
+      "window_id": "seed_104_r0_w0",
+      "world_seed": 104
+    },
+    {
+      "findings": [
+        {
+          "amount": 4,
+          "power": "Metallicize",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "b006da5865b1ed0802104d2a9a0561e1e96b7ad570a4b95a45765bbd2973b373",
+      "window_id": "seed_104_r0_w0",
+      "world_seed": 104
+    },
+    {
+      "findings": [
+        {
+          "amount": 4,
+          "power": "Metallicize",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "c14a2abb1234e111ce066c38efd0ecf3793b3d323a9fdca605e882f3f3280b4d",
+      "window_id": "seed_104_r0_w0",
+      "world_seed": 104
+    },
+    {
+      "findings": [
+        {
+          "amount": 4,
+          "power": "Metallicize",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "f19f9444d01cfd8a565e5878d51b982c5a08f8e62f1754d452e1e5c4739a3ae7",
+      "window_id": "seed_104_r0_w0",
+      "world_seed": 104
+    },
+    {
+      "findings": [
+        {
+          "amount": 4,
+          "power": "Metallicize",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "f2584b44fccc7b58d534d7929d8e84f2c4a396c237df7bc6d2aa5e72cdc4d51a",
+      "window_id": "seed_104_r0_w0",
+      "world_seed": 104
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Thorns",
+          "reason": "player_thorns_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "8e9a5a3303b01b8dfe8af1c8b8777e773bbf107562a67755c11818e1eff19f9b",
+      "window_id": "seed_108_r0_w0",
+      "world_seed": 108
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Thorns",
+          "reason": "player_thorns_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "96faf2bf7914d9f06f684b47c8a8d3343117dcb5aa31e6e0eb86e41599e187bc",
+      "window_id": "seed_108_r0_w0",
+      "world_seed": 108
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Thorns",
+          "reason": "player_thorns_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "e63e78cf97c42eaeb07ca6af4687900c3a51910cf762f0549d40e886479d709f",
+      "window_id": "seed_108_r0_w0",
+      "world_seed": 108
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Thorns",
+          "reason": "player_thorns_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "e76024f836064d80d1972462160e51699e7cff4f46b0ecb30251bcd94da18184",
+      "window_id": "seed_108_r0_w0",
+      "world_seed": 108
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "75360d2f5b7263a7f26ee36b00224bc8936ccf47365ad9c402f8052fde8a4950",
+      "window_id": "seed_120_r0_w0",
+      "world_seed": 120
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "ab1cdd16d7399fb4d6f68a80a03aee80f0d33880b9c5bfd58700b2ed2d5718c2",
+      "window_id": "seed_120_r0_w0",
+      "world_seed": 120
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "caeca173f4850d08b495b12a97e54fe0f7775e0e9527a0f48036577eecb9ff2c",
+      "window_id": "seed_120_r0_w0",
+      "world_seed": 120
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "e17f6dc29110ed028e5c0b257c2388c990eb6c3e811ec0460f1455de70a555db",
+      "window_id": "seed_120_r0_w0",
+      "world_seed": 120
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "e4b406d69d39997078b3ca7f1df50b6a90f1ff3f93058cb60fffbd92bff60ee5",
+      "window_id": "seed_120_r0_w0",
+      "world_seed": 120
+    },
+    {
+      "findings": [
+        {
+          "amount": 3,
+          "power": "Regen",
+          "reason": "enemy_power_impossible_for_encounter",
+          "side": "enemy"
+        }
+      ],
+      "public_state_hash": "f78a1937fc29adbe846b4afdce7f8eb829e3c093db26e1299432be11ba6c9fe2",
+      "window_id": "seed_120_r0_w0",
+      "world_seed": 120
+    },
+    {
+      "findings": [
+        {
+          "amount": 1,
+          "power": "Buffer",
+          "reason": "player_buffer_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "07213e2c60ecb68a6d41698f614329c5449840c6cfd04b66c7e08477de2ddb1e",
+      "window_id": "seed_129_r0_w0",
+      "world_seed": 129
+    },
+    {
+      "findings": [
+        {
+          "amount": 1,
+          "power": "Buffer",
+          "reason": "player_buffer_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "17ed6816b22fafb574e0cd256e1c272d6fbf7cefdd6f5d4552b9afe660347cbe",
+      "window_id": "seed_129_r0_w0",
+      "world_seed": 129
+    },
+    {
+      "findings": [
+        {
+          "amount": 1,
+          "power": "Buffer",
+          "reason": "player_buffer_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "3b4530755d9f51b925b5c9b4008656cb4f8a355fb75884ce20faa961fca1903d",
+      "window_id": "seed_129_r0_w0",
+      "world_seed": 129
+    },
+    {
+      "findings": [
+        {
+          "amount": 1,
+          "power": "Buffer",
+          "reason": "player_buffer_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "4fa6cb53c6eb517fedc5a979bb103f3e37b3c027e6cf792dad2c489f0c75642b",
+      "window_id": "seed_129_r0_w0",
+      "world_seed": 129
+    },
+    {
+      "findings": [
+        {
+          "amount": 1,
+          "power": "Buffer",
+          "reason": "player_buffer_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "5181270af712ce4f56c9f1676b8ad7e6e0f60d69ca930187708f2e2f45c77bcd",
+      "window_id": "seed_129_r0_w0",
+      "world_seed": 129
+    },
+    {
+      "findings": [
+        {
+          "amount": 1,
+          "power": "Buffer",
+          "reason": "player_buffer_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "62f3f37d98c013e0df00f1c098364c26a52214ceda81caf10e8d6a60c1e557f2",
+      "window_id": "seed_129_r0_w0",
+      "world_seed": 129
+    },
+    {
+      "findings": [
+        {
+          "amount": 1,
+          "power": "Buffer",
+          "reason": "player_buffer_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "8677dff7b4cb50de760f855b6272ff1b1b6010a044235d2c359e969e31df4ea4",
+      "window_id": "seed_129_r0_w0",
+      "world_seed": 129
+    },
+    {
+      "findings": [
+        {
+          "amount": 1,
+          "power": "Buffer",
+          "reason": "player_buffer_without_source",
+          "side": "player"
+        }
+      ],
+      "public_state_hash": "be350bc7922191078c008bc3c0794ac52d66d12e9856306720ffd6165fd5c71d",
+      "window_id": "seed_129_r0_w0",
+      "world_seed": 129
+    }
+  ],
+  "inputs": [
+    {
+      "n_rows": 652,
+      "path": "data/competence/comp_008/teacher_labels/train_base_visited_50k.jsonl",
+      "sha256": "15deca2f564786ed862c6fde93d09b1a71a5fe108659032c632819b2fecf0f3a"
+    },
+    {
+      "n_rows": 60,
+      "path": "data/competence/comp_008/audit/holdout_turn_first.jsonl",
+      "sha256": "0f1a869fdd32ddb65a7ac4cfa7827fa2d11cfda5af61fde95ba82e383c6c444c"
+    }
+  ],
+  "kind": "state_sanity_quarantine",
+  "quarantined_state_hashes": [
+    "04fe36cbcfe5a2026a8b88f84d27889044176e9fbd16b85601621c2553159891",
+    "06d1a7151a60cb2094088a4dcbeb97fe1cdcd54a4d5676787e036a876a94153f",
+    "06d8d3c9e7c77e8ed121fedf2cb6bc50fde74f7fb03ad2ad504ccfad9017a185",
+    "07213e2c60ecb68a6d41698f614329c5449840c6cfd04b66c7e08477de2ddb1e",
+    "0b31c4f25a7cadc60d30a57801c84baa895c69296b96360f53f8682aa870d9be",
+    "0c907332c643c5c58793626019d59ca78bdf474df164795e8386e6f55b60ca09",
+    "1538ca37a41be41848f2e74ea523f634e83f637c5b914428caf4e1f9f6874920",
+    "17ed6816b22fafb574e0cd256e1c272d6fbf7cefdd6f5d4552b9afe660347cbe",
+    "2334fd438c27fd19b94eaacedd655d4f1913ee3acac5186444c34b7d77d44010",
+    "235c6cc982fa02f3e82560581c0d9b83b26d00d8381623422704e34d3a7ac5f8",
+    "39b18806b577479bc69aa7d55f409b220448bb50c5fcdaa12c49172fb6ea9820",
+    "3b4530755d9f51b925b5c9b4008656cb4f8a355fb75884ce20faa961fca1903d",
+    "3f3d2c03b064996b76933e12f2aa30d1f04a78e1660910e7092abc78d3f86e41",
+    "4b9cb2ba1858b612695ec1edf312b9b1ccc1df8377e37d8eab94789f92b76a95",
+    "4fa6cb53c6eb517fedc5a979bb103f3e37b3c027e6cf792dad2c489f0c75642b",
+    "5181270af712ce4f56c9f1676b8ad7e6e0f60d69ca930187708f2e2f45c77bcd",
+    "559074d126a455dec76d705e93c1dda7f66805f06e677e9ca7401a7e5d1cbbef",
+    "5cff9fbfb79bdd4f62b98fc3b61d6f623fb0e6922fcf9d2107de444b2d27e420",
+    "62f3f37d98c013e0df00f1c098364c26a52214ceda81caf10e8d6a60c1e557f2",
+    "75360d2f5b7263a7f26ee36b00224bc8936ccf47365ad9c402f8052fde8a4950",
+    "761dd4c5d3ef97e757913fb656bc43b0126590e624097f7fe37ec714539448fc",
+    "785d082ee983ca18c088fe602339e9eee71fed44e6103219d0994dedc2fe2554",
+    "8677dff7b4cb50de760f855b6272ff1b1b6010a044235d2c359e969e31df4ea4",
+    "88a5b1cea7329072f3ddafb91769578ff1792d4510977ce76caab644410310d3",
+    "8e9a5a3303b01b8dfe8af1c8b8777e773bbf107562a67755c11818e1eff19f9b",
+    "94fc5c055a1d7e9a89614ae818d04e3da4e2b45a76d3a51bcf8cc022bea1b5cd",
+    "95d3eebe317f6a2d84f7517f11c81d78a3f0d6cad616f984827cb1e573643ce7",
+    "96faf2bf7914d9f06f684b47c8a8d3343117dcb5aa31e6e0eb86e41599e187bc",
+    "a68d8bfafd6ffc3d755d1f56dda73fcf1c0830f6be13b0b7df39b19ac541ded3",
+    "ab1cdd16d7399fb4d6f68a80a03aee80f0d33880b9c5bfd58700b2ed2d5718c2",
+    "b006da5865b1ed0802104d2a9a0561e1e96b7ad570a4b95a45765bbd2973b373",
+    "b1accc231a37b8062838a290ae6d02e630783482bb9a2ee6ebf1a5f4f4bc7598",
+    "be350bc7922191078c008bc3c0794ac52d66d12e9856306720ffd6165fd5c71d",
+    "c14a2abb1234e111ce066c38efd0ecf3793b3d323a9fdca605e882f3f3280b4d",
+    "c18af0383c5e0da523001fc0c84202638642dd6ce4d472265abee377316a4339",
+    "caeca173f4850d08b495b12a97e54fe0f7775e0e9527a0f48036577eecb9ff2c",
+    "d5b2437d1efc195280ca7685b2df099ee2984a1a79a6832dd7633344ca4446d1",
+    "e17f6dc29110ed028e5c0b257c2388c990eb6c3e811ec0460f1455de70a555db",
+    "e4b406d69d39997078b3ca7f1df50b6a90f1ff3f93058cb60fffbd92bff60ee5",
+    "e63e78cf97c42eaeb07ca6af4687900c3a51910cf762f0549d40e886479d709f",
+    "e76024f836064d80d1972462160e51699e7cff4f46b0ecb30251bcd94da18184",
+    "eb3e210bc2c5f5ae4c3fa75f8435b2e21c7868d6f9af3bd1248107802f75a354",
+    "f19f9444d01cfd8a565e5878d51b982c5a08f8e62f1754d452e1e5c4739a3ae7",
+    "f2584b44fccc7b58d534d7929d8e84f2c4a396c237df7bc6d2aa5e72cdc4d51a",
+    "f78a1937fc29adbe846b4afdce7f8eb829e3c093db26e1299432be11ba6c9fe2",
+    "f960d5ea5370f09e36a5a365326a221883a2b9c26e22ed39d391cab47ccab07f"
+  ],
+  "quarantined_windows": [
+    "seed_103_r0_w0",
+    "seed_104_r0_w0",
+    "seed_108_r0_w0",
+    "seed_120_r0_w0",
+    "seed_129_r0_w0"
+  ],
+  "summary": {
+    "n_rows": 712,
+    "n_states_flagged": 46,
+    "n_windows_flagged": 5
+  },
+  "task_id": "gremlin_nob",
+  "version": 1
+}
