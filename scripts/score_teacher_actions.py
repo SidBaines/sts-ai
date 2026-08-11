@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Score action-only teacher targets under a local MLX base model or adapter."""
+"""Evaluate compact teacher targets under a local MLX base model or adapter."""
 from __future__ import annotations
 
 import argparse
@@ -19,8 +19,12 @@ from sts_ai.teacher import (
 )
 from sts_ai.teacher_action_eval import (
     ACTION_ONLY_OUTPUT_CONTRACT,
+    DEFAULT_GENERATION_MAX_TOKENS,
+    EVALUATED_OUTPUT_CONTRACTS,
+    MlxGreedyGenerator,
     MlxCandidateScorer,
     build_teacher_action_report,
+    build_teacher_generation_report,
 )
 
 
@@ -105,7 +109,11 @@ def _adapter_provenance(path: Path | None) -> dict[str, Any] | None:
     }
 
 
-def _manifest_provenance(path: Path | None) -> dict[str, Any]:
+def _manifest_provenance(
+    path: Path | None,
+    *,
+    output_contract: str = ACTION_ONLY_OUTPUT_CONTRACT,
+) -> dict[str, Any]:
     if path is None:
         raise ValueError("teacher scoring requires a dataset manifest")
     value = json.loads(path.read_text(encoding="utf-8"))
@@ -113,8 +121,12 @@ def _manifest_provenance(path: Path | None) -> dict[str, Any]:
         raise ValueError("teacher manifest must be search_teacher_sft version 3")
     if value.get("loss_mask_mode") != "action":
         raise ValueError("teacher manifest loss_mask_mode must be 'action'")
-    if value.get("output_contract") != ACTION_ONLY_OUTPUT_CONTRACT:
-        raise ValueError("teacher manifest output_contract must be 'action_only'")
+    if value.get("output_contract") != output_contract:
+        if output_contract == ACTION_ONLY_OUTPUT_CONTRACT:
+            raise ValueError("teacher manifest output_contract must be 'action_only'")
+        raise ValueError(
+            f"teacher manifest output_contract must be {output_contract!r}"
+        )
     if value.get("enable_thinking") is not False:
         raise ValueError("action-only teacher manifest must set enable_thinking=false")
     if value.get("observation_version") != EXPECTED_OBSERVATION_VERSION:
@@ -179,6 +191,25 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument(
+        "--contract",
+        choices=EVALUATED_OUTPUT_CONTRACTS,
+        default=ACTION_ONLY_OUTPUT_CONTRACT,
+    )
+    parser.add_argument(
+        "--mode",
+        choices=("candidates", "generate"),
+        default="candidates",
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=DEFAULT_GENERATION_MAX_TOKENS,
+        help=(
+            "Maximum new tokens in --mode generate "
+            f"(default: {DEFAULT_GENERATION_MAX_TOKENS})."
+        ),
+    )
+    parser.add_argument(
         "--per-row-out",
         type=Path,
         default=None,
@@ -190,11 +221,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         and args.per_row_out.resolve(strict=False) == args.out.resolve(strict=False)
     ):
         parser.error("--per-row-out and --out must be distinct")
+    if args.max_tokens <= 0:
+        parser.error("--max-tokens must be positive")
     return args
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
+    if args.out.exists() or args.out.is_symlink():
+        raise ValueError(f"output_must_be_fresh:{args.out}")
     if args.per_row_out is not None and (
         args.per_row_out.exists() or args.per_row_out.is_symlink()
     ):
@@ -207,7 +242,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     rows = _load_jsonl(args.dataset)
     if not rows:
         raise ValueError("teacher dataset is empty")
-    manifest = _manifest_provenance(manifest_path)
+    manifest = _manifest_provenance(
+        manifest_path,
+        output_contract=args.contract,
+    )
     if dataset_sha256 != file_sha256(args.dataset):
         raise RuntimeError("teacher dataset changed while it was loaded")
     if manifest["n_examples"] != len(rows):
@@ -226,29 +264,47 @@ def main(argv: Sequence[str] | None = None) -> None:
                 f"teacher dataset row {row_index} has invalid teacher_selection_rule"
             )
     adapter = _adapter_provenance(args.adapter_path)
-    scorer = MlxCandidateScorer(
-        args.model,
-        adapter_path=str(args.adapter_path.resolve()) if args.adapter_path else None,
-    )
-    report = build_teacher_action_report(
-        rows,
-        scorer,
-        provenance={
-            "dataset": {
-                "path": str(args.dataset.resolve()),
-                "sha256": dataset_sha256,
-            },
-            "manifest": manifest,
-            "model_id": args.model,
-            "adapter": adapter,
-            "backend": "mlx",
-            "git_head": _git_head(),
-            "evaluator_source_sha256": file_sha256(
-                Path(__file__).resolve().parents[1]
-                / "src/sts_ai/teacher_action_eval.py"
-            ),
+    provenance = {
+        "dataset": {
+            "path": str(args.dataset.resolve()),
+            "sha256": dataset_sha256,
         },
+        "manifest": manifest,
+        "model_id": args.model,
+        "adapter": adapter,
+        "backend": "mlx",
+        "git_head": _git_head(),
+        "evaluator_source_sha256": file_sha256(
+            Path(__file__).resolve().parents[1]
+            / "src/sts_ai/teacher_action_eval.py"
+        ),
+    }
+    adapter_path = (
+        str(args.adapter_path.resolve()) if args.adapter_path else None
     )
+    if args.mode == "candidates":
+        scorer = MlxCandidateScorer(
+            args.model,
+            adapter_path=adapter_path,
+        )
+        report = build_teacher_action_report(
+            rows,
+            scorer,
+            provenance=provenance,
+            output_contract=args.contract,
+        )
+    else:
+        generator = MlxGreedyGenerator(
+            args.model,
+            adapter_path=adapter_path,
+        )
+        report = build_teacher_generation_report(
+            rows,
+            generator,
+            output_contract=args.contract,
+            max_tokens=args.max_tokens,
+            provenance=provenance,
+        )
     if dataset_sha256 != file_sha256(args.dataset):
         raise RuntimeError("teacher dataset changed while it was scored")
     if manifest["sha256"] != file_sha256(manifest["path"]):
@@ -270,9 +326,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             for row in report["rows"]
         ).encode("utf-8")
         _publish_fresh(args.per_row_out, per_row_payload)
-    args.out.parent.mkdir(parents=True, exist_ok=True)
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
-    args.out.write_text(rendered, encoding="utf-8")
+    _publish_fresh(args.out, rendered.encode("utf-8"))
     print(rendered, end="")
 
 

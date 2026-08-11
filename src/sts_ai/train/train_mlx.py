@@ -15,7 +15,11 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from sts_ai.prompting import ACTION_ONLY_OUTPUT
+from sts_ai.prompting import (
+    ACTION_ONLY_OUTPUT,
+    ACTION_TEXT_OUTPUT,
+    TURN_PLAN_OUTPUT,
+)
 from sts_ai.provenance import file_sha256
 from sts_ai.teacher import (
     AGGREGATED_ROOT_VISITS,
@@ -802,7 +806,18 @@ def _validate_search_teacher_training_contract(
     base_model: str,
     expected_example_count: int | None,
 ) -> str:
-    """Validate the content-addressed action-only teacher SFT boundary."""
+    """Validate the content-addressed compact teacher SFT boundary."""
+
+    output_contract = manifest.get("output_contract")
+    if output_contract not in (
+        ACTION_ONLY_OUTPUT,
+        ACTION_TEXT_OUTPUT,
+        TURN_PLAN_OUTPUT,
+    ):
+        raise ValueError(
+            "search-teacher SFT manifest output_contract must be one of "
+            "'action_only', 'action_text', or 'turn_plan'"
+        )
 
     expected_manifest = {
         "kind": _SEARCH_TEACHER_SFT_KIND,
@@ -811,7 +826,7 @@ def _validate_search_teacher_training_contract(
         "teacher_selection_rule": AGGREGATED_ROOT_VISITS,
         "teacher_privilege": TEACHER_PRIVILEGE,
         "loss_mask_mode": "action",
-        "output_contract": ACTION_ONLY_OUTPUT,
+        "output_contract": output_contract,
         "enable_thinking": False,
         "tokenizer_id": base_model,
     }
@@ -853,7 +868,7 @@ def _validate_search_teacher_training_contract(
             "teacher_selection_rule": AGGREGATED_ROOT_VISITS,
             "teacher_privilege": TEACHER_PRIVILEGE,
             "loss_mask_mode": "action",
-            "output_contract": ACTION_ONLY_OUTPUT,
+            "output_contract": output_contract,
         }
         row_mismatches = {
             key: {"stored": row.get(key), "expected": expected}
@@ -866,11 +881,14 @@ def _validate_search_teacher_training_contract(
                 f"training contract: {json.dumps(row_mismatches, sort_keys=True)}"
             )
         try:
-            validate_teacher_row(row)
+            validate_teacher_row(
+                row,
+                output_contract=str(output_contract),
+            )
         except ValueError as exc:
             raise ValueError(
                 f"search-teacher SFT dataset row {row_index} has an invalid "
-                f"action-only target: {exc}"
+                f"{output_contract} target: {exc}"
             ) from exc
 
     manifest_digest = manifest.get("dataset_sha256")

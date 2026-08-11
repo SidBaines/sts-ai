@@ -10,7 +10,27 @@ NEUTRAL_FRAME = (
 
 REASONING_ACTION_OUTPUT = "reasoning_action"
 ACTION_ONLY_OUTPUT = "action_only"
-OUTPUT_CONTRACTS = (REASONING_ACTION_OUTPUT, ACTION_ONLY_OUTPUT)
+ACTION_TEXT_OUTPUT = "action_text"
+TURN_PLAN_OUTPUT = "turn_plan"
+OUTPUT_CONTRACTS = (
+    REASONING_ACTION_OUTPUT,
+    ACTION_ONLY_OUTPUT,
+    ACTION_TEXT_OUTPUT,
+    TURN_PLAN_OUTPUT,
+)
+
+ACTION_TEXT_INSTRUCTION = (
+    "Return exactly one JSON object with this schema:\n"
+    '{"action": "<the exact text of one legal action>"}\n'
+    "Copy the action text exactly as it appears in LEGAL ACTIONS."
+)
+TURN_PLAN_INSTRUCTION = (
+    "Return exactly one JSON object with this schema:\n"
+    '{"plan": ["<action text>", "..."], "action": "<the first entry of plan>"}\n'
+    '"plan" lists, in order, the exact texts of the actions you intend to take '
+    'this turn (end it with "end turn"). "action" repeats the first entry.\n'
+    "Copy action texts exactly as they appear in LEGAL ACTIONS."
+)
 
 
 def validate_output_contract(output_contract: str) -> None:
@@ -43,17 +63,31 @@ def render_action_prompt(
     # Keep the historical default literal in its own branch: this function is a
     # frozen policy interface, so opting into the compact action-only contract
     # must not perturb existing prompts by even one byte.
-    output_schema = (
-        '{"reasoning": "brief private reasoning", "action_index": 0}'
-        if output_contract == REASONING_ACTION_OUTPUT
-        else '{"action_index": 0}'
-    )
+    if output_contract in (REASONING_ACTION_OUTPUT, ACTION_ONLY_OUTPUT):
+        output_schema = (
+            '{"reasoning": "brief private reasoning", "action_index": 0}'
+            if output_contract == REASONING_ACTION_OUTPUT
+            else '{"action_index": 0}'
+        )
+        output_instruction = (
+            "Return exactly one JSON object with this schema:\n"
+            f"{output_schema}"
+        )
+        choice_instruction = (
+            f"Valid action_index values are: {valid_indices}. Use only these LEGAL ACTIONS indices; "
+            "do not use hand, enemy, deck, or map indices as action_index."
+        )
+    else:
+        output_instruction = (
+            ACTION_TEXT_INSTRUCTION
+            if output_contract == ACTION_TEXT_OUTPUT
+            else TURN_PLAN_INSTRUCTION
+        )
+        choice_instruction = "Choose from the LEGAL ACTIONS list below."
     return (
         f"{framing}\n\n"
-        "Return exactly one JSON object with this schema:\n"
-        f"{output_schema}\n\n"
-        f"Valid action_index values are: {valid_indices}. Use only these LEGAL ACTIONS indices; "
-        "do not use hand, enemy, deck, or map indices as action_index.\n\n"
+        f"{output_instruction}\n\n"
+        f"{choice_instruction}\n\n"
         f"{reasoning_instruction}"
         f"GAME STATE\n{state_text}\n\n"
         f"LEGAL ACTIONS\n{action_lines}\n"

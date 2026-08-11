@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import unittest
 
-from sts_ai.prompting import ACTION_ONLY_OUTPUT, render_action_prompt
+from sts_ai.prompting import (
+    ACTION_ONLY_OUTPUT,
+    ACTION_TEXT_OUTPUT,
+    TURN_PLAN_OUTPUT,
+    render_action_prompt,
+)
 from sts_ai.schemas import LegalAction
 
 
@@ -68,6 +73,45 @@ class RenderActionPromptTest(unittest.TestCase):
         self.assertIn('Return exactly one JSON object with this schema:\n{"action_index": 0}', prompt)
         self.assertNotIn('"reasoning"', prompt)
         self.assertIn("Valid action_index values are: 0, 1.", prompt)
+
+    def test_action_text_contract_uses_frozen_semantic_instruction(self):
+        prompt = render_action_prompt(
+            self.state_text,
+            self.actions,
+            output_contract=ACTION_TEXT_OUTPUT,
+        )
+
+        self.assertIn(
+            "Return exactly one JSON object with this schema:\n"
+            '{"action": "<the exact text of one legal action>"}\n'
+            "Copy the action text exactly as it appears in LEGAL ACTIONS.",
+            prompt,
+        )
+        self.assertIn("Choose from the LEGAL ACTIONS list below.", prompt)
+        self.assertNotIn("Valid action_index values are:", prompt)
+        self.assertTrue(
+            prompt.endswith(
+                "LEGAL ACTIONS\n0: play Strike -> Jaw Worm\n1: end turn\n"
+            )
+        )
+
+    def test_turn_plan_contract_uses_frozen_semantic_instruction(self):
+        prompt = render_action_prompt(
+            self.state_text,
+            self.actions,
+            output_contract=TURN_PLAN_OUTPUT,
+        )
+
+        self.assertIn(
+            "Return exactly one JSON object with this schema:\n"
+            '{"plan": ["<action text>", "..."], "action": "<the first entry of plan>"}\n'
+            '"plan" lists, in order, the exact texts of the actions you intend to take '
+            'this turn (end it with "end turn"). "action" repeats the first entry.\n'
+            "Copy action texts exactly as they appear in LEGAL ACTIONS.",
+            prompt,
+        )
+        self.assertIn("Choose from the LEGAL ACTIONS list below.", prompt)
+        self.assertNotIn("Valid action_index values are:", prompt)
 
     def test_unknown_output_contract_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "output_contract"):

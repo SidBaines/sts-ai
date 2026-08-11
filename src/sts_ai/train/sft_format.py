@@ -12,10 +12,16 @@ import json
 import re
 from typing import Any
 
-from sts_ai.prompting import REASONING_ACTION_OUTPUT, render_action_prompt
+from sts_ai.prompting import (
+    ACTION_TEXT_OUTPUT,
+    REASONING_ACTION_OUTPUT,
+    TURN_PLAN_OUTPUT,
+    render_action_prompt,
+)
 from sts_ai.schemas import LegalAction
 
 __all__ = [
+    "TURN_PLAN_END_ACTION",
     "chat_template_probe_hash",
     "user_content",
     "reconstruct_prompt",
@@ -29,8 +35,10 @@ __all__ = [
 ]
 
 
+TURN_PLAN_END_ACTION = "end turn"
 LOSS_MASK_MODES = ("completion", "action")
 _ACTION_KEY = "action_index"
+_SEMANTIC_ACTION_KEY = "action"
 _FORMAT_MARKER_RE = re.compile(
     r"(?:<think>|</think>|<\|channel>thought|<channel\|>|"
     r"<\|channel\|>(?:thought|final)|```(?:json)?)",
@@ -190,6 +198,18 @@ def build_example(
             raise ValueError("action loss requires an integer agent.action_index")
         example["loss_mask_mode"] = "action"
         example["target_action_index"] = expected_action_index
+        if output_contract in (ACTION_TEXT_OUTPUT, TURN_PLAN_OUTPUT):
+            descriptions = {
+                action.index: action.description
+                for action in _legal_actions_from_record(record)
+            }
+            if expected_action_index not in descriptions:
+                raise ValueError(
+                    "action loss requires agent.action_index to identify a legal action"
+                )
+            example["target_action_description"] = descriptions[
+                expected_action_index
+            ]
         example["assistant_turn_terminator"] = assistant_turn_terminator(tokenizer)
         tokenized = tokenize_example(example, tokenizer, loss_mask_mode="action")
         example["token_counts"] = _token_counts(tokenized)
@@ -326,7 +346,9 @@ def _balanced_json_candidates(text: str) -> list[tuple[str, tuple[int, int]]]:
 def _action_object_span(
     text: str,
     *,
-    expected_action_index: int | None,
+    action_key: str,
+    expected_action: int | str | None,
+    output_contract: str,
 ) -> tuple[int, int]:
     stripped = text.strip()
     offset = len(text) - len(text.lstrip())
@@ -343,17 +365,30 @@ def _action_object_span(
             continue
         if not isinstance(parsed, dict):
             continue
-        action_index = parsed.get(_ACTION_KEY)
-        if isinstance(action_index, bool) or not isinstance(action_index, int):
-            raise ValueError("final JSON object has no integer action_index")
-        if (
-            expected_action_index is not None
-            and action_index != expected_action_index
-        ):
+        action = parsed.get(action_key)
+        if action_key == _ACTION_KEY:
+            if isinstance(action, bool) or not isinstance(action, int):
+                raise ValueError("final JSON object has no integer action_index")
+        elif not isinstance(action, str):
+            raise ValueError("final JSON object has no string action")
+        if expected_action is not None and action != expected_action:
             raise ValueError(
-                "final JSON action_index disagrees with recorded action: "
-                f"json={action_index} recorded={expected_action_index}"
+                f"final JSON {action_key} disagrees with recorded action: "
+                f"json={action!r} recorded={expected_action!r}"
             )
+        if output_contract == TURN_PLAN_OUTPUT:
+            plan = parsed.get("plan")
+            if (
+                not isinstance(plan, list)
+                or not plan
+                or any(not isinstance(item, str) for item in plan)
+                or action != plan[0]
+                or plan[-1] != TURN_PLAN_END_ACTION
+            ):
+                raise ValueError(
+                    "final JSON turn plan must be a non-empty string list whose "
+                    "first entry matches action and whose final entry is end turn"
+                )
         return span
     raise ValueError("completion has no parseable JSON action object")
 
@@ -395,6 +430,8 @@ def _character_categories(
     completion: str,
     *,
     expected_action_index: int | None,
+    expected_action_description: str | None,
+    output_contract: str,
     turn_terminator: str,
 ) -> tuple[str, list[str]]:
     target = completion
@@ -405,17 +442,32 @@ def _character_categories(
     # default. Explicit syntax/channel markers and the turn suffix are promoted
     # to format tokens below.
     categories = ["thought"] * len(target)
+    semantic_output = output_contract in (ACTION_TEXT_OUTPUT, TURN_PLAN_OUTPUT)
+    action_key = _SEMANTIC_ACTION_KEY if semantic_output else _ACTION_KEY
+    expected_action: int | str | None = (
+        expected_action_description if semantic_output else expected_action_index
+    )
     object_span = _action_object_span(
         completion,
-        expected_action_index=expected_action_index,
+        action_key=action_key,
+        expected_action=expected_action,
+        output_contract=output_contract,
     )
     object_start, object_end = object_span
-    categories[object_start] = "format"
-    categories[object_end - 1] = "format"
+    if semantic_output:
+        # Semantic contracts contain no optional rationale fields. Their entire
+        # JSON object is required format, except for the policy-bearing string
+        # value overridden to ``action`` below. In particular, turn_plan's plan
+        # array is format context rather than another policy target.
+        for index in range(object_start, object_end):
+            categories[index] = "format"
+    else:
+        categories[object_start] = "format"
+        categories[object_end - 1] = "format"
 
     found_action = False
     for key, key_span, value_span in _json_members(completion, object_span):
-        if key == _ACTION_KEY:
+        if key == action_key:
             found_action = True
             # Supervise exactly the syntax needed for the policy-bearing field,
             # not keys/punctuation belonging to optional rationale/metadata.
@@ -424,7 +476,7 @@ def _character_categories(
             for index in range(*value_span):
                 categories[index] = "action"
     if not found_action:
-        raise ValueError("final JSON object has no action_index member")
+        raise ValueError(f"final JSON object has no {action_key} member")
 
     for marker in _FORMAT_MARKER_RE.finditer(target):
         for index in range(marker.start(), marker.end()):
@@ -537,6 +589,10 @@ def tokenize_example(
         completion, char_categories = _character_categories(
             str(example["completion"]),
             expected_action_index=example.get("target_action_index"),
+            expected_action_description=example.get("target_action_description"),
+            output_contract=str(
+                example.get("output_contract", REASONING_ACTION_OUTPUT)
+            ),
             turn_terminator=terminator,
         )
         completion_ids, offsets = _completion_ids_and_offsets(tokenizer, completion)

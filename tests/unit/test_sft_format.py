@@ -11,11 +11,13 @@ from sts_ai.train.sft_format import (
     assistant_turn_content,
     build_example,
     completion_text,
+    loss_mask_token_accounting,
     reconstruct_prompt,
     resolve_loss_mask_mode,
     tokenize_example,
     user_content,
 )
+from sts_ai.prompting import ACTION_TEXT_OUTPUT, TURN_PLAN_OUTPUT
 
 
 FRAMING = "Test framing: choose the most defensible legal action."
@@ -644,6 +646,161 @@ class SftFormatTest(unittest.TestCase):
             example["token_counts"]["n_supervised_thought_tokens"],
             0,
         )
+
+    def test_action_text_mask_targets_exact_json_string_value(self):
+        tokenizer = OffsetCharTokenizer()
+        description = "play Strike -> Jaw Worm (deal 9)"
+        completion = json.dumps({"action": description}, separators=(",", ":"))
+        tokenized = tokenize_example(
+            {
+                "prompt": "prompt",
+                "completion": completion,
+                "output_contract": ACTION_TEXT_OUTPUT,
+                "target_action_description": description,
+                "assistant_turn_terminator": "<turn>",
+            },
+            tokenizer,
+            loss_mask_mode="action",
+        )
+
+        start = tokenized["n_prompt_tokens"]
+        action_text = "".join(
+            chr(token_id)
+            for token_id, is_action in zip(
+                tokenized["input_ids"][start:],
+                tokenized["action_mask"][start:],
+            )
+            if is_action
+        )
+        self.assertEqual(action_text, json.dumps(description))
+        self.assertEqual(tokenized["n_supervised_thought_tokens"], 0)
+        self.assertGreater(tokenized["n_supervised_format_tokens"], 0)
+
+    def test_action_text_contract_rejects_mismatched_or_missing_action(self):
+        tokenizer = OffsetCharTokenizer()
+        base = {
+            "prompt": "prompt",
+            "output_contract": ACTION_TEXT_OUTPUT,
+            "target_action_description": "play Strike -> Jaw Worm (deal 9)",
+            "assistant_turn_terminator": "<turn>",
+        }
+        for completion in (
+            '{"action":"end turn"}',
+            '{"not_action":"play Strike -> Jaw Worm (deal 9)"}',
+        ):
+            with self.subTest(completion=completion):
+                with self.assertRaises(ValueError):
+                    tokenize_example(
+                        {**base, "completion": completion},
+                        tokenizer,
+                        loss_mask_mode="action",
+                    )
+
+    def test_turn_plan_array_is_format_and_first_action_value_is_target(self):
+        tokenizer = OffsetCharTokenizer()
+        first = "play Bash -> Gremlin Nob (deal 8)"
+        plan = [first, "play Strike -> Gremlin Nob (deal 9)", "end turn"]
+        completion = json.dumps(
+            {"plan": plan, "action": first},
+            separators=(",", ":"),
+        )
+        tokenized = tokenize_example(
+            {
+                "prompt": "prompt",
+                "completion": completion,
+                "output_contract": TURN_PLAN_OUTPUT,
+                "target_action_description": first,
+                "assistant_turn_terminator": "<turn>",
+            },
+            tokenizer,
+            loss_mask_mode="action",
+        )
+
+        start = tokenized["n_prompt_tokens"]
+        action_text = "".join(
+            chr(token_id)
+            for token_id, is_action in zip(
+                tokenized["input_ids"][start:],
+                tokenized["action_mask"][start:],
+            )
+            if is_action
+        )
+        self.assertEqual(action_text, json.dumps(first))
+        self.assertEqual(tokenized["n_thought_tokens"], 0)
+        self.assertGreater(tokenized["n_format_tokens"], len(json.dumps(plan)))
+
+    def test_turn_plan_contract_rejects_mismatched_or_missing_plan(self):
+        tokenizer = OffsetCharTokenizer()
+        action = "play Bash -> Gremlin Nob (deal 8)"
+        base = {
+            "prompt": "prompt",
+            "output_contract": TURN_PLAN_OUTPUT,
+            "target_action_description": action,
+            "assistant_turn_terminator": "<turn>",
+        }
+        for completion in (
+            json.dumps(
+                {"plan": ["end turn"], "action": action},
+                separators=(",", ":"),
+            ),
+            json.dumps({"action": action}, separators=(",", ":")),
+        ):
+            with self.subTest(completion=completion):
+                with self.assertRaises(ValueError):
+                    tokenize_example(
+                        {**base, "completion": completion},
+                        tokenizer,
+                        loss_mask_mode="action",
+                    )
+
+    def test_semantic_build_examples_round_trip_and_account(self):
+        tokenizer = OffsetCharTokenizer()
+        examples = []
+        for output_contract, completion in (
+            (
+                ACTION_TEXT_OUTPUT,
+                '{"action":"event option one"}',
+            ),
+            (
+                TURN_PLAN_OUTPUT,
+                '{"plan":["event option one","end turn"],'
+                '"action":"event option one"}',
+            ),
+        ):
+            with self.subTest(output_contract=output_contract):
+                example = build_example(
+                    _record(
+                        legal_actions=[
+                            {"index": 0, "bits": 0, "description": "event option zero"},
+                            {"index": 1, "bits": 8, "description": "event option one"},
+                            {"index": 2, "bits": 9, "description": "end turn"},
+                        ],
+                        agent={
+                            "action_index": 1,
+                            "raw_response": completion,
+                        },
+                    ),
+                    FRAMING,
+                    tokenizer=tokenizer,
+                    enable_thinking=False,
+                    loss_mask_mode="action",
+                    output_contract=output_contract,
+                )
+                tokenized = tokenize_example(
+                    example,
+                    tokenizer,
+                    loss_mask_mode="action",
+                )
+                self.assertEqual(example["completion"], completion)
+                self.assertEqual(example["target_action_description"], "event option one")
+                self.assertGreater(tokenized["n_action_tokens"], 0)
+                self.assertGreater(example["token_counts"]["n_supervised_tokens"], 0)
+                examples.append(example)
+
+        accounting = loss_mask_token_accounting(examples)
+        self.assertEqual(accounting["n_examples"], 2)
+        self.assertEqual(accounting["n_examples_counted"], 2)
+        self.assertGreater(accounting["totals"]["n_action_tokens"], 0)
 
     def test_assistant_turn_terminator_is_derived_from_template(self):
         self.assertEqual(assistant_turn_terminator(OffsetCharTokenizer()), "<turn>")

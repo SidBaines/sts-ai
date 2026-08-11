@@ -16,12 +16,27 @@ from scripts.score_teacher_actions import (
     main as score_main,
 )
 from sts_ai.teacher_action_eval import (
+    ACTION_ONLY_OUTPUT_CONTRACT,
+    ACTION_TEXT_OUTPUT_CONTRACT,
     CandidateSequenceScore,
     MlxCandidateScorer,
+    MlxGreedyGenerator,
+    TURN_PLAN_OUTPUT_CONTRACT,
     action_completion,
+    action_text_completion,
     build_teacher_action_report,
+    build_teacher_generation_report,
+    declared_action_descriptions,
     declared_action_indices,
+    evaluate_generated_action,
+    rerender_turn_plan_prompt_for_action_text,
+    turn_plan_completion,
 )
+from sts_ai.prompting import render_action_prompt
+from sts_ai.schemas import LegalAction
+
+
+SEMANTIC_ASSISTANT_TURN_TERMINATOR = "<turn|>\n"
 
 
 def _prompt(indices: str = "0, 1, 2") -> str:
@@ -53,6 +68,44 @@ def _row(
     }
 
 
+def _semantic_prompt(output_contract: str) -> str:
+    user_prompt = render_action_prompt(
+        "Player HP: 40/80\nGAME STATE sentinel",
+        [
+            LegalAction(index=0, bits=10, description="play Bash -> Nob"),
+            LegalAction(index=1, bits=11, description="play Strike -> Nob"),
+            LegalAction(index=2, bits=12, description="end turn"),
+        ],
+        output_contract=output_contract,
+    )
+    return (
+        "<bos>"
+        + user_prompt.removesuffix("\n")
+        + SEMANTIC_ASSISTANT_TURN_TERMINATOR
+        + "<|turn>model\n"
+    )
+
+
+def _semantic_row(
+    output_contract: str,
+    *,
+    teacher: int = 0,
+) -> dict:
+    descriptions = ["play Bash -> Nob", "play Strike -> Nob", "end turn"]
+    completion = (
+        action_text_completion(descriptions[teacher])
+        if output_contract == ACTION_TEXT_OUTPUT_CONTRACT
+        else turn_plan_completion([descriptions[teacher], "end turn"])
+    )
+    return {
+        **_row(teacher=teacher, prompt=_semantic_prompt(output_contract)),
+        "output_contract": output_contract,
+        "completion": completion,
+        "target_action_description": descriptions[teacher],
+        "assistant_turn_terminator": SEMANTIC_ASSISTANT_TURN_TERMINATOR,
+    }
+
+
 class FakeScorer:
     def __init__(self, log_probabilities: dict[str, float]):
         self.log_probabilities = log_probabilities
@@ -65,6 +118,27 @@ class FakeScorer:
             CandidateSequenceScore(self.log_probabilities[value], len(value))
             for value in completions
         ]
+
+
+class SizedFakeScorer:
+    def __init__(self, values):
+        self.values = values
+        self.calls = []
+
+    def score_candidates(self, prompt, completions):
+        completions = list(completions)
+        self.calls.append((prompt, completions))
+        return [CandidateSequenceScore(*self.values[value]) for value in completions]
+
+
+class FakeGenerator:
+    def __init__(self, values):
+        self.values = iter(values)
+        self.calls = []
+
+    def generate(self, prompt, *, max_tokens):
+        self.calls.append((prompt, max_tokens))
+        return next(self.values)
 
 
 class DeclaredActionIndicesTest(unittest.TestCase):
@@ -84,6 +158,283 @@ class DeclaredActionIndicesTest(unittest.TestCase):
             with self.subTest(prompt=prompt[:40]):
                 with self.assertRaises(ValueError):
                     declared_action_indices(prompt)
+
+
+class DeclaredActionDescriptionsTest(unittest.TestCase):
+    def test_parses_exact_numbered_menu(self):
+        self.assertEqual(
+            declared_action_descriptions(
+                _semantic_prompt(ACTION_TEXT_OUTPUT_CONTRACT),
+                assistant_turn_terminator=SEMANTIC_ASSISTANT_TURN_TERMINATOR,
+            ),
+            ["play Bash -> Nob", "play Strike -> Nob", "end turn"],
+        )
+
+    def test_realistic_template_tail_does_not_pollute_last_description(self):
+        prompt = _semantic_prompt(ACTION_TEXT_OUTPUT_CONTRACT)
+
+        self.assertTrue(
+            prompt.endswith("\n2: end turn<turn|>\n<|turn>model\n")
+        )
+        self.assertEqual(
+            declared_action_descriptions(
+                prompt,
+                assistant_turn_terminator=SEMANTIC_ASSISTANT_TURN_TERMINATOR,
+            )[-1],
+            "end turn",
+        )
+
+    def test_rejects_empty_menu_and_junk_before_menu(self):
+        bad_prompts = (
+            "<bos>LEGAL ACTIONS<turn|>\n<|turn>model\n",
+            (
+                "<bos>LEGAL ACTIONS\nnot a menu entry\n0: end turn"
+                "<turn|>\n<|turn>model\n"
+            ),
+        )
+        for prompt in bad_prompts:
+            with self.subTest(prompt=prompt):
+                with self.assertRaises(ValueError):
+                    declared_action_descriptions(
+                        prompt,
+                        assistant_turn_terminator=(
+                            SEMANTIC_ASSISTANT_TURN_TERMINATOR
+                        ),
+                    )
+
+    def test_rejects_noncontiguous_duplicate_and_duplicated_menus(self):
+        base = _semantic_prompt(ACTION_TEXT_OUTPUT_CONTRACT)
+        bad_prompts = (
+            base.replace("1: play Strike -> Nob", "3: play Strike -> Nob"),
+            base.replace("1: play Strike -> Nob", "0: play Strike -> Nob"),
+            base.replace(
+                SEMANTIC_ASSISTANT_TURN_TERMINATOR,
+                "\nLEGAL ACTIONS\n0: duplicate"
+                + SEMANTIC_ASSISTANT_TURN_TERMINATOR,
+            ),
+        )
+        for prompt in bad_prompts:
+            with self.subTest(prompt=prompt[-80:]):
+                with self.assertRaises(ValueError):
+                    declared_action_descriptions(
+                        prompt,
+                        assistant_turn_terminator=(
+                            SEMANTIC_ASSISTANT_TURN_TERMINATOR
+                        ),
+                    )
+
+
+class SemanticCandidateReportTest(unittest.TestCase):
+    def test_last_entry_teacher_action_scores_with_realistic_template_tail(self):
+        row = _semantic_row(ACTION_TEXT_OUTPUT_CONTRACT, teacher=2)
+        candidates = [
+            action_text_completion("play Bash -> Nob"),
+            action_text_completion("play Strike -> Nob"),
+            action_text_completion("end turn"),
+        ]
+        scorer = SizedFakeScorer(
+            {
+                candidate: (-float(index + 1), 2)
+                for index, candidate in enumerate(candidates)
+            }
+        )
+
+        report = build_teacher_action_report(
+            [row],
+            scorer,
+            output_contract=ACTION_TEXT_OUTPUT_CONTRACT,
+        )
+
+        self.assertEqual(report["n_scored_rows"], 1)
+        self.assertEqual(report["n_skipped_rows"], 0)
+        self.assertEqual(scorer.calls, [(row["prompt"], candidates)])
+        self.assertEqual(report["rows"][0]["teacher_action_index"], 2)
+
+    def test_semantic_contract_invariants_raise_instead_of_skipping(self):
+        cases = []
+        missing_terminator = _semantic_row(ACTION_TEXT_OUTPUT_CONTRACT)
+        del missing_terminator["assistant_turn_terminator"]
+        cases.append((missing_terminator, "missing_assistant_turn_terminator"))
+        empty_terminator = _semantic_row(ACTION_TEXT_OUTPUT_CONTRACT)
+        empty_terminator["assistant_turn_terminator"] = ""
+        cases.append((empty_terminator, "missing_assistant_turn_terminator"))
+        drifted_target = _semantic_row(ACTION_TEXT_OUTPUT_CONTRACT)
+        drifted_target["target_action_description"] = "play Strike -> Nob"
+        cases.append((drifted_target, "target_action_description_mismatch"))
+
+        for row, error in cases:
+            with self.subTest(error=error):
+                with self.assertRaisesRegex(ValueError, error):
+                    build_teacher_action_report(
+                        [row],
+                        SizedFakeScorer({}),
+                        output_contract=ACTION_TEXT_OUTPUT_CONTRACT,
+                    )
+
+    def test_action_text_candidates_are_canonical_and_primary_uses_raw_sum(self):
+        row = _semantic_row(ACTION_TEXT_OUTPUT_CONTRACT, teacher=0)
+        candidates = [
+            action_text_completion("play Bash -> Nob"),
+            action_text_completion("play Strike -> Nob"),
+            action_text_completion("end turn"),
+        ]
+        scorer = SizedFakeScorer(
+            {
+                candidates[0]: (-1.0, 1),
+                candidates[1]: (-2.0, 20),
+                candidates[2]: (-3.0, 2),
+            }
+        )
+
+        report = build_teacher_action_report(
+            [row],
+            scorer,
+            output_contract=ACTION_TEXT_OUTPUT_CONTRACT,
+        )
+
+        scored = report["rows"][0]
+        self.assertEqual(scorer.calls, [(row["prompt"], candidates)])
+        self.assertEqual(scored["top1_action_index"], 0)
+        self.assertEqual(scored["top1_by_mean_token_index"], 1)
+        self.assertTrue(scored["top1_agreement"])
+        self.assertEqual(
+            [candidate["action_description"] for candidate in scored["candidates"]],
+            ["play Bash -> Nob", "play Strike -> Nob", "end turn"],
+        )
+
+    def test_turn_plan_scoring_swaps_only_instruction_and_uses_action_candidates(self):
+        row = _semantic_row(TURN_PLAN_OUTPUT_CONTRACT, teacher=1)
+        candidates = [
+            action_text_completion("play Bash -> Nob"),
+            action_text_completion("play Strike -> Nob"),
+            action_text_completion("end turn"),
+        ]
+        scorer = SizedFakeScorer(
+            {candidate: (-float(index + 1), 3) for index, candidate in enumerate(candidates)}
+        )
+
+        report = build_teacher_action_report(
+            [row],
+            scorer,
+            output_contract=TURN_PLAN_OUTPUT_CONTRACT,
+        )
+
+        scoring_prompt = scorer.calls[0][0]
+        self.assertEqual(scorer.calls[0][1], candidates)
+        self.assertNotEqual(scoring_prompt, row["prompt"])
+        self.assertEqual(
+            scoring_prompt.partition("GAME STATE\n")[2],
+            row["prompt"].partition("GAME STATE\n")[2],
+        )
+        self.assertEqual(report["rows"][0]["scoring_contract"], "action_text")
+
+    def test_rerender_rejects_missing_or_duplicate_instruction(self):
+        prompt = _semantic_prompt(TURN_PLAN_OUTPUT_CONTRACT)
+        rendered = rerender_turn_plan_prompt_for_action_text(prompt)
+        self.assertEqual(
+            rendered.partition("GAME STATE\n")[2],
+            prompt.partition("GAME STATE\n")[2],
+        )
+        with self.assertRaisesRegex(ValueError, "instruction_count"):
+            rerender_turn_plan_prompt_for_action_text("no instruction")
+
+    def test_noncanonical_semantic_completions_are_skipped(self):
+        action_rows = []
+        for completion in (
+            '{"action": "play Bash -> Nob"}',
+            '{"action":"not declared"}',
+            '{"action":"play Bash -> Nob","extra":1}',
+        ):
+            row = _semantic_row(ACTION_TEXT_OUTPUT_CONTRACT)
+            row["completion"] = completion
+            action_rows.append(row)
+        action_report = build_teacher_action_report(
+            action_rows,
+            FakeScorer({}),
+            output_contract=ACTION_TEXT_OUTPUT_CONTRACT,
+        )
+        self.assertEqual(
+            action_report["skipped_record_counts"],
+            {"noncanonical_action_text_completion": 3},
+        )
+
+        plan_rows = []
+        for completion in (
+            '{"action":"play Bash -> Nob","plan":["play Bash -> Nob","end turn"]}',
+            '{"plan":["play Bash -> Nob","end turn"],"action":"end turn"}',
+            '{"plan":[],"action":"play Bash -> Nob"}',
+            '{"plan":["play Bash -> Nob"],"action":"play Bash -> Nob"}',
+        ):
+            row = _semantic_row(TURN_PLAN_OUTPUT_CONTRACT)
+            row["completion"] = completion
+            plan_rows.append(row)
+        plan_report = build_teacher_action_report(
+            plan_rows,
+            FakeScorer({}),
+            output_contract=TURN_PLAN_OUTPUT_CONTRACT,
+        )
+        self.assertEqual(
+            plan_report["skipped_record_counts"],
+            {"noncanonical_turn_plan_completion": 4},
+        )
+
+
+class GenerativeTeacherActionEvalTest(unittest.TestCase):
+    def test_generated_parse_edges_are_fail_closed(self):
+        cases = (
+            ("not json", False, False, None),
+            ('{"action":"play Bash -> Nob","extra":1}', True, False, None),
+            ('{"action":"unknown"}', True, False, None),
+            ('prefix {"action":"play Bash -> Nob"}', False, False, None),
+            ('{"action":"play Bash -> Nob"} trailing', False, False, None),
+            ('{"action":"play Bash -> Nob"}', True, True, 0),
+        )
+        for text, valid_json, matched, chosen_index in cases:
+            with self.subTest(text=text):
+                result = evaluate_generated_action(
+                    text,
+                    output_contract=ACTION_TEXT_OUTPUT_CONTRACT,
+                    action_indices=[0, 1],
+                    action_descriptions=["play Bash -> Nob", "end turn"],
+                )
+                self.assertEqual(result["valid_json"], valid_json)
+                self.assertEqual(result["matched"], matched)
+                self.assertEqual(result["chosen_index"], chosen_index)
+
+    def test_generation_report_supports_all_contracts_and_aggregates(self):
+        cases = (
+            (ACTION_ONLY_OUTPUT_CONTRACT, _row(teacher=1), '{"action_index":1}'),
+            (
+                ACTION_TEXT_OUTPUT_CONTRACT,
+                _semantic_row(ACTION_TEXT_OUTPUT_CONTRACT, teacher=1),
+                '{"action":"play Strike -> Nob"}',
+            ),
+            (
+                TURN_PLAN_OUTPUT_CONTRACT,
+                _semantic_row(TURN_PLAN_OUTPUT_CONTRACT, teacher=1),
+                '{"plan":["play Strike -> Nob","end turn"],'
+                '"action":"play Strike -> Nob"}',
+            ),
+        )
+        for output_contract, row, generated in cases:
+            with self.subTest(output_contract=output_contract):
+                generator = FakeGenerator([generated])
+                report = build_teacher_generation_report(
+                    [row],
+                    generator,
+                    output_contract=output_contract,
+                )
+                self.assertEqual(report["kind"], "teacher_action_greedy_generation")
+                self.assertEqual(report["overall"]["valid_json_rate"], 1.0)
+                self.assertEqual(report["overall"]["matched_rate"], 1.0)
+                self.assertEqual(report["overall"]["top1_rate"], 1.0)
+                self.assertEqual(report["rows"][0]["chosen_index"], 1)
+                self.assertEqual(generator.calls, [(row["prompt"], 128)])
+
+    def test_mlx_generator_construction_is_lazy(self):
+        generator = MlxGreedyGenerator("fake/model", adapter_path="fake/adapter")
+        self.assertIsNone(generator._model)
+        self.assertIsNone(generator._tokenizer)
 
 
 class TeacherActionReportTest(unittest.TestCase):
@@ -359,6 +710,74 @@ class ScoreTeacherActionsCliTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "output_must_be_fresh"):
                 score_main(argv)
+
+    def test_generate_mode_supports_turn_plan_and_per_row_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = root / "teacher.jsonl"
+            manifest = root / "teacher.manifest.json"
+            output = root / "report.json"
+            per_row = root / "rows.jsonl"
+            row = {
+                **_semantic_row(TURN_PLAN_OUTPUT_CONTRACT, teacher=1),
+                "observation_version": "combat_public_v2",
+                "teacher_selection_rule": "aggregated_root_visits",
+            }
+            dataset.write_text(json.dumps(row) + "\n", encoding="utf-8")
+            dataset_sha256 = hashlib.sha256(dataset.read_bytes()).hexdigest()
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "kind": "search_teacher_sft",
+                        "version": 3,
+                        "loss_mask_mode": "action",
+                        "output_contract": TURN_PLAN_OUTPUT_CONTRACT,
+                        "enable_thinking": False,
+                        "tokenizer_id": "fake/model",
+                        "observation_version": "combat_public_v2",
+                        "teacher_selection_rule": "aggregated_root_visits",
+                        "teacher_privilege": "simulator_full_state",
+                        "n_examples": 1,
+                        "dataset_sha256": dataset_sha256,
+                        "source_labels": {
+                            "sha256": "a" * 64,
+                            "manifest_sha256": "b" * 64,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            generator = FakeGenerator(
+                [
+                    '{"plan":["play Strike -> Nob","end turn"],'
+                    '"action":"play Strike -> Nob"}'
+                ]
+            )
+            argv = [
+                str(dataset),
+                "--manifest",
+                str(manifest),
+                "--out",
+                str(output),
+                "--per-row-out",
+                str(per_row),
+                "--contract",
+                TURN_PLAN_OUTPUT_CONTRACT,
+                "--mode",
+                "generate",
+            ]
+            with mock.patch(
+                "scripts.score_teacher_actions.MlxGreedyGenerator",
+                return_value=generator,
+            ), redirect_stdout(io.StringIO()):
+                score_main(argv)
+
+            report = json.loads(output.read_text(encoding="utf-8"))
+            sidecar = [json.loads(line) for line in per_row.read_text().splitlines()]
+            self.assertEqual(report["kind"], "teacher_action_greedy_generation")
+            self.assertEqual(report["output_contract"], TURN_PLAN_OUTPUT_CONTRACT)
+            self.assertEqual(sidecar, report["rows"])
+            self.assertEqual(report["overall"]["top1_rate"], 1.0)
 
 
 if __name__ == "__main__":

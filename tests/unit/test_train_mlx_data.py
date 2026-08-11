@@ -20,6 +20,7 @@ from sts_ai.train.train_mlx import (
     _require_dataset_sha256,
     _resolve_cached_model_snapshot,
     _run_mlx_lora_action_masked,
+    _validate_search_teacher_training_contract,
     prepare_mlx_data,
     prepare_native_mlx_data,
     train,
@@ -427,6 +428,126 @@ class PrepareMlxDataTest(unittest.TestCase):
                 1,
             )
             self.assertEqual(report["token_count_totals"]["n_supervised_tokens"], 1)
+
+    def test_semantic_contracts_round_trip_through_both_mlx_data_paths(self):
+        cases = (
+            (
+                "action_text",
+                '{"action":"play Strike -> Nob"}',
+                "play Strike -> Nob",
+            ),
+            (
+                "turn_plan",
+                '{"plan":["play Bash -> Nob","end turn"],'
+                '"action":"play Bash -> Nob"}',
+                "play Bash -> Nob",
+            ),
+        )
+        for output_contract, completion, description in cases:
+            with self.subTest(output_contract=output_contract):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    dataset = root / "dataset.jsonl"
+                    record = {
+                        "prompt": "PROMPT:",
+                        "completion": completion,
+                        "messages": [
+                            {"role": "user", "content": "PROMPT:"},
+                            {"role": "assistant", "content": completion},
+                        ],
+                        "output_contract": output_contract,
+                        "target_action_index": 0,
+                        "target_action_description": description,
+                        "assistant_turn_terminator": "<turn|>\n",
+                    }
+                    dataset.write_text(
+                        json.dumps(record) + "\n",
+                        encoding="utf-8",
+                    )
+
+                    prepare_mlx_data(
+                        dataset,
+                        root / "chat",
+                        valid_fraction=0.0,
+                    )
+                    chat_record = _read_jsonl(root / "chat" / "train.jsonl")[0]
+                    self.assertEqual(chat_record["messages"], record["messages"])
+
+                    report = prepare_native_mlx_data(
+                        dataset,
+                        root / "native",
+                        tokenizer=FakeTokenizer(),
+                        max_seq_length=512,
+                        valid_fraction=0.0,
+                        loss_mask_mode="action",
+                    )
+                    native_record = _read_jsonl(
+                        root / "native" / "train.jsonl"
+                    )[0]
+                    self.assertEqual(report["n_kept_records"], 1)
+                    self.assertGreater(native_record["n_action_tokens"], 0)
+                    self.assertGreater(native_record["n_format_tokens"], 0)
+
+    def test_strict_teacher_preflight_accepts_semantic_contracts(self):
+        cases = (
+            ("action_text", '{"action":"hit"}'),
+            (
+                "turn_plan",
+                '{"plan":["hit","end turn"],"action":"hit"}',
+            ),
+        )
+        for output_contract, completion in cases:
+            with self.subTest(output_contract=output_contract):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    dataset = root / "teacher.jsonl"
+                    row = {
+                        "prompt": (
+                            "Choose from the LEGAL ACTIONS list below.\n\n"
+                            "GAME STATE\nstate\n\n"
+                            "LEGAL ACTIONS\n0: hit\n1: end turn"
+                            "<turn|>\n<|turn>model\n"
+                        ),
+                        "completion": completion,
+                        "target_action_index": 0,
+                        "target_action_description": "hit",
+                        "teacher_action_index": 0,
+                        "assistant_turn_terminator": "<turn|>\n",
+                        "window_id": "window_0",
+                        "loss_mask_mode": "action",
+                        "output_contract": output_contract,
+                        "observation_version": "combat_public_v2",
+                        "teacher_selection_rule": "aggregated_root_visits",
+                        "teacher_privilege": "simulator_full_state",
+                    }
+                    dataset.write_text(
+                        json.dumps(row) + "\n",
+                        encoding="utf-8",
+                    )
+                    digest = hashlib.sha256(dataset.read_bytes()).hexdigest()
+                    manifest = {
+                        "kind": "search_teacher_sft",
+                        "version": 3,
+                        "observation_version": "combat_public_v2",
+                        "teacher_selection_rule": "aggregated_root_visits",
+                        "teacher_privilege": "simulator_full_state",
+                        "loss_mask_mode": "action",
+                        "output_contract": output_contract,
+                        "enable_thinking": False,
+                        "tokenizer_id": "model",
+                        "n_examples": 1,
+                        "dataset_sha256": digest,
+                    }
+
+                    self.assertEqual(
+                        _validate_search_teacher_training_contract(
+                            dataset_path=dataset,
+                            manifest=manifest,
+                            base_model="model",
+                            expected_example_count=1,
+                        ),
+                        digest,
+                    )
 
     def test_action_token_weight_preserves_scaffold_and_audits_weight_mass(self):
         with tempfile.TemporaryDirectory() as tmp:
