@@ -118,8 +118,11 @@ teacher label files, and the embargoed final Nob cohort), so the
 schema-stability and reproducibility rules in `CLAUDE.md` are active — treat
 `state_text`/action-text changes as versioned interface changes, not free
 edits. The strongest static result so far comes from semantic action-text
-targets on a small Gremlin Nob dataset, but no behavioural improvement has yet
-been established from that static agreement result. Coverage is limited to one
-encounter and the simulator still has an unresolved phantom-power bug. See
+targets on a small Gremlin Nob dataset. A first behavioural comparison on
+held-out saved fights favoured that adapter (more wins, fewer combat deaths),
+while also showing that mid-turn and card-select states — absent from the
+first-per-turn training set — dominate its live-play failures. Coverage is
+limited to one encounter and the simulator still has an unresolved
+phantom-power bug. See
 [`experiment_history.md`](experiment_history.md) for the concise evidence record
 and open items.

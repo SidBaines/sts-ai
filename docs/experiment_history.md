@@ -30,9 +30,13 @@ Development choices were rescored using visit-share regret, tie-aware top-set ag
 
 The semantic action-text comparison held the 150 states, model, and training recipe fixed while changing completions from menu indices to exact legal-action text. Across three training seeds, the best checkpoints reached 0.614 top-1 and 0.128–0.143 mean regret. At the fixed step-1,500 endpoint, the three seeds scored 0.579/0.614/0.614 top-1, versus 0.509 for the best index-target adapter. Free generation was 100% valid JSON, 94.7% legal, and 0.596 top-1. Best-checkpoint position varied by seed: one seed was degenerate at step 750 and recovered by step 1,500. Future comparisons therefore require fixed-step endpoints or a real validation split rather than development-based checkpoint selection. A turn-plan variant trained on 130/150 states scored lower on first-action agreement, with a best top-1 of 0.526, while producing 100% schema-valid plans.
 
+## Behavioural evaluation of the semantic adapter (2026-08-12)
+
+Live play under the `action_text` contract was added to the agent parser (exact match, then unique-prefix, then integer fallback), and the seed-1 step-1,500 adapter was compared with base on the 43 saved Nob starts (4 samples per window at temperature 0.7, `combat_public_v2`, quarantined windows reported separately). On the 8 clean holdout windows (32 episodes per arm): wins 20 vs 14, combat deaths 4 vs 8, invalid-format stops 8 vs 10, favouring the adapter. On the 30 clean training windows (120 episodes per arm) the adapter's invalid-format stops rose to 81 vs 46, capping its wins at 34 vs 49; its stops concentrated at median turn 1 on mid-turn states (a first card already played) and card-select screens — state families absent from the first-per-turn training set. Paired HP-loss deltas (−14.5 holdout, −17.3 train) are confounded by early invalid-stop truncation and were not treated as play-quality evidence. On quarantined windows all 12 adapter holdout episodes ended invalid on corrupted screens. Won fights cost the adapter less HP than base wins (22.6–25.0 vs 34.4–37.2 mean, selection-biased). The search teacher's reference on the same starts remains 43/43.
+
 ## Open items
 
-- The link from static teacher agreement to gameplay behaviour has not been measured.
+- Mid-turn and card-select states are absent from the first-per-turn training set and dominate live-play invalid stops; dense-state training has not yet been rerun with semantic targets.
 - Training data cover only 150 first-per-turn states from one encounter.
 - `combat_public_v3` prompts have not yet been used for training.
 - The simulator's phantom-power bug is not fixed at source.
