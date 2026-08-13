@@ -38,11 +38,15 @@ Live play under the `action_text` contract was added to the agent parser (exact 
 
 Holding the model, recipe, and label source fixed, the training set was changed from 150 first-per-turn states to all 600 consensus-passing dense states (every visited micro-action, including card-select screens). On the clean holdout behaviour protocol, the step-750 checkpoint won 21/32 with one invalid-format stop (versus 20/32 with eight for the first-per-turn adapter and 14/32 with ten for base); its paired reward delta over base was +0.24 with a 95% bootstrap CI of [+0.04, +0.45]. The step-6000 checkpoint won 22/32 with six invalid stops. Intermediate checkpoints were much worse (step 2250: 9/32 with 21 combat deaths), and static dev57 scores oscillated non-monotonically across checkpoints (strict top-1 between 0.246 and 0.632) with poor rank agreement between static scores and behavioural outcomes. All results are from a single training seed.
 
+## Dense-recipe replication (2026-08-13)
+
+Training seeds 0 and 2 replicated the dense recipe end-to-end. At the step-750 endpoint the three seeds won 21/19/23 of 32 clean-holdout episodes with at most one invalid-format stop each; at step 6000 they won 22/23/26 with 6/0/0 invalid stops (pooled 71/96, 74%, versus base 44%). Paired reward deltas over base at step 6000 were +0.51 (95% CI [+0.26, +0.77]) and +0.63 ([+0.32, +0.94]) for seeds 0 and 2. The single-seed inference that early checkpoints play better did not replicate: step 6000 was at least as good as step 750 in every seed. Static dev57 instability replicated (each seed shows a mid-training top-1 crater, 0.14–0.23), and static rank continued not to predict behavioural rank.
+
 ## Open items
 
-- Dense-checkpoint quality is unstable across training steps, and static dev57 rank does not predict behavioural rank; checkpoint selection needs behavioural evaluation or a real validation split.
-- The dense-retraining result is single-seed and single-encounter; replication (seeds 0/2, other elites) is outstanding.
-- Training data cover only one encounter.
+- Static dev57 is not a usable checkpoint selector; behavioural evaluation (or a future real validation split) selects checkpoints.
+- Training data and behavioural evaluation cover one encounter; Lagavulin/Sentries generalization is untested.
+- The adapters play more Enrage-triggering Skills than the first-per-turn adapter (0.90 vs 0.77 per turn at step 750, seed 1); whether mid-turn labels cause this is unverified.
 - `combat_public_v3` prompts have not yet been used for training.
 - The simulator's phantom-power bug is not fixed at source.
 - The embargoed 13-window final Nob cohort remains untouched; its operational record is [`configs/competence/nob_fresh_final_cohort_v1.json`](../configs/competence/nob_fresh_final_cohort_v1.json).
