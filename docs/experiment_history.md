@@ -42,11 +42,17 @@ Holding the model, recipe, and label source fixed, the training set was changed 
 
 Training seeds 0 and 2 replicated the dense recipe end-to-end. At the step-750 endpoint the three seeds won 21/19/23 of 32 clean-holdout episodes with at most one invalid-format stop each; at step 6000 they won 22/23/26 with 6/0/0 invalid stops (pooled 71/96, 74%, versus base 44%). Paired reward deltas over base at step 6000 were +0.51 (95% CI [+0.26, +0.77]) and +0.63 ([+0.32, +0.94]) for seeds 0 and 2. The single-seed inference that early checkpoints play better did not replicate: step 6000 was at least as good as step 750 in every seed. Static dev57 instability replicated (each seed shows a mid-training top-1 crater, 0.14–0.23), and static rank continued not to predict behavioural rank.
 
+## Encounter generalization (experiment 022, 2026-08-13)
+
+The Lagavulin and Sentries cohorts (31 and 27 train windows) were teacher-labeled with the exact Nob protocol (950 and 910 dense states; ~2.7 s/state), after fixing a replay failure on serializer-drifted action descriptions (`resolve_action_index` now falls back to a unique engine-bits match). One shared adapter was trained on all three encounters (2,252 examples, seed 1, 6,000 iterations) and behaviour-evaluated at step 6,000 on each holdout. Results: Lagavulin 25/36 wins versus base 10/36 (invalid stops 1 versus 20), paired reward +0.47 [+0.14, +0.80]; Sentries 22/36 versus 2/36 (invalid stops 2 versus 34), +0.86 [+0.44, +1.28]; Nob clean holdout 25/32 with zero invalid stops versus base 14/32, +0.45 [+0.19, +0.72]. Against the Nob-only dense adapter the shared adapter showed no regression (+0.07 [−0.21, +0.46]) and the numerically best Nob arm so far. The earlier skills-per-turn hypothesis was not supported: the winning shared adapter plays more skills per turn on Nob than arms it outperforms, and raw skill counts are confounded by deck composition and fight length. Its dev57 static (0.526 top-1) remained unpredictive of its behavioural rank.
+
 ## Open items
 
-- Static dev57 is not a usable checkpoint selector; behavioural evaluation (or a future real validation split) selects checkpoints.
-- Training data and behavioural evaluation cover one encounter; Lagavulin/Sentries generalization is untested.
-- The adapters play more Enrage-triggering Skills than the first-per-turn adapter (0.90 vs 0.77 per turn at step 750, seed 1); whether mid-turn labels cause this is unverified.
+- Checkpoint selection still relies on behavioural evaluation; no frozen validation split exists, and dev57 statics remain unpredictive.
+- The gap to the search teacher (100% on all cohorts) is 22–39 points of win rate depending on encounter.
+- The adapter has not been evaluated inside full-game runs (hybrid or full-control), only on isolated fight windows.
+- Lagavulin/Sentries labels have not been state-sanity audited; the phantom-power quarantine only covers the Nob files. The simulator UB is unfixed at source.
+- All shared-adapter results are single-seed (seed 1) at a single endpoint (step 6,000).
 - `combat_public_v3` prompts have not yet been used for training.
 - The simulator's phantom-power bug is not fixed at source.
 - The embargoed 13-window final Nob cohort remains untouched; its operational record is [`configs/competence/nob_fresh_final_cohort_v1.json`](../configs/competence/nob_fresh_final_cohort_v1.json).
