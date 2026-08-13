@@ -53,3 +53,32 @@ class ResolveActionIndexTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BitsOnlyFallbackTest(unittest.TestCase):
+    def test_drifted_description_resolves_via_unique_bits(self):
+        env = _Env(
+            [
+                _Action(0, 4, "play Armaments [Skill] (cost 1)"),
+                _Action(1, 2, "play Doubt [Curse] (cost unplayable)"),
+                _Action(2, 2147483648, "end turn"),
+            ]
+        )
+        self.assertEqual(
+            resolve_action_index(env, 2, "play Doubt (cost -3)"), 1
+        )
+
+    def test_ambiguous_bits_with_drifted_description_raises(self):
+        env = _Env(
+            [
+                _Action(0, 2, "play Doubt [Curse] (cost unplayable)"),
+                _Action(1, 2, "play Regret [Curse] (cost unplayable)"),
+            ]
+        )
+        with self.assertRaises(Exception):
+            resolve_action_index(env, 2, "play Doubt (cost -3)")
+
+    def test_no_bits_and_drifted_description_still_raises(self):
+        env = _Env([_Action(0, 4, "play Armaments [Skill] (cost 1)")])
+        with self.assertRaises(Exception):
+            resolve_action_index(env, None, "play Doubt (cost -3)")

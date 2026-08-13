@@ -36,8 +36,12 @@ def resolve_action_index(
       1. exact (bits, description) — the normal, unambiguous case;
       2. description-only — tolerates a `bits` representation drift while the
          human-readable action is unchanged (the dedup key in combat is the
-         description, so it is unique in the display list).
-    Raises ReplayError if there is no match or an ambiguous description-only one.
+         description, so it is unique in the display list);
+      3. unique bits-only — tolerates a *description* drift (serializer wording
+         changes between recording and replay, e.g. the historical
+         `(cost -3)` → `(cost unplayable)` rename) as long as exactly one legal
+         action carries the recorded engine bits.
+    Raises ReplayError if there is no match or an ambiguous partial one.
     """
     legal = env.legal_actions()
     if bits is not None:
@@ -55,6 +59,10 @@ def resolve_action_index(
     by_desc = [a for a in legal if a.description == description]
     if len(by_desc) == 1:
         return by_desc[0].index
+    if not by_desc and bits is not None:
+        by_bits = [a for a in legal if int(a.bits) == int(bits)]
+        if len(by_bits) == 1:
+            return by_bits[0].index
     available = ", ".join(f"[{a.index}] bits={a.bits} {a.description!r}" for a in legal)
     raise ReplayError(
         f"cannot re-resolve recorded action bits={bits} description={description!r}; "
