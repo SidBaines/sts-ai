@@ -1,0 +1,56 @@
+{
+  "note": "first 30 frozen eval seeds; comp023 full-game arms subset (paired across arms)",
+  "derived_from": "configs/frozen_seeds.json",
+  "splits": {
+    "eval30": [
+      47,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77
+    ]
+  },
+  "excluded": {
+    "seed_2_ub": [
+      2
+    ],
+    "diagnostic_only": [
+      1
+    ],
+    "errored_any_agent": [
+      11,
+      17,
+      22,
+      48,
+      99,
+      110,
+      132,
+      134
+    ]
+  }
+}
