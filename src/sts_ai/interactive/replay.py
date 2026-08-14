@@ -16,6 +16,18 @@ from __future__ import annotations
 from typing import Any, Mapping, Sequence
 
 
+def _description_stem(description: str) -> str:
+    """The serializer-stable core of an action description: everything before
+    the first bracketed/parenthesized annotation. Annotations (card type, cost,
+    computed damage, target damage suffixes) have drifted across serializer
+    versions; the leading verb + name has not."""
+    for marker in (" [", " ("):
+        cut = description.find(marker)
+        if cut != -1:
+            description = description[:cut]
+    return description.strip()
+
+
 class ReplayError(RuntimeError):
     """A recorded action could not be re-resolved against the live display list.
 
@@ -37,10 +49,14 @@ def resolve_action_index(
       2. description-only — tolerates a `bits` representation drift while the
          human-readable action is unchanged (the dedup key in combat is the
          description, so it is unique in the display list);
-      3. unique bits-only — tolerates a *description* drift (serializer wording
-         changes between recording and replay, e.g. the historical
-         `(cost -3)` → `(cost unplayable)` rename) as long as exactly one legal
-         action carries the recorded engine bits.
+      3. unique bits-only, stem-gated — tolerates an *annotation* drift in the
+         description (serializer wording changes between recording and replay,
+         e.g. the historical `(cost -3)` → `(cost unplayable)` rename) as long
+         as exactly one legal action carries the recorded engine bits AND its
+         description stem (the leading verb + name, before any `[...]`/`(...)`
+         annotation) matches the recorded stem. The stem gate keeps true
+         divergence loud: same bits pointing at a *different* action (a state
+         drift, not a rename) still raises.
     Raises ReplayError if there is no match or an ambiguous partial one.
     """
     legal = env.legal_actions()
@@ -61,7 +77,9 @@ def resolve_action_index(
         return by_desc[0].index
     if not by_desc and bits is not None:
         by_bits = [a for a in legal if int(a.bits) == int(bits)]
-        if len(by_bits) == 1:
+        if len(by_bits) == 1 and _description_stem(
+            by_bits[0].description
+        ) == _description_stem(description):
             return by_bits[0].index
     available = ", ".join(f"[{a.index}] bits={a.bits} {a.description!r}" for a in legal)
     raise ReplayError(

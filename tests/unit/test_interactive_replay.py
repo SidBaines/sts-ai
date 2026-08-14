@@ -82,3 +82,8 @@ class BitsOnlyFallbackTest(unittest.TestCase):
         env = _Env([_Action(0, 4, "play Armaments [Skill] (cost 1)")])
         with self.assertRaises(Exception):
             resolve_action_index(env, None, "play Doubt (cost -3)")
+
+    def test_same_bits_different_action_stem_still_raises(self):
+        env = _Env([_Action(0, 1, "play Strike (cost 1)")])
+        with self.assertRaises(Exception):
+            resolve_action_index(env, 1, "play Defend (cost 1)")

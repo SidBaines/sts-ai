@@ -28,6 +28,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
+from sts_ai.prompting import OUTPUT_CONTRACTS, REASONING_ACTION_OUTPUT
 from sts_ai.seeding import expand_specs, rollout_stem
 
 Spec = tuple[int, int]
@@ -293,6 +294,20 @@ def main() -> None:
     parser.add_argument("--max-act", type=int, default=3)
     parser.add_argument("--max-decisions", type=int, default=1500)
     parser.add_argument("--combat-control", choices=["search", "llm"], default="llm")
+    parser.add_argument(
+        "--combat-observation",
+        choices=("legacy", "combat_public_v1", "combat_public_v2", "combat_public_v3"),
+        default="legacy",
+        help="Combat state serializer. Default keeps the historical legacy "
+        "observation; pin this within a matched comparison.",
+    )
+    parser.add_argument(
+        "--output-contract",
+        choices=OUTPUT_CONTRACTS,
+        default=REASONING_ACTION_OUTPUT,
+        help="Assistant JSON schema. Default keeps the historical "
+        "reasoning_action prompt; use action_text for semantic adapters.",
+    )
     parser.add_argument("--battle-simulations", type=int, default=50)
     parser.add_argument("--thinking", action="store_true")
     parser.add_argument(
@@ -466,6 +481,7 @@ def main() -> None:
         return LightspeedHybridEnv(
             world_seed=seed,
             combat_control=args.combat_control,
+            combat_observation=args.combat_observation,
             battle_simulations=args.battle_simulations,
             max_act=args.max_act,
         )
@@ -489,6 +505,7 @@ def main() -> None:
         enable_prefix_caching=args.enable_prefix_caching,
         adapter_path=args.adapter_path,
         max_lora_rank=args.max_lora_rank,
+        output_contract=args.output_contract,
     )
     try:
         extra: dict[str, Any] = {
@@ -499,6 +516,9 @@ def main() -> None:
             "rollouts_per_seed": args.rollouts_per_seed,
             "excluded_seed_count": len(excluded),
             "skipped_existing_pairs": skipped_existing,
+            "combat_observation": args.combat_observation,
+            "competence_interface_version": args.combat_observation,
+            "output_contract": args.output_contract,
             "hints": args.hints,
             "hint_block_hp_fraction": args.hint_block_hp_fraction,
             "hint_on_launder_fail": args.hint_on_launder_fail,
