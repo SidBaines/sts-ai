@@ -2,7 +2,13 @@ import time
 import types
 import unittest
 
-from sts_ai.agents import MlxQwenJsonAgent, RandomLegalAgent, VllmJsonAgent, parse_json_action
+from sts_ai.agents import (
+    MlxQwenJsonAgent,
+    RandomLegalAgent,
+    VllmJsonAgent,
+    parse_json_action,
+    resolve_output_contract,
+)
 from sts_ai.prompting import NEUTRAL_FRAME, retry_instruction
 from sts_ai.schemas import LegalAction
 
@@ -265,6 +271,65 @@ class ParseSemanticActionTest(unittest.TestCase):
         self.assertEqual(decision.action_index, 0)
 
 
+class ResolveOutputContractTest(unittest.TestCase):
+    def _agent(self, combat="action_text", ooc=None):
+        return types.SimpleNamespace(output_contract=combat, ooc_output_contract=ooc)
+
+    def test_combat_and_phaseless_use_combat_contract(self):
+        agent = self._agent(ooc="reasoning_action")
+        self.assertEqual(resolve_output_contract(agent, "combat"), "action_text")
+        self.assertEqual(resolve_output_contract(agent, None), "action_text")
+
+    def test_ooc_phase_switches_when_override_set(self):
+        agent = self._agent(ooc="reasoning_action")
+        for phase in ("event_screen", "map_screen", "rewards", "shop"):
+            self.assertEqual(resolve_output_contract(agent, phase), "reasoning_action")
+
+    def test_ooc_phase_without_override_keeps_uniform_contract(self):
+        agent = self._agent(ooc=None)
+        self.assertEqual(resolve_output_contract(agent, "event_screen"), "action_text")
+
+    def test_agent_without_attrs_defaults_to_reasoning_action(self):
+        self.assertEqual(resolve_output_contract(object(), "combat"), "reasoning_action")
+
+
+class StreamingRequestContractTest(unittest.TestCase):
+    """The per-request contract stored at submit time must drive parse time."""
+
+    def _agent(self):
+        agent = object.__new__(VllmJsonAgent)
+        agent.output_contract = "action_text"
+        agent.ooc_output_contract = "reasoning_action"
+        agent.max_tokens = 4096
+        agent.tokenizer = None
+        return agent
+
+    def test_build_decision_uses_stored_request_contract(self):
+        agent = self._agent()
+        agent._request_contracts = {"r1": "reasoning_action", "r2": "action_text"}
+        actions = [LegalAction(index=0, bits=1, description="take gold 25g")]
+        semantic_payload = '{"action": "take gold 25g"}'
+        # r1 was submitted as an OOC decision: index contract, so exact-text
+        # payloads are invalid there...
+        d1 = agent.build_decision_from_text(semantic_payload, 1, 1, actions, request_id="r1")
+        self.assertFalse(d1.valid)
+        # ...while r2 was a combat submit: action_text resolves the same payload.
+        d2 = agent.build_decision_from_text(semantic_payload, 1, 1, actions, request_id="r2")
+        self.assertTrue(d2.valid)
+        self.assertEqual(agent._request_contracts, {})
+
+    def test_explicit_contract_beats_store_and_missing_id_falls_back(self):
+        agent = self._agent()
+        actions = [LegalAction(index=0, bits=1, description="take gold 25g")]
+        d = agent.build_decision_from_text(
+            '{"action": "take gold 25g"}', 1, 1, actions, output_contract="action_text"
+        )
+        self.assertTrue(d.valid)
+        # No request_id, no explicit contract -> uniform (combat) contract.
+        d2 = agent.build_decision_from_text('{"action": "take gold 25g"}', 1, 1, actions)
+        self.assertTrue(d2.valid)
+
+
 class RetryInstructionTest(unittest.TestCase):
     def test_default_contract_keeps_frozen_literal(self):
         self.assertEqual(
@@ -519,7 +584,7 @@ class VllmJsonAgentTest(unittest.TestCase):
                 raise RuntimeError("boom")
 
         agent = object.__new__(VllmJsonAgent)
-        agent._render_prompt = lambda state_text, legal_actions: f"prompt: {state_text}"
+        agent._render_prompt = lambda state_text, legal_actions, output_contract=None: f"prompt: {state_text}"
         agent._SamplingParams = FakeSamplingParams
         agent._seed = 123
         agent.temperature = 0.2
@@ -547,7 +612,7 @@ class VllmJsonAgentTest(unittest.TestCase):
 
     def test_choose_actions_batch_parses_results_and_sets_token_counts(self):
         agent = object.__new__(VllmJsonAgent)
-        agent._render_prompt = lambda state_text, legal_actions: f"prompt: {state_text}"
+        agent._render_prompt = lambda state_text, legal_actions, output_contract=None: f"prompt: {state_text}"
         agent._count_tokens = lambda text: len(text.split()) if text else 0
         agent._generate = lambda prompts: [
             {
@@ -673,7 +738,7 @@ class VllmJsonAgentTest(unittest.TestCase):
 
         engine = CapturingEngine()
         agent = object.__new__(VllmJsonAgent)
-        agent._base_prompt = lambda state_text, legal_actions: "base prompt"
+        agent._base_prompt = lambda state_text, legal_actions, output_contract=None: "base prompt"
         agent._apply_chat_template = lambda prompt: f"chat: {prompt}"
         agent._SamplingParams = FakeSamplingParams
         agent.temperature = 0.2

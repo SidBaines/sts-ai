@@ -26,7 +26,7 @@ class ScriptedStreamingAgent(ScriptedCombatAgent):
     def __init__(self):
         self.pending = {}
 
-    def stream_submit(self, request_id, state_text, legal_actions, seed, retry=False):
+    def stream_submit(self, request_id, state_text, legal_actions, seed, retry=False, phase=None):
         self.pending[request_id] = (state_text, legal_actions)
 
     def stream_poll(self):
@@ -46,7 +46,7 @@ class ScriptedStreamingAgent(ScriptedCombatAgent):
             )
         ]
 
-    def build_decision_from_text(self, text, prompt_tokens, completion_tokens, legal_actions):
+    def build_decision_from_text(self, text, prompt_tokens, completion_tokens, legal_actions, request_id=None, output_contract=None):
         return parse_json_action(text, legal_actions)
 
     def stream_has_unfinished(self):

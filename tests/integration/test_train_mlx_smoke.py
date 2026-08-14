@@ -38,6 +38,7 @@ class ScriptedJsonAgent:
         self,
         state_text: str,
         legal_actions: list[LegalAction],
+        phase: str | None = None,
     ) -> AgentDecision:
         descriptions = [action.description for action in legal_actions]
         for index, description in enumerate(descriptions):

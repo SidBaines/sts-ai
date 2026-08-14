@@ -37,7 +37,7 @@ class ScriptedCombatAgent:
     def reseed(self, policy_seed):
         return None
 
-    def choose_action(self, state_text, legal_actions):
+    def choose_action(self, state_text, legal_actions, phase=None):
         descs = [a.description for a in legal_actions]
         for i, d in enumerate(descs):
             if d.startswith("play ") or d.startswith("drink potion"):

@@ -32,6 +32,7 @@ class FakeStreamingAgent:
         legal_actions: list[LegalAction],
         seed: int,
         retry: bool = False,
+        phase: str | None = None,
     ) -> None:
         self.pending[request_id] = {"legal_actions": legal_actions, "seed": seed}
         self.seen_seeds[request_id] = seed
@@ -75,6 +76,8 @@ class FakeStreamingAgent:
         prompt_tokens: int,
         completion_tokens: int,
         legal_actions: list[LegalAction],
+        request_id: str | None = None,
+        output_contract: str | None = None,
     ) -> AgentDecision:
         return AgentDecision(
             action_index=int(text),
@@ -99,6 +102,7 @@ class RetryStreamingAgent:
         legal_actions: list[LegalAction],
         seed: int,
         retry: bool = False,
+        phase: str | None = None,
     ) -> None:
         attempt = int(request_id.rsplit(":a", 1)[1])
         self.pending[request_id] = (legal_actions, attempt)
@@ -128,6 +132,8 @@ class RetryStreamingAgent:
         prompt_tokens: int,
         completion_tokens: int,
         legal_actions: list[LegalAction],
+        request_id: str | None = None,
+        output_contract: str | None = None,
     ) -> AgentDecision:
         return parse_json_action(text, legal_actions)
 
@@ -249,6 +255,7 @@ class HintingStreamingAgent:
         legal_actions: list[LegalAction],
         seed: int,
         retry: bool = False,
+        phase: str | None = None,
     ) -> None:
         self.max_pending = max(self.max_pending, len(self.pending) + 1)
         self.pending[request_id] = {"legal_actions": legal_actions}
@@ -288,6 +295,8 @@ class HintingStreamingAgent:
         prompt_tokens: int,
         completion_tokens: int,
         legal_actions: list[LegalAction],
+        request_id: str | None = None,
+        output_contract: str | None = None,
     ) -> AgentDecision:
         decision = parse_json_action(text, legal_actions)
         decision.prompt_tokens = prompt_tokens

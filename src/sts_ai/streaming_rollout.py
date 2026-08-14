@@ -115,6 +115,7 @@ def run_streaming_rollouts(
             slot.view["legal_actions"],
             seed,
             retry=retry,
+            phase=slot.view["phase"],
         )
         in_flight[rid] = slot
 
@@ -214,9 +215,10 @@ def run_streaming_rollouts(
                 output["prompt_tokens"],
                 output["completion_tokens"],
                 view["legal_actions"],
+                request_id=rid,
             )
             # Per-decision wall-time from the backend (submit->finish). Set here, like
-            # decision.retries below, so build_decision_from_text's signature is unchanged.
+            # decision.retries below, so extra outputs stay out of the parse signature.
             decision.latency_s = output.get("latency_s", 0.0)
 
             if slot.stage == "HINTED":

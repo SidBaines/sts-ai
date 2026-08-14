@@ -51,7 +51,7 @@ class ScriptedReplayAgent:
     def reseed(self, policy_seed):
         return None
 
-    def choose_action(self, state_text, legal_actions):
+    def choose_action(self, state_text, legal_actions, phase=None):
         idx = self.indices[self.pos] if self.pos < len(self.indices) else 0
         self.pos += 1
         # Stay in range even after combat diverges from the recorded trace.

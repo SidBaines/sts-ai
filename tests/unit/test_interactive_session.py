@@ -93,7 +93,7 @@ class FakeModelAgent:
         return {"model_id": "fake", "framing": self.framing, "temperature": 0.2,
                 "max_tokens": 10, "thinking": False}
 
-    def choose_action(self, state_text, legal_actions, prompt_override=None):
+    def choose_action(self, state_text, legal_actions, prompt_override=None, phase=None):
         self.last_override = prompt_override
         self.draws += 1
         return AgentDecision(action_index=1, raw_response="m", reasoning="rz",

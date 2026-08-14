@@ -218,7 +218,9 @@ def run_rollout(
             stopped_reason = status  # "terminal" or "no_legal_actions"
             break
 
-        agent_decision = agent.choose_action(view["state_text"], view["legal_actions"])
+        agent_decision = agent.choose_action(
+            view["state_text"], view["legal_actions"], phase=view["phase"]
+        )
         action_index = clamp_action_index(agent_decision, len(view["legal_actions"]))
         if not agent_decision.valid:
             record = build_decision_record(

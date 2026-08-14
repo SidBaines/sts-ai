@@ -19,6 +19,7 @@ def build_agent(
     adapter_path: str | None = None,
     max_lora_rank: int = 16,
     output_contract: str = REASONING_ACTION_OUTPUT,
+    ooc_output_contract: str | None = None,
 ):
     if agent_name == "first":
         return FirstLegalAgent()
@@ -35,6 +36,7 @@ def build_agent(
             enable_thinking=thinking,
             adapter_path=adapter_path,
             output_contract=output_contract,
+            ooc_output_contract=ooc_output_contract,
         )
     if agent_name == "vllm":
         return VllmJsonAgent(
@@ -50,6 +52,7 @@ def build_agent(
             adapter_path=adapter_path,
             max_lora_rank=max_lora_rank,
             output_contract=output_contract,
+            ooc_output_contract=ooc_output_contract,
         )
     raise ValueError(f"unknown agent: {agent_name}")
 

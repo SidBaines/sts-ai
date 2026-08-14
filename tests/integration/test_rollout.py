@@ -19,7 +19,7 @@ class BadIndexAgent:
     def reseed(self, policy_seed):
         return None
 
-    def choose_action(self, state_text, legal_actions):
+    def choose_action(self, state_text, legal_actions, phase=None):
         return AgentDecision(action_index=999, raw_response="bad index")
 
 

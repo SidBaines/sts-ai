@@ -68,7 +68,7 @@ class InvalidAgent:
     def reseed(self, policy_seed: int) -> None:
         return None
 
-    def choose_action(self, state_text, legal_actions):
+    def choose_action(self, state_text, legal_actions, phase=None):
         return AgentDecision(
             action_index=0,
             raw_response="not json",
@@ -211,7 +211,7 @@ class ScriptedHintAgent:
     def reseed(self, policy_seed: int) -> None:
         self.reseed_calls.append(policy_seed)
 
-    def choose_action(self, state_text, legal_actions):
+    def choose_action(self, state_text, legal_actions, phase=None):
         self.calls.append(state_text)
         if "Target action:" in state_text:
             return AgentDecision(
@@ -459,7 +459,7 @@ class StubStochasticAgent:
         self.reseed_calls.append(policy_seed)
         self.rng = random.Random(policy_seed)
 
-    def choose_action(self, state_text, legal_actions):
+    def choose_action(self, state_text, legal_actions, phase=None):
         return AgentDecision(
             action_index=self.rng.randrange(len(legal_actions)),
             raw_response="stub stochastic",

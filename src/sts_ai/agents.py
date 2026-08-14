@@ -19,13 +19,34 @@ from sts_ai.prompting import (
 from sts_ai.schemas import AgentDecision, LegalAction
 
 
+def resolve_output_contract(agent: object, phase: str | None) -> str:
+    """The output contract an agent should use for a decision in ``phase``.
+
+    Combat decisions (and phase-less calls, the historical path) use the
+    agent's ``output_contract``; out-of-combat decisions switch to
+    ``ooc_output_contract`` when one is set. This exists because semantic
+    combat adapters speak exact action text, while out-of-combat menus (long
+    event/shop strings) are only reliably answered via the index contract —
+    measured 2026-08-14: action_text OOC drove both base and adapter to ~100%
+    invalid stops at the first event screen."""
+    ooc = getattr(agent, "ooc_output_contract", None)
+    if phase is not None and phase != "combat" and ooc is not None:
+        return ooc
+    return getattr(agent, "output_contract", REASONING_ACTION_OUTPUT)
+
+
 class ActionAgent(Protocol):
     name: str
 
     def reseed(self, policy_seed: int) -> None:
         ...
 
-    def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
+    def choose_action(
+        self,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        phase: str | None = None,
+    ) -> AgentDecision:
         ...
 
 
@@ -62,7 +83,12 @@ class FirstLegalAgent:
     def reseed(self, policy_seed: int) -> None:
         return None
 
-    def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
+    def choose_action(
+        self,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        phase: str | None = None,
+    ) -> AgentDecision:
         return AgentDecision(action_index=0, raw_response="first legal action")
 
 
@@ -75,7 +101,12 @@ class RandomLegalAgent:
     def reseed(self, policy_seed: int) -> None:
         self.rng = random.Random(policy_seed)
 
-    def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
+    def choose_action(
+        self,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        phase: str | None = None,
+    ) -> AgentDecision:
         return AgentDecision(
             action_index=self.rng.randrange(len(legal_actions)),
             raw_response="random legal action",
@@ -88,7 +119,12 @@ class SimpleHeuristicAgent:
     def reseed(self, policy_seed: int) -> None:
         return None
 
-    def choose_action(self, state_text: str, legal_actions: list[LegalAction]) -> AgentDecision:
+    def choose_action(
+        self,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        phase: str | None = None,
+    ) -> AgentDecision:
         descriptions = [a.description.lower() for a in legal_actions]
 
         for preferred in ("take gold", "take relic", "take potion"):
@@ -139,6 +175,7 @@ class MlxQwenJsonAgent:
         enable_thinking: bool = False,
         adapter_path: str | None = None,
         output_contract: str = REASONING_ACTION_OUTPUT,
+        ooc_output_contract: str | None = None,
     ) -> None:
         try:
             from mlx_lm import generate, load
@@ -161,6 +198,9 @@ class MlxQwenJsonAgent:
         self.adapter_path = adapter_path
         validate_output_contract(output_contract)
         self.output_contract = output_contract
+        if ooc_output_contract is not None:
+            validate_output_contract(ooc_output_contract)
+        self.ooc_output_contract = ooc_output_contract
         try:
             from mlx_lm import batch_generate
         except (ImportError, ModuleNotFoundError):
@@ -198,6 +238,7 @@ class MlxQwenJsonAgent:
             "output_contract": getattr(
                 self, "output_contract", REASONING_ACTION_OUTPUT
             ),
+            "ooc_output_contract": getattr(self, "ooc_output_contract", None),
         }
 
     def sleep(self, level: int = 1) -> None:
@@ -238,10 +279,12 @@ class MlxQwenJsonAgent:
         state_text: str,
         legal_actions: list[LegalAction],
         prompt_override: str | None = None,
+        phase: str | None = None,
     ) -> AgentDecision:
         # `prompt_override` (Interactive Studio advanced-template editor) bypasses
         # render_action_prompt with a fully-rendered user prompt. Default None keeps
         # the harness path byte-identical.
+        contract = resolve_output_contract(self, phase)
         base_prompt = (
             prompt_override
             if prompt_override is not None
@@ -249,9 +292,7 @@ class MlxQwenJsonAgent:
                 state_text,
                 legal_actions,
                 self.framing,
-                output_contract=getattr(
-                    self, "output_contract", REASONING_ACTION_OUTPUT
-                ),
+                output_contract=contract,
             )
         )
         last_decision: AgentDecision | None = None
@@ -260,11 +301,7 @@ class MlxQwenJsonAgent:
         for attempt in range(self.max_retries + 1):
             prompt = base_prompt
             if attempt > 0:
-                prompt += (
-                    retry_instruction(
-                        getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
-                    )
-                )
+                prompt += retry_instruction(contract)
 
             chat_prompt = self._apply_chat_template(prompt)
             response = self._generate_chat(chat_prompt)
@@ -274,7 +311,7 @@ class MlxQwenJsonAgent:
                 legal_actions,
                 completion_tokens=completion_tokens,
                 max_tokens=getattr(self, "max_tokens", None),
-                output_contract=getattr(self, "output_contract", REASONING_ACTION_OUTPUT),
+                output_contract=contract,
             )
             decision.retries = attempt
             decision.prompt_tokens = self._count_tokens(chat_prompt)
@@ -293,6 +330,7 @@ class MlxQwenJsonAgent:
         state_text: str,
         legal_actions: list[LegalAction],
         prompt_override: str | None = None,
+        phase: str | None = None,
     ):
         """Generator for the Interactive Studio's live token view. Yields each
         incremental text segment (str) as the model decodes, then RETURNS the
@@ -301,6 +339,7 @@ class MlxQwenJsonAgent:
         stream_generate (the caller should fall back to choose_action)."""
         if self._stream_generate is None:
             raise RuntimeError("this mlx-lm build has no stream_generate; use choose_action")
+        contract = resolve_output_contract(self, phase)
         base_prompt = (
             prompt_override
             if prompt_override is not None
@@ -308,9 +347,7 @@ class MlxQwenJsonAgent:
                 state_text,
                 legal_actions,
                 self.framing,
-                output_contract=getattr(
-                    self, "output_contract", REASONING_ACTION_OUTPUT
-                ),
+                output_contract=contract,
             )
         )
         chat_prompt = self._apply_chat_template(base_prompt)
@@ -330,7 +367,7 @@ class MlxQwenJsonAgent:
             legal_actions,
             completion_tokens=completion_tokens,
             max_tokens=self.max_tokens,
-            output_contract=getattr(self, "output_contract", REASONING_ACTION_OUTPUT),
+            output_contract=contract,
         )
         decision.retries = 0
         decision.prompt_tokens = self._count_tokens(chat_prompt)
@@ -360,6 +397,7 @@ class MlxQwenJsonAgent:
         self,
         items: list[tuple[str, list[LegalAction]]],
         retry_flags: list[bool] | None = None,
+        phases: list[str | None] | None = None,
     ) -> list[AgentDecision]:
         """Decide for K independent rollouts in one batched generation call (the
         cross-rollout throughput lever; see parallel_rollout). `retry_flags`
@@ -372,22 +410,19 @@ class MlxQwenJsonAgent:
 
         if retry_flags is None:
             retry_flags = [False] * len(items)
+        if phases is None:
+            phases = [None] * len(items)
+        contracts = [resolve_output_contract(self, item_phase) for item_phase in phases]
         prompts = []
-        for (state_text, legal_actions), retry in zip(items, retry_flags):
+        for (state_text, legal_actions), retry, contract in zip(items, retry_flags, contracts):
             prompt = render_action_prompt(
                 state_text,
                 legal_actions,
                 self.framing,
-                output_contract=getattr(
-                    self, "output_contract", REASONING_ACTION_OUTPUT
-                ),
+                output_contract=contract,
             )
             if retry:
-                prompt += (
-                    retry_instruction(
-                        getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
-                    )
-                )
+                prompt += retry_instruction(contract)
             prompts.append(self._apply_chat_template(prompt))
         prompt_ids = [self.tokenizer.encode(p) for p in prompts]
         kwargs: dict = {"max_tokens": self.max_tokens}
@@ -399,14 +434,16 @@ class MlxQwenJsonAgent:
         per_item_latency = round((time.perf_counter() - start) / len(items), 4)
 
         decisions: list[AgentDecision] = []
-        for (_, legal_actions), prompt, text in zip(items, prompts, response.texts):
+        for (_, legal_actions), prompt, text, contract in zip(
+            items, prompts, response.texts, contracts
+        ):
             completion_tokens = self._count_tokens(text)
             decision = parse_json_action(
                 text,
                 legal_actions,
                 completion_tokens=completion_tokens,
                 max_tokens=getattr(self, "max_tokens", None),
-                output_contract=getattr(self, "output_contract", REASONING_ACTION_OUTPUT),
+                output_contract=contract,
             )
             decision.retries = 0
             decision.prompt_tokens = self._count_tokens(prompt)
@@ -476,6 +513,7 @@ class VllmJsonAgent:
         gpu_memory_utilization: float = 0.90,
         seed: int = 0,
         output_contract: str = REASONING_ACTION_OUTPUT,
+        ooc_output_contract: str | None = None,
     ) -> None:
         try:
             from vllm import LLM, SamplingParams
@@ -500,6 +538,9 @@ class VllmJsonAgent:
         self._seed = seed
         validate_output_contract(output_contract)
         self.output_contract = output_contract
+        if ooc_output_contract is not None:
+            validate_output_contract(ooc_output_contract)
+        self.ooc_output_contract = ooc_output_contract
 
         llm_kwargs = {
             "model": model_id,
@@ -554,6 +595,7 @@ class VllmJsonAgent:
             "output_contract": getattr(
                 self, "output_contract", REASONING_ACTION_OUTPUT
             ),
+            "ooc_output_contract": getattr(self, "ooc_output_contract", None),
         }
 
     @property
@@ -615,19 +657,31 @@ class VllmJsonAgent:
                 add_generation_prompt=True,
             )
 
-    def _base_prompt(self, state_text: str, legal_actions: list[LegalAction]) -> str:
+    def _base_prompt(
+        self,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        output_contract: str | None = None,
+    ) -> str:
         return render_action_prompt(
             state_text,
             legal_actions,
             self.framing,
             induce_reasoning=(self.reasoning_mode == "prompted"),
-            output_contract=getattr(
-                self, "output_contract", REASONING_ACTION_OUTPUT
+            output_contract=(
+                output_contract
+                if output_contract is not None
+                else getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
             ),
         )
 
-    def _render_prompt(self, state_text: str, legal_actions: list[LegalAction]) -> str:
-        prompt = self._base_prompt(state_text, legal_actions)
+    def _render_prompt(
+        self,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        output_contract: str | None = None,
+    ) -> str:
+        prompt = self._base_prompt(state_text, legal_actions, output_contract)
         return self._apply_chat_template(prompt)
 
     def _generate(self, prompts: list[str]) -> list[dict] | None:
@@ -662,14 +716,18 @@ class VllmJsonAgent:
         legal_actions: list[LegalAction],
         seed: int,
         retry: bool = False,
+        phase: str | None = None,
     ) -> None:
-        base = self._base_prompt(state_text, legal_actions)
+        contract = resolve_output_contract(self, phase)
+        base = self._base_prompt(state_text, legal_actions, contract)
         if retry:
-            base += (
-                retry_instruction(
-                    getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
-                )
-            )
+            base += retry_instruction(contract)
+        # Parsing happens later (stream_poll -> build_decision_from_text), so the
+        # per-request contract must survive until then. hasattr guard keeps
+        # object.__new__ test instances working.
+        if not hasattr(self, "_request_contracts"):
+            self._request_contracts = {}
+        self._request_contracts[request_id] = contract
         prompt = self._apply_chat_template(base)
         params = self._SamplingParams(
             temperature=self.temperature,
@@ -732,13 +790,20 @@ class VllmJsonAgent:
         prompt_tokens: int,
         completion_tokens: int,
         legal_actions: list[LegalAction],
+        request_id: str | None = None,
+        output_contract: str | None = None,
     ) -> AgentDecision:
+        contract = output_contract
+        if contract is None and request_id is not None:
+            contract = getattr(self, "_request_contracts", {}).pop(request_id, None)
+        if contract is None:
+            contract = resolve_output_contract(self, None)
         decision = parse_json_action(
             text,
             legal_actions,
             completion_tokens=completion_tokens,
             max_tokens=getattr(self, "max_tokens", None),
-            output_contract=getattr(self, "output_contract", REASONING_ACTION_OUTPUT),
+            output_contract=contract,
         )
         decision.retries = 0
         decision.prompt_tokens = prompt_tokens
@@ -751,14 +816,16 @@ class VllmJsonAgent:
         state_text: str,
         legal_actions: list[LegalAction],
         prompt_override: str | None = None,
+        phase: str | None = None,
     ) -> AgentDecision:
         # `prompt_override` (Interactive Studio advanced-template editor) bypasses
         # _base_prompt with a fully-rendered user prompt. Default None keeps the
         # harness path byte-identical.
+        contract = resolve_output_contract(self, phase)
         base_prompt = (
             prompt_override
             if prompt_override is not None
-            else self._base_prompt(state_text, legal_actions)
+            else self._base_prompt(state_text, legal_actions, contract)
         )
         last_decision: AgentDecision | None = None
         start = time.perf_counter()
@@ -766,11 +833,7 @@ class VllmJsonAgent:
         for attempt in range(self.max_retries + 1):
             prompt = base_prompt
             if attempt > 0:
-                prompt += (
-                    retry_instruction(
-                        getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
-                    )
-                )
+                prompt += retry_instruction(contract)
 
             chat_prompt = self._apply_chat_template(prompt)
             results = self._generate([chat_prompt])
@@ -789,7 +852,7 @@ class VllmJsonAgent:
                     legal_actions,
                     completion_tokens=result["completion_tokens"],
                     max_tokens=getattr(self, "max_tokens", None),
-                    output_contract=getattr(self, "output_contract", REASONING_ACTION_OUTPUT),
+                    output_contract=contract,
                 )
                 decision.prompt_tokens = result["prompt_tokens"]
                 decision.completion_tokens = result["completion_tokens"]
@@ -808,6 +871,7 @@ class VllmJsonAgent:
         self,
         items: list[tuple[str, list[LegalAction]]],
         retry_flags: list[bool] | None = None,
+        phases: list[str | None] | None = None,
     ) -> list[AgentDecision]:
         """Decide for K independent rollouts in one vLLM generation call."""
         if not items:
@@ -815,25 +879,22 @@ class VllmJsonAgent:
 
         if retry_flags is None:
             retry_flags = [False] * len(items)
+        if phases is None:
+            phases = [None] * len(items)
+        contracts = [resolve_output_contract(self, item_phase) for item_phase in phases]
         prompts = []
-        for (state_text, legal_actions), retry in zip(items, retry_flags):
+        for (state_text, legal_actions), retry, contract in zip(items, retry_flags, contracts):
             if retry:
                 base = render_action_prompt(
                     state_text,
                     legal_actions,
                     self.framing,
-                    output_contract=getattr(
-                        self, "output_contract", REASONING_ACTION_OUTPUT
-                    ),
+                    output_contract=contract,
                 )
-                base += (
-                    retry_instruction(
-                        getattr(self, "output_contract", REASONING_ACTION_OUTPUT)
-                    )
-                )
+                base += retry_instruction(contract)
                 prompts.append(self._apply_chat_template(base))
             else:
-                prompts.append(self._render_prompt(state_text, legal_actions))
+                prompts.append(self._render_prompt(state_text, legal_actions, contract))
         start = time.perf_counter()
         results = self._generate(prompts)
         per_item_latency = round((time.perf_counter() - start) / len(items), 4)
@@ -854,12 +915,13 @@ class VllmJsonAgent:
         assert len(results) == len(prompts)
 
         decisions: list[AgentDecision] = []
-        for (_, legal_actions), result in zip(items, results):
+        for (_, legal_actions), result, contract in zip(items, results, contracts):
             decision = self.build_decision_from_text(
                 result["text"],
                 result["prompt_tokens"],
                 result["completion_tokens"],
                 legal_actions,
+                output_contract=contract,
             )
             decision.latency_s = per_item_latency
             decisions.append(decision)

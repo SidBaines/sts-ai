@@ -308,6 +308,15 @@ def main() -> None:
         help="Assistant JSON schema. Default keeps the historical "
         "reasoning_action prompt; use action_text for semantic adapters.",
     )
+    parser.add_argument(
+        "--ooc-output-contract",
+        choices=OUTPUT_CONTRACTS,
+        default=None,
+        help="Optional out-of-combat contract override. Unset = one contract "
+        "everywhere (historical). action_text OOC is unusable in practice "
+        "(long event/shop strings defeat exact matching): pair combat "
+        "action_text with reasoning_action here for full-game runs.",
+    )
     parser.add_argument("--battle-simulations", type=int, default=50)
     parser.add_argument("--thinking", action="store_true")
     parser.add_argument(
@@ -506,6 +515,7 @@ def main() -> None:
         adapter_path=args.adapter_path,
         max_lora_rank=args.max_lora_rank,
         output_contract=args.output_contract,
+        ooc_output_contract=args.ooc_output_contract,
     )
     try:
         extra: dict[str, Any] = {
@@ -519,6 +529,7 @@ def main() -> None:
             "combat_observation": args.combat_observation,
             "competence_interface_version": args.combat_observation,
             "output_contract": args.output_contract,
+            "ooc_output_contract": args.ooc_output_contract,
             "hints": args.hints,
             "hint_block_hp_fraction": args.hint_block_hp_fraction,
             "hint_on_launder_fail": args.hint_on_launder_fail,

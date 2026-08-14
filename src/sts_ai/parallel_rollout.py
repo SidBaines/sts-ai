@@ -187,11 +187,17 @@ def run_parallel_rollouts(
         ]
         agent.reseed(derive_batch_seed(members))
         batch = [(slot.view["state_text"], slot.view["legal_actions"]) for slot in active_batch]
+        batch_phases = [slot.view["phase"] for slot in active_batch]
         retry_flags = [slot.attempt > 0 for slot in active_batch]
         try:
-            decisions = agent.choose_actions_batch(batch, retry_flags=retry_flags)
+            decisions = agent.choose_actions_batch(
+                batch, retry_flags=retry_flags, phases=batch_phases
+            )
         except TypeError:
-            decisions = agent.choose_actions_batch(batch)
+            try:
+                decisions = agent.choose_actions_batch(batch, retry_flags=retry_flags)
+            except TypeError:
+                decisions = agent.choose_actions_batch(batch)
 
         for slot, agent_decision in zip(active_batch, decisions):
             view = slot.view

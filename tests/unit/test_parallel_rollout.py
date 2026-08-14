@@ -112,6 +112,7 @@ class RetryBatchAgent:
         self,
         items: list[tuple[str, list[LegalAction]]],
         retry_flags: list[bool] | None = None,
+        phases: list[str | None] | None = None,
     ) -> list[AgentDecision]:
         flags = retry_flags or [False] * len(items)
         self.retry_flags_seen.append(list(flags))
