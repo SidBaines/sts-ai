@@ -50,6 +50,81 @@ class ActionAgent(Protocol):
         ...
 
 
+class CompositeAgent:
+    """Route combat decisions to one agent and out-of-combat decisions to
+    another (e.g. a combat-SFT adapter that fights + the base model that
+    navigates). Exists because semantic combat adapters catastrophically forget
+    the index contract (measured 2026-08-14: `{"action_index":"play_card"}` on
+    event screens), so no single contract lets them play whole games. As an
+    experiment design bonus, arms built with the same ``ooc_agent`` share their
+    out-of-combat policy exactly, isolating combat skill.
+
+    Phase-less calls (``phase=None``) route to the combat agent, matching the
+    historical single-agent default."""
+
+    def __init__(self, combat_agent, ooc_agent, name: str | None = None) -> None:
+        self.combat_agent = combat_agent
+        self.ooc_agent = ooc_agent
+        self.name = name or f"composite({combat_agent.name}+{ooc_agent.name})"
+
+    def _agent_for(self, phase: str | None):
+        return self.ooc_agent if phase is not None and phase != "combat" else self.combat_agent
+
+    def reseed(self, policy_seed: int) -> None:
+        self.combat_agent.reseed(policy_seed)
+        self.ooc_agent.reseed(policy_seed)
+
+    def choose_action(
+        self,
+        state_text: str,
+        legal_actions: list[LegalAction],
+        phase: str | None = None,
+    ) -> AgentDecision:
+        return self._agent_for(phase).choose_action(state_text, legal_actions, phase=phase)
+
+    def choose_actions_batch(
+        self,
+        items: list[tuple[str, list[LegalAction]]],
+        retry_flags: list[bool] | None = None,
+        phases: list[str | None] | None = None,
+    ) -> list[AgentDecision]:
+        if retry_flags is None:
+            retry_flags = [False] * len(items)
+        if phases is None:
+            phases = [None] * len(items)
+        combat_idx = [i for i, p in enumerate(phases) if p is None or p == "combat"]
+        ooc_idx = [i for i, p in enumerate(phases) if not (p is None or p == "combat")]
+        decisions: list[AgentDecision | None] = [None] * len(items)
+        for agent, indices in ((self.combat_agent, combat_idx), (self.ooc_agent, ooc_idx)):
+            if not indices:
+                continue
+            sub = agent.choose_actions_batch(
+                [items[i] for i in indices],
+                retry_flags=[retry_flags[i] for i in indices],
+                phases=[phases[i] for i in indices],
+            )
+            for i, decision in zip(indices, sub):
+                decisions[i] = decision
+        assert all(d is not None for d in decisions)
+        return decisions  # type: ignore[return-value]
+
+    @property
+    def config(self) -> dict:
+        return {
+            "agent": self.name,
+            "composite": True,
+            "combat_agent": dict(self.combat_agent.config),
+            "ooc_agent": dict(self.ooc_agent.config),
+            # Top-level identity mirrors the combat agent (the intervention arm).
+            **{
+                key: value
+                for key, value in dict(self.combat_agent.config).items()
+                if key in ("model_id", "framing", "temperature", "max_tokens", "thinking",
+                           "max_retries", "output_contract", "adapter_path", "reasoning_mode")
+            },
+        }
+
+
 class GenerationBackend(Protocol):
     def stream_submit(
         self,
@@ -948,6 +1023,13 @@ def _resolve_semantic_action(
         metadata["plan"] = plan
     action = parsed.get("action")
     if isinstance(action, str):
+        # Models often copy the rendered menu line verbatim, which includes the
+        # displayed index ("0: play Strike ..."). Strip that prefix before
+        # matching — the stated intent is unambiguous.
+        menu_prefix = re.match(r"^(\d+):\s+(.*)$", action)
+        if menu_prefix is not None and menu_prefix.group(2):
+            action = menu_prefix.group(2)
+            metadata["semantic_match"] = "stripped_menu_index"
         descriptions = [legal.description for legal in legal_actions]
         if action in descriptions:
             return descriptions.index(action), metadata

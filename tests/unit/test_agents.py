@@ -330,6 +330,62 @@ class StreamingRequestContractTest(unittest.TestCase):
         self.assertTrue(d2.valid)
 
 
+class CompositeAgentTest(unittest.TestCase):
+    class _Sub:
+        def __init__(self, name):
+            self.name = name
+            self.calls = []
+            self.config = {"model_id": name, "output_contract": "x"}
+
+        def reseed(self, policy_seed):
+            self.calls.append(("reseed", policy_seed))
+
+        def choose_action(self, state_text, legal_actions, phase=None):
+            self.calls.append(("choose", phase))
+            from sts_ai.schemas import AgentDecision
+            return AgentDecision(action_index=0, raw_response=self.name)
+
+        def choose_actions_batch(self, items, retry_flags=None, phases=None):
+            from sts_ai.schemas import AgentDecision
+            self.calls.append(("batch", tuple(phases or ())))
+            return [AgentDecision(action_index=0, raw_response=self.name) for _ in items]
+
+    def setUp(self):
+        from sts_ai.agents import CompositeAgent
+        self.combat = self._Sub("combat")
+        self.ooc = self._Sub("ooc")
+        self.agent = CompositeAgent(self.combat, self.ooc)
+        self.actions = [LegalAction(index=0, bits=1, description="end turn")]
+
+    def test_routes_by_phase_and_phaseless_goes_to_combat(self):
+        self.assertEqual(
+            self.agent.choose_action("s", self.actions, phase="combat").raw_response, "combat"
+        )
+        self.assertEqual(
+            self.agent.choose_action("s", self.actions, phase="event_screen").raw_response, "ooc"
+        )
+        self.assertEqual(
+            self.agent.choose_action("s", self.actions, phase=None).raw_response, "combat"
+        )
+
+    def test_batch_split_preserves_item_order(self):
+        items = [("a", self.actions), ("b", self.actions), ("c", self.actions)]
+        phases = ["combat", "map_screen", "combat"]
+        out = self.agent.choose_actions_batch(items, phases=phases)
+        self.assertEqual([d.raw_response for d in out], ["combat", "ooc", "combat"])
+
+    def test_reseed_reaches_both(self):
+        self.agent.reseed(7)
+        self.assertIn(("reseed", 7), self.combat.calls)
+        self.assertIn(("reseed", 7), self.ooc.calls)
+
+    def test_config_carries_both_identities(self):
+        cfg = self.agent.config
+        self.assertTrue(cfg["composite"])
+        self.assertEqual(cfg["combat_agent"]["model_id"], "combat")
+        self.assertEqual(cfg["ooc_agent"]["model_id"], "ooc")
+
+
 class RetryInstructionTest(unittest.TestCase):
     def test_default_contract_keeps_frozen_literal(self):
         self.assertEqual(
@@ -803,3 +859,30 @@ class VllmJsonAgentTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StrippedMenuIndexTest(unittest.TestCase):
+    def test_menu_line_copy_with_index_prefix_resolves(self):
+        actions = [
+            LegalAction(index=0, bits=1, description="play Strike [Attack] (cost 1) -> CULTIST (deal 9)"),
+            LegalAction(index=1, bits=2, description="play Defend [Skill] (cost 1)"),
+        ]
+        decision = parse_json_action(
+            '{"action": "0: play Strike [Attack] (cost 1) -> CULTIST (deal 9)"}',
+            actions,
+            output_contract="action_text",
+        )
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 0)
+        self.assertEqual(decision.metadata["semantic_match"], "stripped_menu_index")
+
+    def test_stripped_prefix_then_unique_prefix_composes(self):
+        actions = [
+            LegalAction(index=0, bits=1, description="play Strike [Attack] (cost 1) -> CULTIST (deal 9)"),
+            LegalAction(index=1, bits=2, description="play Defend [Skill] (cost 1)"),
+        ]
+        decision = parse_json_action(
+            '{"action": "1: play Strike [Attack] (cost 1)"}', actions, output_contract="action_text"
+        )
+        self.assertTrue(decision.valid)
+        self.assertEqual(decision.action_index, 0)

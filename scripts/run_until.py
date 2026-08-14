@@ -317,6 +317,14 @@ def main() -> None:
         "(long event/shop strings defeat exact matching): pair combat "
         "action_text with reasoning_action here for full-game runs.",
     )
+    parser.add_argument(
+        "--ooc-model",
+        default=None,
+        help="MLX-only composite routing: run --model (+ --adapter-path) for "
+        "combat decisions and this adapter-free model for out-of-combat "
+        "decisions under --ooc-output-contract. Use when a combat adapter has "
+        "forgotten the index contract.",
+    )
     parser.add_argument("--battle-simulations", type=int, default=50)
     parser.add_argument("--thinking", action="store_true")
     parser.add_argument(
@@ -516,6 +524,7 @@ def main() -> None:
         max_lora_rank=args.max_lora_rank,
         output_contract=args.output_contract,
         ooc_output_contract=args.ooc_output_contract,
+        ooc_model=args.ooc_model,
     )
     try:
         extra: dict[str, Any] = {
@@ -530,6 +539,7 @@ def main() -> None:
             "competence_interface_version": args.combat_observation,
             "output_contract": args.output_contract,
             "ooc_output_contract": args.ooc_output_contract,
+            "ooc_model": args.ooc_model,
             "hints": args.hints,
             "hint_block_hp_fraction": args.hint_block_hp_fraction,
             "hint_on_launder_fail": args.hint_on_launder_fail,

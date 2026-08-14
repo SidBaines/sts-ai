@@ -20,7 +20,35 @@ def build_agent(
     max_lora_rank: int = 16,
     output_contract: str = REASONING_ACTION_OUTPUT,
     ooc_output_contract: str | None = None,
+    ooc_model: str | None = None,
 ):
+    if ooc_model is not None:
+        if agent_name != "mlx":
+            raise ValueError(
+                "ooc_model (composite combat+OOC routing) is MLX-only: vLLM "
+                "cannot co-host two models in one process."
+            )
+        from sts_ai.agents import CompositeAgent
+
+        combat_agent = MlxQwenJsonAgent(
+            model_id=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            max_retries=max_retries,
+            enable_thinking=thinking,
+            adapter_path=adapter_path,
+            output_contract=output_contract,
+        )
+        ooc_agent = MlxQwenJsonAgent(
+            model_id=ooc_model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            max_retries=max_retries,
+            enable_thinking=thinking,
+            adapter_path=None,
+            output_contract=ooc_output_contract or REASONING_ACTION_OUTPUT,
+        )
+        return CompositeAgent(combat_agent, ooc_agent)
     if agent_name == "first":
         return FirstLegalAgent()
     if agent_name == "random":
