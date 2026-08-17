@@ -308,3 +308,34 @@ class TrainMetricsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StratifiedExampleCapTest(unittest.TestCase):
+    def _examples(self, spec):
+        return [
+            {"stem": stem, "row": i}
+            for stem, count in spec.items()
+            for i in range(count)
+        ]
+
+    def test_cap_respected_and_every_trajectory_represented(self):
+        from sts_ai.train.grpo_loop import stratified_example_cap
+
+        examples = self._examples({"a": 50, "b": 50, "c": 3, "d": 1})
+        capped = stratified_example_cap(examples, 20, seed=0)
+        self.assertEqual(len(capped), 20)
+        stems = {e["stem"] for e in capped}
+        self.assertEqual(stems, {"a", "b", "c", "d"})
+
+    def test_deterministic_for_seed_and_identity_under_cap(self):
+        from sts_ai.train.grpo_loop import stratified_example_cap
+
+        examples = self._examples({"a": 30, "b": 30})
+        one = stratified_example_cap(examples, 10, seed=3)
+        two = stratified_example_cap(examples, 10, seed=3)
+        self.assertEqual(one, two)
+        other = stratified_example_cap(examples, 10, seed=4)
+        self.assertNotEqual(one, other)
+        self.assertEqual(
+            stratified_example_cap(examples, 100, seed=0), examples
+        )

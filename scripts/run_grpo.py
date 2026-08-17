@@ -65,6 +65,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "metas and enforced by the PG dataset skew guard.",
     )
     parser.add_argument(
+        "--train-example-cap",
+        type=int,
+        default=None,
+        help="Per-iteration cap on trained examples (seeded stratified "
+        "subsample across trajectories). Bounds the training pass; total vs "
+        "trained counts are recorded in the manifest and wandb.",
+    )
+    parser.add_argument(
         "--max-retries",
         type=int,
         default=1,
@@ -244,6 +252,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         "output_contract": args.output_contract,
         "ooc_output_contract": args.ooc_output_contract,
         "max_retries": args.max_retries,
+        "train_example_cap": args.train_example_cap,
         "clip_eps": args.clip_eps,
         "kl_beta": args.kl_beta,
         "learning_rate": args.learning_rate,
@@ -307,6 +316,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         hf_private=args.hf_private,
         output_contract=args.output_contract,
         ooc_output_contract=args.ooc_output_contract,
+        train_example_cap=args.train_example_cap,
         **extra_kwargs,
     )
     print(json.dumps(summary, indent=2, sort_keys=True))

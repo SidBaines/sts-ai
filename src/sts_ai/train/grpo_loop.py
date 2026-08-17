@@ -6,10 +6,12 @@ Periodic eval is intentionally out of v1: run eval separately with
 from __future__ import annotations
 
 import datetime
+import gc
 import json
 import logging
+import random
 import statistics
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Callable
 
@@ -191,6 +193,47 @@ def _run_meta(
     }
 
 
+def stratified_example_cap(
+    examples: list[dict[str, Any]],
+    cap: int,
+    *,
+    seed: int,
+) -> list[dict[str, Any]]:
+    """Deterministically subsample to at most ``cap`` examples, round-robin
+    across trajectories so every trajectory's advantage stays represented.
+
+    Decisions within a trajectory share one broadcast advantage, so rows are
+    highly redundant; capping per-trajectory both bounds the training pass and
+    mildly normalizes the length bias of row-mean PG losses (longer episodes
+    otherwise contribute proportionally more gradient mass)."""
+    if cap <= 0 or len(examples) <= cap:
+        return list(examples)
+    rng = random.Random(seed)
+    by_stem: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+    for example in examples:
+        by_stem[str(example.get("stem"))].append(example)
+    queues = []
+    for stem in sorted(by_stem):
+        rows = by_stem[stem]
+        rng.shuffle(rows)
+        queues.append(rows)
+    rng.shuffle(queues)
+    capped: list[dict[str, Any]] = []
+    cursor = 0
+    while len(capped) < cap:
+        progressed = False
+        for rows in queues:
+            if cursor < len(rows):
+                capped.append(rows[cursor])
+                progressed = True
+                if len(capped) >= cap:
+                    break
+        if not progressed:
+            break
+        cursor += 1
+    return capped
+
+
 def _format_health(rollouts_dir: Path) -> dict[str, float]:
     """Decision-level format diagnostics for one iteration's rollouts.
 
@@ -267,6 +310,7 @@ def run_grpo(
     hf_private: bool = True,
     output_contract: str | None = None,
     ooc_output_contract: str | None = None,
+    train_example_cap: int | None = None,
     build_dataset_fn: Callable[..., tuple[list[dict[str, Any]], dict[str, Any]]] = build_pg_dataset,
     train_fn: Callable[..., Path] = train_pg_trl_train,
     run_streaming_fn: Callable[..., Any] = run_streaming_rollouts,
@@ -386,6 +430,10 @@ def run_grpo(
             )
         finally:
             agent.sleep()
+            # The dropped rollout model's buffers must actually be reclaimed
+            # before the trainer loads its own copy: transient double residency
+            # here swap-stormed the 2026-08-17 dry-run's second iteration.
+            gc.collect()
 
         dataset_contract_kwargs: dict[str, Any] = {}
         if output_contract is not None:
@@ -403,6 +451,14 @@ def run_grpo(
             **dataset_contract_kwargs,
             loss_mask_mode="action",
         )
+        manifest["n_examples_total"] = len(examples)
+        if train_example_cap is not None:
+            examples = stratified_example_cap(
+                examples, train_example_cap, seed=iteration
+            )
+        manifest["n_examples_trained"] = len(examples)
+        manifest["train_example_cap"] = train_example_cap
+
         dataset_path = iter_dir / "pg.jsonl"
         manifest_path = _write_dataset(dataset_path, examples, manifest)
 
@@ -467,6 +523,7 @@ def run_grpo(
             "health/agent_invalid_rate": label_report.get("agent_invalid_rate", 0.0),
             "health/n_act_boss_clear": label_report.get("n_act_boss_clear", 0),
             "data/n_examples": len(examples),
+            "data/n_examples_total": manifest.get("n_examples_total"),
             "data/n_trajectories_with_advantage": manifest.get("n_trajectories_with_advantage", 0),
             "advantage/mean": advantage_report.get("advantage_mean"),
             "advantage/min": advantage_report.get("advantage_min"),
