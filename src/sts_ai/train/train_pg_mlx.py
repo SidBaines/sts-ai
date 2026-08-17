@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import json
+import random
 import sys
 import warnings
 from pathlib import Path
@@ -303,7 +304,11 @@ def train(
         mx.eval(model.state, optimizer.state)
         mx.clear_cache()
 
+    examples = list(examples)
     for _epoch in range(epochs):
+        # Rollout order groups trajectories (and phases) together; unshuffled
+        # accumulation windows would average highly correlated gradients.
+        random.Random(17 + _epoch).shuffle(examples)
         for example in examples:
             input_ids = mx.array([example["input_ids"]], dtype=mx.int32)
             comp_mask = mx.array([example["completion_mask"]], dtype=mx.bool_)

@@ -232,8 +232,10 @@ def main(argv: Sequence[str] | None = None) -> None:
         "seeds_per_iter": args.seeds_per_iter,
         "concurrency": args.concurrency,
         "temperature": args.temperature,
-        "top_p": args.top_p,
-        "top_k": args.top_k,
+        # The MLX sampler is temperature-only; log top_p/top_k as inactive there
+        # rather than implying they shaped generation.
+        "top_p": args.top_p if args.backend == "cuda" else None,
+        "top_k": args.top_k if args.backend == "cuda" else None,
         "max_seq_len": args.max_seq_len,
         "max_act": args.max_act,
         "max_decisions": args.max_decisions,
@@ -255,6 +257,25 @@ def main(argv: Sequence[str] | None = None) -> None:
         "start_iteration": args.start_iteration,
         "resumed": args.resume_adapter is not None,
     }
+
+    # Immutable run provenance, written before the first iteration (wandb may
+    # be disabled; the on-disk copy is the durable record).
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    from sts_ai.rollout import current_git_sha
+
+    run_config = dict(wandb_config)
+    run_config.update(
+        {
+            "git_sha": current_git_sha(),
+            "tokenizer": args.tokenizer,
+            "train_seeds": train_seeds,
+            "argv": list(argv) if argv is not None else sys.argv[1:],
+        }
+    )
+    (args.out_dir / "run_config.json").write_text(
+        json.dumps(run_config, indent=2, sort_keys=True, default=str) + "\n",
+        encoding="utf-8",
+    )
 
     summary = grpo_loop.run_grpo(
         agent=agent,

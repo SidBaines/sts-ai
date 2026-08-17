@@ -199,17 +199,30 @@ def build_example(
         example["loss_mask_mode"] = "action"
         example["target_action_index"] = expected_action_index
         if output_contract in (ACTION_TEXT_OUTPUT, TURN_PLAN_OUTPUT):
-            descriptions = {
-                action.index: action.description
-                for action in _legal_actions_from_record(record)
-            }
+            legal = _legal_actions_from_record(record)
+            descriptions = {action.index: action.description for action in legal}
             if expected_action_index not in descriptions:
                 raise ValueError(
                     "action loss requires agent.action_index to identify a legal action"
                 )
-            example["target_action_description"] = descriptions[
-                expected_action_index
-            ]
+            target_description = descriptions[expected_action_index]
+            # On-policy sampled completions may carry a lenient-parser variant
+            # of the action text (menu-index prefix, truncated annotation).
+            # When the emitted string RESOLVES to the recorded action, supervise
+            # the emitted tokens — masking the canonical description instead
+            # would silently drop every variant row (measured 32% of live
+            # decisions) and bias training toward exact-copiers. Unresolvable
+            # mismatches still fail closed in _action_object_span.
+            emitted = _emitted_semantic_action(completion, output_contract)
+            if emitted is not None and emitted != target_description:
+                from sts_ai.agents import _resolve_semantic_action
+
+                resolved, _res_meta = _resolve_semantic_action(
+                    {"action": emitted}, legal
+                )
+                if resolved is not None and legal[resolved].index == expected_action_index:
+                    target_description = emitted
+            example["target_action_description"] = target_description
         example["assistant_turn_terminator"] = assistant_turn_terminator(tokenizer)
         tokenized = tokenize_example(example, tokenizer, loss_mask_mode="action")
         example["token_counts"] = _token_counts(tokenized)
@@ -341,6 +354,26 @@ def _balanced_json_candidates(text: str) -> list[tuple[str, tuple[int, int]]]:
                 candidates.append((text[start : index + 1], (start, index + 1)))
                 start = None
     return candidates
+
+
+def _emitted_semantic_action(completion: str, output_contract: str) -> str | None:
+    """The ``action`` string the policy actually emitted, or None if the
+    completion has no parseable action object."""
+    try:
+        span = _action_object_span(
+            completion,
+            action_key=_SEMANTIC_ACTION_KEY,
+            expected_action=None,
+            output_contract=output_contract,
+        )
+    except ValueError:
+        return None
+    try:
+        parsed = json.loads(completion[span[0] : span[1]])
+    except json.JSONDecodeError:
+        return None
+    action = parsed.get(_SEMANTIC_ACTION_KEY)
+    return action if isinstance(action, str) else None
 
 
 def _action_object_span(

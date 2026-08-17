@@ -1,0 +1,33 @@
+{
+  "note": "OOC-RL fixed train cohort: first 16 seeds from the 2026-08-17 search-50 screen of provisional range 200-331 (random-agent hybrid, 60s timeout). Seeds 200-201 excluded defensively (screen double-launch overlap); timed-out/errored seeds excluded.",
+  "derived_from": "provisional train range in configs/frozen_seeds.json",
+  "screen": "random agent, combat_control=search, battle_simulations=50, seed_timeout=60s",
+  "splits": {
+    "ooc_rl_train16": [
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210,
+      211,
+      212,
+      213,
+      214,
+      215,
+      216,
+      217
+    ]
+  },
+  "excluded": {
+    "screen_failed": [
+      [
+        331,
+        "timeout/error"
+      ]
+    ]
+  }
+}
