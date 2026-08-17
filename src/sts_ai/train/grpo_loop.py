@@ -9,6 +9,7 @@ import datetime
 import json
 import logging
 import statistics
+from collections import Counter
 from pathlib import Path
 from typing import Any, Callable
 
@@ -167,20 +168,71 @@ def _run_meta(
     seeds: list[int],
     concurrency: int,
     max_decisions: int,
+    output_contract: str | None = None,
+    ooc_output_contract: str | None = None,
 ) -> dict[str, Any]:
+    extra: dict[str, Any] = {
+        "orchestrator": "grpo_loop",
+        "iteration": iteration,
+        "num_iterations": num_iterations,
+        "group_size": group_size,
+        "seeds": list(seeds),
+        "concurrency": concurrency,
+        "max_decisions": max_decisions,
+    }
+    if output_contract is not None:
+        extra["output_contract"] = output_contract
+    if ooc_output_contract is not None:
+        extra["ooc_output_contract"] = ooc_output_contract
     return {
         "git_sha": current_git_sha(),
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "extra": {
-            "orchestrator": "grpo_loop",
-            "iteration": iteration,
-            "num_iterations": num_iterations,
-            "group_size": group_size,
-            "seeds": list(seeds),
-            "concurrency": concurrency,
-            "max_decisions": max_decisions,
-        },
+        "extra": extra,
     }
+
+
+def _format_health(rollouts_dir: Path) -> dict[str, float]:
+    """Decision-level format diagnostics for one iteration's rollouts.
+
+    Complements the episode-level `agent_invalid_rate`: when RL stalls, these
+    separate "the policy can't emit valid actions" from "the policy emits valid
+    actions but chooses badly", and track which parser path (exact copy /
+    stripped menu index / unique prefix / index fallback) carries the run."""
+    n = invalid = retried = 0
+    resolution: Counter[str] = Counter()
+    for jsonl_path in sorted(rollouts_dir.glob("*.jsonl")):
+        try:
+            lines = jsonl_path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            agent = record.get("agent") or {}
+            metadata = agent.get("metadata") or {}
+            n += 1
+            if agent.get("retries", 0) > 0:
+                retried += 1
+            if not agent.get("valid", True):
+                invalid += 1
+                continue
+            resolution[
+                metadata.get("semantic_match")
+                or ("index_fallback" if metadata.get("semantic_fallback") else "exact")
+            ] += 1
+    denom = max(n, 1)
+    health = {
+        "n_decisions": float(n),
+        "decision_invalid_rate": invalid / denom,
+        "decision_retry_rate": retried / denom,
+    }
+    for key, count in resolution.items():
+        health[f"resolution_{key}_rate"] = count / denom
+    return health
 
 
 def run_grpo(
@@ -213,6 +265,8 @@ def run_grpo(
     wandb_config: dict[str, Any] | None = None,
     hf_repo: str | None = None,
     hf_private: bool = True,
+    output_contract: str | None = None,
+    ooc_output_contract: str | None = None,
     build_dataset_fn: Callable[..., tuple[list[dict[str, Any]], dict[str, Any]]] = build_pg_dataset,
     train_fn: Callable[..., Path] = train_pg_trl_train,
     run_streaming_fn: Callable[..., Any] = run_streaming_rollouts,
@@ -325,12 +379,19 @@ def run_grpo(
                     seeds=seeds,
                     concurrency=concurrency,
                     max_decisions=max_decisions,
+                    output_contract=output_contract,
+                    ooc_output_contract=ooc_output_contract,
                 ),
                 hint_cfg=None,
             )
         finally:
             agent.sleep()
 
+        dataset_contract_kwargs: dict[str, Any] = {}
+        if output_contract is not None:
+            dataset_contract_kwargs["output_contract"] = output_contract
+        if ooc_output_contract is not None:
+            dataset_contract_kwargs["ooc_output_contract"] = ooc_output_contract
         examples, manifest = build_dataset_fn(
             rollouts_dir,
             framing=framing,
@@ -339,6 +400,7 @@ def run_grpo(
             mode="group",
             std_norm=std_norm,
             eps=eps,
+            **dataset_contract_kwargs,
             loss_mask_mode="action",
         )
         dataset_path = iter_dir / "pg.jsonl"
@@ -391,6 +453,9 @@ def run_grpo(
             advantage_report,
         )
 
+        format_health = _format_health(rollouts_dir)
+        log.info("grpo iter=%s format_health=%s", iteration, format_health)
+
         # --- wandb: one clean iteration-indexed dashboard ------------------
         wandb_payload: dict[str, Any] = {
             "reward/mean_floor": rollout_stats["mean_floor"],
@@ -407,7 +472,10 @@ def run_grpo(
             "advantage/min": advantage_report.get("advantage_min"),
             "advantage/max": advantage_report.get("advantage_max"),
             "advantage/n_groups": advantage_report.get("n_groups"),
+            "advantage/n_zero_variance_groups": advantage_report.get("n_zero_variance_groups"),
         }
+        for key, value in format_health.items():
+            wandb_payload[f"format/{key}"] = value
         for key, value in train_stats.items():
             wandb_payload[f"train/{key}"] = value
         _wandb_log(

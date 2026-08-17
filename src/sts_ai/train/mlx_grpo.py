@@ -56,6 +56,8 @@ def build_mlx_backend(
     max_seq_len: int = 4096,
     max_retries: int = 1,
     resume_adapter: str | None = None,
+    output_contract: str = "reasoning_action",
+    ooc_output_contract: str | None = None,
 ) -> MlxBackend:
     """Build the MLX agent, rollout shim, trainer, and PG dataset builder."""
     from sts_ai.agents import MlxQwenJsonAgent
@@ -70,6 +72,8 @@ def build_mlx_backend(
         max_retries=max_retries,
         enable_thinking=thinking,
         adapter_path=resume_adapter,
+        output_contract=output_contract,
+        ooc_output_contract=ooc_output_contract,
     )
     return MlxBackend(
         agent=agent,

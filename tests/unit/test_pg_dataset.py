@@ -367,3 +367,103 @@ class BuildPgDatasetTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PerPhaseContractTest(unittest.TestCase):
+    def test_ooc_records_get_ooc_contract_prompts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_rollout(
+                root,
+                _meta(world_seed=10, rollout_index=0, final_floor=10, n_decisions=2),
+                [
+                    _record(world_seed=10, decision_index=0, phase="combat"),
+                    _record(world_seed=10, decision_index=1, phase="out_of_combat"),
+                ],
+            )
+            _write_rollout(
+                root,
+                _meta(world_seed=10, rollout_index=1, final_floor=20),
+                [_record(world_seed=10, decision_index=0, phase="out_of_combat")],
+            )
+            examples, manifest = build_pg_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="tok",
+                mode="group",
+                loss_mask_mode="completion",
+                output_contract="action_text",
+                ooc_output_contract="reasoning_action",
+            )
+        by_phase = {e["phase"]: e for e in examples}
+        self.assertIn('"action":', by_phase["combat"]["prompt"])
+        self.assertIn("action_index", by_phase["out_of_combat"]["prompt"])
+        self.assertNotIn("action_index", by_phase["combat"]["prompt"])
+        self.assertEqual(manifest["output_contract"], "action_text")
+        self.assertEqual(manifest["ooc_output_contract"], "reasoning_action")
+
+    def test_skew_guard_rejects_contract_mismatch_with_meta(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            meta = _meta(world_seed=10, rollout_index=0, final_floor=10)
+            meta.setdefault("extra", {})["output_contract"] = "action_text"
+            _write_rollout(root, meta, [_record(world_seed=10, decision_index=0)])
+            with self.assertRaisesRegex(ValueError, "skew"):
+                build_pg_dataset(
+                    root,
+                    framing=FRAMING,
+                    tokenizer=FakeTokenizer(),
+                    tokenizer_id="tok",
+                    mode="group",
+                    loss_mask_mode="completion",
+                    output_contract="reasoning_action",
+                )
+
+    def test_metas_without_contract_fields_are_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_rollout(
+                root,
+                _meta(world_seed=10, rollout_index=0, final_floor=10),
+                [_record(world_seed=10, decision_index=0)],
+            )
+            _write_rollout(
+                root,
+                _meta(world_seed=10, rollout_index=1, final_floor=20),
+                [_record(world_seed=10, decision_index=0)],
+            )
+            examples, _manifest = build_pg_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="tok",
+                mode="group",
+                loss_mask_mode="completion",
+                output_contract="action_text",
+                ooc_output_contract="reasoning_action",
+            )
+            self.assertTrue(examples)
+
+
+class ZeroVarianceGroupReportTest(unittest.TestCase):
+    def test_flat_group_counted_and_gets_zero_advantage(self):
+        from sts_ai.train.advantage import group_relative_advantages
+        from sts_ai.train.reward import TrajectoryLabel
+
+        def label(stem, seed, floor):
+            return TrajectoryLabel(
+                stem=stem, world_seed=seed, rollout_index=0, final_floor=floor,
+                final_act=1, outcome="", stopped_reason="terminal",
+                n_invalid=0, n_decisions=1, kept=True, keep_reason="",
+            )
+
+        advantages, report = group_relative_advantages(
+            [
+                label("a0", 1, 5), label("a1", 1, 5),   # flat group
+                label("b0", 2, 5), label("b1", 2, 9),   # informative group
+            ]
+        )
+        self.assertEqual(report["n_zero_variance_groups"], 1)
+        self.assertEqual(advantages["a0"], 0.0)
+        self.assertNotEqual(advantages["b1"], 0.0)

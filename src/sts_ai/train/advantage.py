@@ -96,6 +96,7 @@ def group_relative_advantages(
 
     advantages_by_stem: dict[str, float] = {}
     group_sizes: dict[int, int] = {}
+    n_zero_variance_groups = 0
 
     for world_seed, group in groups.items():
         if not group:
@@ -104,6 +105,11 @@ def group_relative_advantages(
         floors = [label.final_floor for label in group]
         group_mean = statistics.mean(floors)
         group_std = statistics.pstdev(floors)
+        if group_std == 0.0:
+            # Every rollout in the group reached the same floor: the group
+            # contributes zero learning signal this iteration. A persistently
+            # high count is the primary "why isn't it learning" diagnostic.
+            n_zero_variance_groups += 1
 
         for label in group:
             centered = float(label.final_floor) - group_mean
@@ -122,6 +128,7 @@ def group_relative_advantages(
         "eps": eps,
         "n_groups": len(group_sizes),
         "group_sizes": group_sizes,
+        "n_zero_variance_groups": n_zero_variance_groups,
         "n_simulator_error_excluded": n_simulator_error_excluded,
         **_advantage_report_stats(advantages_by_stem),
     }

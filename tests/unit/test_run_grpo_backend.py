@@ -60,9 +60,12 @@ class RunGrpoBackendTest(unittest.TestCase):
                 temperature=1.0,
                 top_p=0.95,
                 top_k=64,
+                max_retries=1,
                 enable_lora=True,
                 enable_sleep_mode=True,
                 gpu_memory_utilization=0.85,
+                output_contract="reasoning_action",
+                ooc_output_contract=None,
             )
             mlx_mock.assert_not_called()
             run_mock.assert_called_once()
@@ -112,7 +115,10 @@ class RunGrpoBackendTest(unittest.TestCase):
                 thinking=True,
                 temperature=1.0,
                 max_seq_len=1024,
+                max_retries=1,
                 resume_adapter=None,
+                output_contract="reasoning_action",
+                ooc_output_contract=None,
             )
             vllm_mock.assert_not_called()
             run_mock.assert_called_once()

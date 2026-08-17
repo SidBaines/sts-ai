@@ -52,6 +52,26 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--combat-control", choices=("search", "llm"), default="llm")
     parser.add_argument("--battle-simulations", type=int, default=50)
     parser.add_argument(
+        "--output-contract",
+        default="reasoning_action",
+        help="Assistant JSON schema for combat decisions (and everywhere when "
+        "no OOC override is set).",
+    )
+    parser.add_argument(
+        "--ooc-output-contract",
+        default=None,
+        help="Optional out-of-combat contract override (e.g. run OOC RL on "
+        "action_text while keeping the default elsewhere). Recorded in rollout "
+        "metas and enforced by the PG dataset skew guard.",
+    )
+    parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=1,
+        help="Invalid-response retries per decision (episode ends after the "
+        "last retry fails).",
+    )
+    parser.add_argument(
         "--gpu-memory-utilization",
         type=float,
         default=0.85,
@@ -152,7 +172,10 @@ def _select_agent_and_overrides(
             thinking=args.thinking,
             temperature=args.temperature,
             max_seq_len=args.max_seq_len,
+            max_retries=args.max_retries,
             resume_adapter=args.resume_adapter,
+            output_contract=args.output_contract,
+            ooc_output_contract=args.ooc_output_contract,
         )
         return backend.agent, {
             "run_streaming_fn": backend.run_fn,
@@ -168,9 +191,12 @@ def _select_agent_and_overrides(
         temperature=args.temperature,
         top_p=args.top_p,
         top_k=args.top_k,
+        max_retries=args.max_retries,
         enable_lora=True,
         enable_sleep_mode=True,
         gpu_memory_utilization=args.gpu_memory_utilization,
+        output_contract=args.output_contract,
+        ooc_output_contract=args.ooc_output_contract,
     )
     return agent, {}
 
@@ -213,6 +239,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         "max_decisions": args.max_decisions,
         "battle_simulations": args.battle_simulations,
         "combat_control": args.combat_control,
+        "output_contract": args.output_contract,
+        "ooc_output_contract": args.ooc_output_contract,
+        "max_retries": args.max_retries,
         "clip_eps": args.clip_eps,
         "kl_beta": args.kl_beta,
         "learning_rate": args.learning_rate,
@@ -255,6 +284,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         wandb_config=wandb_config,
         hf_repo=args.hf_repo,
         hf_private=args.hf_private,
+        output_contract=args.output_contract,
+        ooc_output_contract=args.ooc_output_contract,
         **extra_kwargs,
     )
     print(json.dumps(summary, indent=2, sort_keys=True))

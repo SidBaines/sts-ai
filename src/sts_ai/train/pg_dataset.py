@@ -15,6 +15,7 @@ from sts_ai.train.dataset_builder import (
     _skip_reason,
     discover_rollouts,
 )
+from sts_ai.prompting import REASONING_ACTION_OUTPUT
 from sts_ai.train.reward import label_trajectories
 from sts_ai.train.sft_format import (
     build_example,
@@ -41,12 +42,30 @@ def build_pg_dataset(
     require_framing_match: bool = True,
     drop_phases: tuple[str, ...] = (),
     loss_mask_mode: str = "completion",
+    output_contract: str = REASONING_ACTION_OUTPUT,
+    ooc_output_contract: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     rollout_dir = Path(rollout_dir)
     loss_mask_mode = resolve_loss_mask_mode(loss_mask_mode, manifest_path=None)
 
     pairs = discover_rollouts(rollout_dir)
     metas = [_load_json(meta_path) for _jsonl_path, meta_path in pairs]
+
+    # Train/inference-skew guard: when generation metas record the contracts
+    # they ran under, refuse a reconstruction that disagrees. Metas without the
+    # fields (historical rollouts) are accepted as-is.
+    for meta in metas:
+        extra = meta.get("extra") or {}
+        for key, requested in (
+            ("output_contract", output_contract),
+            ("ooc_output_contract", ooc_output_contract),
+        ):
+            stored = extra.get(key)
+            if stored is not None and stored != requested:
+                raise ValueError(
+                    f"rollout meta records {key}={stored!r} but reconstruction "
+                    f"requested {requested!r}; prompts would skew"
+                )
 
     reasoning_mode = _one_value(
         [_reasoning_mode(meta) for meta in metas],
@@ -107,6 +126,9 @@ def build_pg_dataset(
             if skip_reason is not None:
                 skipped[skip_reason] += 1
                 continue
+            record_contract = output_contract
+            if ooc_output_contract is not None and record.get("phase") != "combat":
+                record_contract = ooc_output_contract
             try:
                 example = build_example(
                     record,
@@ -115,6 +137,7 @@ def build_pg_dataset(
                     enable_thinking=enable_thinking,
                     induce_reasoning=induce_reasoning,
                     loss_mask_mode=loss_mask_mode,
+                    output_contract=record_contract,
                 )
             except ValueError:
                 if loss_mask_mode != "action":
@@ -137,6 +160,8 @@ def build_pg_dataset(
         "enable_thinking": enable_thinking,
         "induce_reasoning": induce_reasoning,
         "loss_mask_mode": loss_mask_mode,
+        "output_contract": output_contract,
+        "ooc_output_contract": ooc_output_contract,
         "mode": mode,
         "min_act": min_act,
         "n_rollouts_discovered": len(pairs),
