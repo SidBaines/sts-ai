@@ -348,6 +348,18 @@ def train(
                 "supervised_token_count": int(example["n_completion_tokens"]),
             }
             log_history.append(entry)
+            if step % 50 == 0:
+                # Periodic atomic flush so live monitors can read training
+                # curves mid-pass (the final write below stays authoritative).
+                try:
+                    tmp = out_adapter_dir / ".trainer_log.json.tmp"
+                    tmp.write_text(
+                        json.dumps(log_history, indent=2, sort_keys=True),
+                        encoding="utf-8",
+                    )
+                    tmp.replace(out_adapter_dir / "trainer_log.json")
+                except OSError:
+                    pass
 
             if accum_count >= grad_accum:
                 apply_accumulated_grad()
