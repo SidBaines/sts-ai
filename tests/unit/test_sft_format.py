@@ -829,3 +829,58 @@ class SftFormatTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EmittedSemanticVariantMaskTest(unittest.TestCase):
+    """On-policy action-mask supervision of lenient-parser variants."""
+
+    def _record(self, raw_response: str):
+        return {
+            "world_seed": 1,
+            "decision_index": 0,
+            "phase": "out_of_combat",
+            "state_text": "state",
+            "legal_actions": [
+                {"index": 0, "bits": 1, "description": "take gold 25g"},
+                {"index": 1, "bits": 2, "description": "skip rewards / proceed"},
+            ],
+            "agent": {
+                "action_index": 0,
+                "raw_response": raw_response,
+                "valid": True,
+                "retries": 0,
+                "metadata": {},
+            },
+            "action_executed": True,
+        }
+
+    def _build(self, raw_response: str):
+        from sts_ai.train.sft_format import build_example
+        from tests.unit.test_pg_dataset import FakeTokenizer
+
+        return build_example(
+            self._record(raw_response),
+            "frame",
+            tokenizer=FakeTokenizer(),
+            enable_thinking=False,
+            loss_mask_mode="action",
+            output_contract="action_text",
+        )
+
+    def test_menu_prefixed_emission_is_supervised_as_emitted(self):
+        example = self._build('{"action": "0: take gold 25g"}')
+        self.assertEqual(example["target_action_description"], "0: take gold 25g")
+        self.assertGreater(example["token_counts"]["n_supervised_action_tokens"], 0)
+
+    def test_exact_emission_keeps_canonical_description(self):
+        example = self._build('{"action": "take gold 25g"}')
+        self.assertEqual(example["target_action_description"], "take gold 25g")
+
+    def test_unresolvable_emission_still_fails_closed(self):
+        with self.assertRaises(ValueError):
+            self._build('{"action": "drink potion Fire Potion"}')
+
+    def test_wrong_action_resolution_fails_closed(self):
+        # Emitted text resolves to a DIFFERENT action than the recorded index.
+        with self.assertRaises(ValueError):
+            self._build('{"action": "skip rewards / proceed"}')
