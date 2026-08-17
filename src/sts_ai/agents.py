@@ -317,8 +317,16 @@ class MlxQwenJsonAgent:
         }
 
     def sleep(self, level: int = 1) -> None:
-        """Release the policy model so the co-resident trainer can use memory."""
+        """Release the policy model so the co-resident trainer can use memory.
+
+        Order matters: the buffers only reach MLX's cache pool once Python
+        drops the last reference (gc), so the cache clear must come AFTER gc —
+        clearing first strands a full model image in the cache and the next
+        load swap-storms (observed 2026-08-17, both dry-runs' iter-1)."""
         self.model = None
+        import gc
+
+        gc.collect()
         import mlx.core as mx
 
         mx.clear_cache()

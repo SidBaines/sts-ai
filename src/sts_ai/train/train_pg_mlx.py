@@ -378,6 +378,12 @@ def train(
     except Exception:
         pass
 
+    # Same release-order rule as MlxQwenJsonAgent.sleep(): refs must be gone
+    # (del + gc) BEFORE the cache clear, or a model image strands in the cache
+    # and the agent's post-training wake() reload swap-storms.
     del model, optimizer
+    import gc
+
+    gc.collect()
     mx.clear_cache()
     return out_adapter_dir

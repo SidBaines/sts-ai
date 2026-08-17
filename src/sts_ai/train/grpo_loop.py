@@ -429,10 +429,11 @@ def run_grpo(
                 hint_cfg=None,
             )
         finally:
+            # Backend sleep() owns the full release choreography (for MLX:
+            # drop refs -> gc -> THEN clear the buffer cache; clearing before
+            # gc strands a model image in the cache and the trainer's load
+            # swap-storms — observed on 2026-08-17 in both dry-runs' iter-1).
             agent.sleep()
-            # The dropped rollout model's buffers must actually be reclaimed
-            # before the trainer loads its own copy: transient double residency
-            # here swap-stormed the 2026-08-17 dry-run's second iteration.
             gc.collect()
 
         dataset_contract_kwargs: dict[str, Any] = {}
