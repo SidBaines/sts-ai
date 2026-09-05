@@ -5,6 +5,7 @@ import argparse
 from collections import defaultdict
 import hashlib
 import json
+import math
 from pathlib import Path
 import statistics
 
@@ -13,6 +14,26 @@ from sts_ai.agents import parse_json_action
 from sts_ai.provenance import adapter_provenance
 from sts_ai.schemas import LegalAction
 from sts_ai.teacher_action_eval import evaluate_generated_action
+
+
+DECLARED_MODEL_COMPARISONS = frozenset({
+    ("base_text_free", "gemma26_text_free"),
+    ("base_text_constrained", "gemma26_text_constrained"),
+    ("base_text_enriched_constrained", "gemma26_text_enriched_constrained"),
+    ("base_text_reversed_constrained", "gemma26_text_reversed_constrained"),
+    ("base_text_sampled", "gemma26_text_sampled"),
+})
+
+MODEL_BUNDLE_CAVEAT = (
+    "Cross-model comparisons change the complete model bundle: model weights and architecture, "
+    "tokenizer/chat-template, quantization and any model-local custom loader. "
+    "The staged gemma26_ollama bundle uses Ollama NVFP4 weights and a custom MLX loader; "
+    "the alternative Hugging Face mlx-community bundle uses 4-bit affine weights with "
+    "8-bit router projections. The E4B control is BF16. Read each arm model path and "
+    "bundle provenance to identify the actual implementation. Gemma26 and E4B chat "
+    "templates may also differ in empty-thought-channel prefilling. "
+    "Differences cannot be attributed to parameter count alone."
+)
 
 
 def read_rows(path: Path) -> list[dict]:
@@ -128,10 +149,12 @@ def validate_arm(config, predictions, labels):
     return remapped, sources, strict
 
 
-def validate_comparison(first_config, second_config, first_sources, second_sources):
+def validate_comparison(first_config, second_config, first_sources, second_sources, *, comparison_pair=None):
     # Metadata and the four intended interventions may differ. All other CLI
     # and generator-code provenance must match, including unknown future fields.
     allowed = {"source", "source_sha256", "out", "started", "adapter", "adapter_identity", "contract", "constrained"}
+    if comparison_pair in DECLARED_MODEL_COMPARISONS:
+        allowed.add("model")
     required = {"model", "temperature", "batch_size", "max_tokens", "max_retries", "script_sha256"}
     for config in (first_config, second_config):
         if not required.issubset(config):
@@ -177,6 +200,53 @@ def values_for(label, kind):
         entry = label["values"][kind]
         return entry["action_final_floors"] if entry["complete_terminal_action_set"] else None
     return label.get("random3_mean", {}).get("action_final_floors")
+
+
+def action_value_consistency(first, second, labels, kind):
+    """Separate changed action identity from changed continuation-policy value."""
+    a = indexed_rows(first, name="first arm")
+    b = indexed_rows(second, name="second arm")
+    if set(a) != set(b):
+        raise ValueError("action-value consistency cohorts differ")
+    rows = []
+    for probe in a:
+        values = values_for(labels[probe], kind)
+        if values is None or not (a[probe]["decision"]["valid"] and b[probe]["decision"]["valid"]):
+            continue
+        ia, ib = (str(row[probe]["decision"]["action_index"]) for row in (a, b))
+        if ia not in values or ib not in values:
+            raise ValueError("valid action absent from complete teacher values")
+        equal = math.isclose(values[ia], values[ib], rel_tol=0, abs_tol=1e-9)
+        rows.append({"probe_id": probe, "same_action": ia == ib, "equal_value": equal,
+                     "informative": max(values.values()) > min(values.values()),
+                     "second_value_minus_first": values[ib] - values[ia]})
+
+    def summarize_subset(items):
+        return {"n": len(items), "n_same_action": sum(row["same_action"] for row in items),
+                "n_different_action_equal_value": sum(not row["same_action"] and row["equal_value"] for row in items),
+                "n_different_action_unequal_value": sum(not row["same_action"] and not row["equal_value"] for row in items),
+                "same_action_rate": mean([row["same_action"] for row in items]),
+                "equivalent_value_rate": mean([row["equal_value"] for row in items]),
+                "n_second_higher_value": sum(not row["equal_value"] and row["second_value_minus_first"] > 0 for row in items),
+                "n_second_lower_value": sum(not row["equal_value"] and row["second_value_minus_first"] < 0 for row in items)}
+
+    return {"complete_teacher_and_both_valid": summarize_subset(rows),
+            "informative_complete_teacher_and_both_valid": summarize_subset([row for row in rows if row["informative"]]),
+            "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."}
+
+
+def paired_regret_on_subset(first, second, probe_ids):
+    a = {row["probe_id"]: row for row in first if row["probe_id"] in probe_ids}
+    b = {row["probe_id"]: row for row in second if row["probe_id"] in probe_ids}
+    worlds = defaultdict(list)
+    for probe in sorted(set(a) & set(b)):
+        if a[probe]["valid"] and b[probe]["valid"]:
+            worlds[a[probe]["world_seed"]].append(b[probe]["regret"] - a[probe]["regret"])
+    deltas = [statistics.mean(group) for group in worlds.values()]
+    return {"first": summary(list(a.values())), "second": summary(list(b.values())),
+            "n_common_valid_states": sum(map(len, worlds.values())), "n_worlds": len(worlds),
+            "mean_world_regret_delta_second_minus_first": mean(deltas),
+            "bootstrap_ci": list(bootstrap_ci(deltas, seed=905)) if deltas else None}
 
 
 def evaluate(prediction, label, values):
@@ -240,8 +310,9 @@ def main():
             per_state[path.parent.name][kind] = evaluated
         arms[path.parent.name] = arm
 
-    comparisons, consistencies = {}, {}
-    for first, second in [
+    comparisons, consistencies, value_consistencies, changed_text_comparisons = {}, {}, {}, {}
+    comparison_provenance = {}
+    within_model_comparisons = [
         ("base_text_free", "base_text_constrained"),
         ("base_index_free", "base_index_constrained"),
         ("base_text_constrained", "base_index_constrained"),
@@ -255,11 +326,36 @@ def main():
         ("rl1_text_constrained", "rl1_text_reversed_constrained"),
         ("base_text_sampled", "rl1_text_sampled"),
         ("base_text_sampled", "rl5_text_sampled"),
-    ]:
+        ("gemma26_text_free", "gemma26_text_constrained"),
+        ("gemma26_text_constrained", "gemma26_text_enriched_constrained"),
+        ("gemma26_text_constrained", "gemma26_text_reversed_constrained"),
+    ]
+    for first, second in within_model_comparisons + sorted(DECLARED_MODEL_COMPARISONS):
         if first not in per_state or second not in per_state:
             continue
-        validate_comparison(arm_configs[first], arm_configs[second], arm_sources[first], arm_sources[second])
+        validate_comparison(arm_configs[first], arm_configs[second], arm_sources[first], arm_sources[second],
+                            comparison_pair=(first, second))
+        model_changed = arm_configs[first]["model"] != arm_configs[second]["model"]
+        comparison_provenance[f"{second}_minus_{first}"] = {
+            "model_intervention_declared": (first, second) in DECLARED_MODEL_COMPARISONS,
+            "model_intervention_observed": model_changed,
+            "first_model": arm_configs[first]["model"], "second_model": arm_configs[second]["model"],
+            "caveat": MODEL_BUNDLE_CAVEAT if model_changed else None}
         consistencies[f"{second}_versus_{first}"] = action_consistency(arm_predictions[first], arm_predictions[second])
+        value_consistencies[f"{second}_versus_{first}"] = {
+            kind: action_value_consistency(arm_predictions[first], arm_predictions[second], labels, kind)
+            for kind in ("heuristic", "random3_mean")}
+        changed_ids = {probe for probe in arm_sources[first]
+                       if arm_sources[first][probe]["state_text"] != arm_sources[second][probe]["state_text"]}
+        if changed_ids:
+            changed_text_comparisons[f"{second}_minus_{first}"] = {
+                "subset_definition": "state_text actually differs between the two validated source cohorts",
+                "n_changed_source_states": len(changed_ids), "probe_ids": sorted(changed_ids),
+                "action_consistency": action_consistency(
+                    [row for row in arm_predictions[first] if row["probe_id"] in changed_ids],
+                    [row for row in arm_predictions[second] if row["probe_id"] in changed_ids]),
+                "values": {kind: paired_regret_on_subset(per_state[first][kind], per_state[second][kind], changed_ids)
+                           for kind in ("heuristic", "random3_mean")}}
         comparison = {}
         for kind in ("heuristic", "random3_mean"):
             a = {r["probe_id"]: r for r in per_state[first][kind]}
@@ -274,11 +370,15 @@ def main():
                 "bootstrap_ci": list(bootstrap_ci(deltas, seed=905)) if deltas else None}
         comparisons[f"{second}_minus_{first}"] = comparison
     report = {"arms": arms, "paired_conditional_regret": comparisons, "paired_action_consistency": consistencies,
+        "paired_action_value_consistency": value_consistencies,
+        "secondary_changed_state_text_comparisons": changed_text_comparisons,
+        "comparison_provenance": comparison_provenance,
         "limitations": ["Only complete matched-cohort arms enter comparisons; incomplete teacher action sets excluded equally.",
                         "Validity is single-attempt generation; max_retries config is not used in probe mode.",
                         "Regret is against privileged continuation-policy values, not optimal-action truth.",
                         "Regret given valid excludes malformed choices and is selection biased; read validity beside it.",
-                        "Pairwise intervals use world means across states valid under both arms; descriptive exploratory comparisons."]}
+                        "Pairwise intervals use world means across states valid under both arms; descriptive exploratory comparisons.",
+                        MODEL_BUNDLE_CAVEAT]}
     args.out.write_text(json.dumps(report, indent=2))
     args.out.with_name("analysis_per_state.json").write_text(json.dumps(per_state, indent=2))
     for name, arm in arms.items():

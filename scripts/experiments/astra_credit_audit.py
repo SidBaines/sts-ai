@@ -24,6 +24,87 @@ from sts_ai.train.dataset_builder import _skip_reason, trajectory_is_contiguous
 from sts_ai.train.sft_format import chat_template_probe_hash, tokenize_example
 
 
+def prepare_failure_cohort(source: Path, out: Path, compare_cohort: Path, iteration: int = 6) -> None:
+    """Freeze every fatal decision, including single-action menus excluded by the broad probe."""
+    from transformers import AutoTokenizer
+    from sts_ai.prompting import NEUTRAL_FRAME, render_action_prompt
+    from sts_ai.schemas import LegalAction
+
+    directory = source / f"iter_{iteration}" / "rollouts"
+    selected, inputs = [], []
+    for path in sorted(directory.glob("seed_*_r*.jsonl")):
+        records = read_jsonl(path)
+        fatal = [row for row in records if row.get("action_executed") is False]
+        meta_path = path.with_suffix(".meta.json")
+        meta = json.loads(meta_path.read_text())
+        if len(fatal) != int(meta["stopped_reason"] == "agent_invalid"):
+            raise ValueError(f"fatal record count disagrees with episode outcome: {path}")
+        if not fatal:
+            continue
+        row = dict(fatal[0])
+        if row != records[-1] or row["agent"]["valid"] or row["phase"] != "out_of_combat":
+            raise ValueError(f"unexpected fatal decision shape: {path}")
+        row["probe_id"] = len(selected)
+        screen = row["state"]["screen_state"].split(".")[-1]
+        row["probe_screen"] = "NEOW" if screen == "EVENT_SCREEN" and row["state"]["floor"] == 0 else screen
+        row["source_trace"] = str(path)
+        selected.append(row)
+        for input_path in (path, meta_path):
+            inputs.append({"path": str(input_path), "sha256": hashlib.sha256(input_path.read_bytes()).hexdigest()})
+    out.mkdir(parents=True, exist_ok=True)
+    cohort = out / "cohort.jsonl"
+    with cohort.open("x") as handle:
+        for row in selected:
+            handle.write(json.dumps(row) + "\n")
+    manifest = {"kind": "astra_original_fatal_state_replay_v1", "n": len(selected),
+                "source": str(directory), "iteration": iteration, "cohort": str(cohort),
+                "sha256": hashlib.sha256(cohort.read_bytes()).hexdigest(),
+                "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                "source_inputs": inputs, "selected_by_screen": dict(Counter(row["probe_screen"] for row in selected)),
+                "legal_action_count_histogram": dict(Counter(len(row["legal_actions"]) for row in selected)),
+                "original_retries": dict(Counter(row["agent"].get("retries", 0) for row in selected)),
+                "selection": "Every action_executed=false final record from a completed agent_invalid episode; no minimum-menu-size filter; original record fields retained verbatim.",
+                "limitations": ["Conditioned on historical failures; not a representative policy-quality cohort.",
+                                "Probe replays exact recorded state_text/legal_actions under its standard first-attempt prompt; historical raw responses here were final retry attempts.",
+                                "Historical iteration6 policy used iter5/adapter; sampling temperature0.7, cap4096. Current probe cap/sampling seed may differ."]}
+    (out / "cohort.manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    print(json.dumps({"cohort": str(cohort), "n": len(selected), "actions": manifest["legal_action_count_histogram"]}), flush=True)
+
+    config = json.loads((source / "run_config.json").read_text())
+    tokenizer = AutoTokenizer.from_pretrained(config["tokenizer"], local_files_only=True)
+    telemetry = []
+    for name, rows in (("historical_failures", selected), ("fresh133", read_jsonl(compare_cohort))):
+        for row in rows:
+            prompt = render_action_prompt(row["state_text"], [LegalAction(**a) for a in row["legal_actions"]], NEUTRAL_FRAME, output_contract="action_text")
+            rendered = tokenizer.apply_chat_template([{"role": "user", "content": prompt}], tokenize=False, add_generation_prompt=True, enable_thinking=False)
+            telemetry.append({"cohort": name, "probe_id": row["probe_id"], "world_seed": row["world_seed"],
+                              "probe_screen": row["probe_screen"], "floor": row["state"]["floor"],
+                              "n_legal_actions": len(row["legal_actions"]), "state_text_chars": len(row["state_text"]),
+                              "first_attempt_prompt_tokens": len(tokenizer.encode(rendered)),
+                              "stored_original_prompt_tokens": row["agent"].get("prompt_tokens"),
+                              "stored_original_completion_tokens": row["agent"].get("completion_tokens"),
+                              "stored_original_raw_response": row["agent"].get("raw_response"),
+                              "original_error": (row["agent"].get("metadata") or {}).get("error"),
+                              "original_retries": row["agent"].get("retries", 0)})
+
+    def distribution(values):
+        values = [value for value in values if isinstance(value, (int, float))]
+        return {"n": len(values), "min": min(values) if values else None, "max": max(values) if values else None,
+                "mean": statistics.mean(values) if values else None, "median": statistics.median(values) if values else None}
+
+    comparison = {"compare_cohort": str(compare_cohort), "compare_cohort_sha256": hashlib.sha256(compare_cohort.read_bytes()).hexdigest(),
+                  "chat_template_probe_hash": chat_template_probe_hash(tokenizer, enable_thinking=False), "cohorts": {},
+                  "interpretation": "Fresh cohort source traces were generated by a random agent, so their stored model-token telemetry is unavailable/zero; reconstructed first-attempt prompt lengths are comparable."}
+    for name in ("historical_failures", "fresh133"):
+        rows = [row for row in telemetry if row["cohort"] == name]
+        comparison["cohorts"][name] = {"n": len(rows), "screens": dict(Counter(row["probe_screen"] for row in rows)),
+            "n_single_action": sum(row["n_legal_actions"] == 1 for row in rows),
+            **{key: distribution([row[key] for row in rows]) for key in
+               ("n_legal_actions", "floor", "first_attempt_prompt_tokens", "state_text_chars", "stored_original_prompt_tokens", "stored_original_completion_tokens")}}
+    (out / "cohort_comparison.json").write_text(json.dumps(comparison, indent=2, sort_keys=True) + "\n")
+    write_csv(out / "cohort_telemetry.csv", telemetry)
+
+
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
@@ -469,10 +550,16 @@ def main() -> None:
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--snapshot-left", type=Path)
     parser.add_argument("--snapshot-right", type=Path)
+    parser.add_argument("--prepare-failure-cohort", action="store_true")
+    parser.add_argument("--failure-iteration", type=int, default=6)
+    parser.add_argument("--compare-cohort", type=Path, default=Path("data/experiments/astra_5sep/policy/cohort.jsonl"))
     args = parser.parse_args()
     if args.self_test:
         result = unittest.TextTestRunner().run(unittest.defaultTestLoader.loadTestsFromTestCase(AuditTests))
         raise SystemExit(0 if result.wasSuccessful() else 1)
+    if args.prepare_failure_cohort:
+        prepare_failure_cohort(args.source, args.out, args.compare_cohort, args.failure_iteration)
+        return
     if args.snapshot_left or args.snapshot_right:
         if not (args.snapshot_left and args.snapshot_right):
             parser.error("snapshot comparison requires both --snapshot-left and --snapshot-right")

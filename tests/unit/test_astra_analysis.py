@@ -7,7 +7,8 @@ import tempfile
 import unittest
 
 from scripts.experiments.astra_analyze_policy import (
-    action_consistency, evaluate, indexed_rows, original_index_map, summary, validate_arm,
+    action_consistency, action_value_consistency, evaluate, indexed_rows,
+    original_index_map, paired_regret_on_subset, summary, validate_arm,
     validate_comparison, values_for,
 )
 
@@ -118,6 +119,22 @@ class TestAstraAnalysis(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing required"):
             validate_comparison({}, {}, {}, {})
 
+    def test_model_change_requires_exact_named_comparison(self) -> None:
+        config = {"model": "e4b-bf16", "temperature": 0, "batch_size": 16,
+                  "max_tokens": 256, "max_retries": 1, "script_sha256": "same-code"}
+        changed = {**config, "model": "26b-a4b-4bit"}
+        for pair in (None, ("base_text_free", "unregistered_model_arm")):
+            with self.assertRaisesRegex(ValueError, "generation/config"):
+                validate_comparison(config, changed, {}, {}, comparison_pair=pair)
+        validate_comparison(config, changed, {}, {},
+                            comparison_pair=("base_text_free", "gemma26_text_free"))
+        with self.assertRaisesRegex(ValueError, "generation/config"):
+            validate_comparison(config, {**changed, "temperature": .7}, {}, {},
+                                comparison_pair=("base_text_free", "gemma26_text_free"))
+        with self.assertRaisesRegex(ValueError, "generation/config"):
+            validate_comparison(config, {**changed, "script_sha256": "different-generator"}, {}, {},
+                                comparison_pair=("base_text_free", "gemma26_text_free"))
+
     def test_consistency_uses_remapped_indices_and_conditions_on_both_valid(self) -> None:
         original = [{"probe_id": i, "world_seed": 1001, "probe_screen": "NEOW",
                      "decision": {"valid": True, "action_index": i}} for i in range(3)]
@@ -131,6 +148,33 @@ class TestAstraAnalysis(unittest.TestCase):
         self.assertEqual(result["n_common_valid"], 2)
         self.assertEqual(result["same_original_action_rate_given_both_valid"], .5)
         self.assertEqual(result["world_bootstrap_ci"], [.5, .5])
+
+    def test_action_change_can_be_harmless_teacher_tie_even_in_informative_state(self) -> None:
+        first = [{"probe_id": i, "decision": {"valid": True, "action_index": 0}} for i in range(3)]
+        second = [{"probe_id": i, "decision": {"valid": True, "action_index": 1}} for i in range(3)]
+        values = [{"0": 30, "1": 30, "2": 10}, {"0": 30, "1": 10}, {"0": 16, "1": 16}]
+        labels = {i: {"values": {"heuristic": {"complete_terminal_action_set": True, "action_final_floors": value}}}
+                  for i, value in enumerate(values)}
+        result = action_value_consistency(first, second, labels, "heuristic")
+        all_rows = result["complete_teacher_and_both_valid"]
+        informative = result["informative_complete_teacher_and_both_valid"]
+        self.assertEqual(all_rows["n"], 3)
+        self.assertEqual(all_rows["n_different_action_equal_value"], 2)
+        self.assertEqual(informative["n"], 2)
+        self.assertEqual(informative["n_different_action_equal_value"], 1)
+        self.assertEqual(informative["n_different_action_unequal_value"], 1)
+        self.assertEqual(informative["same_action_rate"], 0)
+        self.assertEqual(informative["equivalent_value_rate"], .5)
+
+    def test_changed_observation_secondary_excludes_unchanged_states(self) -> None:
+        first = [{"probe_id": i, "world_seed": 1001, "valid": True,
+                  "informative": True, "regret": 4, "normalized_regret": .5,
+                  "top_set_match": False} for i in range(2)]
+        second = [{**first[0], "regret": 100}, {**first[1], "regret": 2}]
+        result = paired_regret_on_subset(first, second, {1})
+        self.assertEqual(result["n_common_valid_states"], 1)
+        self.assertEqual(result["mean_world_regret_delta_second_minus_first"], -2)
+        self.assertEqual(result["bootstrap_ci"], [-2, -2])
 
 
 if __name__ == "__main__":

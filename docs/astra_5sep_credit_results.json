@@ -1,0 +1,490 @@
+{
+  "created_utc": "2026-09-05T22:44:50.807960+00:00",
+  "credit_assignment": {
+    "counterfactual_warning": "Removing format-dead episodes is post-treatment selection; these baseline sensitivity diagnostics are not an unbiased alternative estimator.",
+    "exact_reconstructed_training_log_rows": 6995,
+    "iterations": [
+      {
+        "episodes": 96,
+        "evaluated_policy": "base",
+        "excluded_fatal_records": 22,
+        "excluded_retried_records": 249,
+        "fatal_episodes": 22,
+        "format_token_share_of_absolute_coefficient_allocation": 0.415,
+        "groups_format_vs_nonformat_variance_share_ge_075": 3,
+        "iteration": 0,
+        "largest_row_share_of_summed_kl": 0.7939,
+        "max_sampled_k3_kl": 3237.874,
+        "mean_sampled_k3_kl": 4.0827,
+        "median_sampled_k3_kl": 0.5216,
+        "nonformat_row_advantage_mass_original": 104.449,
+        "nonformat_row_advantage_mass_without_format_dead_baseline": -2.6422,
+        "nonformat_rows_counterfactual_sign_flips": 31,
+        "nonformat_rows_counterfactual_zeroed": 20,
+        "positive_trained_rows_from_format_dead_episodes": 42,
+        "trained_rows": 999,
+        "trained_rows_from_format_dead_episodes": 228
+      },
+      {
+        "episodes": 96,
+        "evaluated_policy": "iter_0/adapter",
+        "excluded_fatal_records": 1,
+        "excluded_retried_records": 13,
+        "fatal_episodes": 1,
+        "format_token_share_of_absolute_coefficient_allocation": 0.372,
+        "groups_format_vs_nonformat_variance_share_ge_075": 0,
+        "iteration": 1,
+        "largest_row_share_of_summed_kl": 0.0658,
+        "max_sampled_k3_kl": 50.6508,
+        "mean_sampled_k3_kl": 0.7694,
+        "median_sampled_k3_kl": 0.5599,
+        "nonformat_row_advantage_mass_original": 22.0919,
+        "nonformat_row_advantage_mass_without_format_dead_baseline": 4.2467,
+        "nonformat_rows_counterfactual_sign_flips": 0,
+        "nonformat_rows_counterfactual_zeroed": 0,
+        "positive_trained_rows_from_format_dead_episodes": 0,
+        "trained_rows": 1000,
+        "trained_rows_from_format_dead_episodes": 10
+      },
+      {
+        "episodes": 96,
+        "evaluated_policy": "iter_1/adapter",
+        "excluded_fatal_records": 0,
+        "excluded_retried_records": 127,
+        "fatal_episodes": 0,
+        "format_token_share_of_absolute_coefficient_allocation": 0.3965,
+        "groups_format_vs_nonformat_variance_share_ge_075": 0,
+        "iteration": 2,
+        "largest_row_share_of_summed_kl": 0.3734,
+        "max_sampled_k3_kl": 388.61,
+        "mean_sampled_k3_kl": 1.0417,
+        "median_sampled_k3_kl": 0.4635,
+        "nonformat_row_advantage_mass_original": -6.4683,
+        "nonformat_row_advantage_mass_without_format_dead_baseline": -6.4683,
+        "nonformat_rows_counterfactual_sign_flips": 0,
+        "nonformat_rows_counterfactual_zeroed": 0,
+        "positive_trained_rows_from_format_dead_episodes": 0,
+        "trained_rows": 999,
+        "trained_rows_from_format_dead_episodes": 0
+      },
+      {
+        "episodes": 96,
+        "evaluated_policy": "iter_2/adapter",
+        "excluded_fatal_records": 0,
+        "excluded_retried_records": 50,
+        "fatal_episodes": 0,
+        "format_token_share_of_absolute_coefficient_allocation": 0.3679,
+        "groups_format_vs_nonformat_variance_share_ge_075": 0,
+        "iteration": 3,
+        "largest_row_share_of_summed_kl": 0.0991,
+        "max_sampled_k3_kl": 76.4118,
+        "mean_sampled_k3_kl": 0.7709,
+        "median_sampled_k3_kl": 0.6571,
+        "nonformat_row_advantage_mass_original": -2.3442,
+        "nonformat_row_advantage_mass_without_format_dead_baseline": -2.3442,
+        "nonformat_rows_counterfactual_sign_flips": 0,
+        "nonformat_rows_counterfactual_zeroed": 0,
+        "positive_trained_rows_from_format_dead_episodes": 0,
+        "trained_rows": 1000,
+        "trained_rows_from_format_dead_episodes": 0
+      },
+      {
+        "episodes": 96,
+        "evaluated_policy": "iter_3/adapter",
+        "excluded_fatal_records": 2,
+        "excluded_retried_records": 480,
+        "fatal_episodes": 2,
+        "format_token_share_of_absolute_coefficient_allocation": 0.3664,
+        "groups_format_vs_nonformat_variance_share_ge_075": 0,
+        "iteration": 4,
+        "largest_row_share_of_summed_kl": 0.07,
+        "max_sampled_k3_kl": 52.1428,
+        "mean_sampled_k3_kl": 0.7444,
+        "median_sampled_k3_kl": 0.5111,
+        "nonformat_row_advantage_mass_original": 33.3942,
+        "nonformat_row_advantage_mass_without_format_dead_baseline": 5.7598,
+        "nonformat_rows_counterfactual_sign_flips": 0,
+        "nonformat_rows_counterfactual_zeroed": 0,
+        "positive_trained_rows_from_format_dead_episodes": 0,
+        "trained_rows": 1000,
+        "trained_rows_from_format_dead_episodes": 20
+      },
+      {
+        "episodes": 96,
+        "evaluated_policy": "iter_4/adapter",
+        "excluded_fatal_records": 0,
+        "excluded_retried_records": 149,
+        "fatal_episodes": 0,
+        "format_token_share_of_absolute_coefficient_allocation": 0.3618,
+        "groups_format_vs_nonformat_variance_share_ge_075": 0,
+        "iteration": 5,
+        "largest_row_share_of_summed_kl": 0.038,
+        "max_sampled_k3_kl": 30.0955,
+        "mean_sampled_k3_kl": 0.7935,
+        "median_sampled_k3_kl": 0.6174,
+        "nonformat_row_advantage_mass_original": -7.0025,
+        "nonformat_row_advantage_mass_without_format_dead_baseline": -7.0025,
+        "nonformat_rows_counterfactual_sign_flips": 0,
+        "nonformat_rows_counterfactual_zeroed": 0,
+        "positive_trained_rows_from_format_dead_episodes": 0,
+        "trained_rows": 999,
+        "trained_rows_from_format_dead_episodes": 0
+      },
+      {
+        "episodes": 96,
+        "evaluated_policy": "iter_5/adapter",
+        "excluded_fatal_records": 56,
+        "excluded_retried_records": 485,
+        "fatal_episodes": 56,
+        "format_token_share_of_absolute_coefficient_allocation": 0.3863,
+        "groups_format_vs_nonformat_variance_share_ge_075": 6,
+        "iteration": 6,
+        "largest_row_share_of_summed_kl": 0.8243,
+        "max_sampled_k3_kl": 3888.2656,
+        "mean_sampled_k3_kl": 4.7263,
+        "median_sampled_k3_kl": 0.664,
+        "nonformat_row_advantage_mass_original": 326.1369,
+        "nonformat_row_advantage_mass_without_format_dead_baseline": -5.9861,
+        "nonformat_rows_counterfactual_sign_flips": 105,
+        "nonformat_rows_counterfactual_zeroed": 23,
+        "positive_trained_rows_from_format_dead_episodes": 186,
+        "trained_rows": 998,
+        "trained_rows_from_format_dead_episodes": 543
+      }
+    ],
+    "units": "Advantage coefficient allocation under per-example mean-token loss, not measured gradient norms."
+  },
+  "experiment": "astra-5sep",
+  "failure_cohort": {
+    "all_original_retries": 2,
+    "comparison_telemetry": {
+      "fresh133": {
+        "first_attempt_prompt_tokens": {
+          "max": 980,
+          "mean": 381.98496240601503,
+          "median": 297,
+          "min": 232,
+          "n": 133
+        },
+        "floor": {
+          "max": 23,
+          "mean": 7.556390977443609,
+          "median": 8,
+          "min": 0,
+          "n": 133
+        },
+        "n": 133,
+        "n_legal_actions": {
+          "max": 20,
+          "mean": 4.93984962406015,
+          "median": 3,
+          "min": 2,
+          "n": 133
+        },
+        "n_single_action": 0,
+        "screens": {
+          "BOSS_RELIC_REWARDS": 5,
+          "CARD_SELECT": 16,
+          "EVENT_SCREEN": 16,
+          "MAP_SCREEN": 16,
+          "NEOW": 16,
+          "REST_ROOM": 16,
+          "REWARDS": 16,
+          "SHOP_ROOM": 16,
+          "TREASURE_ROOM": 16
+        },
+        "state_text_chars": {
+          "max": 1632,
+          "mean": 665.7218045112782,
+          "median": 522,
+          "min": 340,
+          "n": 133
+        },
+        "stored_original_completion_tokens": {
+          "max": 0,
+          "mean": 0,
+          "median": 0,
+          "min": 0,
+          "n": 133
+        },
+        "stored_original_prompt_tokens": {
+          "max": 0,
+          "mean": 0,
+          "median": 0,
+          "min": 0,
+          "n": 133
+        }
+      },
+      "historical_failures": {
+        "first_attempt_prompt_tokens": {
+          "max": 537,
+          "mean": 434.375,
+          "median": 431.0,
+          "min": 403,
+          "n": 56
+        },
+        "floor": {
+          "max": 21,
+          "mean": 6.5,
+          "median": 6.0,
+          "min": 1,
+          "n": 56
+        },
+        "n": 56,
+        "n_legal_actions": {
+          "max": 5,
+          "mean": 1.125,
+          "median": 1.0,
+          "min": 1,
+          "n": 56
+        },
+        "n_single_action": 53,
+        "screens": {
+          "MAP_SCREEN": 55,
+          "REWARDS": 1
+        },
+        "state_text_chars": {
+          "max": 1368,
+          "mean": 1113.767857142857,
+          "median": 1102.5,
+          "min": 865,
+          "n": 56
+        },
+        "stored_original_completion_tokens": {
+          "max": 911,
+          "mean": 24.928571428571427,
+          "median": 8.0,
+          "min": 4,
+          "n": 56
+        },
+        "stored_original_prompt_tokens": {
+          "max": 592,
+          "mean": 489.375,
+          "median": 486.0,
+          "min": 458,
+          "n": 56
+        }
+      }
+    },
+    "fresh_cohort_selection_mismatch": "Fresh133 explicitly excludes legal-action menus with fewer than2 options and therefore excludes the singleton-menu class containing53/56 observed historical fatalities.",
+    "n": 56,
+    "n_single_legal_action": 53,
+    "original_generation_temperature": 0.7,
+    "original_max_completion_tokens": 4096,
+    "original_training_policy": "iter_5/adapter",
+    "protocol": "Preserve exact source state_text/legal_actions and every originalrecord field; append probe_id/probe_screen/source_trace. New model probes use ordinary first-attempt prompts, not the historical final retry prompt; this is a failure-conditioned diagnostic, not representative evaluation.",
+    "reconstructed_first_attempt_vs_original_final_retry_prompt_token_difference": {
+      "55": 56
+    },
+    "screen_counts": {
+      "MAP_SCREEN": 55,
+      "REWARDS": 1
+    }
+  },
+  "kind": "cpu_credit_and_historical_failure_attribution",
+  "no_new_model_runs": true,
+  "raw_completion_attribution": {
+    "categories": {
+      "bare_map_coordinate": {
+        "n": 7,
+        "probe_ids": [
+          2,
+          11,
+          16,
+          20,
+          23,
+          30,
+          55
+        ]
+      },
+      "bare_number_in_action_string": {
+        "n": 15,
+        "probe_ids": [
+          1,
+          3,
+          4,
+          5,
+          8,
+          10,
+          17,
+          18,
+          22,
+          24,
+          36,
+          39,
+          42,
+          48,
+          49
+        ]
+      },
+      "capitalization_only": {
+        "n": 2,
+        "probe_ids": [
+          21,
+          53
+        ]
+      },
+      "malformed_json_repetition": {
+        "n": 1,
+        "probe_ids": [
+          28
+        ]
+      },
+      "malformed_numeric_selector": {
+        "n": 2,
+        "probe_ids": [
+          7,
+          33
+        ]
+      },
+      "map_action_verb_typo": {
+        "n": 2,
+        "probe_ids": [
+          6,
+          31
+        ]
+      },
+      "map_summary_prose_instead_of_action": {
+        "n": 16,
+        "probe_ids": [
+          0,
+          9,
+          12,
+          14,
+          35,
+          37,
+          40,
+          43,
+          44,
+          45,
+          46,
+          47,
+          50,
+          51,
+          52,
+          54
+        ]
+      },
+      "other_nonlegal_string": {
+        "n": 6,
+        "probe_ids": [
+          13,
+          15,
+          27,
+          29,
+          34,
+          38
+        ]
+      },
+      "wrong_map_coordinate_or_room": {
+        "n": 5,
+        "probe_ids": [
+          19,
+          25,
+          26,
+          32,
+          41
+        ]
+      }
+    },
+    "classification_rule": "Mutually exclusive first-match categories after json.loads and the production numeric-prefix regex ^(digits):whitespace. Capitalization-only, bare-number, coordinate-only, next/enter-room prose, choice-map typo, wrong choose-map coordinate/room, malformed numeric selector, other.",
+    "counts": {
+      "ambiguous_legal_prefix_matches": 0,
+      "bare_number_matches_legal_map_x": 5,
+      "bare_number_matches_valid_display_index": 10,
+      "coordinate_string_names_legal_map_x": 7,
+      "numeric_prefix_already_stripped_by_parser": 19,
+      "summary_phrase_is_literal_substring_of_state_text": 15,
+      "well_formed_json_exact_action_string_schema": 55,
+      "zero_legal_prefix_matches": 55
+    },
+    "examples": {
+      "bare_map_coordinate": {
+        "completion": "{\"action\": \"x=6\"}",
+        "legal_actions": [
+          "choose map node x=6 room=REST"
+        ],
+        "probe_id": 2
+      },
+      "bare_number_in_action_string": {
+        "completion": "{\"action\": \"6\"}",
+        "legal_actions": [
+          "choose map node x=6 room=MONSTER"
+        ],
+        "probe_id": 1
+      },
+      "capitalization_only": {
+        "completion": "{\"action\": \"Choose map node x=4 room=EVENT\"}",
+        "legal_actions": [
+          "choose map node x=4 room=EVENT"
+        ],
+        "probe_id": 21
+      },
+      "malformed_numeric_selector": {
+        "completion": "{\"action\": \"2:1\"}",
+        "legal_actions": [
+          "choose map node x=4 room=TREASURE"
+        ],
+        "probe_id": 7
+      },
+      "map_action_verb_typo": {
+        "completion": "{\"action\": \"choice map node x=3\"}",
+        "legal_actions": [
+          "choose map node x=3 room=MONSTER"
+        ],
+        "probe_id": 6
+      },
+      "map_summary_prose_instead_of_action": {
+        "completion": "{\"action\": \"1: next room Monster\"}",
+        "legal_actions": [
+          "choose map node x=1 room=MONSTER"
+        ],
+        "probe_id": 0
+      },
+      "other_nonlegal_string": {
+        "completion": "{\"action\": \"skip map\"}",
+        "legal_actions": [
+          "choose map node x=4 room=MONSTER"
+        ],
+        "probe_id": 13
+      },
+      "wrong_map_coordinate_or_room": {
+        "completion": "{\"action\": \"choose map node x=3\"}",
+        "legal_actions": [
+          "choose map node x=4 room=MONSTER"
+        ],
+        "probe_id": 19
+      }
+    },
+    "interpretation": [
+      "55/56 cases are correct JSON syntax and exact action:string schema. The predominant failure is translating the public map representation into the legal-action text contract.",
+      "Prefix ambiguity explains zero of the55 parsed failures: every normalized payload has zero legal-description prefix matches. Numeric prefix stripping already occurs in19 cases.",
+      "16 outputs use map-summary prose;15 payload phrases also appear literally in the recorded state_text. This supports representation confusion as a mechanism, not causal proof that the serializer alone caused failure.",
+      "Numeric/coordinate payloads mix public map x coordinates with action-list indices and action-text schemas. Fifteen bare numbers consist of10 valid display-index numbers and5 legal-map-x numbers; seven explicit x=N strings all name legal destinations.",
+      "Automatically executing an actual sole legal action would bypass53/56 historically fatal states without making a strategic choice for the model. This is a prospective harness change; it was not applied."
+    ]
+  },
+  "snapshot_active_identity": {
+    "changed_common_language_tensors": 0,
+    "config_change": "Generation defaults added; structural model config unchanged.",
+    "exact_common_language_tensors_compared": 665,
+    "historical_provenance_limit": "Original OOC run did not record resolved revision. Common active language weights are byte-identical across both cached revisions.",
+    "left_revision": "bb8e1b866c3db961f10b008fbeb940617952a07e",
+    "method": "SHA256 of every byte of every common language_model tensor, parsed by safetensors offsets; shapes and dtype also compared; 1MiB buffers; no ML weights loaded.",
+    "removed_tensor_description": "k_proj.weight, v_proj.weight and k_norm.weight in shared-KV layers24 through41; current MLX model does not instantiate independent K/V projections in those layers.",
+    "removed_tensors": 54,
+    "right_revision": "eec12d0899edea9b738ab1009af9159cdfd70d71"
+  },
+  "sources": {
+    "data/experiments/astra_5sep/credit/report.json": "a6cdd3315574b26569f7cf7ffee7762bd616347f93ce56f6c5ff9ce27836fa7c",
+    "data/experiments/astra_5sep/credit/snapshot_audit.json": "0407d04bacac682df36f133a06d140692f5b5f5228f306e101295350571abf1c",
+    "data/experiments/astra_5sep/failure_replay/cohort.jsonl": "fcab6c8d6183bfb0fb55bc12e509da98cde760fead78e5c5f1bf993276017582",
+    "data/experiments/astra_5sep/failure_replay/cohort_comparison.json": "fd9656c548e034e0e0735586f6d6d4cfdcc39e6d5cd089a76020f10476ed078f"
+  },
+  "validation": {
+    "all_classification_counts_sum_to56": true,
+    "all_reported_numeric_prefix_hits_recomputed_from_raw_completions": true,
+    "cohort_sha256_verified": true,
+    "raw_fields_preserved": true
+  }
+}

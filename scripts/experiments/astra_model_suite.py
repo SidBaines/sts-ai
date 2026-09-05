@@ -9,6 +9,11 @@ import sys
 import time
 
 
+def arm_log_path(output: Path) -> Path:
+    """Append a log extension without removing a decimal from an arm name."""
+    return output.with_name(output.name + ".log")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", type=Path, required=True)
@@ -27,7 +32,7 @@ def main() -> None:
         output = Path(arm["out"])
         if output.exists():
             raise FileExistsError(f"fresh suite requires absent output: {output}")
-        log_path = output.with_suffix(".log")
+        log_path = arm_log_path(output)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         started = time.time()
         print("START", arm["out"], flush=True)

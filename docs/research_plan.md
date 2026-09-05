@@ -146,8 +146,23 @@ and the outstanding paired evaluation are in
 [`ooc_rl_v1_status.md`](ooc_rl_v1_status.md).
 
 Two constraints from that work shape what comes next. Format robustness, not
-policy quality, is the binding constraint on out-of-combat RL under the
-`action_text` contract. And there is no out-of-combat teacher: the built-in
-search agent only searches in combat, and its scripted map-screen pathing is
-random, so the most floor-relevant out-of-combat decision class has no
-supervision source.
+policy quality alone, constrains interpretation of out-of-combat RL under the
+`action_text` contract. The built-in search agent only searches in combat and
+its scripted map-screen pathing is random. However, the
+[5 September diagnostic experiments](astra_5sep_experiments.md) now demonstrate
+an experimental OOC supervision source: replaying public frontiers and evaluating
+legal actions with full-game continuations. Closed-loop map/campfire lookahead
+improved paired final floor by +12.69 [9.21, 16.45] on 29 complete pairs from a
+fixed 32-world replication; all missing outcomes were separately accounted for.
+This is privileged fixed-world supervision, and preferred actions differ across
+continuation policies. It is not yet a validated public-state teacher dataset
+or a learned competence improvement.
+
+That session also found substantial semantic menu-order sensitivity, sampled
+format deterioration in the later RL checkpoint, and 53 single-action menus
+among 56 historical fatal decisions. Exact legal decoding and automatic forced
+actions are promising experimental controls; neither has been adopted into the
+production interface or frozen training data. Further competence studies should
+separate observation completeness, valid-output policy, and teacher quality
+before attributing floor changes to a learned risk trait. The primary framing
+design remains matched-data training from a frozen competent checkpoint.

@@ -1,0 +1,665 @@
+{
+  "baseline_information_audit": {
+    "alias_world_seeds": [
+      1011,
+      1014,
+      1016,
+      1017,
+      1031
+    ],
+    "definitions": {
+      "cost_mention": "No substring beginning 'cost' in the supplied card glossary entry. A cost mention is weaker than a complete/correct energy-cost description.",
+      "map_alias": "Two simultaneous choices have equal immediate room and downstream union-count dictionary but different complete room-sequence sets; ignores x labels.",
+      "offer_instances": "Each offered item per visited decision, including repeated offers after taking another reward; not unique items or independent samples.",
+      "partial": "All observed decisions include episodes killed before metadata. Terminal-only counts are supplied separately; sidecars precede execution, so a final observed decision may be unexecuted.",
+      "population": "Policy-independent observation availability under random/heuristic visitation; frequencies are not estimates for an LLM policy.",
+      "route_metrics": "Downstream metrics exclude the immediate choice to match the displayed aggregate. Repeated map states are dependent; no hypothesis-test p-values claimed."
+    },
+    "metrics": {
+      "anonymous_ordinary_event_decisions": {
+        "denominator": 351,
+        "fraction": 1.0,
+        "numerator": 351
+      },
+      "map_choices_aggregate_elites_exceed_any_realizable_route": {
+        "denominator": 3158,
+        "fraction": 0.34293856871437617,
+        "numerator": 1083
+      },
+      "multichoice_map_decisions_with_proven_route_aliases": {
+        "denominator": 753,
+        "fraction": 0.02257636122177955,
+        "numerator": 17
+      },
+      "nonmap_decisions_without_map": {
+        "denominator": 6194,
+        "fraction": 1.0,
+        "numerator": 6194
+      },
+      "offered_card_instances_without_cost_mention": {
+        "denominator": 11991,
+        "fraction": 0.9090984905345676,
+        "numerator": 10901
+      },
+      "offered_potion_instances_without_supplied_tooltip": {
+        "denominator": 1939,
+        "fraction": 0.9927797833935018,
+        "numerator": 1925
+      },
+      "offered_relic_instances_without_supplied_tooltip": {
+        "denominator": 893,
+        "fraction": 1.0,
+        "numerator": 893
+      }
+    },
+    "n_decisions": 8438,
+    "n_episodes": 128,
+    "n_terminal_episodes": 128,
+    "sources": [
+      {
+        "path": "data/experiments/astra_5sep/information/report.json",
+        "sha256": "c9a2cfa278f92275ccce2b1db2439cc615e6c50dbb4113b9efc2f7fc9dc14823"
+      },
+      {
+        "path": "data/experiments/astra_5sep/information/examples.json",
+        "sha256": "9a414f9a38e4afcc5ebaf76e509a6c47249c297f006f751d9fffcd769395c3aa"
+      }
+    ]
+  },
+  "baselines": {
+    "arms": {
+      "heuristic_search50": {
+        "max_floor_completed": 33,
+        "mean_floor_completed": 17.4375,
+        "median_floor_completed": 16.0,
+        "min_floor_completed": 6,
+        "n_planned": 32,
+        "n_scored": 32
+      },
+      "heuristic_search500": {
+        "max_floor_completed": 50,
+        "mean_floor_completed": 23.4375,
+        "median_floor_completed": 21.5,
+        "min_floor_completed": 6,
+        "n_planned": 32,
+        "n_scored": 32
+      },
+      "random_search50": {
+        "max_floor_completed": 24,
+        "mean_floor_completed": 13.96875,
+        "median_floor_completed": 16.0,
+        "min_floor_completed": 6,
+        "n_planned": 32,
+        "n_scored": 32
+      },
+      "random_search500": {
+        "max_floor_completed": 33,
+        "mean_floor_completed": 16.59375,
+        "median_floor_completed": 16.0,
+        "min_floor_completed": 8,
+        "n_planned": 32,
+        "n_scored": 32
+      }
+    },
+    "design": {
+      "agent": [
+        "RandomLegalAgent",
+        "SimpleHeuristicAgent"
+      ],
+      "boss_simulation_multiplier": 2,
+      "combat_search_simulations": [
+        50,
+        500
+      ],
+      "max_act": 3,
+      "max_total_decisions": 250,
+      "rollouts_per_world_per_arm": 1,
+      "timeout_seconds": 30
+    },
+    "n_arms": 4,
+    "n_errors": 0,
+    "n_invalid_decisions": 0,
+    "n_planned_episodes": 128,
+    "n_terminal_episodes": 128,
+    "n_timeouts": 0,
+    "n_ub_flags": 0,
+    "n_victories": 0,
+    "n_worlds": 32,
+    "paired_contrasts": {
+      "heuristic_search500_minus_heuristic_search50": {
+        "bootstrap_ci_95": [
+          3.125,
+          9.09375
+        ],
+        "excluded_worlds": [],
+        "mean_floor_delta": 6,
+        "n_paired_complete_worlds": 32
+      },
+      "heuristic_search500_minus_random_search500": {
+        "bootstrap_ci_95": [
+          3.1867187500000007,
+          10.65625
+        ],
+        "excluded_worlds": [],
+        "mean_floor_delta": 6.84375,
+        "n_paired_complete_worlds": 32
+      },
+      "heuristic_search50_minus_random_search50": {
+        "bootstrap_ci_95": [
+          0.9679687500000007,
+          5.875
+        ],
+        "excluded_worlds": [],
+        "mean_floor_delta": 3.46875,
+        "n_paired_complete_worlds": 32
+      },
+      "random_search500_minus_random_search50": {
+        "bootstrap_ci_95": [
+          1.15625,
+          4.09375
+        ],
+        "excluded_worlds": [],
+        "mean_floor_delta": 2.625,
+        "n_paired_complete_worlds": 32
+      }
+    },
+    "sources": [
+      {
+        "path": "data/experiments/astra_5sep/baselines/plan.json",
+        "sha256": "112714329e1662d1d5e08fcb489cee456cd99184752d9f8f9f292ea2e99b20dc"
+      },
+      {
+        "path": "data/experiments/astra_5sep/baselines/summary.json",
+        "sha256": "236f006cf26de1359312b396ab55b7278141394774872a26db79508e34c3b753"
+      },
+      {
+        "path": "data/experiments/astra_5sep/baselines/attempts.json",
+        "sha256": "4a80580e73347f4db3c25d10674a677bef3153dad504a2c783a407b4f5d7b958"
+      }
+    ],
+    "world_seed_range_inclusive": [
+      1000,
+      1031
+    ]
+  },
+  "change_scope": {
+    "documentation_gotcha": "src/sts_ai/interactive/CLAUDE.md records prefix observation-call-pattern sensitivity; no replay implementation fix was applied.",
+    "new_experiment_scripts": [
+      "scripts/experiments/astra_baselines.py",
+      "scripts/experiments/astra_ooc_teacher.py",
+      "scripts/experiments/astra_ooc_lookahead.py",
+      "scripts/experiments/astra_ooc_routes.py"
+    ],
+    "production_code_changed_by_simulator_experiments": false,
+    "unchanged_components": [
+      "src/sts_ai runtime implementation",
+      "on-disk decision schemas",
+      "Python simulator binding patch",
+      "native simulator source",
+      "training algorithms"
+    ]
+  },
+  "counterfactual_teacher": {
+    "continuations": [
+      "heuristic",
+      "random905",
+      "random906",
+      "random907"
+    ],
+    "failed_probe": {
+      "decision_index": 58,
+      "n_actions": 4,
+      "probe_id": 3,
+      "reason": "Lightweight prefix replay reaches terminal early; failed rows were retained as errors and no recovery labels substituted.",
+      "world_seed": 1031
+    },
+    "n_clean_states_all_actions_all_continuations": 132,
+    "n_continuations": 4,
+    "n_planned_action_continuations": 2628,
+    "n_planned_actions": 657,
+    "n_planned_states": 133,
+    "n_replay_failures": 16,
+    "n_terminal_action_continuations": 2612,
+    "n_timeouts": 0,
+    "per_continuation": {
+      "heuristic": {
+        "mean_first_action_regret": 1.9242424242424243,
+        "mean_source_random_action_regret": 2.5681818181818183,
+        "mean_uniform_random_expected_regret": 2.1935006491824676,
+        "mean_value_range": 4.1893939393939394,
+        "n_complete_states": 132,
+        "n_value_informative": 69
+      },
+      "random905": {
+        "mean_first_action_regret": 1.1893939393939394,
+        "mean_source_random_action_regret": 1.6742424242424243,
+        "mean_uniform_random_expected_regret": 1.5895387125500762,
+        "mean_value_range": 2.7954545454545454,
+        "n_complete_states": 132,
+        "n_value_informative": 68
+      },
+      "random906": {
+        "mean_first_action_regret": 1.8106060606060606,
+        "mean_source_random_action_regret": 1.893939393939394,
+        "mean_uniform_random_expected_regret": 1.8030315749065748,
+        "mean_value_range": 3.3333333333333335,
+        "n_complete_states": 132,
+        "n_value_informative": 76
+      },
+      "random907": {
+        "mean_first_action_regret": 1.371212121212121,
+        "mean_source_random_action_regret": 1.643939393939394,
+        "mean_uniform_random_expected_regret": 1.550534398261671,
+        "mean_value_range": 2.9393939393939394,
+        "n_complete_states": 132,
+        "n_value_informative": 75
+      }
+    },
+    "ranking_sensitivity": {
+      "definition": "States with nonzero value range under both heuristic and three-random-seed-mean continuation",
+      "disjoint_fraction": 0.3968253968253968,
+      "n_disjoint_top_sets": 25,
+      "n_overlapping_top_sets": 38,
+      "n_states": 63
+    },
+    "sources": [
+      {
+        "path": "data/experiments/astra_5sep/teacher/summary.json",
+        "sha256": "26ad2ff9cb7c3d8d6de6bae70488adda54b321e98e55e84ff8f02a2063c24a25"
+      },
+      {
+        "path": "data/experiments/astra_5sep/teacher/labels.jsonl",
+        "sha256": "4edd16c50d969a8b739cd6dbc9e1c06b0117c7761830182afc8f781e9cf893f1"
+      },
+      {
+        "path": "data/experiments/astra_5sep/teacher/replay_diagnostic.json",
+        "sha256": "1a93e0d18ee9332225e69844b854cf15d313351c19633a3040d6109f63af5eb3"
+      }
+    ]
+  },
+  "generated_utc": "2026-09-05T22:44:10.269718+00:00",
+  "interpretation_limits": [
+    "Lookahead accesses exact future outcomes in a fixed simulator world through replay; it is a privileged teacher, not a demonstrated public-information policy or optimal-action oracle.",
+    "Continuation policies and combat-search budgets define the evaluated objective. The studies establish no trained-LLM improvement.",
+    "Completed-pair comparisons condition on successful execution. The separate capped-score bounds account for every planned replication world without a missing-at-random assumption.",
+    "Information-availability frequencies describe baseline-visited decisions; repeated item offers, states and worlds are dependent."
+  ],
+  "lookahead_pilot": {
+    "arms": {
+      "map_only": {
+        "bootstrap_ci_95": [
+          1.0,
+          10.625
+        ],
+        "excluded_seeds": [],
+        "mean_floor_delta_vs_heuristic_complete_pairs": 5.5,
+        "mean_floor_terminal": 26.875,
+        "n_candidates": 155,
+        "n_changed": 5,
+        "n_choice_errors": 0,
+        "n_lookahead_choices": 64,
+        "n_planned": 8,
+        "n_terminal": 8
+      },
+      "map_rest": {
+        "bootstrap_ci_95": [
+          0.5,
+          9.003124999999955
+        ],
+        "excluded_seeds": [],
+        "mean_floor_delta_vs_heuristic_complete_pairs": 4.25,
+        "mean_floor_terminal": 25.625,
+        "n_candidates": 252,
+        "n_changed": 16,
+        "n_choice_errors": 0,
+        "n_lookahead_choices": 95,
+        "n_planned": 8,
+        "n_terminal": 8
+      }
+    },
+    "heuristic_control_mean_floor": 21.375,
+    "n_planned_episodes": 16,
+    "n_terminal_episodes": 16,
+    "n_timeouts": 0,
+    "n_victories": 0,
+    "n_worlds": 8,
+    "sources": [
+      {
+        "path": "data/experiments/astra_5sep/lookahead/plan.json",
+        "sha256": "f860e28ac5f101d827b45eb9f439b93aa2799c0f172cc5fa1951e98fe9aa8e59"
+      },
+      {
+        "path": "data/experiments/astra_5sep/lookahead/summary.json",
+        "sha256": "f1986c3a735cd62e19f642073864026cdb833394951cc01c8d42669790f33ece"
+      },
+      {
+        "path": "data/experiments/astra_5sep/lookahead/attempts.json",
+        "sha256": "95dfddd9ebc4837173baf18a0dd1a67230a027b90c78684b48e37d900f305d50"
+      }
+    ],
+    "world_seed_range_inclusive": [
+      1000,
+      1007
+    ]
+  },
+  "lookahead_replication": {
+    "arms": {
+      "heuristic": {
+        "attempt_statuses": {
+          "completed": 29,
+          "timeout": 3
+        },
+        "excluded_seeds": [
+          1118,
+          1129,
+          1130
+        ],
+        "mean_floor_terminal": 17.896551724137932,
+        "n_candidates": 0,
+        "n_changed": 0,
+        "n_choice_errors": 0,
+        "n_lookahead_choices": 0,
+        "n_paired_worlds": 29,
+        "n_planned": 32,
+        "n_terminal": 29,
+        "timeout_world_seeds": [
+          1118,
+          1129,
+          1130
+        ]
+      },
+      "map_only": {
+        "all32_capped_missing_outcome_bounds": {
+          "bootstrap_ci_95_of_pessimistic_assignment": [
+            -1.03125,
+            10.125
+          ],
+          "mean_difference_lower_bound": 4.90625,
+          "mean_difference_upper_bound": 12.71875
+        },
+        "attempt_statuses": {
+          "completed": 30,
+          "timeout": 2
+        },
+        "excluded_seeds": [
+          1129,
+          1130,
+          1114,
+          1118
+        ],
+        "mean_floor_terminal": 27.533333333333335,
+        "n_candidates": 692,
+        "n_changed": 57,
+        "n_choice_errors": 0,
+        "n_lookahead_choices": 296,
+        "n_paired_worlds": 28,
+        "n_planned": 32,
+        "n_terminal": 30,
+        "paired_capped_floor_delta": {
+          "bootstrap_ci_95": [
+            7.464285714285714,
+            13.357142857142858
+          ],
+          "identical_to_uncapped": true,
+          "mean": 10.321428571428571,
+          "metric": "min(final_floor,50)",
+          "n_worlds": 28
+        },
+        "paired_final_floor_delta": {
+          "bootstrap_ci_95": [
+            7.464285714285714,
+            13.357142857142858
+          ],
+          "mean": 10.321428571428571,
+          "n_worlds": 28
+        },
+        "same_state_action_type_changes_completed_games": {
+          "MAP_SCREEN": {
+            "changed_action_type_transitions": {
+              "ELITE->MONSTER": 2,
+              "ELITE->REST": 1,
+              "ELITE->SHOP": 1,
+              "EVENT->MONSTER": 1,
+              "EVENT->SHOP": 2,
+              "MONSTER->ELITE": 1,
+              "MONSTER->EVENT": 14,
+              "MONSTER->MONSTER": 25,
+              "MONSTER->SHOP": 3,
+              "REST->ELITE": 3,
+              "REST->EVENT": 2,
+              "TREASURE->TREASURE": 2
+            },
+            "chosen_types": {
+              "ELITE": 13,
+              "EVENT": 52,
+              "MONSTER": 139,
+              "REST": 60,
+              "SHOP": 13,
+              "TREASURE": 19
+            },
+            "heuristic_types_same_states": {
+              "ELITE": 13,
+              "EVENT": 39,
+              "MONSTER": 154,
+              "REST": 64,
+              "SHOP": 7,
+              "TREASURE": 19
+            },
+            "n_changed": 57,
+            "n_choices": 296,
+            "net_type_change_same_states": {
+              "ELITE": 0,
+              "EVENT": 13,
+              "MONSTER": -15,
+              "REST": -4,
+              "SHOP": 6,
+              "TREASURE": 0
+            }
+          },
+          "REST_ROOM": {
+            "changed_action_type_transitions": {},
+            "chosen_types": {},
+            "heuristic_types_same_states": {},
+            "n_changed": 0,
+            "n_choices": 0,
+            "net_type_change_same_states": {}
+          }
+        },
+        "timeout_world_seeds": [
+          1114,
+          1118
+        ]
+      },
+      "map_rest": {
+        "all32_capped_missing_outcome_bounds": {
+          "bootstrap_ci_95_of_pessimistic_assignment": [
+            2.0625,
+            13.75
+          ],
+          "mean_difference_lower_bound": 8.25,
+          "mean_difference_upper_bound": 14.5
+        },
+        "attempt_statuses": {
+          "completed": 31,
+          "timeout": 1
+        },
+        "excluded_seeds": [
+          1118,
+          1130,
+          1129
+        ],
+        "mean_floor_terminal": 30.096774193548388,
+        "n_candidates": 1237,
+        "n_changed": 107,
+        "n_choice_errors": 0,
+        "n_lookahead_choices": 490,
+        "n_paired_worlds": 29,
+        "n_planned": 32,
+        "n_terminal": 31,
+        "paired_capped_floor_delta": {
+          "bootstrap_ci_95": [
+            9.206896551724139,
+            16.448275862068964
+          ],
+          "identical_to_uncapped": true,
+          "mean": 12.689655172413794,
+          "metric": "min(final_floor,50)",
+          "n_worlds": 29
+        },
+        "paired_final_floor_delta": {
+          "bootstrap_ci_95": [
+            9.206896551724139,
+            16.448275862068964
+          ],
+          "mean": 12.689655172413794,
+          "n_worlds": 29
+        },
+        "same_state_action_type_changes_completed_games": {
+          "MAP_SCREEN": {
+            "changed_action_type_transitions": {
+              "ELITE->MONSTER": 2,
+              "ELITE->REST": 1,
+              "EVENT->MONSTER": 2,
+              "EVENT->SHOP": 2,
+              "MONSTER->ELITE": 1,
+              "MONSTER->EVENT": 11,
+              "MONSTER->MONSTER": 29,
+              "MONSTER->SHOP": 3,
+              "REST->ELITE": 3,
+              "REST->EVENT": 1,
+              "REST->MONSTER": 1,
+              "TREASURE->TREASURE": 3
+            },
+            "chosen_types": {
+              "ELITE": 16,
+              "EVENT": 55,
+              "MONSTER": 160,
+              "REST": 62,
+              "SHOP": 18,
+              "TREASURE": 20
+            },
+            "heuristic_types_same_states": {
+              "ELITE": 15,
+              "EVENT": 47,
+              "MONSTER": 170,
+              "REST": 66,
+              "SHOP": 13,
+              "TREASURE": 20
+            },
+            "n_changed": 59,
+            "n_choices": 331,
+            "net_type_change_same_states": {
+              "ELITE": 1,
+              "EVENT": 8,
+              "MONSTER": -10,
+              "REST": -4,
+              "SHOP": 5,
+              "TREASURE": 0
+            }
+          },
+          "REST_ROOM": {
+            "changed_action_type_transitions": {
+              "rest->recall": 1,
+              "rest->smith": 3,
+              "smith->recall": 1,
+              "smith->rest": 43
+            },
+            "chosen_types": {
+              "recall": 2,
+              "rest": 124,
+              "smith": 33
+            },
+            "heuristic_types_same_states": {
+              "rest": 85,
+              "smith": 74
+            },
+            "n_changed": 48,
+            "n_choices": 159,
+            "net_type_change_same_states": {
+              "recall": 2,
+              "rest": 39,
+              "smith": -41
+            }
+          }
+        },
+        "timeout_world_seeds": [
+          1129
+        ]
+      }
+    },
+    "floor_cap_verification": {
+      "all_observed_pair_deltas_and_bootstrap_CIs_unchanged": true,
+      "n_changed_by_cap50": 0,
+      "n_observed_outcomes": 90,
+      "observed_max": 50,
+      "observed_min": 7
+    },
+    "max_act": 3,
+    "max_total_decisions": 250,
+    "missing_outcome_bound_definition": "Observed outcomes are capped at50. Pessimistic treatment assignment: missing treated=0,missing control=50. Optimistic assignment reverses these. Each missing capped score is bounded in[0,50]; no missing-at-random assumption. Timedout games remain failures in operational accounting.",
+    "missingness_caveat": "Terminal arm means use different world subsets. Paired contrasts use matching complete worlds and are descriptive conditional results. All32 bounded estimates cover every planned world; timeout failures remain in reliability accounting.",
+    "n_planned_episodes": 96,
+    "n_replay_errors": 0,
+    "n_terminal_episodes": 90,
+    "n_timeouts": 6,
+    "n_victories": 0,
+    "n_worlds": 32,
+    "policy": "MAP_SCREEN only or MAP_SCREEN plus REST_ROOM: evaluate every legal action by exact-prefix replay plus a single SimpleHeuristicAgent continuation, search50, maximize final floor, tie-first. All other choices SimpleHeuristicAgent.",
+    "route_count_caveat": "The counterfactual heuristic type is evaluated at each lookahead-visited state. These counts do not reconstruct a full heuristic trajectory or establish risk preference; same room-type switches can choose different downstream paths. Partial failed games are included only in all_observed_choices.",
+    "rules_frozen_before_launch": true,
+    "sources": [
+      {
+        "path": "data/experiments/astra_5sep/lookahead_replication/plan.json",
+        "sha256": "5b6da41185c6ba47902f7dd7079b35b7f13d88957ae9edddf216d3d40af9bf00"
+      },
+      {
+        "path": "data/experiments/astra_5sep/lookahead_replication/summary.json",
+        "sha256": "91e09e8571c537c4377ac223eaf1f986708f66ae383a2956655183e8a0a9891a"
+      },
+      {
+        "path": "data/experiments/astra_5sep/lookahead_replication/attempts.json",
+        "sha256": "4dd49c53f85e894998f1b52a3cbae2ed3c947a97213544ab43c6a2f136aee3ea"
+      },
+      {
+        "path": "data/experiments/astra_5sep/lookahead_replication/route_summary.json",
+        "sha256": "cc8f6d972f0c1a48f4782143ffcec4bd185fcf475632df7ccc09b0c7f4cb288a"
+      },
+      {
+        "path": "data/experiments/astra_5sep/lookahead_replication/capped_floor_sensitivity.json",
+        "sha256": "f269fdd9fe6e4bc941fff7a52ecb4641163327f1952222c0741c5c23c6bd8b2f"
+      }
+    ],
+    "timeout_per_game_seconds": 90,
+    "world_seed_range_inclusive": [
+      1100,
+      1131
+    ]
+  },
+  "scope": "Simulator-only baseline, information-availability, counterfactual-label and privileged-lookahead experiments. All paths are relative to repository root.",
+  "verification": {
+    "baseline_audit_vs_unwrapped_trace_matches": {
+      "attempted": 8,
+      "passed": 8,
+      "source": {
+        "path": "data/experiments/astra_5sep/baselines_verification/verification.json",
+        "sha256": "e29d389bd8ad8c0797730ffbc3e1dfc29515e34b84fa6f989c5a88184110c3b7"
+      }
+    },
+    "bounded_smoke": "seed3,random,search50,max_act1 passed",
+    "lookahead_pilot_verification": {
+      "independent_process_trace_and_choices_matches": 4,
+      "source": {
+        "path": "data/experiments/astra_5sep/lookahead_verification/verification.json",
+        "sha256": "88e97454f71803b7c0e4652162e555e647ed12f1d49911d8c9a8f99195f6d53d"
+      },
+      "unchanged_action_control_paths_match": 4
+    },
+    "unit_and_integration_suite": {
+      "log_path": "data/experiments/astra_5sep/final_experiment_tests.log",
+      "skipped": 11,
+      "status": "passed",
+      "tests_run": 727
+    }
+  },
+  "version": 1
+}
