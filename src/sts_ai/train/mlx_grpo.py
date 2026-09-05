@@ -23,6 +23,7 @@ def run_parallel_as_streaming(
     run_meta: dict[str, Any] | None = None,
     hint_cfg: Any | None = None,
     max_retries: int | None = None,
+    policy_seed_salt: int = 0,
 ) -> Any:
     """Adapt GRPO's streaming rollout call to MLX lockstep parallel rollouts."""
     if hint_cfg is not None:
@@ -36,6 +37,7 @@ def run_parallel_as_streaming(
         max_decisions=max_decisions,
         max_retries=max_retries,
         run_meta=run_meta,
+        policy_seed_salt=policy_seed_salt,
     )
 
 

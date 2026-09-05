@@ -172,6 +172,7 @@ def _run_meta(
     max_decisions: int,
     output_contract: str | None = None,
     ooc_output_contract: str | None = None,
+    policy_seed_salt: int = 0,
 ) -> dict[str, Any]:
     extra: dict[str, Any] = {
         "orchestrator": "grpo_loop",
@@ -181,6 +182,7 @@ def _run_meta(
         "seeds": list(seeds),
         "concurrency": concurrency,
         "max_decisions": max_decisions,
+        "policy_seed_salt": policy_seed_salt,
     }
     if output_contract is not None:
         extra["output_contract"] = output_contract
@@ -311,6 +313,7 @@ def run_grpo(
     output_contract: str | None = None,
     ooc_output_contract: str | None = None,
     train_example_cap: int | None = None,
+    policy_seed_salt: int = 0,
     build_dataset_fn: Callable[..., tuple[list[dict[str, Any]], dict[str, Any]]] = build_pg_dataset,
     train_fn: Callable[..., Path] = train_pg_trl_train,
     run_streaming_fn: Callable[..., Any] = run_streaming_rollouts,
@@ -406,9 +409,34 @@ def run_grpo(
         rollouts_dir = iter_dir / "rollouts"
         rollouts_dir.mkdir(parents=True, exist_ok=True)
 
+        # Per-iteration salt: fresh sampling streams each iteration (standard
+        # GRPO exploration), and a non-zero base (bumped by the restart
+        # supervisor) re-rolls a wedged iteration instead of deterministically
+        # replaying into the same state-dependent simulator hang. Iteration 0
+        # at base 0 stays byte-identical to the historical unsalted stream.
+        iteration_salt = policy_seed_salt + iteration
+        # Supervised-restart resume: an episode whose meta sidecar exists was
+        # completed by an earlier attempt at THIS iteration — same policy by
+        # construction (every attempt resumes from the same prior adapter;
+        # per-attempt salts only vary the sampling stream) — so only missing
+        # episodes are (re)played. In-flight leftovers (jsonl without meta)
+        # rerun from scratch; _Slot unlinks their partial files on open.
+        pending = [
+            spec
+            for spec in specs
+            if not (rollouts_dir / f"{rollout_stem(*spec)}.meta.json").exists()
+        ]
+        if len(pending) < len(specs):
+            log.info(
+                "GRPO iter=%s resume: %s/%s episodes already complete, running %s",
+                iteration,
+                len(specs) - len(pending),
+                len(specs),
+                len(pending),
+            )
         try:
             run_streaming_fn(
-                specs,
+                pending,
                 make_env,
                 agent,
                 output_for=lambda ws, ri, d=rollouts_dir: (
@@ -425,8 +453,10 @@ def run_grpo(
                     max_decisions=max_decisions,
                     output_contract=output_contract,
                     ooc_output_contract=ooc_output_contract,
+                    policy_seed_salt=iteration_salt,
                 ),
                 hint_cfg=None,
+                policy_seed_salt=iteration_salt,
             )
         finally:
             # Backend sleep() owns the full release choreography (for MLX:

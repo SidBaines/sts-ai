@@ -139,6 +139,153 @@ class GrpoLoopControlFlowTest(unittest.TestCase):
             )
 
 
+class GrpoLoopPolicySeedSaltTest(unittest.TestCase):
+    def test_per_iteration_salt_threads_to_runner_and_meta(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            agent = TrackingStreamingAgent()
+            captured_salts: list[int] = []
+
+            def capturing_streaming_fn(*args: Any, **kwargs: Any) -> Any:
+                captured_salts.append(kwargs["policy_seed_salt"])
+                return run_streaming_rollouts(*args, **kwargs)
+
+            def make_env(world_seed: int) -> FakeParallelEnv:
+                return FakeParallelEnv(world_seed=world_seed, decisions=1)
+
+            def build_dataset_fn(
+                rollout_dir: Path, **kwargs: Any
+            ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+                return (
+                    [{"prompt": "p", "completion": "c", "advantage": 0.0}],
+                    {"advantage_report": {"advantage_mean": 0.0}},
+                )
+
+            def train_fn(**kwargs: Any) -> Path:
+                out_adapter_dir = Path(kwargs["out_adapter_dir"])
+                out_adapter_dir.mkdir(parents=True, exist_ok=True)
+                return out_adapter_dir
+
+            run_grpo(
+                agent=agent,
+                make_env=make_env,
+                base_model="base-model",
+                tokenizer=object(),
+                tokenizer_id="tokenizer-id",
+                framing="framing",
+                train_seeds=[10, 11],
+                out_dir=root,
+                num_iterations=2,
+                group_size=2,
+                seeds_per_iter=1,
+                concurrency=2,
+                max_decisions=2,
+                policy_seed_salt=1000,
+                build_dataset_fn=build_dataset_fn,
+                train_fn=train_fn,
+                run_streaming_fn=capturing_streaming_fn,
+            )
+
+            # Restart-supervisor base + iteration index, per iteration.
+            self.assertEqual(captured_salts, [1000, 1001])
+            meta_paths = sorted((root / "iter_0" / "rollouts").glob("*.meta.json"))
+            self.assertTrue(meta_paths)
+            meta = json.loads(meta_paths[0].read_text(encoding="utf-8"))
+            self.assertEqual(meta["extra"]["policy_seed_salt"], 1000)
+
+    def test_restart_skips_episodes_with_existing_meta(self) -> None:
+        # A supervised restart into a dirty iteration dir must replay only the
+        # missing episodes (meta sidecar absent), never redo completed ones.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            captured_specs: list[list[tuple[int, int]]] = []
+
+            def capturing_streaming_fn(specs: Any, *args: Any, **kwargs: Any) -> Any:
+                captured_specs.append(list(specs))
+                return run_streaming_rollouts(specs, *args, **kwargs)
+
+            def train_fn(**kwargs: Any) -> Path:
+                out_adapter_dir = Path(kwargs["out_adapter_dir"])
+                out_adapter_dir.mkdir(parents=True, exist_ok=True)
+                return out_adapter_dir
+
+            run_kwargs: dict[str, Any] = dict(
+                make_env=lambda ws: FakeParallelEnv(world_seed=ws, decisions=1),
+                base_model="base-model",
+                tokenizer=object(),
+                tokenizer_id="tokenizer-id",
+                framing="framing",
+                train_seeds=[10, 11],
+                out_dir=root,
+                num_iterations=1,
+                group_size=2,
+                seeds_per_iter=1,
+                concurrency=2,
+                max_decisions=2,
+                build_dataset_fn=lambda rollout_dir, **kwargs: (
+                    [{"prompt": "p", "completion": "c", "advantage": 0.0}],
+                    {"advantage_report": {"advantage_mean": 0.0}},
+                ),
+                train_fn=train_fn,
+                run_streaming_fn=capturing_streaming_fn,
+            )
+
+            run_grpo(agent=TrackingStreamingAgent(), **run_kwargs)
+            self.assertEqual(len(captured_specs[0]), 2)
+
+            # Simulate a killed attempt: one episode's meta gone, partial jsonl left.
+            rollouts = root / "iter_0" / "rollouts"
+            (rollouts / "seed_10_r1.meta.json").unlink()
+            run_grpo(agent=TrackingStreamingAgent(), **run_kwargs)
+
+            self.assertEqual(captured_specs[1], [(10, 1)])
+            # The redone episode's file holds exactly one clean trajectory.
+            lines = (rollouts / "seed_10_r1.jsonl").read_text(encoding="utf-8").splitlines()
+            indices = [json.loads(line)["decision_index"] for line in lines]
+            self.assertEqual(indices, sorted(set(indices)))
+
+    def test_default_salt_is_iteration_index(self) -> None:
+        # Fresh exploration streams per iteration are on by default: base 0
+        # gives iteration N salt N (iteration 0 stays byte-identical to the
+        # historical unsalted stream).
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            captured_salts: list[int] = []
+
+            def capturing_streaming_fn(*args: Any, **kwargs: Any) -> Any:
+                captured_salts.append(kwargs["policy_seed_salt"])
+                return run_streaming_rollouts(*args, **kwargs)
+
+            def train_fn(**kwargs: Any) -> Path:
+                out_adapter_dir = Path(kwargs["out_adapter_dir"])
+                out_adapter_dir.mkdir(parents=True, exist_ok=True)
+                return out_adapter_dir
+
+            run_grpo(
+                agent=TrackingStreamingAgent(),
+                make_env=lambda ws: FakeParallelEnv(world_seed=ws, decisions=1),
+                base_model="base-model",
+                tokenizer=object(),
+                tokenizer_id="tokenizer-id",
+                framing="framing",
+                train_seeds=[10, 11],
+                out_dir=root,
+                num_iterations=2,
+                group_size=2,
+                seeds_per_iter=1,
+                concurrency=2,
+                max_decisions=2,
+                build_dataset_fn=lambda rollout_dir, **kwargs: (
+                    [{"prompt": "p", "completion": "c", "advantage": 0.0}],
+                    {"advantage_report": {"advantage_mean": 0.0}},
+                ),
+                train_fn=train_fn,
+                run_streaming_fn=capturing_streaming_fn,
+            )
+
+            self.assertEqual(captured_salts, [0, 1])
+
+
 class GrpoLoopResumeTest(unittest.TestCase):
     def test_resume_starts_at_iteration_and_seeds_from_adapter(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

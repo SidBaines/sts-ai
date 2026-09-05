@@ -167,6 +167,41 @@ class ParallelRolloutSpecTest(unittest.TestCase):
         self.assertEqual(agent.reseed_calls[:4], expected_batch_seeds)
         self.assertEqual(agent.reseed_calls[4:], expected_batch_seeds)
 
+    def test_policy_seed_salt_changes_round_seeds_and_recorded_policy_seed(self) -> None:
+        specs = [(7, 0), (7, 1)]
+        unsalted_agent = ReseededBatchAgent()
+        salted_agent = ReseededBatchAgent()
+
+        unsalted = run_parallel_rollouts(
+            specs, _make_env, unsalted_agent, batch_size=2, max_decisions=4
+        )
+        salted = run_parallel_rollouts(
+            specs,
+            _make_env,
+            salted_agent,
+            batch_size=2,
+            max_decisions=4,
+            policy_seed_salt=4,
+        )
+
+        # The round reseed values (the actual sampling lever) must all shift.
+        self.assertEqual(len(unsalted_agent.reseed_calls), len(salted_agent.reseed_calls))
+        for before, after in zip(unsalted_agent.reseed_calls, salted_agent.reseed_calls):
+            self.assertNotEqual(before, after)
+        self.assertEqual(
+            salted_agent.reseed_calls[0],
+            derive_batch_seed([(7, 0, 0), (7, 1, 0)], salt=4),
+        )
+        # Recorded provenance follows the salt; salt=0 default stayed historical.
+        self.assertEqual(
+            [r.policy_seed for r in salted],
+            [derive_policy_seed(7, 0, salt=4), derive_policy_seed(7, 1, salt=4)],
+        )
+        self.assertEqual(
+            [r.policy_seed for r in unsalted],
+            [derive_policy_seed(7, 0), derive_policy_seed(7, 1)],
+        )
+
     def test_same_world_seed_specs_do_not_collide(self) -> None:
         specs = [(11, 0), (11, 1)]
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -198,6 +233,36 @@ class ParallelRolloutSpecTest(unittest.TestCase):
                 self.assertEqual(records[0]["world_seed"], world_seed)
                 self.assertEqual(records[0]["rollout_index"], rollout_index)
                 self.assertTrue(records[0]["action_executed"])
+
+    def test_rerun_into_existing_output_truncates_instead_of_concatenating(self) -> None:
+        # A killed attempt leaves jsonl (and possibly meta) files behind;
+        # append_jsonl appends unconditionally, so a slot must unlink leftovers
+        # on open or a supervised restart concatenates two trajectories into
+        # one file (decision_index resets mid-file; observed 2026-08-19).
+        specs = [(7, 0)]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            out = lambda ws, ri: root / f"seed_{ws}_r{ri}.jsonl"  # noqa: E731
+
+            run_parallel_rollouts(
+                specs, _make_env, ReseededBatchAgent(),
+                output_for=out, batch_size=1, max_decisions=3,
+            )
+            first_lines = (root / "seed_7_r0.jsonl").read_text(encoding="utf-8").splitlines()
+
+            run_parallel_rollouts(
+                specs, _make_env, ReseededBatchAgent(),
+                output_for=out, batch_size=1, max_decisions=3, policy_seed_salt=4,
+            )
+            lines = (root / "seed_7_r0.jsonl").read_text(encoding="utf-8").splitlines()
+
+            self.assertEqual(len(lines), len(first_lines))
+            indices = [json.loads(line)["decision_index"] for line in lines]
+            self.assertEqual(indices, sorted(set(indices)), "decision_index reset: concatenated trajectories")
+            # The rerun's records carry the salted policy seed, not the first run's.
+            self.assertEqual(
+                json.loads(lines[0])["policy_seed"], derive_policy_seed(7, 0, salt=4)
+            )
 
     def test_batched_retry_succeeds_before_exhaustion(self) -> None:
         agent = RetryBatchAgent()

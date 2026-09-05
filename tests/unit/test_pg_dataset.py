@@ -251,6 +251,41 @@ class BuildPgDatasetTest(unittest.TestCase):
             self.assertEqual(manifest["n_trajectories_with_advantage"], 2)
             self.assertEqual(manifest["advantage_report"]["n_simulator_error_excluded"], 1)
 
+    def test_concatenated_trajectory_is_rejected_whole_and_counted(self):
+        # A killed attempt's leftover jsonl that a restart appended to holds
+        # two trajectories in one file (decision_index resets mid-file). The
+        # builder must skip the whole file, never train on the mixture.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_rollout(
+                root,
+                _meta(world_seed=1, final_floor=5),
+                [_record(world_seed=1, decision_index=0)],
+            )
+            _write_rollout(
+                root,
+                _meta(world_seed=2, final_floor=15),
+                [
+                    _record(world_seed=2, decision_index=0),
+                    _record(world_seed=2, decision_index=1),
+                    _record(world_seed=2, decision_index=0),  # concatenation seam
+                    _record(world_seed=2, decision_index=1),
+                    _record(world_seed=2, decision_index=2),
+                ],
+            )
+
+            examples, manifest = build_pg_dataset(
+                root,
+                framing=FRAMING,
+                tokenizer=FakeTokenizer(),
+                tokenizer_id="fake-tokenizer",
+            )
+
+            self.assertEqual({example["stem"] for example in examples}, {"seed_1_r0"})
+            self.assertEqual(
+                manifest["skipped_record_counts"]["corrupt_concatenated_trajectory"], 5
+            )
+
     def test_unfaithful_or_invalid_decisions_are_skipped_and_counted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

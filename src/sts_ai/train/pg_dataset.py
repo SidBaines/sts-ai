@@ -10,6 +10,7 @@ from sts_ai.train.dataset_builder import (
     _count_missing_meta,
     _load_json,
     _load_jsonl,
+    trajectory_is_contiguous,
     _one_value,
     _reasoning_mode,
     _skip_reason,
@@ -121,7 +122,11 @@ def build_pg_dataset(
             continue
         jsonl_path = jsonl_by_stem[label.stem]
         advantage = float(advantage_by_stem[label.stem])
-        for record in _load_jsonl(jsonl_path):
+        records = _load_jsonl(jsonl_path)
+        if not trajectory_is_contiguous(records):
+            skipped["corrupt_concatenated_trajectory"] += len(records)
+            continue
+        for record in records:
             skip_reason = _skip_reason(record, drop_phases)
             if skip_reason is not None:
                 skipped[skip_reason] += 1

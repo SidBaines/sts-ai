@@ -10,9 +10,19 @@ def _digest_to_seed(digest: bytes) -> int:
     return int.from_bytes(digest[:8], byteorder="big", signed=False) & _SEED_MASK_63_BITS
 
 
-def derive_policy_seed(world_seed: int, rollout_index: int) -> int:
-    """Derive a process-stable policy RNG seed from rollout identity."""
-    payload = f"{world_seed}:{rollout_index}".encode("utf-8")
+def derive_policy_seed(world_seed: int, rollout_index: int, *, salt: int = 0) -> int:
+    """Derive a process-stable policy RNG seed from rollout identity.
+
+    ``salt=0`` (the default) preserves the historical unsalted stream, keeping
+    frozen-seed trajectories byte-identical. A non-zero salt (e.g. the GRPO
+    iteration index, plus a restart offset) yields an independent stream so
+    repeated passes over the same (world_seed, rollout_index) grid sample
+    fresh trajectories instead of deterministically replaying — required both
+    for per-iteration exploration and to dodge state-dependent simulator
+    hangs on supervised restarts.
+    """
+    suffix = "" if salt == 0 else f":s{salt}"
+    payload = f"{world_seed}:{rollout_index}{suffix}".encode("utf-8")
     return _digest_to_seed(hashlib.sha256(payload).digest())
 
 
@@ -33,9 +43,19 @@ def rollout_stem(world_seed: int, rollout_index: int) -> str:
 
 
 # Used by the batched K-rollout path; keep seeding policy centralized here.
-def derive_batch_seed(members: Iterable[tuple[int, int, int]]) -> int:
-    """Derive an order-independent seed from (world, rollout, decision) members."""
+def derive_batch_seed(
+    members: Iterable[tuple[int, int, int]], *, salt: int = 0
+) -> int:
+    """Derive an order-independent seed from (world, rollout, decision) members.
+
+    ``salt=0`` is byte-identical to the historical unsalted derivation; see
+    ``derive_policy_seed`` for salt semantics. Both the lockstep round seed and
+    the streaming per-request seed flow through here, so this is the single
+    point where a salt actually changes sampled tokens.
+    """
     hasher = hashlib.sha256()
+    if salt != 0:
+        hasher.update(f"salt:{salt}\n".encode("utf-8"))
     for world_seed, rollout_index, decision_index in sorted(members):
         hasher.update(f"{world_seed}:{rollout_index}:{decision_index}\n".encode("utf-8"))
     return _digest_to_seed(hasher.digest())

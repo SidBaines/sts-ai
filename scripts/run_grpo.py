@@ -125,6 +125,17 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="Resume: local path to the latest completed adapter to seed training from "
         "(e.g. downloaded from HF grpo/iter_<N>/adapter). Use with --start-iteration N+1.",
     )
+    parser.add_argument(
+        "--policy-seed-salt",
+        type=int,
+        default=0,
+        help="Base salt for rollout sampling seeds; each iteration samples with "
+        "salt=base+iteration (fresh exploration streams per iteration; 0+iter0 is "
+        "byte-identical to the historical unsalted stream). Bump the base (e.g. "
+        "+1000 per restart) when resuming a run that wedged in a state-dependent "
+        "simulator hang, so the redone iteration re-rolls instead of replaying "
+        "into the same state. Recorded in run_config and rollout metas.",
+    )
     parser.add_argument("--wandb-project", default=None, help="wandb project for the per-iteration dashboard.")
     parser.add_argument("--run-name", default=None, help="wandb run name.")
     parser.add_argument("--hf-repo", default=None, help="HF model repo id to push adapters/datasets to (e.g. user/sts-grpo).")
@@ -265,10 +276,13 @@ def main(argv: Sequence[str] | None = None) -> None:
         "loss_mask_mode": "action",
         "start_iteration": args.start_iteration,
         "resumed": args.resume_adapter is not None,
+        "policy_seed_salt": args.policy_seed_salt,
     }
 
     # Immutable run provenance, written before the first iteration (wandb may
-    # be disabled; the on-disk copy is the durable record).
+    # be disabled; the on-disk copy is the durable record). A resume/restart
+    # into an existing out-dir must not clobber the original launch's record:
+    # subsequent launches write run_config.resume-<N>.json instead.
     args.out_dir.mkdir(parents=True, exist_ok=True)
     from sts_ai.rollout import current_git_sha
 
@@ -281,7 +295,13 @@ def main(argv: Sequence[str] | None = None) -> None:
             "argv": list(argv) if argv is not None else sys.argv[1:],
         }
     )
-    (args.out_dir / "run_config.json").write_text(
+    run_config_path = args.out_dir / "run_config.json"
+    if run_config_path.exists():
+        n = 1
+        while (args.out_dir / f"run_config.resume-{n}.json").exists():
+            n += 1
+        run_config_path = args.out_dir / f"run_config.resume-{n}.json"
+    run_config_path.write_text(
         json.dumps(run_config, indent=2, sort_keys=True, default=str) + "\n",
         encoding="utf-8",
     )
@@ -317,6 +337,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         output_contract=args.output_contract,
         ooc_output_contract=args.ooc_output_contract,
         train_example_cap=args.train_example_cap,
+        policy_seed_salt=args.policy_seed_salt,
         **extra_kwargs,
     )
     print(json.dumps(summary, indent=2, sort_keys=True))

@@ -41,6 +41,21 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def trajectory_is_contiguous(records: list[dict[str, Any]]) -> bool:
+    """True when the records' decision_index increases strictly monotonically.
+
+    A reset mid-file means two trajectories were concatenated into one JSONL
+    (a killed attempt's partial file was appended to by a restart — observed
+    2026-08-19 before slots unlinked leftovers); such a file must never be
+    consumed as a single trajectory.
+    """
+    indices = [record.get("decision_index") for record in records]
+    return all(
+        isinstance(a, int) and isinstance(b, int) and b > a
+        for a, b in zip(indices, indices[1:])
+    )
+
+
 def _count_missing_meta(rollout_dir: Path) -> int:
     return sum(
         1

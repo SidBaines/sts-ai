@@ -107,7 +107,18 @@ class RunGrpoBackendTest(unittest.TestCase):
                 patch("sts_ai.lightspeed.LightspeedHybridEnv") as env_mock,
                 contextlib.redirect_stdout(io.StringIO()),
             ):
-                run_grpo.main(self._argv(root, "--backend", "mlx", "--thinking", "--max-seq-len", "1024"))
+                run_grpo.main(
+                    self._argv(
+                        root,
+                        "--backend",
+                        "mlx",
+                        "--thinking",
+                        "--max-seq-len",
+                        "1024",
+                        "--policy-seed-salt",
+                        "1000",
+                    )
+                )
 
             mlx_mock.assert_called_once_with(
                 base_model="base/model",
@@ -131,6 +142,9 @@ class RunGrpoBackendTest(unittest.TestCase):
             self.assertEqual(captured_kwargs["wandb_config"]["backend"], "mlx")
             self.assertTrue(captured_kwargs["wandb_config"]["thinking"])
             self.assertEqual(captured_kwargs["wandb_config"]["max_seq_len"], 1024)
+            # Restart-supervisor salt reaches the loop and the config record.
+            self.assertEqual(captured_kwargs["policy_seed_salt"], 1000)
+            self.assertEqual(captured_kwargs["wandb_config"]["policy_seed_salt"], 1000)
 
     def test_cuda_backend_rejects_thinking(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

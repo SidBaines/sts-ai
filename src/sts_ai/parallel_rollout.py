@@ -43,12 +43,23 @@ class _Slot:
         rollout_index: int,
         env: LightspeedHybridEnv,
         output_path: Optional[Path],
+        policy_seed_salt: int = 0,
     ):
         self.world_seed = world_seed
         self.rollout_index = rollout_index
-        self.policy_seed = derive_policy_seed(world_seed, rollout_index)
+        self.policy_seed = derive_policy_seed(
+            world_seed, rollout_index, salt=policy_seed_salt
+        )
         self.env = env
         self.output_path = output_path
+        # A slot owns its output files from birth: drop any leftovers from a
+        # killed prior attempt. append_jsonl appends unconditionally, so
+        # without this a supervised restart CONCATENATES trajectories into one
+        # file (decision_index resets mid-file; observed 2026-08-19, iter-5).
+        if output_path is not None:
+            output_path = Path(output_path)
+            output_path.unlink(missing_ok=True)
+            output_path.with_suffix(".meta.json").unlink(missing_ok=True)
         self.decisions: list[DecisionRecord] = []
         self.decision_index = 0
         self.view: Optional[dict[str, Any]] = None  # pending decision, set by advance()
@@ -144,10 +155,12 @@ def run_parallel_rollouts(
     max_decisions: int = 200,
     max_retries: int | None = None,
     run_meta: Optional[dict[str, Any]] = None,
+    policy_seed_salt: int = 0,
 ) -> list[RolloutResult]:
     """Run `(world_seed, rollout_index)` specs as concurrent rollouts, K
     (`batch_size`) at a time, batching the agent's per-decision generations.
-    Returns RolloutResults in input spec order."""
+    Returns RolloutResults in input spec order. ``policy_seed_salt=0`` keeps
+    sampling byte-identical to the historical unsalted streams."""
     if max_retries is None:
         max_retries = getattr(agent, "max_retries", 1)
 
@@ -162,6 +175,7 @@ def run_parallel_rollouts(
             rollout_index,
             make_env(world_seed),
             output_for(world_seed, rollout_index),
+            policy_seed_salt=policy_seed_salt,
         )
         advance_slot(
             slot,
@@ -185,7 +199,7 @@ def run_parallel_rollouts(
             (slot.world_seed, slot.rollout_index, slot.decision_index)
             for slot in active_batch
         ]
-        agent.reseed(derive_batch_seed(members))
+        agent.reseed(derive_batch_seed(members, salt=policy_seed_salt))
         batch = [(slot.view["state_text"], slot.view["legal_actions"]) for slot in active_batch]
         batch_phases = [slot.view["phase"] for slot in active_batch]
         retry_flags = [slot.attempt > 0 for slot in active_batch]

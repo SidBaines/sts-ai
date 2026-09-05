@@ -409,6 +409,31 @@ class StreamingRolloutSpecTest(unittest.TestCase):
             derive_batch_seed([(7, 1, 2)]),
         )
 
+    def test_policy_seed_salt_shifts_request_seeds_and_recorded_policy_seed(self) -> None:
+        specs = [(7, 0), (7, 1)]
+        agent = FakeStreamingAgent()
+        results = run_streaming_rollouts(
+            specs,
+            _make_env_with_decisions(2),
+            agent,
+            concurrency=2,
+            max_decisions=200,
+            policy_seed_salt=4,
+        )
+
+        self.assertEqual(
+            agent.seen_seeds["7:1:1:a0"],
+            derive_batch_seed([(7, 1, 1)], salt=4),
+        )
+        self.assertNotEqual(
+            agent.seen_seeds["7:1:1:a0"],
+            derive_batch_seed([(7, 1, 1)]),
+        )
+        self.assertEqual(
+            [r.policy_seed for r in results],
+            [derive_policy_seed(7, 0, salt=4), derive_policy_seed(7, 1, salt=4)],
+        )
+
     def test_decision_record_shape_parity_and_meta_sidecar(self) -> None:
         specs = [(7, 0)]
         expected_keys = {

@@ -46,12 +46,15 @@ def run_streaming_rollouts(
     max_retries: int | None = None,
     run_meta: Optional[dict[str, Any]] = None,
     hint_cfg: HintConfig | None = None,
+    policy_seed_salt: int = 0,
 ) -> list[RolloutResult]:
     """Run rollout specs through a continuous-batching generation backend.
 
     Invalid responses get per-rollout retries as new non-blocking requests;
     after retry exhaustion, the invalid response is recorded and the rollout
     stops with `agent_invalid` before any fallback action is executed.
+    ``policy_seed_salt=0`` keeps per-request sampling seeds byte-identical to
+    the historical unsalted streams.
     """
     if max_retries is None:
         max_retries = getattr(agent, "max_retries", 1)
@@ -77,7 +80,8 @@ def run_streaming_rollouts(
         if slot.stage == "NORMAL":
             state_text = slot.view["state_text"]
             seed = derive_batch_seed(
-                [(slot.world_seed, slot.rollout_index, slot.decision_index)]
+                [(slot.world_seed, slot.rollout_index, slot.decision_index)],
+                salt=policy_seed_salt,
             )
             retry = slot.attempt > 0
         elif slot.stage == "HINTED":
@@ -187,6 +191,7 @@ def run_streaming_rollouts(
             rollout_index,
             make_env(world_seed),
             output_for(world_seed, rollout_index),
+            policy_seed_salt=policy_seed_salt,
         )
         advance_slot(
             slot,
