@@ -111,6 +111,12 @@ Regenerate with `scripts/run_batch.py` plus the exclusion lists in the config.
 
 ## Current state
 
+The [2026-09-05 repository review](repository_review_2026-09-05.md) audits the
+implementation and local artifacts. It records qualifications to the older
+status prose below: incomplete OOC observations, RL update/metric limitations,
+and training/evaluation overlap and quarantine findings. These remain unresolved;
+the review did not change frozen interfaces or rerun training experiments.
+
 The harness, replay validation, search-teacher collection, semantic teacher
 targets, quarantine-aware metrics, local/pod inference, and training paths are
 implemented. Frozen competence artifacts exist (replay-validated cohorts,
