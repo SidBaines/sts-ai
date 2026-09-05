@@ -36,3 +36,20 @@ Suite log filenames append `.log` to the entire arm name. Do not use
 and `base_temp0.7` otherwise collide. The September session's pre-launch
 collision and resumed attempt ledger are retained under `failure_replay/` and
 the `failure_resume_plan*` artifacts; no model predictions were overwritten.
+
+Greedy generation is not guaranteed to be invariant to other prompts in its
+batch. In the Gemma26 original/enriched comparison, unchanged event prompt 31
+changed action when neighboring prompts changed. Preserve whole cohort order,
+batch settings and renderer provenance; use the actually changed-state subset
+when interpreting enrichment, and do not attribute every switch to its own
+state-text change.
+
+The cached 26B policy stalled in native simulation on world 1007 after its
+floor 29 reward exit, although all baseline policies completed that world.
+`gemma26/live_stall.json` and `native_stall_sample.txt` record the native stack
+and timing. The live analyzer finalizes this interrupted cohort only from the
+exact declared timeout plan/command/ledger plus 15 validated episode metadata
+files and the unfinished world's started trace. It writes a separate timeout
+analysis manifest and retains the missing outcome; it never fabricates episode
+metadata or a successful runner report. Complete-pair CIs and all-world capped
+missing-outcome bounds answer different questions and are reported separately.

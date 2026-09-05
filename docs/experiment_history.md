@@ -128,14 +128,53 @@ supervisor tooling in `scripts/rl_ops/`. Full status, resume instructions, the
 per-iteration table and the incident log are in
 [`ooc_rl_v1_status.md`](ooc_rl_v1_status.md).
 
+## September diagnostic experiments (2026-09-05)
+
+The exploratory `astra-5sep` session used fresh development worlds and frozen
+saved prompts, with no new training. The 32-world random/heuristic × combat-search
+50/500 factorial showed independent scope for OOC policy and combat-controller
+improvement. A privileged map/campfire lookahead prototype replicated a large
+gain: +12.69 paired floors [9.21, 16.45] on 29 complete pairs from a fixed
+32-world cohort, with six timeouts across the three arms accounted for separately.
+All-world missing-outcome bounds remained positive. Its fixed-state labels are
+continuation-policy dependent; this is teacher feasibility, not learned-policy
+or public-information optimality evidence.
+
+On 16 matched new worlds, constrained base E4B reached mean floor 14.69 versus
+13.50 free, removing two fatal action errors. The early RL checkpoint reached
+16.00 under the same constraint, a paired +1.31 [-1.13, 3.63] versus constrained
+base: no established play-quality improvement. Auditing all 56 historical
+iteration-6 fatal decisions found 53 singleton menus. Replaying those first-
+attempt prompts gave 56/56 executable greedy outputs for both RL checkpoints,
+but the later checkpoint fell to 30/56 when sampled, all failures on singleton
+menus. This supports a communication-robustness problem; it does not identify
+the trainer's causal instability mechanism.
+
+The user's cached Gemma 4 26B-A4B NVFP4/MXFP8 weights were reused locally without
+requantization. Its frozen-state probes were more menu-order stable than E4B
+(93/133 versus 63/133 semantic choices preserved) and recovered all historical
+failure states at both temperatures. However, it explicitly declined 11/16
+anonymous event prompts, exposing missing option text as a harness limitation.
+Constrained teacher-relative advantage was small and depended on the continuation
+policy; appended glossary/cost/map information alone did not establish a gain.
+The [full report](astra_5sep_experiments.md) and accompanying JSON results retain
+protocols, provenance, missingness, further model comparisons, and limitations.
+
+The constrained 26B live arm finished 15/16 worlds at observed mean floor 17.0;
+world 1007 stalled inside the native simulator and hit the declared 900-second
+timeout. Paired floor difference versus constrained E4B was +2.87 [-0.27,5.93]
+on 15 observed worlds. All 16 capped-outcome sensitivity bounds were [+1.25,+4.38],
+which describe this cohort rather than population uncertainty. No clear
+advantage over the simple heuristic or early RL checkpoint was established.
+
 ## Open items
 
 - Checkpoint selection still relies on behavioural evaluation; no frozen validation split exists, and dev57 statics remain unpredictive.
 - The gap to the search teacher (100% on all cohorts) is 22–39 points of win rate depending on encounter.
 - The adapter has still not been evaluated inside full-game runs; the `adapter_fc` composite arm was postponed and only the two base arms exist.
-- `ooc_grpo_v1` is paused at iteration 6 of 12, and its outstanding deliverable — a paired evaluation of the best pre-instability adapter against the `base_hybrid` control arm — has not been run. See [`ooc_rl_v1_status.md`](ooc_rl_v1_status.md).
-- Format robustness, not play quality, is currently the binding constraint on out-of-combat RL; the v2 recipe addressing it is unimplemented.
-- No out-of-combat teacher exists, and none of the three costed routes has been implemented. Map-screen pathing — the most floor-relevant out-of-combat decision — has no supervision source at all.
+- `ooc_grpo_v1` is paused at iteration 6 of 12. The historical frozen-protocol evaluation against `base_hybrid` remains outstanding; the September 16-world diagnostic comparison uses a different cohort, search budget, and constrained-output control. See [`ooc_rl_v1_status.md`](ooc_rl_v1_status.md).
+- Format robustness and incomplete OOC information both constrain interpretation of play quality; the v2 RL recipe and versioned forced-action/complete-event interfaces remain unimplemented.
+- An experimental privileged OOC continuation teacher now exists. A validated public-state training dataset, robust hidden-future/continuation targets, and a learned-policy replication remain outstanding.
 - Lagavulin/Sentries labels have not been state-sanity audited; the phantom-power quarantine only covers the Nob files.
 - All shared-adapter results are single-seed (seed 1) at a single endpoint (step 6,000).
 - `combat_public_v3` prompts have not yet been used for training.

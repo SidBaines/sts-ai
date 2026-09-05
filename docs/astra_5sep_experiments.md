@@ -1,8 +1,9 @@
 # Astra experiments — 5 September 2026
 
-Branch: `astra-5sep`. Session starts 22:08 UTC, approximately one hour budget.
+Branch: `astra-5sep`. Experiments ran 22:08–23:35 UTC on 5 September 2026.
 This exploratory session preserves production interfaces and frozen artifacts.
 Raw outputs live under `data/experiments/astra_5sep/`.
+The user-requested 26B extension continued beyond the initial hour.
 
 ## Questions and protocol, recorded before model results
 
@@ -66,8 +67,9 @@ quality as separate questions.
 
 ## 1. Fresh-world baseline factorial
 
-Worlds 1000–1031, one game per world and arm, search-controlled combat, 50 or
-500 search simulations. The heuristic takes resources, rests below 55% HP,
+Worlds 1000–1031, one game per world and arm, Ironclad at Ascension 0 through
+Act 3, search-controlled combat, 50 or 500 search simulations with a 2× boss
+multiplier. The heuristic takes resources, rests below 55% HP,
 takes the first card, and otherwise chooses the first action; it is deliberately
 elementary, not an expert policy. All 128 planned games finished as losses, with
 no invalid outputs, timeouts, or `undefined_behavior_evoked` flags. This flag
@@ -333,11 +335,91 @@ chat template, whose source and hash are recorded. Its no-thinking prompt closes
 an empty thought channel; the E4B template differs. The single invalid smoke
 response explicitly declined to choose among anonymous event-option placeholders.
 That is a contract failure and evidence of an observation problem, not ordinary
-malformed JSON. Full frozen-cohort and matched-game results are pending.
+malformed JSON.
 The optional, unlaunched later-E4B-checkpoint live arm was removed to allocate
 time to 26B, with the original plan and amendment retained. Model comparisons
 necessarily change architecture, weights, quantization and chat template as a
 bundle; they cannot isolate the effect of parameter count.
+
+All five 133-state 26B arms and both 56-state failure-replay arms completed:
+
+| 26B arm | Executable / 133 | Heuristic-continuation regret | Random-continuation regret |
+|---|---:|---:|---:|
+| Greedy free | 122 | 1.405 | 1.074 |
+| Greedy constrained | 133 | 1.311 | 0.927 |
+| Enriched constrained | 133 | 1.402 | 1.003 |
+| Reversed-menu constrained | 133 | 1.811 | 1.141 |
+| Sampled free (0.7) | 123 | 1.705 | 1.052 |
+
+As above, regret conditions on valid responses and complete teacher labels;
+free arms exclude different states. The clean constrained 26B–E4B comparison
+uses all 132 teacher-complete states: world-mean regret difference
+**-0.35 [-0.71, -0.02]** under heuristic continuation, but
+**-0.02 [-0.30, 0.32]** under averaged random continuation. This is a modest,
+teacher-dependent static advantage, not proof of superior live play.
+
+All 11 greedy invalid responses were manually reviewed: each explicitly objects
+to missing event-option text, all on the 16 anonymous event screens. The other
+117 decisions are executable. Ten abstentions end normally; one reaches the
+256-token cap while explaining the missing information. At temperature 0.7,
+eight event decisions and two other decisions are invalid.
+
+26B preserves **93/133 (69.9%)** semantic choices under menu reversal, versus
+63/133 for E4B. Map preservation is **13/16**, versus 5/16 for E4B. Nevertheless,
+only **1/16 Neow choices** is preserved; those action descriptions themselves
+contain fixed `event option N` identifiers alongside the displayed menu indices.
+The experiment establishes presentation sensitivity, not its sole mechanism.
+
+Additional public glossary/cost/map text again does not reliably improve values.
+On the 64 changed, teacher-complete states, paired world-mean regret changes are
++0.12 [-0.06, 0.36] under heuristic continuation and +0.08 [-0.08, 0.30]
+under random continuation. Anonymous event text was not repaired by this
+enrichment, so its absence remains a live limitation.
+
+On the historical failure cohort, **26B is executable on 56/56 states at both
+temperatures**. After JSON extraction, 55 selected descriptions match exactly
+and one uses a valid unique prefix. Many raw replies contain Markdown fences,
+so executable validity should not be confused with strict raw-JSON compliance.
+Its behavior is therefore more robust on this selected communication
+failure class than sampled later-RL E4B; the cohort contains only three actual
+branching choices and cannot establish a strategic advantage.
+
+One unchanged event prompt changes action between the original and enriched
+greedy batches. Other prompts in its batch changed; the mechanism behind this
+switch was not isolated. The changed-state subset is reported separately, and
+individual switches should not all be attributed to their own added information.
+
+The 16-world constrained 26B live arm reached **15 terminal losses and one
+native-simulator timeout**, with no invalid decisions or retries. The observed
+15-game mean floor is **17.0**. Its missing world is 1007: after the model
+generated a map choice, the simulator stopped progressing. The last saved
+state was floor 29. A one-second process sample placed all 844 main-thread
+samples inside the native simulator module; exact function attribution was
+unavailable in the stripped binary. The predeclared 900-second suite timeout
+ended the process. No outcome was fabricated and no replacement run was made.
+
+| 26B minus comparator | Mean paired floor difference on 15 observed worlds | All-16-world capped missing-outcome bounds |
+|---|---:|---:|
+| Constrained base E4B | +2.87 [-0.27, 5.93] | [+1.25, +4.38] |
+| Constrained early-RL E4B | +1.00 [-2.47, 4.20] | [-0.06, +3.06] |
+| Simple heuristic | -1.60 [-5.07, 1.73] | [-3.06, +0.06] |
+| Random | +2.73 [0.40, 5.47] | [+1.31, +4.44] |
+
+The middle column gives descriptive 95% world-bootstrap intervals conditional
+on observed outcomes. The last column uses `min(final_floor,50)`, assigning
+the missing 26B outcome anywhere in [0,50]; those bounds describe this cohort
+and are **not confidence intervals**. They preserve the finite-cohort direction
+against constrained base even under an adverse missing outcome, but do not
+establish a population-level advantage. The data do not show superiority over
+the simple heuristic or the early RL checkpoint.
+
+26B is therefore a promising next baseline for communication and presentation
+robustness, with modest live evidence. Increasing model size alone has not
+established the competence improvement needed for a clean framing claim.
+The stalled world also demonstrates why seed screening under another policy
+is insufficient: all baseline policies completed that world, while this policy
+reached a native state that stalled. The experiment does not identify the
+underlying native bug's exact cause.
 
 ## What I would do next
 
@@ -347,7 +429,9 @@ bundle; they cannot isolate the effect of parameter count.
    credit horizon and frozen-trajectory treatment are deliberate.
 2. Build a narrow **map/campfire competence task** with complete public state,
    a fixed combat controller, several continuation policies, and uncertainty-
-   aware teacher targets. Split by whole world/run, not neighboring decisions.
+   aware teacher targets. Average hidden futures consistent with the public
+   state where possible; the fixed-world oracle's full gain may not be
+   recoverable by a public-information policy. Split by whole world/run, not neighboring decisions.
    Evaluate learned policies on fresh complete games with validity and simulator
    failures beside floor. The privileged teacher is supervision, never an input.
 3. Before resuming GRPO, test the objective on a small frozen diagnostic batch:
@@ -358,6 +442,9 @@ bundle; they cannot isolate the effect of parameter count.
    experiment. Freeze trajectories, targets, reward, teacher budget, and endpoint;
    vary framing only. Retain menu permutations and transfer-to-neighboring-traits
    evaluations so a stylistic or position preference is not mistaken for a trait.
+   Measure risk-related choices conditional on the opportunities available,
+   separately from floor: the lookahead improvement did not require a net change
+   in elite selections at its visited map states.
 
 ## Reproducibility, scope, and artifacts
 
@@ -396,4 +483,26 @@ Closed-loop lookahead runs `prepare_decision` at every replayed prefix step.
 The fixed-state teacher used lighter replay followed by an exact target-frontier
 check; it rejected the one mismatching state rather than silently labeling it.
 
-Final test and artifact accounting will be added after the remaining runs.
+The final code suite passed **772 tests, with 11 skipped**. The required CLI
+random smoke (seed 3, 78 decisions) reached terminal loss at floor 24, with no
+undefined-behavior flag, and matched the earlier session trace byte-for-byte.
+Pure regression checks cover the decoder trie,
+cohort/provenance validation, failure accounting, the suite log-name collision,
+and packed-weight import transformations.
+
+[Study accounting](astra_5sep_accounting.json) records **304 planned research
+whole-game slots on 64 simulator worlds: 297 observed outcomes and seven
+missing outcomes** (six replication timeouts and one 26B timeout). The 64 live
+model slots contain 63 observed outcomes. The main fixed-state studies produced
+**3,241 responses**: 21 arms ×133 states and eight arms ×56 historical failure
+states. These are repeated matched observations, not independent games.
+Teacher continuation attempts, development smoke tests, replay checks, the
+unlaunched cancelled arm, and the resumed pre-inference log-name error are
+accounted for separately.
+
+Compact tracked evidence accompanies this report:
+[simulator results](astra_5sep_simulator_results.json),
+[policy probes](astra_5sep_policy_results.json),
+[live comparisons](astra_5sep_live_results.json),
+[failure replay](astra_5sep_failure_replay_results.json), and
+[credit audit](astra_5sep_credit_results.json).

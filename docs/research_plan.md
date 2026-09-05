@@ -166,3 +166,12 @@ production interface or frozen training data. Further competence studies should
 separate observation completeness, valid-output policy, and teacher quality
 before attributing floor changes to a learned risk trait. The primary framing
 design remains matched-data training from a frozen competent checkpoint.
+
+The same session evaluated the user's cached Gemma 4 26B-A4B NVFP4/MXFP8
+model locally. It improved communication and menu-permutation robustness, but
+explicitly declined anonymous event prompts with missing option text. Its
+constrained live arm completed 15/16 worlds before a native-simulator stall;
+the paired floor difference against constrained E4B was +2.87 [-0.27, 5.93]
+on observed worlds. It is a promising next baseline, not established evidence
+that model scaling has solved OOC competence. Simulator isolation and complete
+event descriptions remain necessary work for the next study.

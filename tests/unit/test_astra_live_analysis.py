@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from scripts.experiments.astra_analyze_live import (
     E4B_SUFFIX, IncompleteCohort, PROBE_HASH, PUBLIC_KEYS, compare, load_cohort,
-    validate_comparison, validate_config, validate_episode,
+    validate_comparison, validate_config, validate_episode, validate_timeout_attempt, validate_started_trace,
 )
 from sts_ai.seeding import derive_policy_seed
 
@@ -132,6 +132,48 @@ class TestAstraLiveAnalysis(unittest.TestCase):
             self.assertEqual(result["kind"],"explicit_model_bundle_intervention")
             b["config"]["temperature"]=.7
             with self.assertRaisesRegex(ValueError,"generation configuration"):validate_comparison(a,b)
+
+    def test_interrupted_trace_is_unscored_and_requires_valid_started_identity(self) -> None:
+        meta,rows,cfg=self.fixture()
+        result=validate_started_trace(rows,1000,meta["extra"]["interface_provenance"])
+        self.assertFalse(result["scored"]);self.assertIsNone(result["floor"])
+        self.assertFalse(result["metadata_present"])
+        with self.assertRaisesRegex(ValueError,"started trace"):validate_started_trace([],1000,{})
+        with self.assertRaisesRegex(ValueError,"identity"):validate_started_trace(rows,1001,{})
+        rows[0]["action_executed"]=False
+        with self.assertRaisesRegex(ValueError,"unexecuted"):validate_started_trace(rows,1000,{})
+
+    def test_interruption_requires_final_timeout_and_exact_predeclared_command(self) -> None:
+        _meta,_rows,cfg=self.fixture();cfg["constrained"]=True
+        arm={k:cfg[k] for k in ("seeds","contract","max_decisions","max_retries","temperature","constrained")}
+        arm.update(mode="rollout",out="/tmp/gemma26_text_constrained",timeout_seconds=900)
+        plan={"arms":[arm],"model":cfg["model"],"batch_size":16,"recorded":100}
+        command=["python","scripts/experiments/astra_policy_probe.py","rollout","--out",arm["out"],"--model",cfg["model"],"--contract","action_text","--batch-size","16","--seeds","1000","--max-decisions","250","--max-retries","1","--temperature","0.0","--constrained"]
+        attempt={"arm":arm,"command":command,"status":"timeout","started":200,"wall_seconds":900.1}
+        validate_timeout_attempt(plan,[attempt],cfg,Path(arm["out"]))
+        with self.assertRaises(IncompleteCohort):validate_timeout_attempt(plan,[],cfg,Path(arm["out"]))
+        bad=copy.deepcopy(attempt);bad["wall_seconds"]=899
+        with self.assertRaisesRegex(ValueError,"boundary"):validate_timeout_attempt(plan,[bad],cfg,Path(arm["out"]))
+        bad=copy.deepcopy(attempt);bad["command"][-2]="0.7"
+        with self.assertRaisesRegex(ValueError,"command provenance"):validate_timeout_attempt(plan,[bad],cfg,Path(arm["out"]))
+        with self.assertRaisesRegex(ValueError,"ambiguous"):validate_timeout_attempt(plan,[attempt,attempt],cfg,Path(arm["out"]))
+
+    def test_final_timeout_retains_all_worlds_without_creating_missing_metadata(self) -> None:
+        seeds=tuple(range(1000,1016));_meta,_rows,cfg=self.fixture();cfg["seeds"]=",".join(map(str,seeds))
+        with tempfile.TemporaryDirectory() as tmp:
+            directory=Path(tmp);(directory/"config.json").write_text(json.dumps(cfg))
+            for seed in seeds:
+                meta,rows,_cfg=self.fixture(seed)
+                (directory/f"seed_{seed}_r0.jsonl").write_text(json.dumps(rows[0])+"\n")
+                if seed != 1007:(directory/f"seed_{seed}_r0.meta.json").write_text(json.dumps(meta))
+            with self.assertRaises(IncompleteCohort):load_cohort(directory)
+            with patch("scripts.experiments.astra_analyze_live.finalized_timeout",return_value={"kind":"validated_timeout"}):
+                arm=load_cohort(directory)
+            self.assertEqual(len(arm["episodes"]),16)
+            self.assertEqual(sum(e["scored"] for e in arm["episodes"]),15)
+            self.assertEqual([e["world_seed"] for e in arm["episodes"] if not e["scored"]],[1007])
+            self.assertFalse((directory/"seed_1007_r0.meta.json").exists())
+            self.assertFalse((directory/"report.json").exists())
 
 
 if __name__=="__main__":unittest.main()

@@ -239,6 +239,166 @@
           0.24551971326164873
         ]
       }
+    },
+    "gemma26_text_constrained_minus_gemma26_text_free": {
+      "heuristic": {
+        "n_common_valid_states": 121,
+        "n_worlds": 30,
+        "mean_world_regret_delta_second_minus_first": -0.3888888888888889,
+        "bootstrap_ci": [
+          -1.1444444444444446,
+          0.05555555555555555
+        ]
+      },
+      "random3_mean": {
+        "n_common_valid_states": 121,
+        "n_worlds": 30,
+        "mean_world_regret_delta_second_minus_first": -0.14444444444444438,
+        "bootstrap_ci": [
+          -0.31481481481481466,
+          1.9891495857867388e-17
+        ]
+      }
+    },
+    "gemma26_text_enriched_constrained_minus_gemma26_text_constrained": {
+      "heuristic": {
+        "n_common_valid_states": 132,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": 0.07910906298003072,
+        "bootstrap_ci": [
+          -0.01228878648233487,
+          0.21048387096774138
+        ]
+      },
+      "random3_mean": {
+        "n_common_valid_states": 132,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": 0.04267793138760879,
+        "bootstrap_ci": [
+          -0.041935483870967745,
+          0.15921658986175113
+        ]
+      }
+    },
+    "gemma26_text_reversed_constrained_minus_gemma26_text_constrained": {
+      "heuristic": {
+        "n_common_valid_states": 132,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": 0.6874807987711213,
+        "bootstrap_ci": [
+          -0.015360983102918595,
+          1.5572331029185866
+        ]
+      },
+      "random3_mean": {
+        "n_common_valid_states": 132,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": 0.09608294930875573,
+        "bootstrap_ci": [
+          -0.18832629288274455,
+          0.35514848950332817
+        ]
+      }
+    },
+    "gemma26_text_constrained_minus_base_text_constrained": {
+      "heuristic": {
+        "n_common_valid_states": 132,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": -0.3513824884792627,
+        "bootstrap_ci": [
+          -0.7135195852534562,
+          -0.02157834101382493
+        ]
+      },
+      "random3_mean": {
+        "n_common_valid_states": 132,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": -0.016820276497695873,
+        "bootstrap_ci": [
+          -0.29733934971838194,
+          0.3172183819764462
+        ]
+      }
+    },
+    "gemma26_text_enriched_constrained_minus_base_text_enriched_constrained": {
+      "heuristic": {
+        "n_common_valid_states": 132,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": -0.4747311827956989,
+        "bootstrap_ci": [
+          -1.0548425499231953,
+          0.022657450076804912
+        ]
+      },
+      "random3_mean": {
+        "n_common_valid_states": 132,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": 0.03963133640552994,
+        "bootstrap_ci": [
+          -0.25151817716333846,
+          0.3827470558115718
+        ]
+      }
+    },
+    "gemma26_text_free_minus_base_text_free": {
+      "heuristic": {
+        "n_common_valid_states": 118,
+        "n_worlds": 30,
+        "mean_world_regret_delta_second_minus_first": -0.24563492063492065,
+        "bootstrap_ci": [
+          -1.0979583333333334,
+          0.7406448412698412
+        ]
+      },
+      "random3_mean": {
+        "n_common_valid_states": 118,
+        "n_worlds": 30,
+        "mean_world_regret_delta_second_minus_first": 0.04886243386243378,
+        "bootstrap_ci": [
+          -0.20612103174603183,
+          0.3064589947089945
+        ]
+      }
+    },
+    "gemma26_text_reversed_constrained_minus_base_text_reversed_constrained": {
+      "heuristic": {
+        "n_common_valid_states": 132,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": 0.23402457757296466,
+        "bootstrap_ci": [
+          -0.6342703533026113,
+          1.171622503840245
+        ]
+      },
+      "random3_mean": {
+        "n_common_valid_states": 132,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": -0.09370199692780336,
+        "bootstrap_ci": [
+          -0.3386859959037378,
+          0.14713325652841777
+        ]
+      }
+    },
+    "gemma26_text_sampled_minus_base_text_sampled": {
+      "heuristic": {
+        "n_common_valid_states": 117,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": 0.13118279569892471,
+        "bootstrap_ci": [
+          -0.8666666666666667,
+          1.2204704301075264
+        ]
+      },
+      "random3_mean": {
+        "n_common_valid_states": 117,
+        "n_worlds": 31,
+        "mean_world_regret_delta_second_minus_first": 0.0648745519713261,
+        "bootstrap_ci": [
+          -0.14498655913978495,
+          0.2806451612903225
+        ]
+      }
     }
   },
   "paired_action_consistency": {
@@ -829,6 +989,398 @@
           "same_original_action_rate_given_both_valid": 0.625
         }
       }
+    },
+    "gemma26_text_constrained_versus_gemma26_text_free": {
+      "n_states": 133,
+      "n_common_valid": 122,
+      "same_original_action_rate_given_both_valid": 0.8934426229508197,
+      "n_worlds": 30,
+      "mean_world_consistency": 0.8524603174603175,
+      "world_bootstrap_ci": [
+        0.7596765873015874,
+        0.9305555555555556
+      ],
+      "by_screen": {
+        "BOSS_RELIC_REWARDS": {
+          "n_common_valid": 5,
+          "same_original_action_rate_given_both_valid": 0.8
+        },
+        "CARD_SELECT": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.875
+        },
+        "EVENT_SCREEN": {
+          "n_common_valid": 5,
+          "same_original_action_rate_given_both_valid": 1
+        },
+        "MAP_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        },
+        "NEOW": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.75
+        },
+        "REST_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.875
+        },
+        "REWARDS": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.75
+        },
+        "SHOP_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        },
+        "TREASURE_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        }
+      }
+    },
+    "gemma26_text_enriched_constrained_versus_gemma26_text_constrained": {
+      "n_states": 133,
+      "n_common_valid": 133,
+      "same_original_action_rate_given_both_valid": 0.9022556390977443,
+      "n_worlds": 31,
+      "mean_world_consistency": 0.913594470046083,
+      "world_bootstrap_ci": [
+        0.8669719662058373,
+        0.9555299539170506
+      ],
+      "by_screen": {
+        "BOSS_RELIC_REWARDS": {
+          "n_common_valid": 5,
+          "same_original_action_rate_given_both_valid": 0.6
+        },
+        "CARD_SELECT": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.875
+        },
+        "EVENT_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.9375
+        },
+        "MAP_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.75
+        },
+        "NEOW": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        },
+        "REST_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        },
+        "REWARDS": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.9375
+        },
+        "SHOP_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.8125
+        },
+        "TREASURE_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        }
+      }
+    },
+    "gemma26_text_reversed_constrained_versus_gemma26_text_constrained": {
+      "n_states": 133,
+      "n_common_valid": 133,
+      "same_original_action_rate_given_both_valid": 0.6992481203007519,
+      "n_worlds": 31,
+      "mean_world_consistency": 0.7057219662058372,
+      "world_bootstrap_ci": [
+        0.6046850998463901,
+        0.8001152073732718
+      ],
+      "by_screen": {
+        "BOSS_RELIC_REWARDS": {
+          "n_common_valid": 5,
+          "same_original_action_rate_given_both_valid": 1
+        },
+        "CARD_SELECT": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.375
+        },
+        "EVENT_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        },
+        "MAP_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.8125
+        },
+        "NEOW": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.0625
+        },
+        "REST_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.875
+        },
+        "REWARDS": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.9375
+        },
+        "SHOP_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.4375
+        },
+        "TREASURE_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        }
+      }
+    },
+    "gemma26_text_constrained_versus_base_text_constrained": {
+      "n_states": 133,
+      "n_common_valid": 133,
+      "same_original_action_rate_given_both_valid": 0.6541353383458647,
+      "n_worlds": 31,
+      "mean_world_consistency": 0.6721966205837173,
+      "world_bootstrap_ci": [
+        0.5701977726574502,
+        0.768592549923195
+      ],
+      "by_screen": {
+        "BOSS_RELIC_REWARDS": {
+          "n_common_valid": 5,
+          "same_original_action_rate_given_both_valid": 0.4
+        },
+        "CARD_SELECT": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.25
+        },
+        "EVENT_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.875
+        },
+        "MAP_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.75
+        },
+        "NEOW": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.3125
+        },
+        "REST_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        },
+        "REWARDS": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.6875
+        },
+        "SHOP_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.4375
+        },
+        "TREASURE_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        }
+      }
+    },
+    "gemma26_text_enriched_constrained_versus_base_text_enriched_constrained": {
+      "n_states": 133,
+      "n_common_valid": 133,
+      "same_original_action_rate_given_both_valid": 0.6466165413533834,
+      "n_worlds": 31,
+      "mean_world_consistency": 0.6501536098310292,
+      "world_bootstrap_ci": [
+        0.5579857910906298,
+        0.7351804915514593
+      ],
+      "by_screen": {
+        "BOSS_RELIC_REWARDS": {
+          "n_common_valid": 5,
+          "same_original_action_rate_given_both_valid": 0.8
+        },
+        "CARD_SELECT": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.25
+        },
+        "EVENT_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.9375
+        },
+        "MAP_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.625
+        },
+        "NEOW": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.3125
+        },
+        "REST_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        },
+        "REWARDS": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.5
+        },
+        "SHOP_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.5
+        },
+        "TREASURE_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        }
+      }
+    },
+    "gemma26_text_free_versus_base_text_free": {
+      "n_states": 133,
+      "n_common_valid": 119,
+      "same_original_action_rate_given_both_valid": 0.5294117647058824,
+      "n_worlds": 30,
+      "mean_world_consistency": 0.5275396825396825,
+      "world_bootstrap_ci": [
+        0.4216666666666667,
+        0.6280972222222221
+      ],
+      "by_screen": {
+        "BOSS_RELIC_REWARDS": {
+          "n_common_valid": 5,
+          "same_original_action_rate_given_both_valid": 0.6
+        },
+        "CARD_SELECT": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.25
+        },
+        "EVENT_SCREEN": {
+          "n_common_valid": 5,
+          "same_original_action_rate_given_both_valid": 0.8
+        },
+        "MAP_SCREEN": {
+          "n_common_valid": 13,
+          "same_original_action_rate_given_both_valid": 0.46153846153846156
+        },
+        "NEOW": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.25
+        },
+        "REST_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.875
+        },
+        "REWARDS": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.5625
+        },
+        "SHOP_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.1875
+        },
+        "TREASURE_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        }
+      }
+    },
+    "gemma26_text_reversed_constrained_versus_base_text_reversed_constrained": {
+      "n_states": 133,
+      "n_common_valid": 133,
+      "same_original_action_rate_given_both_valid": 0.5112781954887218,
+      "n_worlds": 31,
+      "mean_world_consistency": 0.4831413210445468,
+      "world_bootstrap_ci": [
+        0.38217741935483873,
+        0.5868673195084486
+      ],
+      "by_screen": {
+        "BOSS_RELIC_REWARDS": {
+          "n_common_valid": 5,
+          "same_original_action_rate_given_both_valid": 0.6
+        },
+        "CARD_SELECT": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.0625
+        },
+        "EVENT_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.1875
+        },
+        "MAP_SCREEN": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.625
+        },
+        "NEOW": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.25
+        },
+        "REST_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.875
+        },
+        "REWARDS": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.625
+        },
+        "SHOP_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.4375
+        },
+        "TREASURE_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        }
+      }
+    },
+    "gemma26_text_sampled_versus_base_text_sampled": {
+      "n_states": 133,
+      "n_common_valid": 118,
+      "same_original_action_rate_given_both_valid": 0.559322033898305,
+      "n_worlds": 31,
+      "mean_world_consistency": 0.5663978494623656,
+      "world_bootstrap_ci": [
+        0.46439996159754227,
+        0.6626411290322581
+      ],
+      "by_screen": {
+        "BOSS_RELIC_REWARDS": {
+          "n_common_valid": 5,
+          "same_original_action_rate_given_both_valid": 0.4
+        },
+        "CARD_SELECT": {
+          "n_common_valid": 15,
+          "same_original_action_rate_given_both_valid": 0.3333333333333333
+        },
+        "EVENT_SCREEN": {
+          "n_common_valid": 8,
+          "same_original_action_rate_given_both_valid": 0.875
+        },
+        "MAP_SCREEN": {
+          "n_common_valid": 11,
+          "same_original_action_rate_given_both_valid": 0.2727272727272727
+        },
+        "NEOW": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.4375
+        },
+        "REST_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.875
+        },
+        "REWARDS": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 0.5
+        },
+        "SHOP_ROOM": {
+          "n_common_valid": 15,
+          "same_original_action_rate_given_both_valid": 0.26666666666666666
+        },
+        "TREASURE_ROOM": {
+          "n_common_valid": 16,
+          "same_original_action_rate_given_both_valid": 1
+        }
+      }
     }
   },
   "paired_action_value_consistency": {
@@ -1407,6 +1959,390 @@
         },
         "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
       }
+    },
+    "gemma26_text_constrained_versus_gemma26_text_free": {
+      "heuristic": {
+        "complete_teacher_and_both_valid": {
+          "n": 121,
+          "n_same_action": 108,
+          "n_different_action_equal_value": 9,
+          "n_different_action_unequal_value": 4,
+          "same_action_rate": 0.8925619834710744,
+          "equivalent_value_rate": 0.9669421487603306,
+          "n_second_higher_value": 2,
+          "n_second_lower_value": 2
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 64,
+          "n_same_action": 58,
+          "n_different_action_equal_value": 2,
+          "n_different_action_unequal_value": 4,
+          "same_action_rate": 0.90625,
+          "equivalent_value_rate": 0.9375,
+          "n_second_higher_value": 2,
+          "n_second_lower_value": 2
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      },
+      "random3_mean": {
+        "complete_teacher_and_both_valid": {
+          "n": 121,
+          "n_same_action": 108,
+          "n_different_action_equal_value": 6,
+          "n_different_action_unequal_value": 7,
+          "same_action_rate": 0.8925619834710744,
+          "equivalent_value_rate": 0.9421487603305785,
+          "n_second_higher_value": 5,
+          "n_second_lower_value": 2
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 89,
+          "n_same_action": 79,
+          "n_different_action_equal_value": 3,
+          "n_different_action_unequal_value": 7,
+          "same_action_rate": 0.8876404494382022,
+          "equivalent_value_rate": 0.9213483146067416,
+          "n_second_higher_value": 5,
+          "n_second_lower_value": 2
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      }
+    },
+    "gemma26_text_enriched_constrained_versus_gemma26_text_constrained": {
+      "heuristic": {
+        "complete_teacher_and_both_valid": {
+          "n": 132,
+          "n_same_action": 119,
+          "n_different_action_equal_value": 9,
+          "n_different_action_unequal_value": 4,
+          "same_action_rate": 0.9015151515151515,
+          "equivalent_value_rate": 0.9696969696969697,
+          "n_second_higher_value": 1,
+          "n_second_lower_value": 3
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 69,
+          "n_same_action": 61,
+          "n_different_action_equal_value": 4,
+          "n_different_action_unequal_value": 4,
+          "same_action_rate": 0.8840579710144928,
+          "equivalent_value_rate": 0.9420289855072463,
+          "n_second_higher_value": 1,
+          "n_second_lower_value": 3
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      },
+      "random3_mean": {
+        "complete_teacher_and_both_valid": {
+          "n": 132,
+          "n_same_action": 119,
+          "n_different_action_equal_value": 4,
+          "n_different_action_unequal_value": 9,
+          "same_action_rate": 0.9015151515151515,
+          "equivalent_value_rate": 0.9318181818181818,
+          "n_second_higher_value": 3,
+          "n_second_lower_value": 6
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 96,
+          "n_same_action": 84,
+          "n_different_action_equal_value": 3,
+          "n_different_action_unequal_value": 9,
+          "same_action_rate": 0.875,
+          "equivalent_value_rate": 0.90625,
+          "n_second_higher_value": 3,
+          "n_second_lower_value": 6
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      }
+    },
+    "gemma26_text_reversed_constrained_versus_gemma26_text_constrained": {
+      "heuristic": {
+        "complete_teacher_and_both_valid": {
+          "n": 132,
+          "n_same_action": 92,
+          "n_different_action_equal_value": 21,
+          "n_different_action_unequal_value": 19,
+          "same_action_rate": 0.696969696969697,
+          "equivalent_value_rate": 0.8560606060606061,
+          "n_second_higher_value": 7,
+          "n_second_lower_value": 12
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 69,
+          "n_same_action": 41,
+          "n_different_action_equal_value": 9,
+          "n_different_action_unequal_value": 19,
+          "same_action_rate": 0.5942028985507246,
+          "equivalent_value_rate": 0.7246376811594203,
+          "n_second_higher_value": 7,
+          "n_second_lower_value": 12
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      },
+      "random3_mean": {
+        "complete_teacher_and_both_valid": {
+          "n": 132,
+          "n_same_action": 92,
+          "n_different_action_equal_value": 11,
+          "n_different_action_unequal_value": 29,
+          "same_action_rate": 0.696969696969697,
+          "equivalent_value_rate": 0.7803030303030303,
+          "n_second_higher_value": 12,
+          "n_second_lower_value": 17
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 96,
+          "n_same_action": 60,
+          "n_different_action_equal_value": 7,
+          "n_different_action_unequal_value": 29,
+          "same_action_rate": 0.625,
+          "equivalent_value_rate": 0.6979166666666666,
+          "n_second_higher_value": 12,
+          "n_second_lower_value": 17
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      }
+    },
+    "gemma26_text_constrained_versus_base_text_constrained": {
+      "heuristic": {
+        "complete_teacher_and_both_valid": {
+          "n": 132,
+          "n_same_action": 86,
+          "n_different_action_equal_value": 25,
+          "n_different_action_unequal_value": 21,
+          "same_action_rate": 0.6515151515151515,
+          "equivalent_value_rate": 0.8409090909090909,
+          "n_second_higher_value": 13,
+          "n_second_lower_value": 8
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 69,
+          "n_same_action": 40,
+          "n_different_action_equal_value": 8,
+          "n_different_action_unequal_value": 21,
+          "same_action_rate": 0.5797101449275363,
+          "equivalent_value_rate": 0.6956521739130435,
+          "n_second_higher_value": 13,
+          "n_second_lower_value": 8
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      },
+      "random3_mean": {
+        "complete_teacher_and_both_valid": {
+          "n": 132,
+          "n_same_action": 86,
+          "n_different_action_equal_value": 15,
+          "n_different_action_unequal_value": 31,
+          "same_action_rate": 0.6515151515151515,
+          "equivalent_value_rate": 0.7651515151515151,
+          "n_second_higher_value": 17,
+          "n_second_lower_value": 14
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 96,
+          "n_same_action": 58,
+          "n_different_action_equal_value": 7,
+          "n_different_action_unequal_value": 31,
+          "same_action_rate": 0.6041666666666666,
+          "equivalent_value_rate": 0.6770833333333334,
+          "n_second_higher_value": 17,
+          "n_second_lower_value": 14
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      }
+    },
+    "gemma26_text_enriched_constrained_versus_base_text_enriched_constrained": {
+      "heuristic": {
+        "complete_teacher_and_both_valid": {
+          "n": 132,
+          "n_same_action": 85,
+          "n_different_action_equal_value": 21,
+          "n_different_action_unequal_value": 26,
+          "same_action_rate": 0.6439393939393939,
+          "equivalent_value_rate": 0.803030303030303,
+          "n_second_higher_value": 17,
+          "n_second_lower_value": 9
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 69,
+          "n_same_action": 37,
+          "n_different_action_equal_value": 6,
+          "n_different_action_unequal_value": 26,
+          "same_action_rate": 0.5362318840579711,
+          "equivalent_value_rate": 0.6231884057971014,
+          "n_second_higher_value": 17,
+          "n_second_lower_value": 9
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      },
+      "random3_mean": {
+        "complete_teacher_and_both_valid": {
+          "n": 132,
+          "n_same_action": 85,
+          "n_different_action_equal_value": 15,
+          "n_different_action_unequal_value": 32,
+          "same_action_rate": 0.6439393939393939,
+          "equivalent_value_rate": 0.7575757575757576,
+          "n_second_higher_value": 17,
+          "n_second_lower_value": 15
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 96,
+          "n_same_action": 57,
+          "n_different_action_equal_value": 7,
+          "n_different_action_unequal_value": 32,
+          "same_action_rate": 0.59375,
+          "equivalent_value_rate": 0.6666666666666666,
+          "n_second_higher_value": 17,
+          "n_second_lower_value": 15
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      }
+    },
+    "gemma26_text_free_versus_base_text_free": {
+      "heuristic": {
+        "complete_teacher_and_both_valid": {
+          "n": 118,
+          "n_same_action": 62,
+          "n_different_action_equal_value": 29,
+          "n_different_action_unequal_value": 27,
+          "same_action_rate": 0.5254237288135594,
+          "equivalent_value_rate": 0.7711864406779662,
+          "n_second_higher_value": 17,
+          "n_second_lower_value": 10
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 61,
+          "n_same_action": 23,
+          "n_different_action_equal_value": 11,
+          "n_different_action_unequal_value": 27,
+          "same_action_rate": 0.3770491803278688,
+          "equivalent_value_rate": 0.5573770491803278,
+          "n_second_higher_value": 17,
+          "n_second_lower_value": 10
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      },
+      "random3_mean": {
+        "complete_teacher_and_both_valid": {
+          "n": 118,
+          "n_same_action": 62,
+          "n_different_action_equal_value": 17,
+          "n_different_action_unequal_value": 39,
+          "same_action_rate": 0.5254237288135594,
+          "equivalent_value_rate": 0.6694915254237288,
+          "n_second_higher_value": 20,
+          "n_second_lower_value": 19
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 86,
+          "n_same_action": 38,
+          "n_different_action_equal_value": 9,
+          "n_different_action_unequal_value": 39,
+          "same_action_rate": 0.4418604651162791,
+          "equivalent_value_rate": 0.5465116279069767,
+          "n_second_higher_value": 20,
+          "n_second_lower_value": 19
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      }
+    },
+    "gemma26_text_reversed_constrained_versus_base_text_reversed_constrained": {
+      "heuristic": {
+        "complete_teacher_and_both_valid": {
+          "n": 132,
+          "n_same_action": 68,
+          "n_different_action_equal_value": 33,
+          "n_different_action_unequal_value": 31,
+          "same_action_rate": 0.5151515151515151,
+          "equivalent_value_rate": 0.7651515151515151,
+          "n_second_higher_value": 14,
+          "n_second_lower_value": 17
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 69,
+          "n_same_action": 27,
+          "n_different_action_equal_value": 11,
+          "n_different_action_unequal_value": 31,
+          "same_action_rate": 0.391304347826087,
+          "equivalent_value_rate": 0.5507246376811594,
+          "n_second_higher_value": 14,
+          "n_second_lower_value": 17
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      },
+      "random3_mean": {
+        "complete_teacher_and_both_valid": {
+          "n": 132,
+          "n_same_action": 68,
+          "n_different_action_equal_value": 25,
+          "n_different_action_unequal_value": 39,
+          "same_action_rate": 0.5151515151515151,
+          "equivalent_value_rate": 0.7045454545454546,
+          "n_second_higher_value": 22,
+          "n_second_lower_value": 17
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 96,
+          "n_same_action": 44,
+          "n_different_action_equal_value": 13,
+          "n_different_action_unequal_value": 39,
+          "same_action_rate": 0.4583333333333333,
+          "equivalent_value_rate": 0.59375,
+          "n_second_higher_value": 22,
+          "n_second_lower_value": 17
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      }
+    },
+    "gemma26_text_sampled_versus_base_text_sampled": {
+      "heuristic": {
+        "complete_teacher_and_both_valid": {
+          "n": 117,
+          "n_same_action": 65,
+          "n_different_action_equal_value": 25,
+          "n_different_action_unequal_value": 27,
+          "same_action_rate": 0.5555555555555556,
+          "equivalent_value_rate": 0.7692307692307693,
+          "n_second_higher_value": 16,
+          "n_second_lower_value": 11
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 60,
+          "n_same_action": 25,
+          "n_different_action_equal_value": 8,
+          "n_different_action_unequal_value": 27,
+          "same_action_rate": 0.4166666666666667,
+          "equivalent_value_rate": 0.55,
+          "n_second_higher_value": 16,
+          "n_second_lower_value": 11
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      },
+      "random3_mean": {
+        "complete_teacher_and_both_valid": {
+          "n": 117,
+          "n_same_action": 65,
+          "n_different_action_equal_value": 16,
+          "n_different_action_unequal_value": 36,
+          "same_action_rate": 0.5555555555555556,
+          "equivalent_value_rate": 0.6923076923076923,
+          "n_second_higher_value": 18,
+          "n_second_lower_value": 18
+        },
+        "informative_complete_teacher_and_both_valid": {
+          "n": 86,
+          "n_same_action": 42,
+          "n_different_action_equal_value": 8,
+          "n_different_action_unequal_value": 36,
+          "same_action_rate": 0.4883720930232558,
+          "equivalent_value_rate": 0.5813953488372093,
+          "n_second_higher_value": 18,
+          "n_second_lower_value": 18
+        },
+        "interpretation": "Value ties are under this finite privileged continuation-policy label, not proof of strategically interchangeable actions."
+      }
     }
   },
   "secondary_changed_state_text_comparisons": {
@@ -1877,6 +2813,304 @@
           ]
         }
       }
+    },
+    "gemma26_text_enriched_constrained_minus_gemma26_text_constrained": {
+      "subset_definition": "state_text actually differs between the two validated source cohorts",
+      "n_changed_source_states": 65,
+      "probe_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        85,
+        86,
+        87,
+        89,
+        90,
+        91,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116
+      ],
+      "action_consistency": {
+        "n_states": 65,
+        "n_common_valid": 65,
+        "same_original_action_rate_given_both_valid": 0.8153846153846154,
+        "n_worlds": 25,
+        "mean_world_consistency": 0.788,
+        "world_bootstrap_ci": [
+          0.6613333333333334,
+          0.8986666666666666
+        ],
+        "by_screen": {
+          "BOSS_RELIC_REWARDS": {
+            "n_common_valid": 5,
+            "same_original_action_rate_given_both_valid": 0.6
+          },
+          "CARD_SELECT": {
+            "n_common_valid": 16,
+            "same_original_action_rate_given_both_valid": 0.875
+          },
+          "MAP_SCREEN": {
+            "n_common_valid": 16,
+            "same_original_action_rate_given_both_valid": 0.75
+          },
+          "REWARDS": {
+            "n_common_valid": 12,
+            "same_original_action_rate_given_both_valid": 0.9166666666666666
+          },
+          "SHOP_ROOM": {
+            "n_common_valid": 16,
+            "same_original_action_rate_given_both_valid": 0.8125
+          }
+        }
+      },
+      "values": {
+        "heuristic": {
+          "first": {
+            "n": 64,
+            "n_valid": 64,
+            "n_valid_informative": 39,
+            "mean_regret_given_valid": 1.390625,
+            "mean_normalized_regret_given_valid_informative": 0.3067683855407641,
+            "top_set_rate_given_valid_informative": 0.5641025641025641
+          },
+          "second": {
+            "n": 64,
+            "n_valid": 64,
+            "n_valid_informative": 39,
+            "mean_regret_given_valid": 1.578125,
+            "mean_normalized_regret_given_valid_informative": 0.35805043682281534,
+            "top_set_rate_given_valid_informative": 0.5128205128205128
+          },
+          "n_common_valid_states": 64,
+          "n_worlds": 25,
+          "mean_world_regret_delta_second_minus_first": 0.12266666666666667,
+          "bootstrap_ci": [
+            -0.064,
+            0.36006666666666565
+          ]
+        },
+        "random3_mean": {
+          "first": {
+            "n": 64,
+            "n_valid": 64,
+            "n_valid_informative": 53,
+            "mean_regret_given_valid": 1.09375,
+            "mean_normalized_regret_given_valid_informative": 0.47754914964718087,
+            "top_set_rate_given_valid_informative": 0.33962264150943394
+          },
+          "second": {
+            "n": 64,
+            "n_valid": 64,
+            "n_valid_informative": 53,
+            "mean_regret_given_valid": 1.2864583333333335,
+            "mean_normalized_regret_given_valid_informative": 0.5274443278442459,
+            "top_set_rate_given_valid_informative": 0.2830188679245283
+          },
+          "n_common_valid_states": 64,
+          "n_worlds": 25,
+          "mean_world_regret_delta_second_minus_first": 0.08488888888888886,
+          "bootstrap_ci": [
+            -0.08444444444444449,
+            0.29822222222222217
+          ]
+        }
+      }
+    }
+  },
+  "comparison_provenance": {
+    "base_text_constrained_minus_base_text_free": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "base_index_constrained_minus_base_index_free": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "base_index_constrained_minus_base_text_constrained": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "rl1_text_constrained_minus_base_text_constrained": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "rl5_text_constrained_minus_base_text_constrained": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "base_text_enriched_constrained_minus_base_text_constrained": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "base_index_enriched_constrained_minus_base_index_constrained": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "rl1_text_enriched_constrained_minus_rl1_text_constrained": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "base_text_reversed_constrained_minus_base_text_constrained": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "rl1_text_reversed_constrained_minus_rl1_text_constrained": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "rl1_text_sampled_minus_base_text_sampled": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "rl5_text_sampled_minus_base_text_sampled": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "caveat": null
+    },
+    "gemma26_text_constrained_minus_gemma26_text_free": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "second_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "caveat": null
+    },
+    "gemma26_text_enriched_constrained_minus_gemma26_text_constrained": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "second_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "caveat": null
+    },
+    "gemma26_text_reversed_constrained_minus_gemma26_text_constrained": {
+      "model_intervention_declared": false,
+      "model_intervention_observed": false,
+      "first_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "second_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "caveat": null
+    },
+    "gemma26_text_constrained_minus_base_text_constrained": {
+      "model_intervention_declared": true,
+      "model_intervention_observed": true,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "caveat": "Cross-model comparisons change the complete model bundle: model weights and architecture, tokenizer/chat-template, quantization and any model-local custom loader. The staged gemma26_ollama bundle uses Ollama NVFP4 weights and a custom MLX loader; the alternative Hugging Face mlx-community bundle uses 4-bit affine weights with 8-bit router projections. The E4B control is BF16. Read each arm model path and bundle provenance to identify the actual implementation. Gemma26 and E4B chat templates may also differ in empty-thought-channel prefilling. Differences cannot be attributed to parameter count alone."
+    },
+    "gemma26_text_enriched_constrained_minus_base_text_enriched_constrained": {
+      "model_intervention_declared": true,
+      "model_intervention_observed": true,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "caveat": "Cross-model comparisons change the complete model bundle: model weights and architecture, tokenizer/chat-template, quantization and any model-local custom loader. The staged gemma26_ollama bundle uses Ollama NVFP4 weights and a custom MLX loader; the alternative Hugging Face mlx-community bundle uses 4-bit affine weights with 8-bit router projections. The E4B control is BF16. Read each arm model path and bundle provenance to identify the actual implementation. Gemma26 and E4B chat templates may also differ in empty-thought-channel prefilling. Differences cannot be attributed to parameter count alone."
+    },
+    "gemma26_text_free_minus_base_text_free": {
+      "model_intervention_declared": true,
+      "model_intervention_observed": true,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "caveat": "Cross-model comparisons change the complete model bundle: model weights and architecture, tokenizer/chat-template, quantization and any model-local custom loader. The staged gemma26_ollama bundle uses Ollama NVFP4 weights and a custom MLX loader; the alternative Hugging Face mlx-community bundle uses 4-bit affine weights with 8-bit router projections. The E4B control is BF16. Read each arm model path and bundle provenance to identify the actual implementation. Gemma26 and E4B chat templates may also differ in empty-thought-channel prefilling. Differences cannot be attributed to parameter count alone."
+    },
+    "gemma26_text_reversed_constrained_minus_base_text_reversed_constrained": {
+      "model_intervention_declared": true,
+      "model_intervention_observed": true,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "caveat": "Cross-model comparisons change the complete model bundle: model weights and architecture, tokenizer/chat-template, quantization and any model-local custom loader. The staged gemma26_ollama bundle uses Ollama NVFP4 weights and a custom MLX loader; the alternative Hugging Face mlx-community bundle uses 4-bit affine weights with 8-bit router projections. The E4B control is BF16. Read each arm model path and bundle provenance to identify the actual implementation. Gemma26 and E4B chat templates may also differ in empty-thought-channel prefilling. Differences cannot be attributed to parameter count alone."
+    },
+    "gemma26_text_sampled_minus_base_text_sampled": {
+      "model_intervention_declared": true,
+      "model_intervention_observed": true,
+      "first_model": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+      "second_model": "data/experiments/astra_5sep/gemma26_ollama",
+      "caveat": "Cross-model comparisons change the complete model bundle: model weights and architecture, tokenizer/chat-template, quantization and any model-local custom loader. The staged gemma26_ollama bundle uses Ollama NVFP4 weights and a custom MLX loader; the alternative Hugging Face mlx-community bundle uses 4-bit affine weights with 8-bit router projections. The E4B control is BF16. Read each arm model path and bundle provenance to identify the actual implementation. Gemma26 and E4B chat templates may also differ in empty-thought-channel prefilling. Differences cannot be attributed to parameter count alone."
     }
   },
   "limitations": [
@@ -1884,7 +3118,8 @@
     "Validity is single-attempt generation; max_retries config is not used in probe mode.",
     "Regret is against privileged continuation-policy values, not optimal-action truth.",
     "Regret given valid excludes malformed choices and is selection biased; read validity beside it.",
-    "Pairwise intervals use world means across states valid under both arms; descriptive exploratory comparisons."
+    "Pairwise intervals use world means across states valid under both arms; descriptive exploratory comparisons.",
+    "Cross-model comparisons change the complete model bundle: model weights and architecture, tokenizer/chat-template, quantization and any model-local custom loader. The staged gemma26_ollama bundle uses Ollama NVFP4 weights and a custom MLX loader; the alternative Hugging Face mlx-community bundle uses 4-bit affine weights with 8-bit router projections. The E4B control is BF16. Read each arm model path and bundle provenance to identify the actual implementation. Gemma26 and E4B chat templates may also differ in empty-thought-channel prefilling. Differences cannot be attributed to parameter count alone."
   ],
   "arms": {
     "base_index_constrained": {
@@ -2067,6 +3302,121 @@
           "mean_regret_given_valid": 1.0918635170603674,
           "mean_normalized_regret_given_valid_informative": 0.4499502353394359,
           "top_set_rate_given_valid_informative": 0.41935483870967744
+        }
+      },
+      "source_sha256": "939cc93f4039e4716aa7c8f4df8a6e11e3d3ae7be07aaa2f1f292ca6a30861d5"
+    },
+    "gemma26_text_constrained": {
+      "n": 133,
+      "pipeline_valid": 133,
+      "values": {
+        "heuristic": {
+          "n": 132,
+          "n_valid": 132,
+          "n_valid_informative": 69,
+          "mean_regret_given_valid": 1.3106060606060606,
+          "mean_normalized_regret_given_valid_informative": 0.37015782772482425,
+          "top_set_rate_given_valid_informative": 0.5362318840579711
+        },
+        "random3_mean": {
+          "n": 132,
+          "n_valid": 132,
+          "n_valid_informative": 96,
+          "mean_regret_given_valid": 0.9267676767676768,
+          "mean_normalized_regret_given_valid_informative": 0.4262258405091286,
+          "top_set_rate_given_valid_informative": 0.4583333333333333
+        }
+      },
+      "source_sha256": "939cc93f4039e4716aa7c8f4df8a6e11e3d3ae7be07aaa2f1f292ca6a30861d5"
+    },
+    "gemma26_text_enriched_constrained": {
+      "n": 133,
+      "pipeline_valid": 133,
+      "values": {
+        "heuristic": {
+          "n": 132,
+          "n_valid": 132,
+          "n_valid_informative": 69,
+          "mean_regret_given_valid": 1.4015151515151516,
+          "mean_normalized_regret_given_valid_informative": 0.3991433349712011,
+          "top_set_rate_given_valid_informative": 0.5072463768115942
+        },
+        "random3_mean": {
+          "n": 132,
+          "n_valid": 132,
+          "n_valid_informative": 96,
+          "mean_regret_given_valid": 1.0025252525252526,
+          "mean_normalized_regret_given_valid_informative": 0.4433554701387582,
+          "top_set_rate_given_valid_informative": 0.4375
+        }
+      },
+      "source_sha256": "c62dba1eb574a028c312a902dc0f702f924e9d358d4a9e5925b49c1d9d5f95d1"
+    },
+    "gemma26_text_free": {
+      "n": 133,
+      "pipeline_valid": 122,
+      "values": {
+        "heuristic": {
+          "n": 132,
+          "n_valid": 121,
+          "n_valid_informative": 64,
+          "mean_regret_given_valid": 1.4049586776859504,
+          "mean_normalized_regret_given_valid_informative": 0.3509994849389031,
+          "top_set_rate_given_valid_informative": 0.5625
+        },
+        "random3_mean": {
+          "n": 132,
+          "n_valid": 121,
+          "n_valid_informative": 89,
+          "mean_regret_given_valid": 1.0743801652892562,
+          "mean_normalized_regret_given_valid_informative": 0.46761438976265557,
+          "top_set_rate_given_valid_informative": 0.4044943820224719
+        }
+      },
+      "source_sha256": "939cc93f4039e4716aa7c8f4df8a6e11e3d3ae7be07aaa2f1f292ca6a30861d5"
+    },
+    "gemma26_text_reversed_constrained": {
+      "n": 133,
+      "pipeline_valid": 133,
+      "values": {
+        "heuristic": {
+          "n": 132,
+          "n_valid": 132,
+          "n_valid_informative": 69,
+          "mean_regret_given_valid": 1.8106060606060606,
+          "mean_normalized_regret_given_valid_informative": 0.4506476230483792,
+          "top_set_rate_given_valid_informative": 0.5072463768115942
+        },
+        "random3_mean": {
+          "n": 132,
+          "n_valid": 132,
+          "n_valid_informative": 96,
+          "mean_regret_given_valid": 1.1414141414141414,
+          "mean_normalized_regret_given_valid_informative": 0.4811768010069641,
+          "top_set_rate_given_valid_informative": 0.3958333333333333
+        }
+      },
+      "source_sha256": "6ee53e629bfa898a673723eb0eaa2df1ed0d53efd1a3938ce5353289eae18055"
+    },
+    "gemma26_text_sampled": {
+      "n": 133,
+      "pipeline_valid": 123,
+      "values": {
+        "heuristic": {
+          "n": 132,
+          "n_valid": 122,
+          "n_valid_informative": 62,
+          "mean_regret_given_valid": 1.7049180327868851,
+          "mean_normalized_regret_given_valid_informative": 0.40963387692617953,
+          "top_set_rate_given_valid_informative": 0.5161290322580645
+        },
+        "random3_mean": {
+          "n": 132,
+          "n_valid": 122,
+          "n_valid_informative": 89,
+          "mean_regret_given_valid": 1.0519125683060109,
+          "mean_normalized_regret_given_valid_informative": 0.46260928251035727,
+          "top_set_rate_given_valid_informative": 0.4157303370786517
         }
       },
       "source_sha256": "939cc93f4039e4716aa7c8f4df8a6e11e3d3ae7be07aaa2f1f292ca6a30861d5"
@@ -2378,6 +3728,46 @@
       "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
       "started": 1788647695.1270888
     },
+    "gemma26_text_sampled": {
+      "mode": "probe",
+      "source": "data/experiments/astra_5sep/policy/cohort.jsonl",
+      "out": "data/experiments/astra_5sep/policy/gemma26_text_sampled",
+      "per_screen": 16,
+      "model": "data/experiments/astra_5sep/gemma26_ollama",
+      "adapter": null,
+      "contract": "action_text",
+      "constrained": false,
+      "batch_size": 16,
+      "max_tokens": 256,
+      "temperature": 0.7,
+      "seeds": "1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015",
+      "max_decisions": 250,
+      "max_retries": 1,
+      "adapter_identity": null,
+      "source_sha256": "939cc93f4039e4716aa7c8f4df8a6e11e3d3ae7be07aaa2f1f292ca6a30861d5",
+      "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
+      "started": 1788650239.775962
+    },
+    "gemma26_text_free": {
+      "mode": "probe",
+      "source": "data/experiments/astra_5sep/policy/cohort.jsonl",
+      "out": "data/experiments/astra_5sep/policy/gemma26_text_free",
+      "per_screen": 16,
+      "model": "data/experiments/astra_5sep/gemma26_ollama",
+      "adapter": null,
+      "contract": "action_text",
+      "constrained": false,
+      "batch_size": 16,
+      "max_tokens": 256,
+      "temperature": 0.0,
+      "seeds": "1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015",
+      "max_decisions": 250,
+      "max_retries": 1,
+      "adapter_identity": null,
+      "source_sha256": "939cc93f4039e4716aa7c8f4df8a6e11e3d3ae7be07aaa2f1f292ca6a30861d5",
+      "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
+      "started": 1788649886.247692
+    },
     "base_text_constrained": {
       "mode": "probe",
       "source": "/Users/sidbaines/Documents/SlayTheSpireAI/data/experiments/astra_5sep/policy/cohort.jsonl",
@@ -2417,6 +3807,26 @@
       "source_sha256": "c62dba1eb574a028c312a902dc0f702f924e9d358d4a9e5925b49c1d9d5f95d1",
       "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
       "started": 1788647295.294923
+    },
+    "gemma26_text_reversed_constrained": {
+      "mode": "probe",
+      "source": "data/experiments/astra_5sep/policy/cohort_reversed.jsonl",
+      "out": "data/experiments/astra_5sep/policy/gemma26_text_reversed_constrained",
+      "per_screen": 16,
+      "model": "data/experiments/astra_5sep/gemma26_ollama",
+      "adapter": null,
+      "contract": "action_text",
+      "constrained": true,
+      "batch_size": 16,
+      "max_tokens": 256,
+      "temperature": 0.0,
+      "seeds": "1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015",
+      "max_decisions": 250,
+      "max_retries": 1,
+      "adapter_identity": null,
+      "source_sha256": "6ee53e629bfa898a673723eb0eaa2df1ed0d53efd1a3938ce5353289eae18055",
+      "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
+      "started": 1788650143.536294
     },
     "rl5_text_sampled": {
       "mode": "probe",
@@ -2545,6 +3955,46 @@
       "source_sha256": "939cc93f4039e4716aa7c8f4df8a6e11e3d3ae7be07aaa2f1f292ca6a30861d5",
       "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
       "started": 1788646926.734983
+    },
+    "gemma26_text_enriched_constrained": {
+      "mode": "probe",
+      "source": "data/experiments/astra_5sep/policy/cohort_enriched.jsonl",
+      "out": "data/experiments/astra_5sep/policy/gemma26_text_enriched_constrained",
+      "per_screen": 16,
+      "model": "data/experiments/astra_5sep/gemma26_ollama",
+      "adapter": null,
+      "contract": "action_text",
+      "constrained": true,
+      "batch_size": 16,
+      "max_tokens": 256,
+      "temperature": 0.0,
+      "seeds": "1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015",
+      "max_decisions": 250,
+      "max_retries": 1,
+      "adapter_identity": null,
+      "source_sha256": "c62dba1eb574a028c312a902dc0f702f924e9d358d4a9e5925b49c1d9d5f95d1",
+      "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
+      "started": 1788650048.206846
+    },
+    "gemma26_text_constrained": {
+      "mode": "probe",
+      "source": "data/experiments/astra_5sep/policy/cohort.jsonl",
+      "out": "data/experiments/astra_5sep/policy/gemma26_text_constrained",
+      "per_screen": 16,
+      "model": "data/experiments/astra_5sep/gemma26_ollama",
+      "adapter": null,
+      "contract": "action_text",
+      "constrained": true,
+      "batch_size": 16,
+      "max_tokens": 256,
+      "temperature": 0.0,
+      "seeds": "1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015",
+      "max_decisions": 250,
+      "max_retries": 1,
+      "adapter_identity": null,
+      "source_sha256": "939cc93f4039e4716aa7c8f4df8a6e11e3d3ae7be07aaa2f1f292ca6a30861d5",
+      "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
+      "started": 1788649976.713299
     },
     "base_text_sampled": {
       "mode": "probe",

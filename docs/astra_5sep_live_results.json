@@ -217,6 +217,7 @@
           "world_seed": 1015
         }
       ],
+      "interruption": null,
       "mean_floor_scored": 14.6875,
       "model_bundle": {
         "kind": "e4b_hf_snapshot",
@@ -455,6 +456,7 @@
           "world_seed": 1015
         }
       ],
+      "interruption": null,
       "mean_floor_scored": 13.5,
       "model_bundle": {
         "kind": "e4b_hf_snapshot",
@@ -476,6 +478,306 @@
         "terminal": 14
       },
       "unscored_worlds": []
+    },
+    "gemma26_text_constrained": {
+      "cohort_artifact_sha256": "3f0cb4e912b70fb58b44a93619a1d94296c2ec3f41bc9c67ea3c633d736d8c54",
+      "config": {
+        "adapter": null,
+        "adapter_identity": null,
+        "batch_size": 16,
+        "constrained": true,
+        "contract": "action_text",
+        "max_decisions": 250,
+        "max_retries": 1,
+        "max_tokens": 256,
+        "mode": "rollout",
+        "model": "data/experiments/astra_5sep/gemma26_ollama",
+        "out": "data/experiments/astra_5sep/live/gemma26_text_constrained",
+        "per_screen": 16,
+        "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
+        "seeds": "1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015",
+        "source": null,
+        "source_sha256": null,
+        "started": 1788650409.326228,
+        "temperature": 0.0
+      },
+      "config_sha256": "929d979cef9524b11c52c67d0061bf36e7767bf725b0144d37a239032ce4eaa8",
+      "episodes": [
+        {
+          "error": null,
+          "floor": 23,
+          "n_decisions": 89,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1000
+        },
+        {
+          "error": null,
+          "floor": 24,
+          "n_decisions": 95,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1001
+        },
+        {
+          "error": null,
+          "floor": 16,
+          "n_decisions": 64,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1002
+        },
+        {
+          "error": null,
+          "floor": 24,
+          "n_decisions": 91,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1003
+        },
+        {
+          "error": null,
+          "floor": 16,
+          "n_decisions": 67,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1004
+        },
+        {
+          "error": null,
+          "floor": 21,
+          "n_decisions": 75,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1005
+        },
+        {
+          "error": null,
+          "floor": 16,
+          "n_decisions": 69,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1006
+        },
+        {
+          "error": "outer timeout; no final metadata",
+          "floor": null,
+          "interface_provenance_source": "same-batch completed worlds plus pinned config/timeout command",
+          "metadata_present": false,
+          "n_decisions": 126,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": null,
+          "scored": false,
+          "stopped_reason": "outer_timeout_missing_outcome",
+          "undefined_behavior_evoked": null,
+          "world_seed": 1007
+        },
+        {
+          "error": null,
+          "floor": 16,
+          "n_decisions": 63,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1008
+        },
+        {
+          "error": null,
+          "floor": 20,
+          "n_decisions": 74,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1009
+        },
+        {
+          "error": null,
+          "floor": 14,
+          "n_decisions": 58,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1010
+        },
+        {
+          "error": null,
+          "floor": 16,
+          "n_decisions": 62,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1011
+        },
+        {
+          "error": null,
+          "floor": 8,
+          "n_decisions": 33,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1012
+        },
+        {
+          "error": null,
+          "floor": 16,
+          "n_decisions": 59,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1013
+        },
+        {
+          "error": null,
+          "floor": 14,
+          "n_decisions": 59,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1014
+        },
+        {
+          "error": null,
+          "floor": 11,
+          "n_decisions": 41,
+          "n_invalid": 0,
+          "n_retry_decisions": 0,
+          "outcome": "GameOutcome.PLAYER_LOSS",
+          "scored": true,
+          "stopped_reason": "terminal",
+          "undefined_behavior_evoked": false,
+          "world_seed": 1015
+        }
+      ],
+      "interruption": {
+        "attempt": {
+          "arm": {
+            "constrained": true,
+            "contract": "action_text",
+            "max_decisions": 250,
+            "max_retries": 1,
+            "mode": "rollout",
+            "out": "data/experiments/astra_5sep/live/gemma26_text_constrained",
+            "seeds": "1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015",
+            "temperature": 0.0,
+            "timeout_seconds": 900
+          },
+          "command": [
+            "/Users/sidbaines/Documents/SlayTheSpireAI/.venv/bin/python",
+            "scripts/experiments/astra_policy_probe.py",
+            "rollout",
+            "--out",
+            "data/experiments/astra_5sep/live/gemma26_text_constrained",
+            "--model",
+            "data/experiments/astra_5sep/gemma26_ollama",
+            "--contract",
+            "action_text",
+            "--batch-size",
+            "16",
+            "--seeds",
+            "1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015",
+            "--max-decisions",
+            "250",
+            "--max-retries",
+            "1",
+            "--temperature",
+            "0.0",
+            "--constrained"
+          ],
+          "started": 1788650409.286589,
+          "status": "timeout",
+          "wall_seconds": 900.1171929836273
+        },
+        "kind": "finalized_outer_timeout",
+        "ledger": "data/experiments/astra_5sep/gemma26_model_plan.attempts.json",
+        "ledger_sha256": "7821178b6750454ebca839f15f74729d49592edfa548d600fddb54bb4fb8c1f8",
+        "missing_provenance": "Missing-world interface inferred from the same pinned batch/config and15 validated completed metadata records; no missing metadata was synthesized.",
+        "plan": "data/experiments/astra_5sep/gemma26_model_plan.json",
+        "plan_sha256": "d21bb7e124f2dbff50a429cbb4a918a57448ac50e7230c51b3e0ba21edc40772"
+      },
+      "mean_floor_scored": 17,
+      "model_bundle": {
+        "chat_template_sha256": "36e3a42e5cf14cd0020e72d92e1fdd9970f59b82170e421f0cbe1bb42bead3f0",
+        "config_sha256": "13a80cfe8b02fb01134550cc6112d5fd055e92a3b2d7e40d8c659fc526fa4533",
+        "custom_model_sha256": "c9ac1d1e261186eae39585e97c4fd27d25a8ee1f4b7e19ba542453e6db5ba0f7",
+        "kind": "gemma26_ollama_nvfp4_mxfp8",
+        "path": "data/experiments/astra_5sep/gemma26_ollama",
+        "quantization_modes": {
+          "mxfp8": 38,
+          "nvfp4": 228,
+          "unquantized": 391
+        },
+        "source_manifest_sha256": "f0fc7e0ae4947d382989b1f57db3d098a86b87c5b6e9523b9561ba81a2a64879",
+        "staging_report_sha256": "42face9657888c4f15e7d51289fbc39c76a980033c97e9535d2ee1b436c40a8a",
+        "strict_load_report_sha256": "8ac015aa8e81ab2037a9f7052d028f119235f1ac24509e9b24e724560952765d",
+        "weight_verification": "Source hashes were verified by staging audit; analyzer rechecks audited symlink targets and sizes, not all large weight bytes."
+      },
+      "n_artifact_complete": 15,
+      "n_decisions": 1125,
+      "n_invalid_decisions": 0,
+      "n_invalid_episodes": 0,
+      "n_planned": 16,
+      "n_retry_decisions": 0,
+      "n_scored": 15,
+      "n_victories": 0,
+      "source_directory": "data/experiments/astra_5sep/live/gemma26_text_constrained",
+      "status": "finalized_with_missing_outcome",
+      "stop_reasons": {
+        "outer_timeout_missing_outcome": 1,
+        "terminal": 15
+      },
+      "unscored_worlds": [
+        1007
+      ]
     },
     "rl1_text_constrained": {
       "cohort_artifact_sha256": "a803d373533791503add7037159f21a77fa4e17ea6c1c8d51f9d2be45322d789",
@@ -701,6 +1003,7 @@
           "world_seed": 1015
         }
       ],
+      "interruption": null,
       "mean_floor_scored": 16,
       "model_bundle": {
         "kind": "e4b_hf_snapshot",
@@ -922,6 +1225,7 @@
           "world_seed": 1015
         }
       ],
+      "interruption": null,
       "mean_floor_scored": 19,
       "model_bundle": null,
       "n_artifact_complete": 16,
@@ -1137,6 +1441,7 @@
           "world_seed": 1015
         }
       ],
+      "interruption": null,
       "mean_floor_scored": 14.625,
       "model_bundle": null,
       "n_artifact_complete": 16,
@@ -1247,6 +1552,54 @@
     },
     {
       "all_world_capped_floor_bounds": {
+        "lower": 1.3125,
+        "metric": "min(final_floor,50)",
+        "upper": 4.4375
+      },
+      "bootstrap_ci_95": [
+        0.4,
+        5.466666666666667
+      ],
+      "direction": "second minus first",
+      "first": "random_search50",
+      "mean_floor_delta": 2.7333333333333334,
+      "n_planned_worlds": 16,
+      "n_scored_pairs": 15,
+      "second": "gemma26_text_constrained",
+      "unscored_pair_worlds": [
+        1007
+      ],
+      "validation": {
+        "kind": "different_policy_families_same_worlds_and_simulator",
+        "note": "Model temperature0 is not a matched sampling-temperature intervention against RandomLegalAgent or deterministic heuristic."
+      }
+    },
+    {
+      "all_world_capped_floor_bounds": {
+        "lower": -3.0625,
+        "metric": "min(final_floor,50)",
+        "upper": 0.0625
+      },
+      "bootstrap_ci_95": [
+        -5.066666666666666,
+        1.7333333333333334
+      ],
+      "direction": "second minus first",
+      "first": "heuristic_search50",
+      "mean_floor_delta": -1.6,
+      "n_planned_worlds": 16,
+      "n_scored_pairs": 15,
+      "second": "gemma26_text_constrained",
+      "unscored_pair_worlds": [
+        1007
+      ],
+      "validation": {
+        "kind": "different_policy_families_same_worlds_and_simulator",
+        "note": "Model temperature0 is not a matched sampling-temperature intervention against RandomLegalAgent or deterministic heuristic."
+      }
+    },
+    {
+      "all_world_capped_floor_bounds": {
         "lower": 1.375,
         "metric": "min(final_floor,50)",
         "upper": 1.375
@@ -1322,6 +1675,55 @@
     },
     {
       "all_world_capped_floor_bounds": {
+        "lower": 1.25,
+        "metric": "min(final_floor,50)",
+        "upper": 4.375
+      },
+      "bootstrap_ci_95": [
+        -0.26666666666666666,
+        5.933333333333334
+      ],
+      "direction": "second minus first",
+      "first": "base_text_constrained",
+      "mean_floor_delta": 2.8666666666666667,
+      "n_planned_worlds": 16,
+      "n_scored_pairs": 15,
+      "second": "gemma26_text_constrained",
+      "unscored_pair_worlds": [
+        1007
+      ],
+      "validation": {
+        "additional_adapter_change": false,
+        "additional_decoder_change": false,
+        "bundles": [
+          {
+            "kind": "e4b_hf_snapshot",
+            "path": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+            "revision": "eec12d0899edea9b738ab1009af9159cdfd70d71"
+          },
+          {
+            "chat_template_sha256": "36e3a42e5cf14cd0020e72d92e1fdd9970f59b82170e421f0cbe1bb42bead3f0",
+            "config_sha256": "13a80cfe8b02fb01134550cc6112d5fd055e92a3b2d7e40d8c659fc526fa4533",
+            "custom_model_sha256": "c9ac1d1e261186eae39585e97c4fd27d25a8ee1f4b7e19ba542453e6db5ba0f7",
+            "kind": "gemma26_ollama_nvfp4_mxfp8",
+            "path": "data/experiments/astra_5sep/gemma26_ollama",
+            "quantization_modes": {
+              "mxfp8": 38,
+              "nvfp4": 228,
+              "unquantized": 391
+            },
+            "source_manifest_sha256": "f0fc7e0ae4947d382989b1f57db3d098a86b87c5b6e9523b9561ba81a2a64879",
+            "staging_report_sha256": "42face9657888c4f15e7d51289fbc39c76a980033c97e9535d2ee1b436c40a8a",
+            "strict_load_report_sha256": "8ac015aa8e81ab2037a9f7052d028f119235f1ac24509e9b24e724560952765d",
+            "weight_verification": "Source hashes were verified by staging audit; analyzer rechecks audited symlink targets and sizes, not all large weight bytes."
+          }
+        ],
+        "changes": "Architecture,weights,quantization,tokenizer and chat template change together; parameter-count effects are not isolated.",
+        "kind": "explicit_model_bundle_intervention"
+      }
+    },
+    {
+      "all_world_capped_floor_bounds": {
         "lower": 1.3125,
         "metric": "min(final_floor,50)",
         "upper": 1.3125
@@ -1356,6 +1758,55 @@
             }
           }
         }
+      }
+    },
+    {
+      "all_world_capped_floor_bounds": {
+        "lower": 2.4375,
+        "metric": "min(final_floor,50)",
+        "upper": 5.5625
+      },
+      "bootstrap_ci_95": [
+        1.1333333333333333,
+        6.666666666666667
+      ],
+      "direction": "second minus first",
+      "first": "base_text_free",
+      "mean_floor_delta": 3.933333333333333,
+      "n_planned_worlds": 16,
+      "n_scored_pairs": 15,
+      "second": "gemma26_text_constrained",
+      "unscored_pair_worlds": [
+        1007
+      ],
+      "validation": {
+        "additional_adapter_change": false,
+        "additional_decoder_change": true,
+        "bundles": [
+          {
+            "kind": "e4b_hf_snapshot",
+            "path": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+            "revision": "eec12d0899edea9b738ab1009af9159cdfd70d71"
+          },
+          {
+            "chat_template_sha256": "36e3a42e5cf14cd0020e72d92e1fdd9970f59b82170e421f0cbe1bb42bead3f0",
+            "config_sha256": "13a80cfe8b02fb01134550cc6112d5fd055e92a3b2d7e40d8c659fc526fa4533",
+            "custom_model_sha256": "c9ac1d1e261186eae39585e97c4fd27d25a8ee1f4b7e19ba542453e6db5ba0f7",
+            "kind": "gemma26_ollama_nvfp4_mxfp8",
+            "path": "data/experiments/astra_5sep/gemma26_ollama",
+            "quantization_modes": {
+              "mxfp8": 38,
+              "nvfp4": 228,
+              "unquantized": 391
+            },
+            "source_manifest_sha256": "f0fc7e0ae4947d382989b1f57db3d098a86b87c5b6e9523b9561ba81a2a64879",
+            "staging_report_sha256": "42face9657888c4f15e7d51289fbc39c76a980033c97e9535d2ee1b436c40a8a",
+            "strict_load_report_sha256": "8ac015aa8e81ab2037a9f7052d028f119235f1ac24509e9b24e724560952765d",
+            "weight_verification": "Source hashes were verified by staging audit; analyzer rechecks audited symlink targets and sizes, not all large weight bytes."
+          }
+        ],
+        "changes": "Architecture,weights,quantization,tokenizer and chat template change together; parameter-count effects are not isolated.",
+        "kind": "explicit_model_bundle_intervention"
       }
     },
     {
@@ -1399,12 +1850,61 @@
           }
         }
       }
+    },
+    {
+      "all_world_capped_floor_bounds": {
+        "lower": -3.0625,
+        "metric": "min(final_floor,50)",
+        "upper": 0.0625
+      },
+      "bootstrap_ci_95": [
+        -4.2,
+        2.466666666666667
+      ],
+      "direction": "second minus first",
+      "first": "gemma26_text_constrained",
+      "mean_floor_delta": -1,
+      "n_planned_worlds": 16,
+      "n_scored_pairs": 15,
+      "second": "rl1_text_constrained",
+      "unscored_pair_worlds": [
+        1007
+      ],
+      "validation": {
+        "additional_adapter_change": true,
+        "additional_decoder_change": false,
+        "bundles": [
+          {
+            "chat_template_sha256": "36e3a42e5cf14cd0020e72d92e1fdd9970f59b82170e421f0cbe1bb42bead3f0",
+            "config_sha256": "13a80cfe8b02fb01134550cc6112d5fd055e92a3b2d7e40d8c659fc526fa4533",
+            "custom_model_sha256": "c9ac1d1e261186eae39585e97c4fd27d25a8ee1f4b7e19ba542453e6db5ba0f7",
+            "kind": "gemma26_ollama_nvfp4_mxfp8",
+            "path": "data/experiments/astra_5sep/gemma26_ollama",
+            "quantization_modes": {
+              "mxfp8": 38,
+              "nvfp4": 228,
+              "unquantized": 391
+            },
+            "source_manifest_sha256": "f0fc7e0ae4947d382989b1f57db3d098a86b87c5b6e9523b9561ba81a2a64879",
+            "staging_report_sha256": "42face9657888c4f15e7d51289fbc39c76a980033c97e9535d2ee1b436c40a8a",
+            "strict_load_report_sha256": "8ac015aa8e81ab2037a9f7052d028f119235f1ac24509e9b24e724560952765d",
+            "weight_verification": "Source hashes were verified by staging audit; analyzer rechecks audited symlink targets and sizes, not all large weight bytes."
+          },
+          {
+            "kind": "e4b_hf_snapshot",
+            "path": "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+            "revision": "eec12d0899edea9b738ab1009af9159cdfd70d71"
+          }
+        ],
+        "changes": "Architecture,weights,quantization,tokenizer and chat template change together; parameter-count effects are not isolated.",
+        "kind": "explicit_model_bundle_intervention"
+      }
     }
   ],
   "kind": "astra_matched_live_v1",
   "provenance_note": "Probe metadata omits battle_simulations/git_sha; exact audited runner hash pins search50,maxact3,boss multiplier2. Public interface and native binary hashes must match baseline artifacts.",
-  "scoring": "Terminal and agent_invalid stops retain observed final floor. Simulator errors, UB flags and other truncations are unscored and bounded0\u201350 under the capped metric. Incomplete arms have no outcome summary.",
-  "script_sha256": "7adfffcc598b8aa0ddb58a469a096219cd8228a137b5d764a21b4b990623fa36",
+  "scoring": "Terminal and agent_invalid stops retain observed final floor. Simulator errors, UB flags and other truncations are unscored and bounded0\u201350 under the capped metric. Incomplete arms have no outcome summary unless the explicit Gemma26 outer-timeout ledger finalizes15 complete metadata records plus1 validated started trace; then paired estimates condition on15 observed worlds and bounds include all16.",
+  "script_sha256": "1466fa0ed546ef03915eeae2f224cb142519f710ea0e49f28eb9b91701bccac2",
   "world_seeds": [
     1000,
     1001,

@@ -238,6 +238,194 @@
         "temperature": 0.7
       }
     },
+    "gemma26_temp0.0": {
+      "by_menu_size": {
+        "branching": {
+          "completion_tokens_max": 14,
+          "completion_tokens_mean": 12.333333333333334,
+          "invalid": 0,
+          "n": 3,
+          "raw_output_categories": {
+            "valid_live_action": 3
+          },
+          "strict_action_contract_valid": 2,
+          "valid": 3,
+          "valid_rate": 1.0,
+          "valid_resolution_paths": {
+            "exact_action_text": 2,
+            "unique_prefix": 1
+          }
+        },
+        "singleton": {
+          "completion_tokens_max": 21,
+          "completion_tokens_mean": 19.71698113207547,
+          "invalid": 0,
+          "n": 53,
+          "raw_output_categories": {
+            "valid_live_action": 53
+          },
+          "strict_action_contract_valid": 1,
+          "valid": 53,
+          "valid_rate": 1.0,
+          "valid_resolution_paths": {
+            "exact_action_text": 53
+          }
+        }
+      },
+      "by_screen": {
+        "MAP_SCREEN": {
+          "completion_tokens_max": 21,
+          "completion_tokens_mean": 19.509090909090908,
+          "invalid": 0,
+          "n": 55,
+          "raw_output_categories": {
+            "valid_live_action": 55
+          },
+          "strict_action_contract_valid": 3,
+          "valid": 55,
+          "valid_rate": 1.0,
+          "valid_resolution_paths": {
+            "exact_action_text": 55
+          }
+        },
+        "REWARDS": {
+          "completion_tokens_max": 9,
+          "completion_tokens_mean": 9,
+          "invalid": 0,
+          "n": 1,
+          "raw_output_categories": {
+            "valid_live_action": 1
+          },
+          "strict_action_contract_valid": 0,
+          "valid": 1,
+          "valid_rate": 1.0,
+          "valid_resolution_paths": {
+            "unique_prefix": 1
+          }
+        }
+      },
+      "invalid_probe_ids": [],
+      "overall": {
+        "completion_tokens_max": 21,
+        "completion_tokens_mean": 19.321428571428573,
+        "invalid": 0,
+        "n": 56,
+        "raw_output_categories": {
+          "valid_live_action": 56
+        },
+        "strict_action_contract_valid": 3,
+        "valid": 56,
+        "valid_rate": 1.0,
+        "valid_resolution_paths": {
+          "exact_action_text": 55,
+          "unique_prefix": 1
+        }
+      },
+      "provenance": {
+        "adapter": null,
+        "adapter_identity": null,
+        "batch_size": 16,
+        "max_tokens": 256,
+        "model": "data/experiments/astra_5sep/gemma26_ollama",
+        "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
+        "source_sha256": "fcab6c8d6183bfb0fb55bc12e509da98cde760fead78e5c5f1bf993276017582",
+        "temperature": 0.0
+      }
+    },
+    "gemma26_temp0.7": {
+      "by_menu_size": {
+        "branching": {
+          "completion_tokens_max": 14,
+          "completion_tokens_mean": 12.333333333333334,
+          "invalid": 0,
+          "n": 3,
+          "raw_output_categories": {
+            "valid_live_action": 3
+          },
+          "strict_action_contract_valid": 2,
+          "valid": 3,
+          "valid_rate": 1.0,
+          "valid_resolution_paths": {
+            "exact_action_text": 2,
+            "unique_prefix": 1
+          }
+        },
+        "singleton": {
+          "completion_tokens_max": 81,
+          "completion_tokens_mean": 20.037735849056602,
+          "invalid": 0,
+          "n": 53,
+          "raw_output_categories": {
+            "valid_live_action": 53
+          },
+          "strict_action_contract_valid": 10,
+          "valid": 53,
+          "valid_rate": 1.0,
+          "valid_resolution_paths": {
+            "exact_action_text": 53
+          }
+        }
+      },
+      "by_screen": {
+        "MAP_SCREEN": {
+          "completion_tokens_max": 81,
+          "completion_tokens_mean": 19.818181818181817,
+          "invalid": 0,
+          "n": 55,
+          "raw_output_categories": {
+            "valid_live_action": 55
+          },
+          "strict_action_contract_valid": 12,
+          "valid": 55,
+          "valid_rate": 1.0,
+          "valid_resolution_paths": {
+            "exact_action_text": 55
+          }
+        },
+        "REWARDS": {
+          "completion_tokens_max": 9,
+          "completion_tokens_mean": 9,
+          "invalid": 0,
+          "n": 1,
+          "raw_output_categories": {
+            "valid_live_action": 1
+          },
+          "strict_action_contract_valid": 0,
+          "valid": 1,
+          "valid_rate": 1.0,
+          "valid_resolution_paths": {
+            "unique_prefix": 1
+          }
+        }
+      },
+      "invalid_probe_ids": [],
+      "overall": {
+        "completion_tokens_max": 81,
+        "completion_tokens_mean": 19.625,
+        "invalid": 0,
+        "n": 56,
+        "raw_output_categories": {
+          "valid_live_action": 56
+        },
+        "strict_action_contract_valid": 12,
+        "valid": 56,
+        "valid_rate": 1.0,
+        "valid_resolution_paths": {
+          "exact_action_text": 55,
+          "unique_prefix": 1
+        }
+      },
+      "provenance": {
+        "adapter": null,
+        "adapter_identity": null,
+        "batch_size": 16,
+        "max_tokens": 256,
+        "model": "data/experiments/astra_5sep/gemma26_ollama",
+        "script_sha256": "484b216f36c287e7f483280d1fb16f2334fc51ad3b1ab491da4bd9f13402e56d",
+        "source_sha256": "fcab6c8d6183bfb0fb55bc12e509da98cde760fead78e5c5f1bf993276017582",
+        "temperature": 0.7
+      }
+    },
     "rl1_temp0.0": {
       "by_menu_size": {
         "branching": {
@@ -699,7 +887,9 @@
     "rl1_temp0.0",
     "rl1_temp0.7",
     "rl5_temp0.0",
-    "rl5_temp0.7"
+    "rl5_temp0.7",
+    "gemma26_temp0.0",
+    "gemma26_temp0.7"
   ],
   "historical_final_retry_descriptive_only": {
     "by_menu_size": {
@@ -920,6 +1110,61 @@
         "valid_count_delta": 5
       }
     },
+    "base_temp0.0 -> gemma26_temp0.0": {
+      "by_menu_size": {
+        "branching": {
+          "action_switch_probe_ids": [
+            30,
+            39,
+            53
+          ],
+          "action_switches_both_valid": 3,
+          "n": 3,
+          "transitions": {
+            "valid_to_valid": 3
+          },
+          "valid_count_delta": 0
+        },
+        "singleton": {
+          "action_switch_probe_ids": [],
+          "action_switches_both_valid": 0,
+          "n": 53,
+          "transitions": {
+            "invalid_to_valid": 21,
+            "valid_to_valid": 32
+          },
+          "valid_count_delta": 21
+        }
+      },
+      "observed_interventions": {
+        "model": [
+          "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+          "data/experiments/astra_5sep/gemma26_ollama"
+        ],
+        "out": [
+          "data/experiments/astra_5sep/failure_replay/base_temp0.0",
+          "data/experiments/astra_5sep/failure_replay/gemma26_temp0.0"
+        ],
+        "started": [
+          1788649331.03865,
+          1788650346.9758132
+        ]
+      },
+      "overall": {
+        "action_switch_probe_ids": [
+          30,
+          39,
+          53
+        ],
+        "action_switches_both_valid": 3,
+        "n": 56,
+        "transitions": {
+          "invalid_to_valid": 21,
+          "valid_to_valid": 35
+        },
+        "valid_count_delta": 21
+      }
+    },
     "base_temp0.0 -> rl1_temp0.0": {
       "by_menu_size": {
         "branching": {
@@ -1038,6 +1283,60 @@
           "valid_to_valid": 35
         },
         "valid_count_delta": 21
+      }
+    },
+    "base_temp0.7 -> gemma26_temp0.7": {
+      "by_menu_size": {
+        "branching": {
+          "action_switch_probe_ids": [
+            39,
+            53
+          ],
+          "action_switches_both_valid": 2,
+          "n": 3,
+          "transitions": {
+            "invalid_to_valid": 1,
+            "valid_to_valid": 2
+          },
+          "valid_count_delta": 1
+        },
+        "singleton": {
+          "action_switch_probe_ids": [],
+          "action_switches_both_valid": 0,
+          "n": 53,
+          "transitions": {
+            "invalid_to_valid": 15,
+            "valid_to_valid": 38
+          },
+          "valid_count_delta": 15
+        }
+      },
+      "observed_interventions": {
+        "model": [
+          "/Users/sidbaines/.cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-bf16/snapshots/eec12d0899edea9b738ab1009af9159cdfd70d71",
+          "data/experiments/astra_5sep/gemma26_ollama"
+        ],
+        "out": [
+          "data/experiments/astra_5sep/failure_replay/base_temp0.7",
+          "data/experiments/astra_5sep/failure_replay/gemma26_temp0.7"
+        ],
+        "started": [
+          1788649484.936044,
+          1788650378.035923
+        ]
+      },
+      "overall": {
+        "action_switch_probe_ids": [
+          39,
+          53
+        ],
+        "action_switches_both_valid": 2,
+        "n": 56,
+        "transitions": {
+          "invalid_to_valid": 16,
+          "valid_to_valid": 40
+        },
+        "valid_count_delta": 16
       }
     },
     "base_temp0.7 -> rl1_temp0.7": {
@@ -1166,6 +1465,51 @@
           "valid_to_valid": 24
         },
         "valid_count_delta": -10
+      }
+    },
+    "gemma26_temp0.0 -> gemma26_temp0.7": {
+      "by_menu_size": {
+        "branching": {
+          "action_switch_probe_ids": [],
+          "action_switches_both_valid": 0,
+          "n": 3,
+          "transitions": {
+            "valid_to_valid": 3
+          },
+          "valid_count_delta": 0
+        },
+        "singleton": {
+          "action_switch_probe_ids": [],
+          "action_switches_both_valid": 0,
+          "n": 53,
+          "transitions": {
+            "valid_to_valid": 53
+          },
+          "valid_count_delta": 0
+        }
+      },
+      "observed_interventions": {
+        "out": [
+          "data/experiments/astra_5sep/failure_replay/gemma26_temp0.0",
+          "data/experiments/astra_5sep/failure_replay/gemma26_temp0.7"
+        ],
+        "started": [
+          1788650346.9758132,
+          1788650378.035923
+        ],
+        "temperature": [
+          0.0,
+          0.7
+        ]
+      },
+      "overall": {
+        "action_switch_probe_ids": [],
+        "action_switches_both_valid": 0,
+        "n": 56,
+        "transitions": {
+          "valid_to_valid": 56
+        },
+        "valid_count_delta": 0
       }
     },
     "rl1_temp0.0 -> rl1_temp0.7": {
@@ -1405,9 +1749,6 @@
       }
     }
   },
-  "pending_arms": [
-    "gemma26_temp0.0",
-    "gemma26_temp0.7"
-  ],
+  "pending_arms": [],
   "source_sha256": "fcab6c8d6183bfb0fb55bc12e509da98cde760fead78e5c5f1bf993276017582"
 }

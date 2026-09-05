@@ -157,6 +157,57 @@ def validate_episode(meta: dict, records: list[dict], seed: int, config: dict | 
             "interface": provenance}
 
 
+def validate_timeout_attempt(plan: dict, attempts: list[dict], config: dict, directory: Path) -> dict:
+    """Only a finalized, predeclared outer timeout can close an interrupted arm."""
+    matches = [a for a in attempts if Path(a["arm"]["out"]).resolve() == directory.resolve()]
+    if not matches or matches[-1].get("status") != "timeout":
+        raise IncompleteCohort("outer timeout has not been recorded")
+    if len(matches) != 1:
+        raise ValueError("ambiguous timeout attempts")
+    attempt=matches[0]; arm=attempt["arm"]
+    if arm not in plan["arms"] or plan["model"] != config["model"] or plan["batch_size"] != config["batch_size"]:
+        raise ValueError("timeout plan/config mismatch")
+    if arm.get("timeout_seconds") != 900 or attempt["wall_seconds"] < 900 or attempt["started"] < plan["recorded"]:
+        raise ValueError("timeout was not the predeclared900-second boundary")
+    for key in ("seeds","contract","max_decisions","max_retries","temperature","constrained"):
+        if arm.get(key) != config[key]:raise ValueError("timeout arm/config mismatch")
+    expected=["scripts/experiments/astra_policy_probe.py", "rollout", "--out", arm["out"],
+              "--model", plan["model"], "--contract", arm["contract"], "--batch-size", str(plan["batch_size"])]
+    for name in ("source","adapter","seeds","max_tokens","max_decisions","max_retries","temperature"):
+        if name in arm:expected.extend(["--"+name.replace("_","-"),str(arm[name])])
+    if arm.get("constrained"):expected.append("--constrained")
+    if attempt["command"][1:] != expected:raise ValueError("timeout command provenance mismatch")
+    return attempt
+
+
+def finalized_timeout(directory: Path, config: dict) -> dict:
+    if directory.name != "gemma26_text_constrained" or Path(config["model"]).resolve() != GEMMA26_DIR.resolve():
+        raise IncompleteCohort("no registered interrupted-cohort plan")
+    plan_path=ROOT/"data/experiments/astra_5sep/gemma26_model_plan.json"
+    ledger_path=plan_path.with_suffix(".attempts.json")
+    if not ledger_path.exists():raise IncompleteCohort("timeout ledger absent")
+    attempt=validate_timeout_attempt(json.loads(plan_path.read_text()),json.loads(ledger_path.read_text()),config,directory)
+    return {"kind":"finalized_outer_timeout","plan":str(plan_path.relative_to(ROOT)),
+            "plan_sha256":file_sha256(plan_path),"ledger":str(ledger_path.relative_to(ROOT)),
+            "ledger_sha256":file_sha256(ledger_path),"attempt":attempt,
+            "missing_provenance":"Missing-world interface inferred from the same pinned batch/config and15 validated completed metadata records; no missing metadata was synthesized."}
+
+
+def validate_started_trace(records: list[dict], seed: int, interface: dict) -> dict:
+    if not records:raise ValueError("missing world lacks a started trace")
+    identity=(seed,0,derive_policy_seed(seed,0))
+    for i,row in enumerate(records):
+        if row.get("decision_index") != i or tuple(row.get(k) for k in ("world_seed","rollout_index","policy_seed")) != identity:
+            raise ValueError("interrupted trace identity/contiguity mismatch")
+        if row.get("phase") != "out_of_combat" or not row.get("agent",{}).get("valid") or row.get("action_executed") is not True or row.get("selected_action") not in row.get("legal_actions",[]):
+            raise ValueError("interrupted trace has invalid or unexecuted action")
+    if len(records)>250:raise ValueError("interrupted trace exceeds budget")
+    return {"world_seed":seed,"stopped_reason":"outer_timeout_missing_outcome","scored":False,"floor":None,
+            "n_decisions":len(records),"n_invalid":0,"n_retry_decisions":sum(r["agent"].get("retries",0)>0 for r in records),
+            "outcome":None,"error":"outer timeout; no final metadata","undefined_behavior_evoked":None,"interface":interface,
+            "metadata_present":False,"interface_provenance_source":"same-batch completed worlds plus pinned config/timeout command"}
+
+
 def load_cohort(directory: Path, *, seeds: tuple[int, ...] = SEEDS, model: bool = True) -> dict:
     config = json.loads((directory / "config.json").read_text()) if model else None
     if config is not None:
@@ -170,13 +221,19 @@ def load_cohort(directory: Path, *, seeds: tuple[int, ...] = SEEDS, model: bool 
         # The baseline experiment intentionally contains32worlds; select the
         # prespecified16 comparison worlds, never a data-dependent intersection.
         metas &= expected; traces &= expected
+    interruption=None
+    missing=expected-metas
     if metas != expected or traces != expected:
         if (metas|traces)-expected:
             raise ValueError("unexpected rollout identities")
-        raise IncompleteCohort(f"needs all{len(seeds)} trace+meta pairs; metadata={len(metas)},traces={len(traces)}")
+        if model and len(seeds)==16 and len(metas)==15 and traces==expected and not (directory/"report.json").exists():
+            interruption=finalized_timeout(directory,config)
+        else:
+            raise IncompleteCohort(f"needs all{len(seeds)} trace+meta pairs; metadata={len(metas)},traces={len(traces)}")
     episodes=[]; artifact_hashes={}
     for seed in seeds:
         stem=directory/f"seed_{seed}_r0"
+        if stem.name in missing:continue
         meta=json.loads(stem.with_suffix(".meta.json").read_text())
         episodes.append(validate_episode(meta,read_rows(stem.with_suffix(".jsonl")),seed,config))
         for suffix in (".meta.json", ".jsonl"):
@@ -184,10 +241,15 @@ def load_cohort(directory: Path, *, seeds: tuple[int, ...] = SEEDS, model: bool 
     first=episodes[0]["interface"]
     if any(e["interface"] != first for e in episodes):
         raise ValueError("within-arm interface provenance mismatch")
+    if interruption:
+        for stem_name in sorted(missing):
+            seed=int(stem_name.split("_")[1]);path=directory/(stem_name+".jsonl")
+            episodes.append(validate_started_trace(read_rows(path),seed,first));artifact_hashes[path.name]=file_sha256(path)
+        episodes.sort(key=lambda e:e["world_seed"])
     digest=hashlib.sha256(json.dumps(artifact_hashes,sort_keys=True,separators=(",",":")).encode()).hexdigest()
     return {"name":directory.name,"directory":str(directory),"config":config,"episodes":episodes,"interface":first,
             "cohort_artifact_sha256":digest,"config_sha256":file_sha256(directory/"config.json") if model else None,
-            "model_bundle":model_bundle(config) if model else None}
+            "model_bundle":model_bundle(config) if model else None,"interruption":interruption}
 
 
 def validate_comparison(first: dict, second: dict) -> dict:
@@ -240,10 +302,10 @@ def compare(first: dict, second: dict) -> dict:
 
 def summarize(arm: dict) -> dict:
     episodes=arm["episodes"];scored=[e for e in episodes if e["scored"]]
-    return {"status":"complete_validated","source_directory":arm["directory"],"config":arm["config"],
+    return {"status":"finalized_with_missing_outcome" if arm.get("interruption") else "complete_validated","interruption":arm.get("interruption"),"source_directory":arm["directory"],"config":arm["config"],
             "cohort_artifact_sha256":arm["cohort_artifact_sha256"],"config_sha256":arm["config_sha256"],
             "model_bundle":arm["model_bundle"],
-            "n_planned":len(episodes),"n_artifact_complete":len(episodes),"n_scored":len(scored),
+            "n_planned":len(episodes),"n_artifact_complete":sum(e.get("metadata_present",True) for e in episodes),"n_scored":len(scored),
             "stop_reasons":dict(Counter(e["stopped_reason"] for e in episodes)),
             "mean_floor_scored":statistics.mean(e["floor"] for e in scored) if scored else None,
             "n_invalid_episodes":sum(e["stopped_reason"]=="agent_invalid" for e in episodes),
@@ -277,7 +339,7 @@ def main() -> None:
     report={"kind":"astra_matched_live_v1","world_seeds":list(SEEDS),"arms":arms,
             "baselines":{a["name"]:summarize(a) for a in baselines},"comparisons":comparisons,
             "provenance_note":"Probe metadata omits battle_simulations/git_sha; exact audited runner hash pins search50,maxact3,boss multiplier2. Public interface and native binary hashes must match baseline artifacts.",
-            "scoring":"Terminal and agent_invalid stops retain observed final floor. Simulator errors, UB flags and other truncations are unscored and bounded0–50 under the capped metric. Incomplete arms have no outcome summary.",
+            "scoring":"Terminal and agent_invalid stops retain observed final floor. Simulator errors, UB flags and other truncations are unscored and bounded0–50 under the capped metric. Incomplete arms have no outcome summary unless the explicit Gemma26 outer-timeout ledger finalizes15 complete metadata records plus1 validated started trace; then paired estimates condition on15 observed worlds and bounds include all16.",
             "comparability":"Live configs use temperature0,max_tokens256. Free decoding uses that256 cap; constrained decoding instead uses longest canonical candidate token count+1. Historical temperature0.7 cohorts are not compared. Random/heuristic comparisons change policy family; the explicitly registered Gemma26 comparison changes the whole model bundle.",
             "script_sha256":file_sha256(__file__)}
     args.out.parent.mkdir(parents=True,exist_ok=True);tmp=args.out.with_suffix(".json.tmp")
