@@ -46,10 +46,21 @@ Streamlit viewer), so the JS just injects `board_html`.
   (no snapshot), so to act from an earlier decision you `branch_at(k)` — a fresh env
   replays `history[:k]`. The original session is untouched and stays **warm in
   memory**, so replay cost is paid only on load/branch, never per-step.
-- **Replay determinism is verified for BOTH combat modes** (`tests/integration/
-  test_interactive_replay.py`): `llm` re-applies the exact recorded player actions;
-  `search` re-runs the C++ search agent per combat and still reproduces the frontier
-  exactly. If `search` ever regresses, `llm`-mode branching stays exact.
+- **Replay tests cover both combat modes, but do not guarantee every prefix**
+  (`tests/integration/test_interactive_replay.py`): `llm` re-applies recorded
+  player actions; `search` re-runs the C++ search agent. The simulator's known
+  undefined behavior can make replay depend on observation/getter call order.
+  In the 2026-09-05 diagnostic, fresh world 1031's full rollout reproduced
+  byte-for-byte across processes, but lightweight `replay_actions` reached a
+  terminal state after 55 of 58 prefix actions. Replaying with the production
+  `prepare_decision` call at every prefix step reproduced all 59 checked public
+  views exactly. Preserve the source observation-call pattern when diagnosing
+  replay, and require exact target `state_text` and legal-action equality before
+  collecting counterfactual labels. That workaround is verified for this prefix,
+  not a simulator fix or universal determinism guarantee. Evidence:
+  `data/experiments/astra_5sep/teacher/replay_diagnostic.json`; the failed probe
+  remains excluded from the frozen teacher comparison rather than being silently
+  replaced by recovery labels.
 - **`search`-mode branch/load replay re-runs each combat** (~`battle_simulations`
   MCTS sims), so a late-game branch can take seconds. The UI shows a "replaying…"
   status; envs stay warm afterwards.
