@@ -46,13 +46,98 @@ Training seeds 0 and 2 replicated the dense recipe end-to-end. At the step-750 e
 
 The Lagavulin and Sentries cohorts (31 and 27 train windows) were teacher-labeled with the exact Nob protocol (950 and 910 dense states; ~2.7 s/state), after fixing a replay failure on serializer-drifted action descriptions (`resolve_action_index` now falls back to a unique engine-bits match). One shared adapter was trained on all three encounters (2,252 examples, seed 1, 6,000 iterations) and behaviour-evaluated at step 6,000 on each holdout. Results: Lagavulin 25/36 wins versus base 10/36 (invalid stops 1 versus 20), paired reward +0.47 [+0.14, +0.80]; Sentries 22/36 versus 2/36 (invalid stops 2 versus 34), +0.86 [+0.44, +1.28]; Nob clean holdout 25/32 with zero invalid stops versus base 14/32, +0.45 [+0.19, +0.72]. Against the Nob-only dense adapter the shared adapter showed no regression (+0.07 [−0.21, +0.46]) and the numerically best Nob arm so far. The earlier skills-per-turn hypothesis was not supported: the winning shared adapter plays more skills per turn on Nob than arms it outperforms, and raw skill counts are confounded by deck composition and fight length. Its dev57 static (0.526 top-1) remained unpredictive of its behavioural rank.
 
+## Whole-game arms (experiment 023, 2026-08-14)
+
+The shared three-encounter adapter was taken out of isolated fight windows into
+whole games on the first 30 frozen eval seeds
+(`configs/competence/comp023_eval30_seeds.json`), 2 rollouts per seed at
+temperature 0.7 under `combat_public_v2` and `action_text`. Before launch,
+fusion faithfulness was verified (MLX-plus-adapter versus MLX-plus-fused,
+greedy on 57 stored dev prompts, 57/57 exact text matches) and engine
+equivalence was verified (MLX versus vLLM-metal on the same fused weights,
+greedy fight episode, 16/16 identical decisions and the same outcome).
+
+The first launch failed informatively: every adapter run and every base run
+stopped with `agent_invalid` at the first out-of-combat screen. Exact-text
+`action_text` is unusable out of combat for both models, because event and
+reward strings are long. Three fixes followed. Output contracts became
+per-phase, threaded through all three orchestrators. The adapter turned out to
+have forgotten the index contract out of combat (emitting
+`{"action_index": "play_card"}`), which motivated `CompositeAgent` — the
+adapter fights, the base model navigates — with the side benefit that arms
+share an identical out-of-combat policy, isolating combat skill. The base
+model's dominant combat format failure was copying the menu line verbatim
+(`"0: play Strike…"`), so the parser now strips the `N: ` prefix before
+matching. A composite smoke test covering 2 full games and 251 mixed-phase
+decisions produced zero invalid decisions.
+
+Two base arms completed, 60 episodes each. With the built-in search agent
+resolving combat, `base_hybrid` reached mean final floor 18.9 (median 16,
+max 50) with all 60 episodes terminal and zero invalid decisions in 4,198.
+With the model in full combat control, `base_fc` reached mean floor 10.6
+(median 10, max 24), and 20 of 60 episodes ended in `agent_invalid` despite a
+per-decision invalid rate of only 0.2% (20 of 8,778) — over a long episode a
+low per-decision failure rate compounds into a third of runs lost to format.
+The `adapter_fc` composite arm was postponed to free the GPU for RL and has not
+been run.
+
+A parallel label-integrity audit re-collected the Lagavulin and Sentries labels
+under the stem-gated resolver; both were byte-identical, confirming the teacher
+data and the shared adapter trained on it are clean.
+
+An investigation into an out-of-combat teacher found that **none exists**.
+`ScumSearchAgent2` only searches in combat; out of combat it runs hand-scripted
+policies of very uneven quality — expert-curated card-reward weights and
+sensible rest, boss-relic and treasure rules, but many events fall through to
+random, and map-screen pathing is literally `stepRandom`. Exposing it as a
+teacher would teach random pathing, the most floor-relevant out-of-combat
+decision class. Three routes were costed: (A) expose the scripted policies as
+oracles, worth it only for card-reward and card-select screens; (B) a
+playout-based out-of-combat search teacher scoring each option by N full
+playouts from a cloned `GameContext`, the principled option and roughly one to
+two days, with the caveat that a floor-maximising playout teacher bakes in a
+risk posture that the framing experiment would need to account for; and (C)
+self-imitation format unification, converting outcome-filtered out-of-combat
+decisions from our own runs into `action_text` SFT rows so one adapter speaks
+the same contract everywhere. None have been implemented.
+
+## Out-of-combat GRPO (`ooc_grpo_v1`, 2026-08-17 to 08-19)
+
+The first RL rung: hybrid out-of-combat GRPO over final floor, with the search
+agent resolving all combats so within-group floor variance is attributable to
+out-of-combat decisions. The run reached iteration 6 of 12 and is paused
+incomplete. Mean floor rose from 16.8 at the base policy to a peak of 18.6 at
+iteration 2, then fell to 9.8 by iteration 6.
+
+The result is a **format-drift instability rather than a play-quality finding**.
+The lenient `action_text` parser combined with on-policy supervision of emitted
+tokens forms an amplifying loop: leniently-resolved forms get reinforced, drift
+to the parser's edge, then a wave of invalid deaths slams format back. The
+invalid-death series across iterations 0–6 was 22, 1, 0, 0, 2, 0, 56 — a
+growing oscillation, not a damping one — so by iteration 6 the reward curve
+mostly measured format dynamics. A v2 recipe (supervise the canonical action
+description rather than the emitted variant, add a retry penalty, raise
+`kl_beta`) was identified but deliberately left unapplied to keep the v1 curve
+clean.
+
+The run also exercised the harness against the simulator's uninitialized-memory
+hang, which proved to be **state-dependent and therefore not screenable per
+seed across policies**. This produced the policy-seed salting mechanism, a
+three-layer fix for restart-induced trajectory concatenation, and the
+supervisor tooling in `scripts/rl_ops/`. Full status, resume instructions, the
+per-iteration table and the incident log are in
+[`ooc_rl_v1_status.md`](ooc_rl_v1_status.md).
+
 ## Open items
 
 - Checkpoint selection still relies on behavioural evaluation; no frozen validation split exists, and dev57 statics remain unpredictive.
 - The gap to the search teacher (100% on all cohorts) is 22–39 points of win rate depending on encounter.
-- The adapter has not been evaluated inside full-game runs (hybrid or full-control), only on isolated fight windows.
-- Lagavulin/Sentries labels have not been state-sanity audited; the phantom-power quarantine only covers the Nob files. The simulator UB is unfixed at source.
+- The adapter has still not been evaluated inside full-game runs; the `adapter_fc` composite arm was postponed and only the two base arms exist.
+- `ooc_grpo_v1` is paused at iteration 6 of 12, and its outstanding deliverable — a paired evaluation of the best pre-instability adapter against the `base_hybrid` control arm — has not been run. See [`ooc_rl_v1_status.md`](ooc_rl_v1_status.md).
+- Format robustness, not play quality, is currently the binding constraint on out-of-combat RL; the v2 recipe addressing it is unimplemented.
+- No out-of-combat teacher exists, and none of the three costed routes has been implemented. Map-screen pathing — the most floor-relevant out-of-combat decision — has no supervision source at all.
+- Lagavulin/Sentries labels have not been state-sanity audited; the phantom-power quarantine only covers the Nob files.
 - All shared-adapter results are single-seed (seed 1) at a single endpoint (step 6,000).
 - `combat_public_v3` prompts have not yet been used for training.
-- The simulator's phantom-power bug is not fixed at source.
+- The simulator's uninitialized-memory bugs are unfixed at source: the phantom-power variant, and the hang variant that is state-dependent and therefore not screenable per seed across policies.
 - The embargoed 13-window final Nob cohort remains untouched; its operational record is [`configs/competence/nob_fresh_final_cohort_v1.json`](../configs/competence/nob_fresh_final_cohort_v1.json).

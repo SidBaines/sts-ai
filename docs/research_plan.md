@@ -126,3 +126,22 @@ limited to one encounter and the simulator still has an unresolved
 phantom-power bug. See
 [`experiment_history.md`](experiment_history.md) for the concise evidence record
 and open items.
+
+Competence work has since reached whole games and a first RL rung. A shared
+three-encounter combat adapter generalizes across held-out fights, and two
+whole-game base arms are recorded on the frozen eval-30 seeds: with the search
+agent resolving combat the base model reaches mean floor 18.9 with no invalid
+decisions, while under full combat control it reaches 10.6 and loses a third of
+its episodes to format failures. The first out-of-combat GRPO run
+(`ooc_grpo_v1`) is paused incomplete at iteration 6 of 12; it peaked at mean
+floor 18.6 before a format-drift instability took over the curve, so it is not
+yet evidence about out-of-combat play quality. Its status, resume instructions
+and the outstanding paired evaluation are in
+[`ooc_rl_v1_status.md`](ooc_rl_v1_status.md).
+
+Two constraints from that work shape what comes next. Format robustness, not
+policy quality, is the binding constraint on out-of-combat RL under the
+`action_text` contract. And there is no out-of-combat teacher: the built-in
+search agent only searches in combat, and its scripted map-screen pathing is
+random, so the most floor-relevant out-of-combat decision class has no
+supervision source.
