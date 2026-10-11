@@ -1,0 +1,50 @@
+{
+  "campaign": "nonllm_curriculum_v1",
+  "base_tag": "env-v0.1.0",
+  "started_at_utc": "2026-10-11T20:08:46Z",
+  "deadline_utc": "2026-10-12T06:30:00Z",
+  "budget_seconds": 37274,
+  "hardware": {
+    "chip": "M5 Pro",
+    "memory_gb": 48,
+    "cpu_cores": 15
+  },
+  "native_build": "/Users/sidbaines/.codex/worktrees/environment-base/SlayTheSpireAI/external/sts_lightspeed/build",
+  "seed_start": 10000,
+  "initial_worlds": 512,
+  "native_simulations": 200,
+  "max_act": 1,
+  "gamma": 1.0,
+  "sizes": [
+    "small",
+    "medium",
+    "large"
+  ],
+  "contexts": [
+    "none",
+    "mean"
+  ],
+  "learning_rates": [
+    0.0001,
+    0.0003,
+    0.001
+  ],
+  "training_seeds": [
+    11,
+    23,
+    37
+  ],
+  "final_embargo": true,
+  "initial_act1_worlds": 256,
+  "act3_enrichment_worlds": 256,
+  "teacher_bank_worlds_total": 512,
+  "execution": {
+    "learner": "pytorch_mps",
+    "rollout_inference": "cpu",
+    "workers": 8,
+    "bc_batch_size": 1024,
+    "fast_observations": true,
+    "native_ooc_combat_simulations": 200
+  },
+  "original_deadline_utc": "2026-10-12T06:08:46Z"
+}

@@ -13,13 +13,15 @@ dependencies = []
 
 [project.optional-dependencies]
 gym = ["gymnasium==1.4.0"]
+policy = ["torch==2.14.0", "numpy==2.5.4"]
+policy-mlx = ["mlx==0.30.6", "numpy==2.5.4"]
 
 [project.scripts]
 sts-env = "sts_env.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["sts_env*"]
+include = ["sts_env*", "sts_policy*"]
 
 [tool.setuptools.package-data]
 "sts_env._backend" = ["native_manifest.json"]

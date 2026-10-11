@@ -1,18 +1,15 @@
-# Environment base goals and status
+# Non-LLM curriculum research goals and current state
 
-The `environment-base` branch is the reusable environment release, extracted
-from the research harness. Its source of truth is
-[the environment contract and maintenance plan](environment_base.md). Historical
-research goals, experiments, and artifacts remain on the original research branch.
+This experiment branch starts from immutable `env-v0.1.0`. The active objective
+is non-LLM learning for combat and out-of-combat play on the local M5 Pro/48 GB
+Mac, within the first ten-hour allocation ending 2026-10-12 06:30:00 UTC.
 
-Release 0.1.0 passed all local gates on 11 October 2026: a dependency-free
-stepping API, optional Gymnasium wrapper, three control modes, custom-agent CLI,
-pinned native build, replayable public traces, and bounded native fault handling.
-The immutable release reference is `env-v0.1.0`;
-[the verification record](release_v0.1.0.md) contains the 191-test result and
-CLI, replay, privacy, vectorization, and packaging evidence.
-
-Subsequent work maintains tested environment fixes here with new immutable
-release tags. Model, encoder, reward, and training experiments belong in adapters
-or experiment branches started from a release tag. Known simulator and Act 4
-public-state limitations remain documented in the contract.
+[The detailed curriculum and experiment plan](nonllm_curriculum_plan.md) is the
+source of truth for hypotheses, action representation, alternatives, budget,
+selection/evaluation gates, and operational recovery. Current status: fresh Act 1 and Act 2/3 banks collected and audited;
+228 tests and the bounded release smoke passed before the first training jobs.
+The GPU architecture screen is running. First small models won 42/48 development
+fights; the matched public heuristic won 42/48 and native search 44/48. These
+are development pilots, not final results or integrated-game competence.
+[Measured throughput and operational evidence](nonllm_throughput.md) records
+the selected execution path and remaining limitations. Keep the environment release and old research work intact.
