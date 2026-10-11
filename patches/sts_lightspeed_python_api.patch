@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..3ab3f98 100644
+index a9afe35..c86284a 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1380 @@
+@@ -9,24 +9,1429 @@
 
  #include <sstream>
  #include <algorithm>
@@ -523,6 +523,55 @@ index a9afe35..3ab3f98 100644
 +        }
 +        first = false;
 +    }
++}
++
++static const char *publicEventNames[] = {"INVALID", "MONSTER", "REST", "SHOP", "TREASURE", "NEOW", "OMINOUS_FORGE", "PLEADING_VAGRANT", "ANCIENT_WRITING", "OLD_BEGGAR", "BIG_FISH", "BONFIRE_SPIRITS", "COLOSSEUM", "CURSED_TOME", "DEAD_ADVENTURER", "DESIGNER_IN_SPIRE", "AUGMENTER", "DUPLICATOR", "FACE_TRADER", "FALLING", "FORGOTTEN_ALTAR", "THE_DIVINE_FOUNTAIN", "GHOSTS", "GOLDEN_IDOL", "GOLDEN_SHRINE", "WING_STATUE", "KNOWING_SKULL", "LAB", "THE_SSSSSERPENT", "LIVING_WALL", "MASKED_BANDITS", "MATCH_AND_KEEP", "MINDBLOOM", "HYPNOTIZING_COLORED_MUSHROOMS", "MYSTERIOUS_SPHERE", "THE_NEST", "NLOTH", "NOTE_FOR_YOURSELF", "PURIFIER", "SCRAP_OOZE", "SECRET_PORTAL", "SENSORY_STONE", "SHINING_LIGHT", "THE_CLERIC", "THE_JOUST", "THE_LIBRARY", "THE_MAUSOLEUM", "THE_MOAI_HEAD", "THE_WOMAN_IN_BLUE", "TOMB_OF_LORD_RED_MASK", "TRANSMORGRIFIER", "UPGRADE_SHRINE", "VAMPIRES", "WE_MEET_AGAIN", "WHEEL_OF_CHANGE", "WINDING_HALLS", "WORLD_OF_GOOP"};
++
++pybind11::dict publicEvent(const GameContext &gc) {
++    pybind11::dict d;
++    if (gc.screenState != ScreenState::EVENT_SCREEN) { return d; }
++    d["event"] = publicEventNames[static_cast<int>(gc.curEvent)];
++    switch (gc.curEvent) {
++        case Event::CURSED_TOME: case Event::SCRAP_OOZE: case Event::MATCH_AND_KEEP:
++            d["event_data"] = gc.info.eventData; break;
++        case Event::DEAD_ADVENTURER: d["phase"] = gc.info.phase; break;
++        case Event::DESIGNER_IN_SPIRE:
++            d["upgrade_one"] = gc.info.upgradeOne;
++            d["cleanup_is_remove"] = gc.info.cleanUpIsRemoveCard; break;
++        case Event::BIG_FISH: case Event::FACE_TRADER: case Event::FORGOTTEN_ALTAR:
++        case Event::GHOSTS: case Event::SHINING_LIGHT: case Event::THE_CLERIC:
++        case Event::THE_LIBRARY: case Event::THE_MOAI_HEAD: case Event::THE_WOMAN_IN_BLUE:
++        case Event::VAMPIRES:
++            d["hp_amount0"] = gc.info.hpAmount0; break;
++        case Event::GOLDEN_IDOL:
++            d["hp_amount0"] = gc.info.hpAmount0; d["hp_amount1"] = gc.info.hpAmount1; break;
++        case Event::KNOWING_SKULL: case Event::WINDING_HALLS:
++            d["hp_amount0"] = gc.info.hpAmount0; d["hp_amount1"] = gc.info.hpAmount1;
++            d["hp_amount2"] = gc.info.hpAmount2; break;
++        case Event::WORLD_OF_GOOP: d["gold_loss"] = gc.info.goldLoss; break;
++        case Event::FALLING: {
++            auto addCard = [&](const char *key, int idx) {
++                if (idx >= 0 && idx < gc.deck.size()) { std::ostringstream os; os << gc.deck.cards[idx]; d[key] = os.str(); }
++            };
++            addCard("falling_skill_card", gc.info.skillCardDeckIdx);
++            addCard("falling_power_card", gc.info.powerCardDeckIdx);
++            addCard("falling_attack_card", gc.info.attackCardDeckIdx); break;
++        }
++        case Event::NLOTH:
++            d["relic0"] = std::string(getRelicName(gc.relics.relics[gc.info.relicIdx0].id));
++            d["relic1"] = std::string(getRelicName(gc.relics.relics[gc.info.relicIdx1].id)); break;
++        case Event::WE_MEET_AGAIN:
++            d["gold"] = gc.info.gold;
++            if (gc.info.potionIdx >= 0 && gc.info.potionIdx < gc.potionCapacity) {
++                d["potion"] = std::string(safePotionName(gc.potions[gc.info.potionIdx]));
++            }
++            if (gc.info.cardIdx >= 0 && gc.info.cardIdx < gc.deck.size()) {
++                std::ostringstream os; os << gc.deck.cards[gc.info.cardIdx]; d["card"] = os.str();
++            }
++            break;
++        default: break;
++    }
++    return d;
 +}
 +
 +std::string describeGameAction(const GameContext &gc, const search::GameAction &a) {
@@ -1383,10 +1432,16 @@ index a9afe35..3ab3f98 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +1397,175 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -39,7 +1444,179 @@ PYBIND11_MODULE(slaythespire, m) {
+         .def_readwrite("boss_simulation_multiplier", &search::ScumSearchAgent2::bossSimulationMultiplier, "bonus multiplier to the simulation count for boss fights")
+         .def_readwrite("pause_on_card_reward", &search::ScumSearchAgent2::pauseOnCardReward, "causes the agent to pause so as to cede control to the user when it encounters a card reward choice")
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
-         .def("playout", &search::ScumSearchAgent2::playout);
-
+-        .def("playout", &search::ScumSearchAgent2::playout);
++        .def("playout", &search::ScumSearchAgent2::playout)
++        .def("seed", [](search::ScumSearchAgent2 &a, unsigned int seed) { a.rng.seed(seed); })
++        .def("select_out_of_combat_action", &search::ScumSearchAgent2::selectOutOfCombatAction)
++        .def("preview_out_of_combat_action", [](const search::ScumSearchAgent2 &a, const GameContext &gc) { auto copy = a; return copy.selectOutOfCombatAction(gc); });
++
 +    pybind11::class_<search::GameAction> gameAction(m, "GameAction");
 +    gameAction.def(pybind11::init<std::uint32_t>())
 +        .def(pybind11::init<int, int>(), pybind11::arg("idx1"), pybind11::arg("idx2") = 0)
@@ -1555,11 +1610,10 @@ index a9afe35..3ab3f98 100644
 +                << " outcome=" << static_cast<int>(bc.outcome) << ">";
 +            return oss.str();
 +        });
-+
+
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
-         .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -55,6 +1580,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1632,8 @@ PYBIND11_MODULE(slaythespire, m) {
               [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
               "add a card to the deck"
          )
@@ -1568,7 +1622,7 @@ index a9afe35..3ab3f98 100644
          .def("remove_card",
              [](GameContext &gc, int idx) {
                  if (idx < 0 || idx >= gc.deck.size()) {
-@@ -75,6 +1602,43 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +1654,43 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
@@ -1612,7 +1666,17 @@ index a9afe35..3ab3f98 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -836,5 +2400,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -84,7 +1700,8 @@ PYBIND11_MODULE(slaythespire, m) {
+         .def_readwrite("cur_map_node_x", &GameContext::curMapNodeX)
+         .def_readwrite("cur_map_node_y", &GameContext::curMapNodeY)
+         .def_readwrite("cur_room", &GameContext::curRoom)
+-//        .def_readwrite("cur_event", &GameContext::curEvent) // todo standardize event names
++        .def_property_readonly("current_event", [](const GameContext &gc) { return std::string(publicEventNames[static_cast<int>(gc.curEvent)]); })
++        .def("public_event", &publicEvent)
+         .def_readwrite("boss", &GameContext::boss)
+
+         .def_readwrite("cur_hp", &GameContext::curHp)
+@@ -836,5 +2453,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
@@ -1706,10 +1770,20 @@ index e2e9cdd..a037a29 100644
 
          void playoutRandom(BattleContext &state, std::vector<Action> &actionStack);
 diff --git a/include/sim/search/ScumSearchAgent2.h b/include/sim/search/ScumSearchAgent2.h
-index ffa449b..7ab46c1 100644
+index ffa449b..711bb31 100644
 --- a/include/sim/search/ScumSearchAgent2.h
 +++ b/include/sim/search/ScumSearchAgent2.h
-@@ -44,8 +44,8 @@ namespace sts::search {
+@@ -35,6 +35,9 @@ namespace sts::search {
+         std::default_random_engine rng;
+
+
++        bool selectOnly = false;
++        GameAction selectOutOfCombatAction(const GameContext &gc);
++
+         // public interface
+         void playout(GameContext &gc);
+
+@@ -44,8 +47,8 @@ namespace sts::search {
          void takeAction(GameContext &gc, GameAction a);
          void takeAction(BattleContext &bc, Action a);
 
@@ -1838,6 +1912,27 @@ index 965faef..7871360 100644
      }
 
  }
+diff --git a/src/game/GameContext.cpp b/src/game/GameContext.cpp
+index fa10364..0e95174 100644
+--- a/src/game/GameContext.cpp
++++ b/src/game/GameContext.cpp
+@@ -2675,6 +2675,7 @@ void GameContext::chooseEventOption(int idx) {
+                     loseGold(unfavorable ? 75 : 60);
+                     deck.transformRandomCards(miscRng, 2); // TODO
+                     regainControl();
++                    break;
+
+                 case 4:
+                     loseGold(unfavorable ? 110 : 90);
+@@ -2683,7 +2684,7 @@ void GameContext::chooseEventOption(int idx) {
+                         returnToMapAction(gc);
+                     };
+                     openCardSelectScreen(CardSelectScreenType::REMOVE, 1);
+-
++                    break;
+                 case 5:
+                     playerLoseHp(unfavorable ? 5 : 3);
+                     regainControl();
 diff --git a/src/sim/search/Action.cpp b/src/sim/search/Action.cpp
 index 551623d..7b4e762 100644
 --- a/src/sim/search/Action.cpp
@@ -1998,11 +2093,25 @@ index 79eccf9..d715863 100644
              continue;
          }
          ++foundPotions;
+diff --git a/src/sim/search/GameAction.cpp b/src/sim/search/GameAction.cpp
+index 8c977ee..8c4485d 100644
+--- a/src/sim/search/GameAction.cpp
++++ b/src/sim/search/GameAction.cpp
+@@ -574,6 +574,9 @@ std::vector<search::GameAction> getAllRewardActions(const sts::GameContext &gc)
+         for (int x = 0; x < r.cardRewards[i].size(); ++x) {
+             actions.emplace_back(search::GameAction::RewardsActionType::CARD, i, x);
+         }
++        // Declining one card reward is independent of skipping the entire
++        // rewards screen; Singing Bowl also grants max HP through this action.
++        actions.emplace_back(search::GameAction::RewardsActionType::CARD, i, 5);
+     }
+
+     for (int i = 0; i < r.relicCount; ++i) {
 diff --git a/src/sim/search/ScumSearchAgent2.cpp b/src/sim/search/ScumSearchAgent2.cpp
-index 53aa5d2..acd5c43 100644
+index 53aa5d2..2914185 100644
 --- a/src/sim/search/ScumSearchAgent2.cpp
 +++ b/src/sim/search/ScumSearchAgent2.cpp
-@@ -6,6 +6,7 @@
+@@ -6,12 +6,39 @@
 
  #include <sim/search/ExpertKnowledge.h>
  #include <game/Game.h>
@@ -2010,7 +2119,39 @@ index 53aa5d2..acd5c43 100644
  #include "sim/PrintHelpers.h"
  #include "sim/search/BattleScumSearcher2.h"
 
-@@ -65,7 +66,20 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
+ using namespace sts;
+
++namespace { struct SelectedGameAction { search::GameAction action; }; }
++
++search::GameAction search::ScumSearchAgent2::selectOutOfCombatAction(const GameContext &gc) {
++    if (gc.outcome != GameOutcome::UNDECIDED || gc.screenState == ScreenState::BATTLE
++        || gc.screenState == ScreenState::INVALID) {
++        throw std::runtime_error("native OOC policy needs a nonterminal out-of-combat decision");
++    }
++    GameContext copy = gc;
++    selectOnly = true;
++    try {
++        stepOutOfCombatPolicy(copy);
++    } catch (const SelectedGameAction &selected) {
++        selectOnly = false;
++        if (!selected.action.isValidAction(gc)) {
++            throw std::runtime_error("native OOC policy selected an illegal action");
++        }
++        return selected.action;
++    } catch (...) {
++        selectOnly = false;
++        throw;
++    }
++    selectOnly = false;
++    throw std::runtime_error("native OOC policy did not select an action");
++}
++
+ void search::ScumSearchAgent2::takeAction(GameContext &gc, search::GameAction a) {
++    if (selectOnly) { throw SelectedGameAction{a}; }
+     if (printActions) {
+         gameActionHistory.emplace_back(a.bits);
+         std::cout << std::hex << a.bits << std::endl;
+@@ -65,7 +92,20 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
      std::vector<search::Action> bestActions;
      int bestOutcomePlayerHp = -1;
 
@@ -2031,7 +2172,7 @@ index 53aa5d2..acd5c43 100644
          const std::int64_t simulationCount = isBossEncounter(bc.encounter) ?
                                                (bossSimulationMultiplier * simulationCountBase) : simulationCountBase;
 
-@@ -82,32 +96,54 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
+@@ -82,32 +122,54 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
 
          simulationCountTotal += searcher.root.simulationCount;
 
@@ -2090,7 +2231,7 @@ index 53aa5d2..acd5c43 100644
      for (int actionCount = 0; actionCount < stepsNoSolution; ++actionCount) {
          if (bc.outcome != Outcome::UNDECIDED) {
              break;
-@@ -117,6 +153,9 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
+@@ -117,6 +179,9 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
          const sts::search::BattleScumSearcher2::Edge *maxEdge = nullptr;
 
          for (const auto &edge : curNode->edges) {
@@ -2100,7 +2241,7 @@ index 53aa5d2..acd5c43 100644
              if (edge.node.simulationCount > maxSimulations) {
                  maxSimulations = edge.node.simulationCount;
                  maxEdge = &edge;
-@@ -132,8 +171,10 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
+@@ -132,8 +197,10 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
          }
 
          takeAction(bc, maxEdge->action);
@@ -2111,7 +2252,24 @@ index 53aa5d2..acd5c43 100644
  }
 
  void search::ScumSearchAgent2::stepRandom(GameContext &gc) {
-@@ -408,4 +449,3 @@ void search::ScumSearchAgent2::stepEventPolicy(GameContext &gc) {
+@@ -161,7 +228,7 @@ void search::ScumSearchAgent2::stepOutOfCombatPolicy(GameContext &gc) {
+             if (gc.relics.has(RelicId::CURSED_KEY)) {
+                 takeChest = gc.info.chestSize == ChestSize::LARGE;
+             }
+-            takeAction(gc, takeChest);
++            takeAction(gc, takeChest ? 0 : 1);
+             break;
+         }
+
+@@ -334,6 +401,7 @@ void search::ScumSearchAgent2::weightedCardRewardPolicy(GameContext &gc) {
+                 acc += weights[i].second;
+                 if (roll <= acc) {
+                     selection = weights[i].first;
++                    break;
+                 }
+             }
+         }
+@@ -408,4 +476,3 @@ void search::ScumSearchAgent2::stepEventPolicy(GameContext &gc) {
              return;
      }
  }

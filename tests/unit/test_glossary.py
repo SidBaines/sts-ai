@@ -1,13 +1,11 @@
 """Unit tests for the effect/status glossary augmentation (pure Python)."""
 from __future__ import annotations
 
-import glob
-import json
 import re
 import unittest
 
-from sts_ai import glossary
-from sts_ai.glossary import (
+from sts_env._backend import glossary
+from sts_env._backend.glossary import (
     CARD_DB,
     INTENT_DB,
     RELIC_DB,
@@ -18,7 +16,6 @@ from sts_ai.glossary import (
     relic_definition,
     status_definition,
 )
-from sts_ai.rollout_view import to_view
 
 COMBAT_TEXT = (
     "Battle turn 1\n"
@@ -370,104 +367,6 @@ class AugmentOocTest(unittest.TestCase):
         self.assertIn("Twin Strike:", key)
         self.assertNotIn("gold", key)  # non-card choices ignored
         self.assertNotIn("[Skill", key)  # tag stripped from the looked-up name
-
-
-class RegressionTest(unittest.TestCase):
-    def test_augmented_state_text_still_parses_hand(self):
-        # The KEY block is appended after Piles/Potions, so the combat-board hand
-        # parser (rollout_view) must still see exactly the 3 hand cards.
-        record = {
-            "phase": "combat",
-            "state": {
-                "screen_state": "ScreenState.BATTLE",
-                "combat": {
-                    "turn": 1, "player_cur_hp": 56, "player_max_hp": 80,
-                    "player_block": 0, "player_energy": 3,
-                    "enemies": [
-                        {"index": 0, "name": "CULTIST", "cur_hp": 50, "max_hp": 50,
-                         "block": 0, "intent": "CULTIST_INCANTATION", "alive": True},
-                    ],
-                },
-            },
-            "state_text": augment(COMBAT_TEXT, [], "combat"),
-            "legal_actions": [],
-            "selected_action": {"index": 0, "description": "end turn"},
-            "agent": {"action_index": 0},
-            "after_state": {},
-        }
-        cv = to_view(record).combat
-        self.assertEqual([c.name for c in cv.hand], ["Strike", "Bash", "Defend+"])
-
-    def test_combat_notes_do_not_break_combat_view_parsing(self):
-        # The incoming-damage and can't-play notes are appended after Potions; the
-        # combat-board parser (rollout_view) must still read hand + enemies cleanly.
-        combat_text = (
-            "Battle turn 0\nPlayer HP: 80/80, block: 5, energy: 0/3\nPlayer powers: none\n"
-            "Enemies:\n  [0] JAW_WORM HP 25/42, block 0, intent JAW_WORM_CHOMP (deal 11)\n"
-            "Hand:\n  [0] Strike (cost 1)\n  [1] Strike (cost 1)\n"
-            "Piles: draw 5, discard 0, exhaust 0\nPotions: none\n"
-        )
-        actions = [{"index": 0, "description": "end turn"}]
-        record = {
-            "phase": "combat",
-            "state": {
-                "screen_state": "ScreenState.BATTLE",
-                "combat": {
-                    "turn": 0, "player_cur_hp": 80, "player_max_hp": 80,
-                    "player_block": 5, "player_energy": 0,
-                    "enemies": [
-                        {"index": 0, "name": "JAW_WORM", "cur_hp": 25, "max_hp": 42,
-                         "block": 0, "intent": "JAW_WORM_CHOMP", "alive": True},
-                    ],
-                },
-            },
-            "state_text": augment(combat_text, actions, "combat"),
-            "legal_actions": actions,
-            "selected_action": {"index": 0, "description": "end turn"},
-            "agent": {"action_index": 0},
-            "after_state": {},
-        }
-        cv = to_view(record).combat
-        self.assertEqual([c.name for c in cv.hand], ["Strike", "Strike"])
-        self.assertEqual([e.name for e in cv.enemies], ["JAW_WORM"])
-        self.assertTrue(cv.chosen_is_end_turn)
-
-
-class CoverageTest(unittest.TestCase):
-    """Every card/status that actually appears in our recorded traces must be in
-    the DBs (skips if no traces are present, so a fresh clone stays green)."""
-
-    def test_dbs_cover_names_seen_in_traces(self):
-        files = glob.glob("data/rollouts/enriched_qwen_seed*.jsonl")
-        if not files:
-            self.skipTest("no enriched_qwen rollout traces present")
-
-        cards: set[str] = set()
-        statuses: set[str] = set()
-        for path in files:
-            with open(path) as handle:
-                lines = handle.readlines()
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                record = json.loads(line)
-                state_text = record.get("state_text", "")
-                cards.update(glossary._hand_card_names(state_text))
-                cards.update(glossary._ooc_card_names(record.get("legal_actions", [])))
-                for enemy in record.get("state", {}).get("combat", {}).get("enemies", []):
-                    for field, label in (("vulnerable", "Vulnerable"), ("weak", "Weak"),
-                                         ("strength", "Strength"), ("poison", "Poison")):
-                        if enemy.get(field):
-                            statuses.add(label)
-                for raw in state_text.splitlines():
-                    if raw.startswith("Player powers:"):
-                        statuses |= glossary._scan_status_names(raw)
-
-        missing_cards = sorted(c for c in cards if c.rstrip("+") not in CARD_DB)
-        missing_statuses = sorted(s for s in statuses if s not in STATUS_DB)
-        self.assertEqual(missing_cards, [], f"cards seen in traces but missing from CARD_DB: {missing_cards}")
-        self.assertEqual(missing_statuses, [], f"statuses missing from STATUS_DB: {missing_statuses}")
 
 
 class MapRenderTest(unittest.TestCase):

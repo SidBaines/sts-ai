@@ -12,9 +12,9 @@ import textwrap
 import unittest
 from typing import Any
 
-from sts_ai.lightspeed import LightspeedHybridEnv
-from sts_ai.rollout import prepare_decision
-from sts_ai.turn_math import TurnMathInputs, turn_math_lines
+from sts_env._backend.lightspeed import LightspeedHybridEnv
+from tests.native_helpers import prepare_decision
+from sts_env._backend.turn_math import TurnMathInputs, turn_math_lines
 
 from tests.support import requires_simulator
 
@@ -142,8 +142,8 @@ def _recompute_turn_math(state_text: str, actions: list[dict[str, Any]]) -> list
 
 _DETERMINISM_DRIVER = """
 import json
-from sts_ai.lightspeed import LightspeedHybridEnv
-from sts_ai.rollout import prepare_decision
+from sts_env._backend.lightspeed import LightspeedHybridEnv
+from tests.native_helpers import prepare_decision
 
 env = LightspeedHybridEnv(
     world_seed=4,

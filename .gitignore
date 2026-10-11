@@ -8,6 +8,7 @@ __pycache__/
 
 # Local environments
 .venv/
+.wheel-venv/
 .venv-mlx/
 venv/
 .env

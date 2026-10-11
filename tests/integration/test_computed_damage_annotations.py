@@ -5,7 +5,7 @@ import re
 import unittest
 from typing import Any
 
-from sts_ai.lightspeed import LightspeedHybridEnv
+from sts_env._backend.lightspeed import LightspeedHybridEnv
 
 from tests.support import requires_simulator
 
