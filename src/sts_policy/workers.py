@@ -60,8 +60,12 @@ class CurriculumEpisode:
                 last_selected = self.episode.env.step(action)
                 self.episode.steps += 1
                 self.episode._advance()
-                state = self.episode.env.summary()
-                if state.get("undefined_behavior_evoked"):
+                # Match the base summary's exact latched/live UB predicate.
+                # The v5 summary deepcopies the whole public card/enemy state;
+                # reconstructing a prefix needs only this fail-closed flag here.
+                raw_env = self.episode.env._env
+                if (raw_env._undefined_behavior_evoked or
+                        (raw_env.bc is not None and raw_env.bc.undefined_behavior_evoked)):
                     raise SimulatorError("Simulator reported undefined behavior; trajectory is invalid")
                 if self.episode.env.is_terminal():
                     raise SimulatorError("Task prefix reached an ended episode")

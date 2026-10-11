@@ -171,3 +171,27 @@ four CPU workers and a 480-second collection ceiling; all worlds finished in
 contains 16 Act 3 development fights from 15 worlds and 16 Act 3 final fights
 from 12 worlds, replacing the original one-world-per-split coverage only after
 its separate publication. Original banks/panels remain preserved.
+
+The later direct-guard optimization removes the remaining per-prefix v5 summary
+copy. Inside the isolated adapter, it reads exactly the base summary's predicate:
+raw backend `_undefined_behavior_evoked`, OR a live battle context's
+`undefined_behavior_evoked`. The sticky flag remains checked after battle exit;
+terminal/legal-menu checks, OOC previews and all counters remain unchanged.
+
+Landed-source verification repeated generated prefixes, ten random first-bank
+starts, twenty Act 2/3 starts, and a known invalid prefix. Public observations,
+all diagnostics, native teacher labels, subsequent rewards, and rejection errors
+were identical. Matched persistent RPC resets over 7852 prefix actions measured
+1.613 seconds with the old summary guard versus 0.915 seconds with direct flags
+(1.763x additional reset speedup). No native binary or environment-base source
+changed. This optimization landed after both health-ablation conditions finished.
+
+The current collection adapter identity is
+1f2e599fe97c57be233c3d66e1bb10682d9079394676c20657bd625781b41607.
+Earlier banks preserve their original collection identities and remain replay
+compatible under their unchanged native/Python provenance; new collection must
+use a new directory rather than resume an old source identity.
+
+The spawn-based simulator cannot start from a Python stdin entry point. Use the
+guarded official CLI or a saved script with `if __name__ == "__main__"`; do not
+interpret a missing `<stdin>` child entry point as a simulator or policy fault.

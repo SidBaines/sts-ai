@@ -309,6 +309,66 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(episode["native_steps"], 10)
         self.assertTrue(episode["truncated"])
 
+    def test_deferred_bootstrap_matches_frozen_policy_and_fault_quarantine(self):
+        class ChangingWorker(FakeWorker):
+            def submit(self, method, *args):
+                future = super().submit(method, *args)
+                if method == "step" and future.exception() is None:
+                    obs, reward, terminated, truncated, info = future.result()
+                    obs["state"]["cur_hp"] -= self.steps
+                    replacement = Future()
+                    replacement.set_result((obs, reward, terminated, truncated, info))
+                    return replacement
+                return future
+        class StateValueModel(torch.nn.Module):
+            def forward(self, hp):
+                return torch.zeros(len(hp), 2), hp / 100.
+        def collate(batch, device="cpu"):
+            return torch.tensor([obs["state"]["cur_hp"] for obs in batch], device=device)
+        def forward(model, batch):
+            logits, values = model(batch)
+            return logits, values, torch.ones_like(logits, dtype=torch.bool)
+        model = StateValueModel()
+        for deterministic in (True, False):
+            collected = []
+            for deferred in (False, True):
+                torch.manual_seed(12)
+                collected.append(collect_rollouts(model, [ChangingWorker(), ChangingWorker()],
+                    [FakeTask(1), FakeTask(2), FakeTask(3)], collate=collate, forward=forward,
+                    deterministic=deterministic, teacher_simulations=1, deferred_bootstrap=deferred))
+            original, deferred = collected
+            self.assertEqual(original["transitions"], deferred["transitions"])
+            self.assertEqual(original["episodes"], deferred["episodes"])
+            self.assertEqual(original["faults"], deferred["faults"])
+            self.assertEqual(original["teacher_records"], deferred["teacher_records"])
+            self.assertGreater(deferred["forward_counts"]["reused_bootstrap_values"], 0)
+            self.assertEqual(deferred["forward_counts"]["bootstrap_batches"], 0)
+
+    def test_deferred_bootstrap_explicitly_values_truncations_and_budget_cutoffs(self):
+        from unittest.mock import patch
+        for budget in (False, True):
+            elapsed = {"seconds": 0.}
+            class CutoffWorker(FakeWorker):
+                def submit(self, method, *args):
+                    future = super().submit(method, *args)
+                    if method == "step":
+                        obs, reward, _, _, info = future.result()
+                        replacement = Future()
+                        replacement.set_result((obs, reward, False, not budget, info))
+                        if budget: elapsed["seconds"] = 2.
+                        return replacement
+                    return future
+            model = TinyModel()
+            with torch.no_grad(): model.value.fill_(3.)
+            with patch("sts_policy.rollout_training.time.monotonic", side_effect=lambda: elapsed["seconds"]):
+                result = collect_rollouts(model, [CutoffWorker()], [FakeTask(1)],
+                    collate=tiny_collate, forward=tiny_forward, max_seconds=1., deferred_bootstrap=True)
+            transition = result["transitions"][0]
+            self.assertEqual(transition.next_value, 3.)
+            self.assertTrue(transition.truncated)
+            self.assertEqual(result["forward_counts"]["bootstrap_observations"], 1)
+            self.assertEqual(result["cohort_completed"], not budget)
+
 
 def observation():
     return {"phase": "combat", "state": {"cur_hp": 80, "max_hp": 80},

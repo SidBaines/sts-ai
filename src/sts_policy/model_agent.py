@@ -134,12 +134,34 @@ class CompositeActorCritic(torch.nn.Module):
         self.combat, self.ooc = combat, ooc
 
     def forward(self, state, actions, mask):
-        combat_logits, combat_values = self.combat(state, actions, mask)
-        ooc_logits, ooc_values = self.ooc(state, actions, mask)
         # public_candidate_v2 numeric feature 7 is the documented combat flag.
         phase = state[:, 7] > .5
-        return (torch.where(phase[:, None], combat_logits, ooc_logits),
-                torch.where(phase, combat_values, ooc_values))
+        combat_rows = phase.nonzero(as_tuple=True)[0]
+        if combat_rows.numel() == len(state) or combat_rows.numel() == 0:
+            active, inactive = ((self.combat, self.ooc) if combat_rows.numel() == len(state)
+                                else (self.ooc, self.combat))
+            logits, values = active(state, actions, mask)
+            if torch.is_grad_enabled():
+                # Preserve the former zero gradients of inactive parameters;
+                # None would change optimizers' weight-decay/state semantics.
+                zero = values.new_zeros(())
+                for parameter in inactive.parameters():
+                    if parameter.requires_grad and parameter.numel():
+                        zero = zero + parameter.reshape(-1)[0] * 0.
+                logits, values = logits + zero, values + zero
+            return logits, values
+        ooc_rows = (~phase).nonzero(as_tuple=True)[0]
+        combat_logits, combat_values = self.combat(
+            state.index_select(0, combat_rows), actions.index_select(0, combat_rows),
+            mask.index_select(0, combat_rows))
+        ooc_logits, ooc_values = self.ooc(
+            state.index_select(0, ooc_rows), actions.index_select(0, ooc_rows),
+            mask.index_select(0, ooc_rows))
+        logits = combat_logits.new_empty((len(state), actions.shape[1]))
+        values = combat_values.new_empty((len(state),))
+        logits = logits.index_copy(0, combat_rows, combat_logits).index_copy(0, ooc_rows, ooc_logits)
+        values = values.index_copy(0, combat_rows, combat_values).index_copy(0, ooc_rows, ooc_values)
+        return logits, values
 
 
 def make_agent(checkpoint: str | None = None, device: str = "cpu", deterministic: bool = True,

@@ -178,3 +178,44 @@ comparisons; current source and logs are being committed as a recovery point.
   remain separate fromgame losses. Nativeauto-combatUBlimit remainsqualified.
 - 255tests passed20.131s;focused campaign/reward/aggregation21tests also passed.
   Supervisor23112 islive;checkfreshmetrics aswellasPID.
+
+## 2026-10-11 23:25 UTC — health study, faster collection and deployment proof
+
+- Expandedharddev clip.1 vsnative pairedHPcostdelta+11.02,95%CI6.52..16.40.
+  This prompted two matched180s health-reward pilots fromexact same source/OOC
+  weights and192trainstarts64distinctworlds/act. No final worlds were evaluated.
+- Reference battle70/80,meanHP14.9125,fullAct1clears5/24;lambda.25 battle72/80,
+  HP13.6625,full2/24;lambda1 battle72/80,HP14.0625,full3/24. Allcohorts complete,
+  matched andzero surfacedfaults. Prespecified criterion rejectedbothbecause
+  compositeclearsregressed;selected.combat_health pointsreference snapshot.
+  Keepalternatives forlaterOO Ccoupling; donotclaims generalharm from24worlds.
+- Study ownjournal/plan/selection liveshealth_ablation_4b0ab67c028d. Source/code
+  frozenbetweenconditions; directguardlandedONLYafterthe study finished.
+- DeferredbootstrapCPUparitydeterministic+stochasticactualnativecases passed:
+  actions/observations/rewards identical,targetdifferences<=7.45e-9;1.35..1.37x
+  collectiongain. Enabledonlyafterhyperparametercontrols. Faultedtrajectories
+  remainexcluded andactualcutoffstates stillbootstrap explicitly.
+- ScratchCLIcontrol wasinitiallyrejectedbycheckpoint-onlywarmoptimizerflag.
+  Correctedflagcondition and addedregression. Actual90s scratchlargeMLP:54/64
+  Act1+20/26originalhard. Originalfailedinvocation ispreserved.
+- Directguardmatched20laterstarts7852prefixactions1.613s->.915s; randomfirstbank
+  andseededUBfaultproofs passed. Newadapter1f2e599f..., frozenbase49c/native8dba
+  unchanged; oldcollectionresume remainsstrictsourcehash-incompatible.
+- CompositeActorCritic nowroutesphasegroups ratherthancomputingbothnetsallrows:
+  batch8large+large1.99x(allcombat),2.20x(allOOC),1.57x(mixed), withallparameter
+  gradient/outputparity1e-5. Noencoder/modelarchitecturechange.
+- DeployedpretrainedModelAgent throughofficialCLI modefull seed3 maxact1:
+  twoindependentprocesses producedidentical459-rowcanonical traces,228external
+  actions andnative_steps0, endingordinarydefeat. This verifiesboth-phaseagent
+  integration/determinism, notwinningcompetence. Initialstdinlauncher failed
+  spawn__main__ resolution; usedguardedCLIentrypointinstead, retainingfailure.
+- Fullregressiongate beforedirectguard:259tests passed25.264s. Newhealth/dispatch
+  gates andthree directguardpairedtests passed; currentfullgate follows.
+- MainresumedPID40629 fromfreshjournal withphasefrontierpreserved, fasterreplay
+  active anddeadlineunchanged. Healthstudyusedsame sourcefiles forbothcases.
+
+## 2026-10-11 23:29 UTC — combined regression gate
+
+**268 tests passed** in24.716s withnativegates enabled. Maincombat frontier
+isadvancingagain afterhealthstudy; currentnext_round10 andnewguard source
+active. OOC andjointfull-run stages remainrequired; nofinallearnerpanel yet.

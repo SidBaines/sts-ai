@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from scripts.report_nonllm import summarize_live, world_bootstrap, summarize_metrics
+from scripts.report_nonllm import summarize_live, world_bootstrap, summarize_metrics, paired_world_comparison
 
 
 class NonllmReportTests(unittest.TestCase):
@@ -43,3 +43,20 @@ class NonllmReportTests(unittest.TestCase):
         result = summarize_metrics({"development": {"accuracy": .7, "examples": 20}})
         self.assertEqual(result["bc_development"]["accuracy"], .7)
         self.assertIn("per-world", result["bc_ci_note"])
+
+    def test_paired_comparison_excludes_entire_fault_world(self):
+        rows = [{"task_id": "a", "world_seed": 1, "terminated": True, "task_outcome": "battle_victory", "hp_cost": 3},
+                {"task_id": "b", "world_seed": 1, "terminated": True, "task_outcome": "battle_victory", "hp_cost": 3},
+                {"task_id": "c", "world_seed": 2, "terminated": True, "task_outcome": "battle_defeat", "hp_cost": 10}]
+        other = [dict(row, hp_cost=row["hp_cost"] + 2) for row in rows]
+        comparison = paired_world_comparison(rows, other, right_faults=[{"task_id": "d", "world_seed": 1}])
+        self.assertEqual(comparison["excluded_fault_world_shared_tasks"], 2)
+        self.assertEqual(comparison["paired_success_difference"]["observations"], 1)
+        self.assertEqual(comparison["paired_hp_cost_difference"]["world_mean"], -2)
+        self.assertEqual(comparison["excluded_fault_worlds"], ["1"])
+
+    def test_paired_comparison_rejects_missing_or_duplicate_task_identity(self):
+        with self.assertRaises(ValueError):
+            paired_world_comparison([{"world_seed": 1}], [])
+        with self.assertRaises(ValueError):
+            paired_world_comparison([{"task_id": "a"}, {"task_id": "a"}], [])

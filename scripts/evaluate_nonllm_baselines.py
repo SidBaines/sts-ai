@@ -165,6 +165,7 @@ def main() -> None:
     parser.add_argument("--max-act", type=int)
     parser.add_argument("--timeout", type=float, default=10.)
     parser.add_argument("--fast-observations", action="store_true")
+    parser.add_argument("--fast-replay", action="store_true")
     args = parser.parse_args()
     if min(args.episodes, args.workers, args.seconds, args.timeout) <= 0:
         parser.error("episode/worker counts and time bounds must be positive")
@@ -177,7 +178,8 @@ def main() -> None:
     results = []
     def lane(chunk):
         output = []
-        with CurriculumWorker({"fast_observations": args.fast_observations}, timeout=args.timeout) as worker:
+        with CurriculumWorker({"fast_observations": args.fast_observations or args.fast_replay,
+                               "fast_replay": args.fast_replay}, timeout=args.timeout) as worker:
             for index, task in chunk:
                 if time.monotonic() >= deadline:
                     break

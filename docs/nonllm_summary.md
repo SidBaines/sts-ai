@@ -1,110 +1,90 @@
 # Non-LLM Slay the Spire — experiment summary
 
-Latest updates come first. This is the short, manually maintained account of
-state and decisions. [Detailed timeline](nonllm_progress.md) ·
-[Decision/recovery notes](nonllm_progress_notes.md) · [Experiment plan](nonllm_curriculum_plan.md).
+Latest milestones first. [Detailed log](nonllm_progress.md) ·
+[Decision/recovery notes](nonllm_progress_notes.md) · [Plan](nonllm_curriculum_plan.md).
+Deadline: **12 October, 06:30 UTC**. All results below are development results;
+final evaluation remains embargoed.
 
-## 2026-10-11 22:07 UTC — combat improvement controls; later-act coverage expanded
+## 2026-10-11 23:25 UTC — health bonuses tested; main combat training continues
 
-**State:** architecture selection finished. The large independent-candidate MLP
-at LR 1e-4 won 45/48 development fights; two initialization repeats each won
-44/48. Combat PPO controls now compare learning rate, clipping, entropy,
-discounting, sparse/potential rewards, an explicit HP bonus and scratch learning.
-OOC and full-run stages retain their reserved time.
+The learned combat policy loses materially more HP than native search. Two
+matched three-minute reward pilots improved isolated battles, but reduced
+full Act 1 clears with the same OOC policy:
 
-**Decision:** keep the native teacher at 200 simulations. More search is not
-automatically better on this small matched development panel:
-
-| Teacher simulations | Wins / 48 | World-mean HP cost | Mean query time |
+| Terminal HP bonus | Battle wins / 80 | Mean battle HP cost | Act 1 clears / 24 |
 | --- | ---: | ---: | ---: |
-| 50 | 42 | 10.98 | 0.369ms |
-| 200 | 44 | 6.73 | 1.060ms |
-| 1,000 | 43 | 7.09 | 4.813ms |
+| Reference: none | 70 | 14.91 | 5 |
+| 0.25 | 72 | 13.66 | 2 |
+| 1.0 | 72 | 14.06 | 3 |
 
-Episode-weighted HP cost improves at 1,000; the table uses equal-world weighting.
-This is a cost/quality choice, not proof that larger search budgets never help.
+**Decision:** retain the reference under the prespecified selection rule. Keep
+both alternatives for later coupling tests; this small panel does not prove
+health bonuses are generally harmful. [Study detail](nonllm_health_progress.md).
 
-**Decision:** select and train across later acts explicitly. The initial Act 3
-development/final fights came from just one world each. A fresh 2,048-world bank
-adds 560,620 labels and 24,276 starts (23 flagged worlds quarantined). Expanded
-Act 3 panels now cover **15 development and 12 final worlds**, with no duplicated
-evaluation fights. Current screening cohorts remain frozen; promoted candidates
-will be reevaluated on the expanded cohort before longer training.
+Training now avoids duplicate inference by reusing the next actor value. Paired
+tests preserved trajectories/targets within 7.5e-9 and measured **1.35–1.37×**
+faster collection. Direct sticky/live UB checks remove unnecessary replay
+deepcopies: **1.613s → 0.915s** over twenty later-act resets. Fault detection,
+observations and rewards matched; the native build is unchanged.
 
-Corrective learning now mixes a fixed 20k native rehearsal reservoir with all
-prior learner-state labels. OOC teacher comparisons will use identical frontiers,
-initial weights and training time. Full verification: **255 tests passed**.
-Final selection remains embargoed; deadline is **06:30 UTC**.
+## 2026-10-11 22:25 UTC — later-act evidence chooses tighter clipping
 
-## 2026-10-11 21:41 UTC — architecture comparisons running; execution path verified
+Ten combat controls covered learning rate, clipping, entropy, discount,
+sparse/potential rewards, HP preservation and scratch learning. Expanded
+later-act evidence changed the winner:
 
-**State:** six size/context policies are trained; learning-rate and initialization
-comparisons are running. The current best pilot controls combat successfully on
-the development panel. OOC learning, joint full-run training and final evaluation
-remain ahead. No final-world results have been used for selection.
-
-| Policy on the same 48 development fights / 21 worlds | Wins | Surfaced faults / truncations |
+| Promoted PPO recipe | Act 1 wins / 64 | Later-act wins / 32 |
 | --- | ---: | ---: |
-| Random | 28/48 | 0/0 |
-| Simple public-state heuristic | 42/48 | 0/0 |
-| Privileged native search, 200 simulations | 44/48 | 0/0 |
-| Best learned pilot: large candidate MLP, LR 1e-4 | 45/48 | 0/0 |
+| LR 3e-4 | 59 | 24 |
+| Gamma 0.99 | 58 | 26 |
+| Clip 0.1 | 55 | 29 |
 
-This is a small panel repeatedly used for selection, so one extra win is not
-evidence that the learner is better than native search. Remaining comparisons
-and the frozen final panel will decide what generalizes.
+**Decision:** clip 0.1, LR 1e-4, gamma 1, entropy 0.01, potential shaping.
+Matched later-act references: native **30/32**, public heuristic **28/32**,
+random **13/32**. The learner's win-rate advantage is uncertain, and its
+world-mean HP cost is **11.02 higher than native** (95% paired CI 6.52–16.40).
 
-**Decision:** use eight persistent simulator workers, CPU rollout inference and
-MPS training updates. The real leading-model benchmark supports this choice:
+A CLI flag initially skipped scratch PPO; it was repaired and rerun on the
+original matched cohorts. Scratch won **54/64** Act 1 and **20/26** later-act
+fights after ninety seconds. It is a useful baseline, not a failed approach.
 
-| Matched measurement | Slower path | Selected path | Evidence |
-| --- | ---: | ---: | --- |
-| Warm 48-fight collection, 687 decisions | MPS: 1.39s | CPU: 0.96s | Same win and decision counts |
-| Twenty later-act prefix resets | Standard: 4.12s | Fast replay: 1.58s | Observations, labels, rewards, diagnostics and fault rejection matched |
-| Eight-worker native label collection | Uncached: 3,638/s | Cached: 5,002/s | Same labels and surfaced fault |
+## 2026-10-11 22:06 UTC — expanded data and fixed comparison cohorts
 
-GPU updates and saved AdamW-moment restoration passed live checks. Compatible
-PPO chunks retain optimizer state; changing method/reward/task resets it with a
-logged reason. Tests and the detailed log cover recovery failures as well.
+Added 2,048 native-teacher worlds: **560,620 labels / 24,276 fights**, with
+23 flagged worlds quarantined. Act 3 development/final panels now cover
+**15/12 worlds**, replacing the earlier single-world limitation. Comparisons
+keep fixed cohorts; promoted policies are reevaluated after a cohort change.
 
-## 2026-10-11 21:28 UTC — recovered after laptop closure; deadline extended
+Teacher budgets 50/200/1,000 won **42/44/43 of 48** matched fights. Retain
+200: mean query time **1.06ms**, versus **4.81ms** at 1,000. Larger search
+improved episode-weighted HP, but not world-weighted HP or wins on this panel.
 
-All six architecture checkpoints survived the interruption. Completed jobs were
-recovered from saved artifacts and reused. AC power is connected. Sid explicitly
-extended the deadline to **12 October, 06:30 UTC**; training and final evaluation
-must finish within it. The detailed log records the original deadline and recovery.
+Corrective learning mixes a fixed 20k native rehearsal reservoir with all prior
+learner-state labels. OOC teacher comparisons use identical frontiers, initial
+weights and time; composite deployment is assessed before final selection.
 
-## 2026-10-11 20:50 UTC — first combat policies and later-stage data ready
+## 2026-10-11 21:28 UTC — laptop recovery and extended deadline
 
-The first small policies each won 42/48 development fights, providing a usable
-starting point for combat improvement. Added a separate later-act bank and OOC
-lookahead labels so the curriculum can progress beyond starter fights.
+Six trained architecture checkpoints survived laptop closure. Saved completed
+jobs were reused, power was reconnected, and Sid extended the deadline to
+**06:30 UTC**. Recovery and failed commands remain in the detailed log.
 
-| Dataset | Valid worlds / attempted | Teacher decisions | Replayable fights |
-| --- | ---: | ---: | ---: |
-| Act 1 bank | 252/256 | 49,944 | 2,245 |
-| Act 3 enrichment | 246/256 | 68,520 | 2,983 |
+## 2026-10-11 20:50 UTC — first policies and execution measurements
 
-The enrichment includes 718 Act 2 and 123 Act 3 fights. Act 3 boss coverage is
-thin: seven training starts, one development, zero final. Full-run testing is
-essential; this bank cannot establish boss generalization.
+Initial small models won **42/48** development fights; size/LR selection chose
+a large candidate MLP at LR 1e-4: **45/48**, with two seeds each **44/48**.
+Use eight persistent CPU simulator workers, CPU rollout inference and MPS
+updates. The leading-model warm collection benchmark was **0.96s CPU versus
+1.39s MPS**. Phase-routed composite evaluation is **1.57–2.20×** faster.
 
-The separate train-only OOC teacher evaluates four short privileged continuations
-at each of 256 frontiers. Its proxy strictly improves over scripted continuation
-on 89 frontiers. We will compare actual held-out outcomes before promoting it.
-Auto-native combat currently loses a backend UB flag when its temporary battle
-state is discarded; zero surfaced hybrid faults does not certify fault-free
-playouts. This limitation is recorded and the frozen binary remains unchanged.
+## 2026-10-11 20:08 UTC — scope and plan
 
-## 2026-10-11 20:08 UTC — scope and experiment design
+Created `codex/nonllm-curriculum` from immutable `env-v0.1.0`, preserving the
+original experiments. Curriculum: isolated combat → OOC with native combat →
+full-control Act 1-to-3 traces. Compare shared/specialized policies and reserve
+final evaluation time. Inputs are public legal-action candidates and game state;
+teacher labels are privileged, and worlds remain in one train/dev/final split.
 
-Created `codex/nonllm-curriculum` from immutable release `env-v0.1.0`, preserving
-the original experiments. The plan is combat imitation/DAgger/PPO → separate
-OOC improvement with native combat → full-control traces and Act 1-to-3 expansion.
-Compare shared and specialized policies; reserve final evaluation time.
-
-The policy scores public legal-action candidates rather than treating changing
-menu indices as permanent action meanings. It uses no LLM, hidden game seed or
-native action bits. Native teacher labels are explicitly privileged. World-level
-train/dev/final splits prevent fights from the same world leaking across sets;
-simulator faults are quarantined separately from ordinary defeats.
+Known limitation: auto-native combat discards a temporary UB flag. Zero surfaced
+hybrid faults cannot certify clean native playouts; explicit full-control faults
+are quarantined. The frozen native build has not been silently changed.

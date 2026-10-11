@@ -49,7 +49,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                      collate: Callable[..., Any], forward: Callable[..., Any],
                      config: PPOConfig = PPOConfig(), device: str = "cpu",
                      max_seconds: float = 120., deterministic: bool = False,
-                     teacher_simulations: int | None = None) -> dict[str, Any]:
+                     teacher_simulations: int | None = None,
+                     deferred_bootstrap: bool = False) -> dict[str, Any]:
     """The actor is frozen throughout collection; failures quarantine whole episodes.
 
     Worker operations execute concurrently. A collector budget truncation uses
@@ -66,6 +67,19 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
     failed_steps, resets = 0, 0
     timings = {"reset_wait_seconds": 0., "step_wait_seconds": 0., "teacher_wait_seconds": 0.,
                "policy_seconds": 0., "bootstrap_seconds": 0.}
+    forward_counts = {"actor_batches": 0, "actor_observations": 0, "bootstrap_batches": 0,
+                      "bootstrap_observations": 0, "reused_bootstrap_values": 0}
+
+    def bootstrap_values(observations: list[dict[str, Any]]) -> list[float]:
+        if not observations:
+            return []
+        bootstrap_started = time.monotonic()
+        _, next_values, _ = forward(model, collate(observations, device))
+        output = next_values.cpu().tolist()
+        timings["bootstrap_seconds"] += time.monotonic() - bootstrap_started
+        forward_counts["bootstrap_batches"] += 1
+        forward_counts["bootstrap_observations"] += len(observations)
+        return output
 
     def start(slot: int) -> None:
         nonlocal resets
@@ -91,6 +105,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         entry = active.pop(slot)
         info = {**entry["last_info"], **info}
         trajectory = entry["trajectory"]
+        if entry.get("awaiting_bootstrap"):
+            raise RuntimeError("Cannot finalize a trajectory with a missing next-state value")
         if budget_truncation and trajectory and not trajectory[-1].terminated:
             trajectory[-1].truncated = True
         _set_advantages(trajectory, config)
@@ -130,6 +146,12 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
             except Exception as error:
                 fault(slot, error)
         if time.monotonic() - started >= max_seconds:
+            if deferred_bootstrap:
+                pending_slots = [slot for slot, entry in active.items() if entry.get("awaiting_bootstrap")]
+                values = bootstrap_values([active[slot]["obs"] for slot in pending_slots])
+                for slot, value in zip(pending_slots, values):
+                    active[slot]["trajectory"][-1].next_value = float(value)
+                    active[slot]["awaiting_bootstrap"] = False
             for slot in list(active):
                 finish(slot, {}, budget_truncation=True)
             break
@@ -151,6 +173,14 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         # Single packed device transfer for action/logp/value (action IDs < 2^24).
         packed = torch.stack((positions.float(), log_probs, values), dim=-1).cpu().tolist()
         timings["policy_seconds"] += time.monotonic() - policy_started
+        forward_counts["actor_batches"] += 1
+        forward_counts["actor_observations"] += len(observations)
+        if deferred_bootstrap:
+            for slot, (_, _, value) in zip(slots, packed):
+                if active[slot].get("awaiting_bootstrap"):
+                    active[slot]["trajectory"][-1].next_value = float(value)
+                    active[slot]["awaiting_bootstrap"] = False
+                    forward_counts["reused_bootstrap_values"] += 1
         if teacher_simulations is not None:
             futures = {slot: workers[slot].submit("teacher_action", teacher_simulations) for slot in slots}
             for slot in slots:
@@ -183,12 +213,11 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 fault(slot, error)
         if results:
             next_slots = list(results)
-            next_obs = [results[slot][0] for slot in next_slots]
-            bootstrap_started = time.monotonic()
-            _, next_values, _ = forward(model, collate(next_obs, device))
-            next_values_cpu = next_values.cpu().tolist()
-            timings["bootstrap_seconds"] += time.monotonic() - bootstrap_started
-            for slot, next_value in zip(next_slots, next_values_cpu):
+            bootstrap_slots = ([slot for slot in next_slots if results[slot][3] and not results[slot][2]]
+                               if deferred_bootstrap else next_slots)
+            explicit_values = dict(zip(bootstrap_slots,
+                bootstrap_values([results[slot][0] for slot in bootstrap_slots])))
+            for slot in next_slots:
                 observation, reward, terminated, truncated, info = results[slot]
                 entry = active[slot]
                 position, action, log_prob, value = entry.pop("sample")
@@ -196,7 +225,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 entry["trajectory"].append(Transition(old_observation, position, action, log_prob, value,
                                                        [True] * len(old_observation["legal_actions"]),
                                                        float(reward), bool(terminated), bool(truncated),
-                                                       0. if terminated else float(next_value), entry["task"].seed))
+                                                       0. if terminated else float(explicit_values.get(slot, 0.)), entry["task"].seed))
+                entry["awaiting_bootstrap"] = deferred_bootstrap and not (terminated or truncated)
                 entry["reward"] += float(reward)
                 entry["steps"] += 1
                 entry["obs"] = observation
@@ -219,6 +249,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
             "faults": faults, "excluded_transitions": failed_steps, "resets": resets,
             "elapsed_seconds": time.monotonic() - started,
             "timings": timings,
+            "forward_counts": forward_counts, "deferred_bootstrap": deferred_bootstrap,
             "discount_unit": "one_external_decision; native_combat_is_one_macro_transition"}
 
 

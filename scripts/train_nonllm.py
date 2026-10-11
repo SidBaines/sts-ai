@@ -112,6 +112,7 @@ def main() -> None:
     parser.add_argument("--inference-device", choices=("cpu", "mps"), default="cpu")
     parser.add_argument("--fast-observations", action="store_true")
     parser.add_argument("--fast-replay", action="store_true")
+    parser.add_argument("--deferred-bootstrap", action="store_true")
     parser.add_argument("--reward-mode", choices=("potential", "sparse", "progress"), default="potential")
     parser.add_argument("--terminal-hp-weight", type=float, default=0.)
     parser.add_argument("--progress-floor-weight", type=float, default=.05)
@@ -240,7 +241,8 @@ def main() -> None:
                 result = collect_rollouts(model, workers, tasks, collate=collate_public,
                                            forward=forward_policy, config=ppo, device=args.inference_device,
                                            max_seconds=min(remaining, 120.), deterministic=args.command == "evaluate",
-                                           teacher_simulations=args.teacher_simulations)
+                                           teacher_simulations=args.teacher_simulations,
+                                           deferred_bootstrap=args.deferred_bootstrap)
                 transitions, labels = result.pop("transitions"), result.pop("teacher_records")
                 result["transitions"] = len(transitions)
                 result["teacher_records"] = len(labels)

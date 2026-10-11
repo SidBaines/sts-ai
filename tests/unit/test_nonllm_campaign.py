@@ -28,6 +28,28 @@ class CampaignRecoveryTests(unittest.TestCase):
             self.assertIsNone(result)
             self.assertEqual(runner.state['commands'][-1]['status'],'failed')
 
+    def test_scratch_training_omits_checkpoint_only_optimizer_flag(self):
+        with tempfile.TemporaryDirectory() as temporary,patch.dict(os.environ,{'STS_LIGHTSPEED_BUILD':'test'}):
+            runner=campaign.Campaign(Path(temporary))
+            with patch.object(runner,'run',return_value=None) as run:
+                runner.train('scratch','ppo',deferred_bootstrap=True)
+            command=run.call_args.args[1]
+            self.assertNotIn('--warm-optimizer',command)
+            self.assertIn('--deferred-bootstrap',command)
+            self.assertNotIn('True',command)
+
+    def test_cached_metrics_do_not_cross_changed_evaluation_cohorts(self):
+        with tempfile.TemporaryDirectory() as temporary,patch.dict(os.environ,{'STS_LIGHTSPEED_BUILD':'test'}):
+            root=Path(temporary)
+            metrics=root/'same.metrics.json';metrics.write_text('{}')
+            runner=campaign.Campaign(root)
+            runner.state['commands'].append({'name':'same','status':'complete','finished':time.time(),
+                'command':[sys.executable,'-c','pass','--tasks','old.jsonl']})
+            with patch.object(campaign,'DEADLINE',time.time()+3600),patch.object(campaign,'ROOT',root):
+                result=runner.run('same',[sys.executable,'-c','raise SystemExit(2)','--tasks','new.jsonl'],seconds=1)
+            self.assertIsNone(result)
+            self.assertEqual(runner.state['commands'][-1]['status'],'failed')
+
     def test_final_panel_requires_full_requested_cohort(self):
         complete={'command':'evaluate','rounds':[{'task_ids':['a','b'], 'episodes':[{'task_id':'a','termination_reason':'battle_finished'}],
                                                 'faults':[{'task_id':'b'}], 'cohort_completed':True}]}

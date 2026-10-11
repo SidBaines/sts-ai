@@ -35,6 +35,17 @@ def atomic(path, value):
     os.replace(temporary, path)
 
 
+def cohort_arguments(command):
+    """Changing data, policies or task cohorts invalidates a cached condition."""
+    keys={'--tasks','--teacher','--dev-teacher','--checkpoint','--combat-checkpoint',
+          '--ooc-checkpoint','--world-start','--horizon','--max-act','--task-kind',
+          '--split','--episodes','--baseline','--seed'}
+    values={}
+    for index,token in enumerate(command[:-1]):
+        if str(token) in keys:values[str(token)]=str(command[index+1])
+    return values
+
+
 def panel_complete(metrics):
     """A successful process is insufficient: every requested task must be classified."""
     rounds = metrics.get('rounds',[]) if metrics.get('command') == 'evaluate' else [metrics]
@@ -73,7 +84,7 @@ class Campaign:
             digest = hashlib.sha256(metrics.read_bytes()).hexdigest()
             expected = previous.get('metrics_sha256')
             legacy_valid = metrics.stat().st_mtime <= previous.get('finished', 0) + 5
-            if digest == expected or (expected is None and legacy_valid):
+            if (digest == expected or (expected is None and legacy_valid)) and cohort_arguments(previous['command'])==cohort_arguments(command):
                 previous['metrics_sha256'] = digest
                 return json.loads(metrics.read_text())
         allowance = min(seconds + 90, phase_end - time.time(), DEADLINE - time.time())
@@ -132,10 +143,15 @@ class Campaign:
             command += ['--workers', 8, '--updates', 100000, '--episodes', 128,
                         '--fast-observations', '--inference-device', 'cpu']
         for key, value in kwargs.items():
-            command += ['--' + key.replace('_', '-'), str(value)]
+            flag='--'+key.replace('_','-')
+            if isinstance(value,bool):
+                if value:command.append(flag)
+                elif key=='goal_act_clear':command.append('--no-goal-act-clear')
+            elif value is not None:
+                command += [flag,str(value)]
         if '--fast-replay' in (ROOT/'scripts/train_nonllm.py').read_text():
             command += ['--fast-replay']
-        if method == 'ppo':
+        if method == 'ppo' and checkpoint is not None:
             command += ['--warm-optimizer']
         result = self.run(name, command, seconds, end)
         return (path, result) if path.exists() and result is not None else (None, result)
@@ -152,7 +168,12 @@ class Campaign:
         else:
             command += ['--world-start', 10000]
         for key, value in kwargs.items():
-            command += ['--' + key.replace('_', '-'), str(value)]
+            flag='--'+key.replace('_','-')
+            if isinstance(value,bool):
+                if value:command.append(flag)
+                elif key=='goal_act_clear':command.append('--no-goal-act-clear')
+            elif value is not None:
+                command += [flag,str(value)]
         if '--fast-replay' in (ROOT/'scripts/train_nonllm.py').read_text():
             command += ['--fast-replay']
         return self.run(name, command, seconds, end)
@@ -244,10 +265,11 @@ class Campaign:
     def curriculum(self, name, source, end, kind, **settings):
         self.state['phase'] = name
         current, best = Path(source), Path(source)
-        reference = self.evaluate_combat(name+'_initial_dev',best,end=end) if kind=='battle' else self.evaluate(name + '_initial_dev', best, kind, end=end)
-        best_score = self.score(reference)
-        saved_phase = self.state.setdefault('phase_progress', {}).setdefault(name,
-                       {'next_round': 0, 'started': time.time(), 'current': str(source), 'best': str(best), 'best_score': best_score})
+        saved_phase=self.state.setdefault('phase_progress',{}).get(name)
+        if saved_phase is None:
+            reference=self.evaluate_combat(name+'_initial_dev',best,end=end) if kind=='battle' else self.evaluate(name+'_initial_dev',best,kind,end=end)
+            saved_phase={'next_round':0,'started':time.time(),'current':str(source),'best':str(best),'best_score':self.score(reference)}
+            self.state['phase_progress'][name]=saved_phase
         round_index = saved_phase['next_round']
         phase_started = saved_phase['started']
         current, best = Path(saved_phase['current']), Path(saved_phase['best'])
@@ -255,6 +277,7 @@ class Campaign:
         while time.time() < end - 180:
             tag = f'{name}_{round_index:04d}'
             round_settings = dict(settings)
+            round_settings['deferred_bootstrap'] = True
             if kind == 'battle' and HARD_BANK.exists():
                 elapsed_fraction = (time.time() - phase_started) / max(1, end - phase_started)
                 if elapsed_fraction < .1:
@@ -358,6 +381,9 @@ class Campaign:
 
     def ppo_screen(self, name, source, kind, end, **settings):
         self.state['phase'] = name + '_hyperparameter_screen'
+        if name in self.state.get('phase_progress',{}):
+            recipe=self.state.get('combat_effective_settings', self.state['combat_expanded_promotion'][0]['settings'])
+            return Path(self.state['phase_progress'][name]['best']),recipe
         basic = {'learning_rate':1e-4,'reward_mode':'potential','gamma':1.,
                  'clip_ratio':.2,'entropy_coef':.01,'terminal_hp_weight':0.}
         recipes = [('lr0.0001_potential',{}),('lr0.0003_potential',{'learning_rate':3e-4}),
@@ -397,7 +423,7 @@ class Campaign:
         combat_start, combat_settings = self.ppo_screen('combat', shared, 'battle', INITIAL+14400,
                                                    tasks=BANK/'battles.jsonl', horizon=256)
 
-        if (EXPANDED_PANELS/'panels.json').exists():
+        if (EXPANDED_PANELS/'panels.json').exists() and 'combat' not in self.state.get('phase_progress',{}):
             self.state['active_panel_directory']=str(EXPANDED_PANELS)
             promoted=[]
             for candidate in self.state['combat_pilot_panel'][:3]:
@@ -410,6 +436,7 @@ class Campaign:
             self.save()
         rehearsal=ROOT/'data/nonllm_curriculum/native_rehearsal/teacher.jsonl'
         if rehearsal.exists():self.state['native_rehearsal']=str(rehearsal)
+        self.state['combat_effective_settings']=combat_settings
         combat = self.curriculum('combat', combat_start, INITIAL+14400, 'battle',
                                  tasks=BANK/'battles.jsonl', horizon=256, teacher_simulations=200,
                                  **combat_settings)

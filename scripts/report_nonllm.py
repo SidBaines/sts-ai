@@ -114,6 +114,61 @@ def summarize_bc(rows: list[dict[str, Any]], *, replicates: int = 2000,
             for phase, records in phases.items()}
 
 
+def paired_world_comparison(left: list[dict[str, Any]], right: list[dict[str, Any]], *,
+                            left_faults: list[dict[str, Any]] | None = None,
+                            right_faults: list[dict[str, Any]] | None = None,
+                            replicates: int = 2000, seed: int = 0) -> dict[str, Any]:
+    """Paired left-minus-right outcomes on exact task IDs and common clean worlds.
+
+    Any world faulted by either policy is excluded entirely, never assigned a
+    loss. Censored tasks are excluded from decisive comparisons, with counts.
+    """
+    def indexed(rows):
+        result = {}
+        for row in rows:
+            identity = row.get("task_id")
+            if not identity:
+                raise ValueError("paired comparisons require exact task_id metadata")
+            if identity in result:
+                raise ValueError("duplicate task_id cannot define a unique paired evaluation")
+            result[identity] = row
+        return result
+    a, b = indexed(left), indexed(right)
+    faults = [*(left_faults or []), *(right_faults or []),
+              *(row for row in left + right if row.get("fault", False))]
+    if any(row.get("world_seed") is None for row in faults):
+        raise ValueError("fault world identity required for common-world comparison")
+    fault_worlds = {str(row["world_seed"]) for row in faults}
+    success_differences, hp_differences = [], []
+    excluded_fault_tasks, censored_tasks = 0, 0
+    for identity in sorted(set(a) & set(b)):
+        first, second = a[identity], b[identity]
+        world = first.get("world_seed")
+        if world is None or str(world) != str(second.get("world_seed")):
+            raise ValueError("paired task world identities differ or are missing")
+        if str(world) in fault_worlds:
+            excluded_fault_tasks += 1
+            continue
+        outcomes = [str(row.get("task_outcome") or row.get("outcome", "")).rsplit(".", 1)[-1]
+                    for row in (first, second)]
+        if not all(row.get("terminated") and not row.get("truncated") and outcome in SUCCESS | FAILURE
+                   for row, outcome in zip((first, second), outcomes)):
+            censored_tasks += 1
+            continue
+        success_differences.append((world, float(outcomes[0] in SUCCESS) - float(outcomes[1] in SUCCESS)))
+        if first.get("hp_cost") is not None and second.get("hp_cost") is not None:
+            hp_differences.append((world, float(first["hp_cost"]) - float(second["hp_cost"])))
+    return {"left_valid_episodes": len(left), "right_valid_episodes": len(right),
+            "shared_task_ids": len(set(a) & set(b)),
+            "unmatched_left_task_ids": len(set(a) - set(b)), "unmatched_right_task_ids": len(set(b) - set(a)),
+            "excluded_fault_worlds": sorted(fault_worlds), "excluded_fault_world_shared_tasks": excluded_fault_tasks,
+            "excluded_censored_shared_tasks": censored_tasks,
+            "paired_success_difference": world_bootstrap(success_differences, replicates=replicates, seed=seed),
+            "paired_hp_cost_difference": world_bootstrap(hp_differences, replicates=replicates, seed=seed),
+            "direction": "left minus right; positive success and negative HP cost favor left",
+            "eligibility": "same exact task_id; recognized terminal outcomes; no censoring; no world faulted by either policy"}
+
+
 def summarize_metrics(metrics: dict[str, Any], *, replicates: int = 2000,
                       seed: int = 0) -> dict[str, Any]:
     rounds = metrics.get("rounds", [])
