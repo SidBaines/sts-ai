@@ -4,6 +4,38 @@ Latest updates come first. This is the short, manually maintained account of
 state and decisions. [Detailed timeline](nonllm_progress.md) ·
 [Decision/recovery notes](nonllm_progress_notes.md) · [Experiment plan](nonllm_curriculum_plan.md).
 
+## 2026-10-11 22:07 UTC — combat improvement controls; later-act coverage expanded
+
+**State:** architecture selection finished. The large independent-candidate MLP
+at LR 1e-4 won 45/48 development fights; two initialization repeats each won
+44/48. Combat PPO controls now compare learning rate, clipping, entropy,
+discounting, sparse/potential rewards, an explicit HP bonus and scratch learning.
+OOC and full-run stages retain their reserved time.
+
+**Decision:** keep the native teacher at 200 simulations. More search is not
+automatically better on this small matched development panel:
+
+| Teacher simulations | Wins / 48 | World-mean HP cost | Mean query time |
+| --- | ---: | ---: | ---: |
+| 50 | 42 | 10.98 | 0.369ms |
+| 200 | 44 | 6.73 | 1.060ms |
+| 1,000 | 43 | 7.09 | 4.813ms |
+
+Episode-weighted HP cost improves at 1,000; the table uses equal-world weighting.
+This is a cost/quality choice, not proof that larger search budgets never help.
+
+**Decision:** select and train across later acts explicitly. The initial Act 3
+development/final fights came from just one world each. A fresh 2,048-world bank
+adds 560,620 labels and 24,276 starts (23 flagged worlds quarantined). Expanded
+Act 3 panels now cover **15 development and 12 final worlds**, with no duplicated
+evaluation fights. Current screening cohorts remain frozen; promoted candidates
+will be reevaluated on the expanded cohort before longer training.
+
+Corrective learning now mixes a fixed 20k native rehearsal reservoir with all
+prior learner-state labels. OOC teacher comparisons will use identical frontiers,
+initial weights and training time. Full verification: **255 tests passed**.
+Final selection remains embargoed; deadline is **06:30 UTC**.
+
 ## 2026-10-11 21:41 UTC — architecture comparisons running; execution path verified
 
 **State:** six size/context policies are trained; learning-rate and initialization

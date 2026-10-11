@@ -113,6 +113,8 @@ def main() -> None:
     parser.add_argument("--fast-observations", action="store_true")
     parser.add_argument("--fast-replay", action="store_true")
     parser.add_argument("--reward-mode", choices=("potential", "sparse", "progress"), default="potential")
+    parser.add_argument("--terminal-hp-weight", type=float, default=0.)
+    parser.add_argument("--progress-floor-weight", type=float, default=.05)
     parser.add_argument("--goal-act-clear", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--seconds", type=float, default=120.)
@@ -150,6 +152,8 @@ def main() -> None:
         parser.error("evaluate requires a checkpoint")
     if args.device == "mps" and not torch.backends.mps.is_available():
         parser.error("MPS is unavailable")
+    if not all(math.isfinite(value) and value >= 0 for value in (args.terminal_hp_weight, args.progress_floor_weight)):
+        parser.error("reward weights must be finite and nonnegative")
     torch.set_num_threads(args.threads)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
@@ -176,7 +180,9 @@ def main() -> None:
     reward_config = {"gamma": args.gamma, "reward_mode": args.reward_mode,
                      "goal_act_clear": args.goal_act_clear,
                      "reward_version": REWARD_VERSION,
-                     "progress_floor_weight": .05, "terminal_hp_weight": 0.}
+                     "progress_floor_weight": args.progress_floor_weight,
+                     "terminal_hp_weight": args.terminal_hp_weight}
+    metrics["reward_config"] = reward_config
     optimizer_carry = {"restored": False, "reason": "fresh_optimizer"}
     if args.warm_optimizer:
         optimizer_carry = warm_optimizer(optimizer, payload, method=args.command, task_kind=args.task_kind,
@@ -217,6 +223,8 @@ def main() -> None:
                         minibatch_size=args.batch_size, epochs=args.ppo_epochs,
                         entropy_weight=args.entropy_coef, clip_ratio=args.clip_ratio)
         workers = [CurriculumWorker(config={"gamma": args.gamma, "reward_mode": args.reward_mode,
+                                            "terminal_hp_weight": args.terminal_hp_weight,
+                                            "progress_floor_weight": args.progress_floor_weight,
                                             "goal_act_clear": args.goal_act_clear,
                                             "fast_observations": args.fast_observations or args.fast_replay,
                                             "fast_replay": args.fast_replay}, timeout=args.timeout)

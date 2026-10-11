@@ -28,6 +28,16 @@ class CampaignRecoveryTests(unittest.TestCase):
             self.assertIsNone(result)
             self.assertEqual(runner.state['commands'][-1]['status'],'failed')
 
+    def test_final_panel_requires_full_requested_cohort(self):
+        complete={'command':'evaluate','rounds':[{'task_ids':['a','b'], 'episodes':[{'task_id':'a','termination_reason':'battle_finished'}],
+                                                'faults':[{'task_id':'b'}], 'cohort_completed':True}]}
+        self.assertTrue(campaign.panel_complete(complete))
+        complete['rounds'][0]['episodes'][0]['termination_reason']='collector_budget'
+        self.assertFalse(campaign.panel_complete(complete))
+        complete['rounds'][0]['episodes'][0]['termination_reason']='battle_finished'
+        complete['rounds'][0]['task_ids'].append('unstarted')
+        self.assertFalse(campaign.panel_complete(complete))
+
     def test_failed_log_does_not_attribute_later_rerun_metrics(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)

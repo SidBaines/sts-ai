@@ -141,3 +141,10 @@ old/new dataset identities. `--resume` is stricter and restores RNG as well,
 requiring the same dataset and stage settings. `--fast-replay` enables verified
 prefix replay without repeated intermediate public rendering; frontier observations,
 teacher labels, rewards, termination, and fault behavior remain identical.
+
+`--terminal-hp-weight` (default zero) adds an explicit terminal survival HP
+bonus for successful battles/runs; this is an objective ablation, not pure
+potential shaping. `--progress-floor-weight` (default 0.05) sets the progress
+reward in progress mode. Both weights are passed to native task workers and
+recorded in metrics and checkpoints, and changing either resets optimizer
+carry across chunks.

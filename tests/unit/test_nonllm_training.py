@@ -215,6 +215,100 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(outcome["reason"], expected)
             self.assertFalse(fresh.state)
 
+    def test_terminal_hp_and_progress_rewards_are_explicit_and_bounded(self):
+        from sts_policy.curriculum import reward_components
+        previous = {"state": {"cur_hp": 80, "max_hp": 80, "floor": 3}}
+        following = {"state": {"cur_hp": 40, "max_hp": 80, "floor": 5}}
+        components = reward_components(previous, following, task_outcome="battle_victory", terminated=True,
+                                       mode="progress", terminal_hp_weight=.25, progress_floor_weight=.2)
+        self.assertEqual(components["terminal_hp"], .125)
+        self.assertEqual(components["progress"], .4)
+        self.assertEqual(components["terminal"], 1.)
+        cutoff = reward_components(previous, following, task_outcome="", terminated=False,
+                                   mode="progress", terminal_hp_weight=.25, progress_floor_weight=.2)
+        self.assertEqual(cutoff["terminal_hp"], 0.)
+        self.assertEqual(cutoff["terminal"], 0.)
+
+    def test_cli_reward_flags_reach_worker_and_logged_configuration(self):
+        import contextlib
+        import importlib.util
+        import io
+        from unittest.mock import patch
+        script = Path(__file__).resolve().parents[2] / "scripts" / "train_nonllm.py"
+        spec = importlib.util.spec_from_file_location("nonllm_cli_test", script)
+        cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cli)
+        received, logged = [], []
+        class Worker:
+            def __init__(self, config, timeout): received.append(config)
+            def close(self): pass
+        result = {"transitions": [], "teacher_records": [], "episodes": [], "faults": []}
+        with tempfile.TemporaryDirectory() as directory, contextlib.redirect_stdout(io.StringIO()):
+            args = ["train_nonllm.py", "evaluate", "--checkpoint", "unused.pt", "--output", str(Path(directory)/"eval.pt"),
+                    "--workers", "1", "--reward-mode", "progress", "--terminal-hp-weight", ".25",
+                    "--progress-floor-weight", ".2"]
+            with patch("sys.argv", args), patch.object(cli, "source_model", return_value=(TinyModel(), None)), \
+                 patch.object(cli, "tasks_for", return_value=[FakeTask(1)]), patch.object(cli, "CurriculumWorker", Worker), \
+                 patch.object(cli, "collect_rollouts", return_value=result), \
+                 patch.object(cli, "write_metrics", side_effect=lambda path, metrics: logged.append(metrics)):
+                cli.main()
+        self.assertEqual(received[0]["terminal_hp_weight"], .25)
+        self.assertEqual(received[0]["progress_floor_weight"], .2)
+        self.assertEqual(logged[-1]["config"]["terminal_hp_weight"], .25)
+        self.assertEqual(logged[-1]["config"]["progress_floor_weight"], .2)
+        self.assertEqual(logged[-1]["reward_config"]["terminal_hp_weight"], .25)
+        self.assertEqual(logged[-1]["reward_config"]["progress_floor_weight"], .2)
+
+    def test_collector_zero_step_budget_preserves_reset_info_and_censors_cohort(self):
+        class MetadataWorker(FakeWorker):
+            def submit(self, method, *args):
+                future = super().submit(method, *args)
+                if method == "reset":
+                    obs, _ = future.result()
+                    future = Future()
+                    future.set_result((obs, {"hp_cost": 0., "split": "dev", "native_steps": 4,
+                                             "native_provenance": {"build": "abc"}, "reward_version": "test"}))
+                return future
+        result = collect_rollouts(TinyModel(), [MetadataWorker()], [FakeTask(1), FakeTask(3)],
+                                  collate=tiny_collate, forward=tiny_forward, max_seconds=0.)
+        self.assertEqual(result["requested_tasks"], 2)
+        self.assertEqual(result["unstarted_tasks"], 1)
+        self.assertFalse(result["cohort_completed"])
+        episode = result["episodes"][0]
+        self.assertEqual(episode["steps"], 0)
+        self.assertTrue(episode["truncated"])
+        self.assertFalse(episode["terminated"])
+        self.assertEqual(episode["termination_reason"], "collector_budget")
+        self.assertEqual(episode["split"], "dev")
+        self.assertEqual(episode["native_steps"], 4)
+        self.assertEqual(episode["native_provenance"], {"build": "abc"})
+
+    def test_collector_step_budget_preserves_step_info_and_never_marks_cohort_complete(self):
+        from unittest.mock import patch
+        elapsed = {"seconds": 0.}
+        class StepMetadataWorker(FakeWorker):
+            def submit(self, method, *args):
+                future = super().submit(method, *args)
+                if method == "step":
+                    obs, reward, terminated, truncated, _ = future.result()
+                    future = Future()
+                    future.set_result((obs, reward, terminated, truncated,
+                                       {"hp_cost": 5., "split": "dev", "native_steps": 10, "task_outcome": ""}))
+                    elapsed["seconds"] = 2.
+                return future
+        # First decision completes, then the collector wall budget expires.
+        with patch("sts_policy.rollout_training.time.monotonic", side_effect=lambda: elapsed["seconds"]):
+            result = collect_rollouts(TinyModel(), [StepMetadataWorker()], [FakeTask(1)],
+                                      collate=tiny_collate, forward=tiny_forward, max_seconds=1.)
+        self.assertFalse(result["cohort_completed"])
+        self.assertEqual(result["unstarted_tasks"], 0)
+        episode = result["episodes"][0]
+        self.assertEqual(episode["termination_reason"], "collector_budget")
+        self.assertEqual(episode["steps"], 1)
+        self.assertEqual(episode["hp_cost"], 5.)
+        self.assertEqual(episode["native_steps"], 10)
+        self.assertTrue(episode["truncated"])
+
 
 def observation():
     return {"phase": "combat", "state": {"cur_hp": 80, "max_hp": 80},

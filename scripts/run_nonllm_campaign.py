@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import fcntl
 import hashlib
 from datetime import datetime, timezone
@@ -21,6 +22,8 @@ DEADLINE = datetime.fromisoformat('2026-10-12T06:30:00+00:00').timestamp()
 BANK = ROOT / 'data/nonllm_curriculum/teacher_act1_200_seed10000'
 HARD_BANK = ROOT / 'data/nonllm_curriculum/teacher_act3_200_seed11000'
 LOOKAHEAD_BANK = ROOT / 'data/nonllm_curriculum/ooc_lookahead_v1'
+PANELS = ROOT / 'data/nonllm_curriculum/panels'
+EXPANDED_PANELS = ROOT / 'data/nonllm_curriculum/panels_expanded'
 
 
 def atomic(path, value):
@@ -30,6 +33,24 @@ def atomic(path, value):
         stream.flush()
         os.fsync(stream.fileno())
     os.replace(temporary, path)
+
+
+def panel_complete(metrics):
+    """A successful process is insufficient: every requested task must be classified."""
+    rounds = metrics.get('rounds',[]) if metrics.get('command') == 'evaluate' else [metrics]
+    if not rounds:
+        return False
+    for row in rounds:
+        episodes, faults = row.get('episodes',[]), row.get('faults',[])
+        requested = row.get('task_ids',[])
+        actual = [entry.get('task_id') for entry in episodes+faults]
+        if not requested or Counter(requested) != Counter(actual):
+            return False
+        if row.get('unstarted_tasks',0) or any(entry.get('termination_reason')=='collector_budget' for entry in episodes):
+            return False
+        if row.get('cohort_completed') is False:
+            return False
+    return True
 
 
 class Campaign:
@@ -49,12 +70,19 @@ class Campaign:
         metrics = self.destination / (name + '.metrics.json')
         previous = next((x for x in self.state['commands'] if x['name'] == name and x['status'] == 'complete'), None)
         if previous and metrics.exists():
-            return json.loads(metrics.read_text())
+            digest = hashlib.sha256(metrics.read_bytes()).hexdigest()
+            expected = previous.get('metrics_sha256')
+            legacy_valid = metrics.stat().st_mtime <= previous.get('finished', 0) + 5
+            if digest == expected or (expected is None and legacy_valid):
+                previous['metrics_sha256'] = digest
+                return json.loads(metrics.read_text())
         allowance = min(seconds + 90, phase_end - time.time(), DEADLINE - time.time())
         if allowance <= 2:
             return None
         source_identity = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                            for p in sorted((ROOT/'src/sts_policy').glob('*.py'))}
+        source_identity.update({str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else str(p): hashlib.sha256(p.read_bytes()).hexdigest()
+                                for p in (ROOT/'scripts/train_nonllm.py', Path(__file__)) if p.exists()})
         record = {'source_identity': source_identity, 'name': name, 'command': [str(x) for x in command], 'started': time.time(),
                   'status': 'running', 'metrics': str(metrics)}
         self.state['commands'].append(record)
@@ -68,20 +96,23 @@ class Campaign:
             started = time.monotonic()
             while process.poll() is None:
                 self.save()
-                if time.monotonic() - started >= allowance:
+                if time.monotonic() - started >= allowance or time.time() >= min(phase_end, DEADLINE):
                     os.killpg(process.pid, signal.SIGTERM)
+                    record['stop_reason'] = 'utc_deadline' if time.time() >= DEADLINE else 'stage_or_runtime_budget'
                     try:
-                        process.wait(timeout=5)
+                        process.wait(timeout=max(.001, min(5, DEADLINE-time.time())))
                     except subprocess.TimeoutExpired:
                         os.killpg(process.pid, signal.SIGKILL)
                         process.wait()
                     record['status'] = 'budget_stop'
                     break
-                time.sleep(5)
+                time.sleep(max(.001, min(5, min(phase_end, DEADLINE)-time.time())))
             record['exit_code'] = process.returncode
         record['finished'] = time.time()
         if record['status'] == 'running':
             record['status'] = 'complete' if process.returncode == 0 else 'failed'
+        if record['status'] == 'complete' and metrics.exists():
+            record['metrics_sha256'] = hashlib.sha256(metrics.read_bytes()).hexdigest()
         self.save()
         print(json.dumps(record), flush=True)
         if record['status'] == 'complete' and metrics.exists() and metrics.stat().st_mtime >= record['started']:
@@ -126,10 +157,35 @@ class Campaign:
             command += ['--fast-replay']
         return self.run(name, command, seconds, end)
 
+    def evaluate_combat(self, name, checkpoint, *, split='dev', episodes=48, end=DEADLINE):
+        primary = self.evaluate(name+'_act1', checkpoint, 'battle', split, episodes, end=end)
+        hard_path = Path(self.state.get('active_panel_directory',str(PANELS))) / (split+'_hard.jsonl')
+        hard = self.evaluate(name+'_hard', checkpoint, 'battle', split, 256, end=end,
+                             tasks=hard_path, max_act=3) if hard_path.exists() else None
+        if primary is None:
+            return None
+        score = self.score(primary) if hard is None else .5*(self.score(primary)+self.score(hard))
+        combined = {'selection_score':score, 'primary_score':self.score(primary),
+                    'hard_score':self.score(hard) if hard else None,
+                    'rounds':primary.get('rounds',[])+(hard.get('rounds',[]) if hard else []),
+                    'note':'Equal weight Act1 and later-act panels; intervals must cluster by world. Thin Act3 flagged in panel manifest.'}
+        atomic(self.destination/(name+'_combined.metrics.json'),combined)
+        return combined
+
+    def evaluate_composite(self, name, combat, ooc, *, split='dev', episodes=32, max_act=1, end=DEADLINE):
+        command = [PYTHON, ROOT/'scripts/train_nonllm.py', 'evaluate', '--output', self.destination/(name+'.unused.pt'),
+                   '--metrics', self.destination/(name+'.metrics.json'), '--combat-checkpoint',combat,
+                   '--ooc-checkpoint',ooc, '--device','cpu','--threads',2,'--workers',8,'--episodes',episodes,
+                   '--seed',777,'--world-start',10000,'--split',split,'--task-kind','run','--max-act',max_act,
+                   '--horizon',2048,'--simulations',200,'--seconds',120,'--fast-observations','--fast-replay']
+        return self.run(name,command,120,end)
+
     @staticmethod
     def score(metrics):
         if not metrics:
             return -1e9
+        if 'selection_score' in metrics:
+            return metrics['selection_score']
         episodes = [episode for row in metrics.get('rounds', []) for episode in row.get('episodes', [])]
         decisive = [x for x in episodes if x.get('terminated')]
         wins = sum(x.get('outcome') in ('battle_victory', 'act_clear', 'victory') for x in decisive)
@@ -188,7 +244,7 @@ class Campaign:
     def curriculum(self, name, source, end, kind, **settings):
         self.state['phase'] = name
         current, best = Path(source), Path(source)
-        reference = self.evaluate(name + '_initial_dev', best, kind, end=end)
+        reference = self.evaluate_combat(name+'_initial_dev',best,end=end) if kind=='battle' else self.evaluate(name + '_initial_dev', best, kind, end=end)
         best_score = self.score(reference)
         saved_phase = self.state.setdefault('phase_progress', {}).setdefault(name,
                        {'next_round': 0, 'started': time.time(), 'current': str(source), 'best': str(best), 'best_score': best_score})
@@ -206,8 +262,10 @@ class Campaign:
                 elif elapsed_fraction < .35:
                     round_settings['tasks'] = BANK/'battles.jsonl'
                 else:
-                    round_settings['tasks'] = HARD_BANK/'battles.jsonl' if round_index % 3 else BANK/'battles.jsonl'
-                round_settings['max_act'] = 3 if round_settings['tasks'].is_relative_to(HARD_BANK) else 1
+                    round_settings['tasks'] = Path(self.state.get('active_panel_directory',str(PANELS)))/f'train_act{1 + round_index % 3}.jsonl'
+                round_settings['max_act'] = 1 if round_settings['tasks'].is_relative_to(BANK) else 3
+            if kind != 'battle':
+                round_settings['world_start'] = settings.get('world_start',20000) + round_index*128
             path, _ = self.train(tag, 'ppo', current, seconds=min(180, end-time.time()-120), end=end,
                                  task_kind=kind, seed=11 + round_index, **round_settings)
             if path is None:
@@ -216,11 +274,16 @@ class Campaign:
             if kind == 'battle' and round_index % 3 == 0:
                 labels = path.with_suffix('.dagger.jsonl')
                 if labels.exists() and labels.stat().st_size:
-                    corrected, _ = self.train(tag + '_dagger', 'bc', current, seconds=20, end=end,
-                                              teacher=labels, phase='combat', learning_rate=1e-4)
+                    from sts_policy.aggregation import aggregate_teachers
+                    aggregate = self.destination/(tag+'_aggregate.jsonl')
+                    aggregate_teachers([Path(self.state.get('native_rehearsal',str(BANK/'teacher.jsonl'))),
+                                        *sorted(self.destination.glob('combat_*.dagger.jsonl'))],aggregate,
+                                       max_records=30000,seed=11,phase='combat')
+                    corrected, _ = self.train(tag + '_dagger', 'bc', current, seconds=30, end=end,
+                                              teacher=aggregate, phase='combat', learning_rate=1e-4)
                     if corrected:
                         current = corrected
-            evaluation = self.evaluate(tag + '_dev', current, kind, end=end)
+            evaluation = self.evaluate_combat(tag+'_dev',current,end=end) if kind=='battle' else self.evaluate(tag + '_dev', current, kind, end=end)
             score = self.score(evaluation)
             if score > best_score:
                 best, best_score = current, score
@@ -271,27 +334,55 @@ class Campaign:
                        '--world-start', 10000, '--seed', 777, '--horizon', 2048, '--max-act', 3,
                        '--workers', 8, '--seconds', 600, '--simulations', 200, '--fast-observations']
             self.run(name, command, 600)
-        self.state['status'] = 'finished'
+        self.evaluate_combat('final_combat_extended',combat,split='final',episodes=160)
+        required=['final_battle_act1','final_ooc_act1','final_run_act1','final_run_act3','final_composite',
+                  'final_combat_extended_act1','final_combat_extended_hard']
+        required += [f'final_baseline_{baseline}_{kind}' for kind in ('battle','ooc','run') for baseline in ('random','native','heuristic')]
+        required += [f'final_baseline_{baseline}_run_act3' for baseline in ('random','native','heuristic')]
+        complete={row['name'] for row in self.state['commands'] if row['status']=='complete'}
+        hard_tasks=Path(self.state.get('active_panel_directory',str(PANELS)))/'final_hard.jsonl'
+        for baseline in ('random','native','heuristic'):
+            name=f'final_baseline_{baseline}_hard'
+            self.run(name,[PYTHON,ROOT/'scripts/evaluate_nonllm_baselines.py','--output',self.destination/(name+'.metrics.json'),
+                           '--baseline',baseline,'--kind','battle','--split','final','--episodes',256,'--tasks',hard_tasks,
+                           '--seed',777,'--horizon',256,'--max-act',3,'--simulations',200,'--workers',8,
+                           '--seconds',300,'--fast-observations'],300)
+            required.append(name)
+        complete={row['name'] for row in self.state['commands'] if row['status']=='complete'}
+        self.state['final_required_panels']=required
+        self.state['final_missing_panels']=[name for name in required if name not in complete or
+            not (self.destination/(name+'.metrics.json')).exists() or
+            not panel_complete(json.loads((self.destination/(name+'.metrics.json')).read_text()))]
+        self.state['status']='finished' if not self.state['final_missing_panels'] else 'partial'
         self.save()
 
     def ppo_screen(self, name, source, kind, end, **settings):
         self.state['phase'] = name + '_hyperparameter_screen'
-        panel = []
-        for rate, reward in ((1e-4, 'potential'), (3e-4, 'potential'), (1e-3, 'potential'), (3e-4, 'sparse')):
-            tag = f'{name}_pilot_lr{rate}_{reward}'
-            path, result = self.train(tag, 'ppo', source, seconds=90, end=end,
-                                     task_kind=kind, learning_rate=rate, reward_mode=reward, **settings)
+        basic = {'learning_rate':1e-4,'reward_mode':'potential','gamma':1.,
+                 'clip_ratio':.2,'entropy_coef':.01,'terminal_hp_weight':0.}
+        recipes = [('lr0.0001_potential',{}),('lr0.0003_potential',{'learning_rate':3e-4}),
+                   ('lr0.001_potential',{'learning_rate':1e-3}),
+                   ('lr0.0003_sparse',{'learning_rate':3e-4,'reward_mode':'sparse'}),
+                   ('clip0.1',{'clip_ratio':.1}),('entropy0.005',{'entropy_coef':.005}),
+                   ('entropy0.02',{'entropy_coef':.02}),('gamma0.99',{'gamma':.99}),
+                   ('terminal_hp0.25',{'terminal_hp_weight':.25}),('scratch',{})]
+        architecture = json.loads(Path(self.state['selected']['shared_bc']).with_suffix('.metrics.json').read_text())['config']
+        panel=[]
+        for label, changes in recipes:
+            tag=f'{name}_pilot_{label}'
+            recipe={**basic,**changes}
+            extra={'size':architecture['size'],'context':architecture['context']} if label=='scratch' else {}
+            path,result=self.train(tag,'ppo',None if label=='scratch' else source,seconds=90,end=end,
+                                   task_kind=kind,**recipe,**settings,**extra)
             if path:
-                evaluation = self.evaluate(tag + '_dev', path, kind, episodes=64, end=end)
-                panel.append((self.score(evaluation), path, rate, reward))
+                evaluation=self.evaluate_combat(tag+'_dev',path,episodes=64,end=end)
+                panel.append((self.score(evaluation),path,recipe))
         if not panel:
-            return source, 3e-4, 'potential'
-        panel.sort(reverse=True)
-        self.state[name + '_pilot_panel'] = [{'score': score, 'checkpoint': str(path),
-                                             'learning_rate': rate, 'reward': reward}
-                                            for score, path, rate, reward in panel]
+            return source,basic
+        panel.sort(key=lambda x:x[0],reverse=True)
+        self.state[name+'_pilot_panel']=[{'score':score,'checkpoint':str(path),'settings':recipe} for score,path,recipe in panel]
         self.save()
-        return panel[0][1], panel[0][2], panel[0][3]
+        return panel[0][1],panel[0][2]
 
     def main(self):
         shared = self.screen()
@@ -299,28 +390,50 @@ class Campaign:
             hardened, _ = self.train('combat_act3_bc', 'bc', shared, seconds=180,
                                      teacher=HARD_BANK/'teacher.jsonl', dev_teacher=BANK/'teacher.jsonl', phase='combat')
             if hardened:
-                before = self.evaluate('combat_hardening_before_dev', shared)
-                after = self.evaluate('combat_hardening_after_dev', hardened)
+                before = self.evaluate_combat('combat_hardening_before_dev', shared)
+                after = self.evaluate_combat('combat_hardening_after_dev', hardened)
                 if self.score(after) >= self.score(before) - 5:
                     shared = hardened
-        combat_start, combat_rate, combat_reward = self.ppo_screen('combat', shared, 'battle', INITIAL+14400,
+        combat_start, combat_settings = self.ppo_screen('combat', shared, 'battle', INITIAL+14400,
                                                    tasks=BANK/'battles.jsonl', horizon=256)
 
+        if (EXPANDED_PANELS/'panels.json').exists():
+            self.state['active_panel_directory']=str(EXPANDED_PANELS)
+            promoted=[]
+            for candidate in self.state['combat_pilot_panel'][:3]:
+                checkpoint=Path(candidate['checkpoint'])
+                evaluation=self.evaluate_combat(checkpoint.stem+'_expanded_dev',checkpoint,episodes=64)
+                promoted.append((self.score(evaluation),checkpoint,candidate['settings']))
+            promoted.sort(key=lambda x:x[0],reverse=True)
+            combat_start,combat_settings=promoted[0][1],promoted[0][2]
+            self.state['combat_expanded_promotion']=[{'score':score,'checkpoint':str(path),'settings':recipe} for score,path,recipe in promoted]
+            self.save()
+        rehearsal=ROOT/'data/nonllm_curriculum/native_rehearsal/teacher.jsonl'
+        if rehearsal.exists():self.state['native_rehearsal']=str(rehearsal)
         combat = self.curriculum('combat', combat_start, INITIAL+14400, 'battle',
                                  tasks=BANK/'battles.jsonl', horizon=256, teacher_simulations=200,
-                                 reward_mode=combat_reward, learning_rate=combat_rate)
+                                 **combat_settings)
         specialist, _ = self.train('ooc_specialist_bc', 'bc', shared, seconds=120, phase='ooc')
         ooc_start = specialist or shared
         if LOOKAHEAD_BANK.exists():
-            lookahead, _ = self.train('ooc_lookahead_bc', 'bc', shared, seconds=90,
-                                      teacher=LOOKAHEAD_BANK/'teacher.jsonl', dev_teacher=BANK/'teacher.jsonl', phase='ooc')
-            if lookahead:
-                a = self.evaluate('ooc_scripted_dev', ooc_start, 'ooc', episodes=32)
-                b = self.evaluate('ooc_lookahead_dev', lookahead, 'ooc', episodes=32)
-                self.state['ooc_teacher_panel'] = {'scripted_score': self.score(a), 'lookahead_score': self.score(b)}
-                if self.score(b) > self.score(a):
-                    ooc_start = lookahead
-                self.save()
+            matched_scripted=self.destination/'ooc_matched_scripted_teacher.jsonl'
+            with (LOOKAHEAD_BANK/'teacher.jsonl').open() as source_rows,matched_scripted.open('w') as output:
+                for line in source_rows:
+                    row=json.loads(line)
+                    row['teacher_index']=row['scripted_index']
+                    row['teacher_kind']='native_scripted_same_frontier_ablation'
+                    output.write(json.dumps(row,sort_keys=True)+'\n')
+            teacher_panel=[]
+            for label,teacher in [('scripted_matched',matched_scripted),('lookahead_matched',LOOKAHEAD_BANK/'teacher.jsonl')]:
+                trained,_=self.train('ooc_'+label+'_bc','bc',ooc_start,seconds=90,teacher=teacher,
+                                     dev_teacher=BANK/'teacher.jsonl',phase='ooc')
+                if trained:
+                    evaluation=self.evaluate('ooc_'+label+'_dev',trained,'ooc',episodes=32)
+                    teacher_panel.append((self.score(evaluation),trained,label))
+            teacher_panel.sort(key=lambda x:x[0],reverse=True)
+            self.state['ooc_teacher_panel']=[{'score':score,'checkpoint':str(path),'teacher':label} for score,path,label in teacher_panel]
+            if teacher_panel:ooc_start=teacher_panel[0][1]
+            self.save()
         ooc = self.curriculum('ooc', ooc_start, INITIAL+21600, 'ooc',
                              world_start=20000, horizon=1024, reward_mode='progress', learning_rate=3e-4)
         initial_panel = []
@@ -328,6 +441,8 @@ class Campaign:
             evaluation = self.evaluate('joint_start_' + label + '_dev', checkpoint, 'run', episodes=32,
                                        end=INITIAL+28800)
             initial_panel.append((self.score(evaluation), checkpoint))
+        composite_dev=self.evaluate_composite('joint_start_composite_dev',combat,ooc,end=INITIAL+28800)
+        self.state['composite_initial_dev_score']=self.score(composite_dev)
         initial_panel.sort(reverse=True)
         self.state['joint_start_panel'] = [{'score': score, 'checkpoint': str(path)} for score, path in initial_panel]
         self.save()

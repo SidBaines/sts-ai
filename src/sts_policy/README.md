@@ -144,3 +144,30 @@ Adding this optional replay path changes the collection source identity to
 Old banks remain replay compatible because native/public Python identities are
 unchanged and still validated. Never resume old collection under changed source:
 use a new dataset directory so the recorded collection identity remains true.
+
+## Balanced panels and rehearsal reservoirs
+
+`build_curriculum_panels.py --banks ... --output ...` assembles preserved battle
+starts without executing any held-out learner. Training uses three genuine act
+files cycled by round rather than invented duplicate IDs. Development/final
+panels request equal act counts, select across worlds before adding extra fights
+from a world, and never oversample evaluation starts. Metadata records actual
+world/floor coverage and source bank manifest identities. Publish new cohorts
+to a versioned directory: changing an active development file mid-screen would
+make candidate scores incomparable.
+
+`aggregation.aggregate_teachers` streams a deterministic train-only reservoir
+over native/learner label files. It validates world splits and legal menu labels,
+retains source-file/line hashes, and never overwrites a source. A fixed native
+rehearsal sample avoids repeatedly scanning gigabytes of immutable native labels
+for every DAgger correction; subsequent aggregation adds all prior learner
+corrections. The saved rehearsal file and its manifest provide the provenance
+chain back to original native banks. Compression and source mixing are explicit
+recorded settings, not silently equivalent to retaining every native example.
+
+The first Act 3 expansion used 2048 separate worlds, native 200 simulations,
+four CPU workers and a 480-second collection ceiling; all worlds finished in
+337 seconds, with 2025 valid and 23 flagged-invalid worlds. The expanded panel
+contains 16 Act 3 development fights from 15 worlds and 16 Act 3 final fights
+from 12 worlds, replacing the original one-world-per-split coverage only after
+its separate publication. Original banks/panels remain preserved.

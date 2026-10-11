@@ -74,7 +74,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         except StopIteration:
             return
         active[slot] = {"task": task, "future": workers[slot].submit("reset", task),
-                        "trajectory": [], "labels": [], "obs": None, "reward": 0., "steps": 0}
+                        "trajectory": [], "labels": [], "obs": None, "last_info": {},
+                        "reward": 0., "steps": 0}
         resets += 1
 
     def fault(slot: int, error: Exception) -> None:
@@ -88,6 +89,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
 
     def finish(slot: int, info: dict[str, Any], budget_truncation: bool = False) -> None:
         entry = active.pop(slot)
+        info = {**entry["last_info"], **info}
         trajectory = entry["trajectory"]
         if budget_truncation and trajectory and not trajectory[-1].terminated:
             trajectory[-1].truncated = True
@@ -104,8 +106,11 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                          "hp_cost": info.get("hp_cost"), "floor": state.get("floor", state.get("floor_num")),
                          "act": state.get("act", state.get("act_num")), "split": info.get("split"),
                          "native_steps": info.get("native_steps"), "fault": False,
+                         "native_provenance": info.get("native_provenance"),
+                         "reward_version": info.get("reward_version"),
+                         "reward_settings": info.get("reward_settings"),
                          "terminated": bool(trajectory and trajectory[-1].terminated),
-                         "truncated": bool(trajectory and trajectory[-1].truncated)})
+                         "truncated": budget_truncation or bool(trajectory and trajectory[-1].truncated)})
 
     for slot in range(len(workers)):
         start(slot)
@@ -119,6 +124,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 observation, info = entry["future"].result()
                 timings["reset_wait_seconds"] += time.monotonic() - wait_started
                 entry["obs"], entry["future"] = observation, None
+                entry["last_info"] = info
                 if not observation.get("legal_actions"):
                     finish(slot, info)
             except Exception as error:
@@ -194,6 +200,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 entry["reward"] += float(reward)
                 entry["steps"] += 1
                 entry["obs"] = observation
+                entry["last_info"] = info
                 if terminated or truncated:
                     finish(slot, info)
         # An entire batch can finish/fault together; refill before the while
@@ -202,7 +209,12 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
             for slot in range(len(workers)):
                 if slot not in active:
                     start(slot)
+    requested = len(tasks)
+    cohort_completed = (resets == requested and len(episodes) + len(faults) == requested
+                        and all(episode["termination_reason"] != "collector_budget" for episode in episodes))
     return {"transitions": transitions, "teacher_records": labels, "episodes": episodes,
+            "requested_tasks": requested, "unstarted_tasks": requested - resets,
+            "cohort_completed": cohort_completed,
             "task_ids": [task_identity(task) for task in tasks],
             "faults": faults, "excluded_transitions": failed_steps, "resets": resets,
             "elapsed_seconds": time.monotonic() - started,

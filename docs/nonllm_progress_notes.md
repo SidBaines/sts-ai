@@ -145,3 +145,36 @@ Never erase failed commands or silently replay beyond the original deadline.
 Full suite: **245 tests passed**, simulator gates enabled, in 20.719s.
 The campaign is running with fresh heartbeats and continuing learning-rate
 comparisons; current source and logs are being committed as a recovery point.
+
+## 2026-10-11 22:07 UTC — curriculum audit and controls activated
+
+- Independent audits found Act1-only model selection, sparse Act3 sampling,
+  missing promised short controls, current-label-only DAgger fine tuning,
+  confounded OOC teacher histories, and insufficient final completion gates.
+  These were repaired before extended combat training.
+- Ten matched90s PPO recipes cover LR1e-4/3e-4/1e-3, sparse/potential, clip.1/.2,
+  entropy.005/.01/.02, gamma.99/1 matched to worker shaping, terminalHPweight.25,
+  and same-architecture scratch initialization. All settings and faults are logged.
+- Combat selection blends Act1 and later-act results. Early controls retain the
+  original immutable hard cohort; topthree are reevaluated on expanded panels.
+  Later training cycles Act1/2/3 task pools instead of a72%Act1 mixedbank.
+- Additional bank seeds12000..14047:2025valid/23faults,560620labels,24276starts.
+  Expansion uses the same native/Python identities. Expanded Act3 dev/final
+  panels have15/12worldclusters, addressing the prior single-world limitation.
+- Native rehearsal20000traincombatrows samples381997eligible records with all
+  sourcehashes/transitiveprovenance. Each corrective update aggregates rehearsal
+  plus all earlier DAggerlabels into a deterministic bounded30000row reservoir.
+- Scripted-versus-lookahead ablation uses identical256frontiers and90s from the
+  same specializedcheckpoint; baseline replacesonly teacher_index withstored
+  scripted_index. Composite dev evaluation precedes integratedshared training.
+- Nonbattle training world cohorts advance128seeds perchunk instead of replaying
+  the same128worlds throughout aphase. Evaluation cohorts remain fixed.
+- UTCdeadline checked eachpoll includingafterlaptopsleep, withsleep/grace capped
+  byremaining deadline. CLI/script hashes join adapterhashes. Cached metrics
+  require matchingSHA or validatedlegacycompletion.
+- Budget-censored episodes preserve latestinfo/provenance and markzero-step
+  truncations. Finalfinished status requires eachnamedpanel and exactrequested
+  task-IDcohort classified withoutunstarted/budget-censored entries. Faults
+  remain separate fromgame losses. Nativeauto-combatUBlimit remainsqualified.
+- 255tests passed20.131s;focused campaign/reward/aggregation21tests also passed.
+  Supervisor23112 islive;checkfreshmetrics aswellasPID.
