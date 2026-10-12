@@ -1,5 +1,19 @@
 # Long curriculum — latest first
 
+## 2026-10-12 12:17 UTC — periodic three-act evaluation and audited seed coverage
+
+An independent CPU-only observer now checks selected-best and latest completed training-candidate snapshots every 30 minutes on the same 48 fresh-start DEV worlds. It does not alter learner selection, rewards or the final embargo. The dashboard now separates INITIAL, evaluated SELECTED BEST and evaluated LATEST CANDIDATE; exact checkpoint hashes, capture/evaluation times, reuse and newer-unevaluated-weight warnings prevent stale results being presented as current.
+
+| Three-act DEV snapshot | Wins / requested | Defeats | Faults / cutoffs | Mean reached floor |
+| --- | ---: | ---: | --- | ---: |
+| Initial checkpoint | 0/48 | 48 | 0 / 0 | 28.60 |
+| Selected best, CP14 | 0/48 | 48 | 0 / 0 | 30.92 |
+| Candidate captured at controller round 184 | 0/48 | 48 | 0 / 0 | 28.71 |
+
+These are complete matched cohorts. Selected best gets farther on this cohort; full-game completion improvement is not established. Identical checkpoint/condition results are reused with their original evaluation timestamp, rather than plotted as new independent measurements. Observer process 8097 runs separately; only the dashboard was restarted (PID8502). The pinned learner remains live and unchanged. [Evaluation observer](full_run_monitor.md).
+
+The seed audit at 12:04:30 UTC covered 167 committed chunks: **21,376 attempts from 10,320 distinct TRAIN worlds**, comprising **9,686 fresh worlds + 634 borrowed native worlds**. Sampled learner frontiers reuse 2,338 of those fresh worlds and add no new seeds. Current 128-task batches contain 70 Act 2 continuations, 19 fresh Act 2-goal runs, 26 fresh three-act runs and 13 Act 1 rehearsals. Fresh worlds rotate each chunk; this is not a fixed 128-seed set. [Exact environment/start/seed audit](long_curriculum_seed_audit.md). A later manifest-only update at 2026-10-12T12:30:47Z records 13,220 distinct requested worlds across 27,776 attempts; fresh sampling continues to grow.
+
 ## 2026-10-12 11:20 UTC — live dashboard available
 
 The main run continues in the background. The read-only dashboard is open at **http://127.0.0.1:8786**, refreshing every eight seconds. It shows the active allocation, checkpoint/heartbeat ages, valid transitions, accepted updates, training returns and percentiles, loss/KL/entropy/clip metrics, throughput/timings, matched DEV decisions and separate conditional training families. Missing metrics are explicitly unavailable; rehearsal clears and continuation success are not full-game win estimates.

@@ -27,3 +27,14 @@ PYTHONPATH=src .venv/bin/python -m unittest tests.unit.test_long_rl_dashboard
 ```
 
 These include finite/unavailable metrics, matched TaskID coverage, family separation, pause-ledger semantics, curated paths/symlink rejection, cache invalidation after journal completion and a localhost HTTP smoke on an ephemeral port.
+
+
+## Full three-act observer view
+
+The prominent full-run panel reads exactly the sibling `data/long_rl_v1/full_run_eval/telemetry.json` written by the independent observer. It never opens observer checkpoint copies or invokes an evaluation. The observer is monitoring only: its fresh full-start `dev_act3` panel does not change learner ranking, selection, rewards or the final embargo.
+
+INITIAL is the immutable pre-update 2026-10-12 reference: initial SHA `57f1e9613a69e31230b591ef0ff2cca27e23ddc81c3a24366cee173bc9909e70`, 0/48 whole-game wins, 48 defeats, no faults/cutoffs/unstarted tasks, mean floor 28.6042. The initial line is dashed and remains a fixed comparison, not an observed training curve. Selected-best and latest-candidate evaluated snapshots are distinct roles. If both roles share a SHA at one evaluation, one row can carry both roles; the same result is not counted as independent evidence.
+
+A missing observer result is **NOT YET EVALUATED**, never 0/48. Every row carries its exact checkpoint SHA, roles, captured controller round/time, evaluation UTC, requested/outcome counts, completion status, cohort identity check and mean floor. The most recent evaluation may describe older weights than the live role: the dashboard compares SHA identities and says when a newer live role remains unevaluated. Ages refer to evaluation time, not the training checkpoint timestamp. Only complete panels appear in the trend series; incomplete/mismatched panels remain visible in the table.
+
+Observer telemetry is cached by mtime/size under the same refresh bound. A symlink escaping the owned observer directory is rejected. Records require an exact 64-digit checkpoint SHA, recognized role and monitoring-only provenance. Requested TaskID multisets are checked against the campaign's fixed `dev_act3` cohort; 48 unique requested IDs and accounted outcomes are required. Checkpoint bytes and unrestricted metrics paths are never served. The original curriculum DEV tiles remain separately labeled by target; the Act 3 initial leader is explicitly an INITIAL reference.

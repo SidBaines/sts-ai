@@ -141,6 +141,106 @@ def normalize_training(metrics, job, index):
     return row
 
 
+FULL_RUN_ROLES = ("selected_best", "latest_candidate")
+
+
+def normalize_full_run(telemetry, checkpoints, reference_task_ids=()):
+    """Full Act-1-start panels stay separate from curriculum/continuation scores.
+
+    Exact SHA and role identify an evaluated snapshot, never today's live weights.
+    Invalid or unmatched cohorts remain visible with a validity warning.
+    """
+    result = {"monitoring_only": True, "status": "not_yet_evaluated", "history": [],
+              "latest": {role: None for role in FULL_RUN_ROLES}, "errors": []}
+    if telemetry is None:
+        return result
+    if not isinstance(telemetry, dict) or telemetry.get("monitoring_only") is not True:
+        result["errors"].append("Observer telemetry must be explicitly monitoring_only")
+        return result
+    if telemetry.get("version", 1) != 1:
+        result["errors"].append("Unsupported observer telemetry version")
+        return result
+    panel = telemetry.get("panel", "dev_act3")
+    panel_name = panel.get("name", panel.get("id")) if isinstance(panel, dict) else panel
+    if panel_name not in ("dev_act3", None):
+        result["errors"].append("Observer panel is not fresh full-start dev_act3")
+        return result
+    history = telemetry.get("histories", telemetry.get("history", []))
+    if not isinstance(history, list) or len(history) > 5000:
+        result["errors"].append("Observer history is invalid or exceeds 5000 panels")
+        return result
+    reference = Counter(reference_task_ids)
+    seen = set()
+    for record in history:
+        if not isinstance(record, dict):
+            result["errors"].append("Ignored malformed observer record")
+            continue
+        sha = record.get("checkpoint_sha256")
+        if not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{64}", sha) is None:
+            result["errors"].append("Ignored observer record without exact checkpoint SHA256")
+            continue
+        roles = record.get("roles", [record.get("role")])
+        if isinstance(roles, str):
+            roles = [roles]
+        roles = [role for role in roles if role in FULL_RUN_ROLES]
+        if not roles:
+            result["errors"].append("Ignored observer record without recognized snapshot role")
+            continue
+        evaluated_at = number(record.get("evaluated_at"))
+        identity = (sha, evaluated_at, tuple(sorted(set(roles))))
+        if identity in seen:
+            continue
+        seen.add(identity)
+        row = {"checkpoint_sha256": sha, "roles": sorted(set(roles)),
+               "checkpoint_name": record.get("checkpoint_name"),
+               "capture_at": number(record.get("capture_at", record.get("captured_at"))),
+               "evaluated_at": evaluated_at,
+               "captured_global_round": number(record.get("captured_global_round", record.get("global_round"))),
+               "requested": number(record.get("requested")), "clears": number(record.get("clears", record.get("wins"))),
+               "defeats": number(record.get("defeats")), "faults": number(record.get("faults")),
+               "truncated": number(record.get("truncated")), "unstarted": number(record.get("unstarted")),
+               "floor_mean": number(record.get("floor_mean")), "reported_complete": record.get("complete") is True}
+        ids = record.get("task_ids", [])
+        ids_valid = isinstance(ids, list) and all(isinstance(value, str) for value in ids)
+        row["task_count"] = len(ids) if ids_valid else None
+        row["matched_panel"] = Counter(ids) == reference if ids_valid and reference else None
+        row["exact_cohort"] = ids_valid and len(ids) == 48 and len(set(ids)) == 48 and row["matched_panel"] is True
+        outcomes = [row[field] for field in ("clears", "defeats", "faults", "truncated", "unstarted")]
+        row["outcome_coverage"] = all(v is not None and v >= 0 for v in outcomes) and sum(outcomes) == row["requested"]
+        row["complete"] = (row["reported_complete"] and row["requested"] == 48 and row["exact_cohort"]
+                           and row["outcome_coverage"] and row["unstarted"] == 0)
+        row["clear_rate"] = row["clears"] / row["requested"] if row["requested"] and row["clears"] is not None else None
+        row["matches_live_role"] = {role: sha == checkpoints.get("best_checkpoint" if role == "selected_best" else "last_checkpoint", {}).get("sha256") for role in row["roles"]}
+        result["history"].append(row)
+    result["history"].sort(key=lambda row: row["evaluated_at"] or 0)
+    for row in result["history"]:
+        for role in row["roles"]:
+            result["latest"][role] = row
+    # Role aliases may deliberately reuse an older exact-SHA observation after a
+    # rollback. The alias, rather than newest eval timestamp, identifies that role.
+    for role, alias in (telemetry.get("latest") or {}).items():
+        if role not in FULL_RUN_ROLES or not isinstance(alias, dict):
+            continue
+        row = next((row for row in reversed(result["history"])
+                    if row["checkpoint_sha256"] == alias.get("checkpoint_sha256")
+                    and row["evaluated_at"] == alias.get("evaluated_at")), None)
+        if row is None:
+            result["errors"].append(f"Observer {role} alias has no matching measured panel")
+            result["latest"][role] = None
+            continue
+        result["latest"][role] = dict(row,
+            role_capture_at=number(alias.get("role_capture_at")),
+            role_captured_global_round=number(alias.get("role_captured_global_round")),
+            reused_evaluation=alias.get("reused_evaluation") is True)
+        result["latest"][role]["matches_live_role"] = {role: row["checkpoint_sha256"] == checkpoints.get("best_checkpoint" if role == "selected_best" else "last_checkpoint", {}).get("sha256")}
+    result["status"] = telemetry.get("status", "evaluated" if result["history"] else "not_yet_evaluated")
+    result["updated_at"] = number(telemetry.get("updated_at", telemetry.get("heartbeat")))
+    result["next_due"] = number(telemetry.get("next_due"))
+    result["interval_seconds"] = number(telemetry.get("interval_seconds"))
+    result["pending"] = telemetry.get("pending") if isinstance(telemetry.get("pending"), dict) else None
+    return result
+
+
 class TelemetryStore:
     """Journal refresh is rate-limited; each changed metric is reduced once."""
     def __init__(self, campaign: Path, refresh_seconds: float = 8):
@@ -163,6 +263,21 @@ class TelemetryStore:
         except (OSError, ValueError) as exc:
             self.errors.append(f"{name}: {type(exc).__name__}")
             return default
+
+    def observer_telemetry(self):
+        """Read exactly the owned sibling observer telemetry, never its models."""
+        parent = self.campaign.parent
+        path = parent / "full_run_eval" / "telemetry.json"
+        if path.resolve().parent != parent / "full_run_eval":
+            self.errors.append("Rejected observer telemetry symlink outside owned directory")
+            return None
+        try:
+            return self.cache.read(path)
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError) as exc:
+            self.errors.append(f"full_run_eval/telemetry.json: {type(exc).__name__}")
+            return None
 
     def metric(self, job, index):
         path = curated_metric_path(self.campaign, job.get("metrics"))
@@ -264,6 +379,20 @@ class TelemetryStore:
         learner_job = next((job for job in reversed(jobs) if job.get("kind") == "train"), {})
         learner_command = learner_job.get("command", [])
         self.snapshot["config"]["inference_device"] = learner_command[learner_command.index("--inference-device") + 1] if "--inference-device" in learner_command else None
+        reference_ids = (j.get("goal_leaders", {}).get("dev_act3", {}).get("quality") or {}).get("cohort", [])
+        observer = self.observer_telemetry()
+        full_run = normalize_full_run(observer, cps, reference_ids)
+        full_run["initial"] = {"checkpoint_sha256": config_record.get("initial_checkpoint_sha256"),
+                               "checkpoint_name": cps["initial_checkpoint"]["name"],
+                               "clears": 0, "requested": 48, "defeats": 48, "faults": 0, "truncated": 0,
+                               "unstarted": 0, "floor_mean": 28.604166666666668, "complete": True,
+                               "reference_date": "2026-10-12", "reference_label": "Original pre-update DEV reference"}
+        baseline = observer.get("baseline", {}) if isinstance(observer, dict) else {}
+        if baseline.get("checkpoint_sha256") == config_record.get("initial_checkpoint_sha256"):
+            full_run["initial"]["saved_metrics_at"] = number(baseline.get("captured_at"))
+            full_run["initial"]["timestamp_kind"] = baseline.get("timestamp_kind")
+        self.snapshot["full_run"] = full_run
+        self.snapshot["errors"] = self.errors.copy()
         self.last_refresh = time.monotonic()
 
     def get(self):
@@ -281,6 +410,12 @@ class TelemetryStore:
             authorized = number(allocation.get("authorized_seconds"))
             used = result["active_used_seconds"]
             result["active_remaining_seconds"] = max(0, authorized - used) if authorized is not None and used is not None else None
+            # Ages are computed per response without mutating the cached observation.
+            full_run = dict(result["full_run"])
+            full_run["latest"] = {role: (dict(row, evaluation_age_seconds=max(0, now-row["evaluated_at"]) if row.get("evaluated_at") is not None else None) if row else None)
+                                  for role, row in full_run["latest"].items()}
+            full_run["observer_heartbeat_age_seconds"] = max(0, now-full_run["updated_at"]) if number(full_run.get("updated_at")) is not None else None
+            result["full_run"] = full_run
             return result
 
 

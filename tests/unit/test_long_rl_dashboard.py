@@ -105,6 +105,92 @@ class DashboardTests(unittest.TestCase):
         self.assertIsNone(result["decisions"][0]["quality"])
         self.assertIsNone(result["decisions"][0]["goal_act"])
 
+    def test_full_run_missing_is_not_zero_and_roles_bind_exact_sha(self):
+        missing = dashboard.normalize_full_run(None, {})
+        self.assertIsNone(missing["latest"]["selected_best"])
+        self.assertIsNone(missing["latest"]["latest_candidate"])
+        self.assertEqual(missing["history"], [])
+        ids = [str(i) for i in range(48)]
+        sha = "a" * 64
+        record = {"roles": ["selected_best", "latest_candidate"], "checkpoint_sha256": sha,
+                  "capture_at": 100, "evaluated_at": 110, "captured_global_round": 14,
+                  "requested": 48, "clears": 1, "defeats": 47, "faults": 0, "truncated": 0,
+                  "unstarted": 0, "complete": True, "floor_mean": 30, "task_ids": ids}
+        checkpoints = {"best_checkpoint": {"sha256": sha}, "last_checkpoint": {"sha256": "b" * 64}}
+        result = dashboard.normalize_full_run({"monitoring_only": True, "panel": "dev_act3", "histories": [record, record]}, checkpoints, ids)
+        self.assertEqual(len(result["history"]), 1)
+        row = result["latest"]["selected_best"]
+        self.assertTrue(row["complete"])
+        self.assertTrue(row["matches_live_role"]["selected_best"])
+        self.assertFalse(row["matches_live_role"]["latest_candidate"])
+        self.assertEqual(row["clear_rate"], 1 / 48)
+        self.assertEqual(row["captured_global_round"], 14)
+        self.assertIs(result["latest"]["selected_best"], result["latest"]["latest_candidate"])
+
+    def test_full_run_alias_can_reuse_old_exact_sha_after_rollback(self):
+        ids = [str(i) for i in range(48)]
+        def record(sha, stamp):
+            return {"roles": ["latest_candidate"], "checkpoint_sha256": sha * 64,
+                    "evaluated_at": stamp, "captured_at": stamp-10, "captured_global_round": stamp,
+                    "requested": 48, "clears": 0, "defeats": 48, "faults": 0, "truncated": 0,
+                    "unstarted": 0, "complete": True, "floor_mean": 28, "task_ids": ids}
+        old, newer = record("a", 100), record("b", 200)
+        alias = dict(old, role="latest_candidate", role_capture_at=300,
+                     role_captured_global_round=300, reused_evaluation=True)
+        result = dashboard.normalize_full_run({"monitoring_only": True, "histories": [old, newer],
+                    "latest": {"latest_candidate": alias}}, {"last_checkpoint": {"sha256": "a"*64}}, ids)
+        row = result["latest"]["latest_candidate"]
+        self.assertEqual(row["evaluated_at"], 100)
+        self.assertEqual(row["role_capture_at"], 300)
+        self.assertTrue(row["reused_evaluation"])
+        self.assertTrue(row["matches_live_role"]["latest_candidate"])
+        self.assertEqual(len(result["history"]), 2)
+
+    def test_full_run_exact_cohort_and_incomplete_outcomes(self):
+        ids = [str(i) for i in range(48)]
+        row = {"role": "selected_best", "checkpoint_sha256": "a" * 64, "evaluated_at": 110,
+               "requested": 48, "clears": 0, "defeats": 48, "faults": 0, "truncated": 0,
+               "unstarted": 0, "complete": True, "floor_mean": 28, "task_ids": ids[:-1] + [ids[0]]}
+        result = dashboard.normalize_full_run({"monitoring_only": True, "histories": [row]}, {}, ids)
+        self.assertFalse(result["history"][0]["matched_panel"])
+        self.assertFalse(result["history"][0]["complete"])
+        row.update(task_ids=ids, defeats=47, unstarted=1)
+        result = dashboard.normalize_full_run({"monitoring_only": True, "histories": [row]}, {}, ids)
+        self.assertTrue(result["history"][0]["matched_panel"])
+        self.assertFalse(result["history"][0]["complete"])
+        row["checkpoint_sha256"] = "short"
+        result = dashboard.normalize_full_run({"monitoring_only": True, "histories": [row]}, {}, ids)
+        self.assertEqual(result["history"], [])
+        self.assertTrue(result["errors"])
+        self.assertFalse(dashboard.normalize_full_run({"monitoring_only": False, "histories": [row]}, {}, ids)["history"])
+
+    def test_full_run_owned_path_cache_and_initial_reference(self):
+        observer = self.campaign.parent / "full_run_eval"
+        # Use a nested owned root so this fixture cannot collide with another test.
+        study = self.campaign / "study"
+        campaign = study / "campaign"
+        campaign.mkdir(parents=True)
+        observer = study / "full_run_eval"
+        observer.mkdir()
+        for name, value in (("journal.json", {}), ("progress.json", {}), ("config.json", {"initial_checkpoint_sha256": "f" * 64})):
+            (campaign / name).write_text(json.dumps(value))
+        telemetry = observer / "telemetry.json"
+        telemetry.write_text(json.dumps({"monitoring_only": True, "histories": []}))
+        store = dashboard.TelemetryStore(campaign)
+        first = store.get()
+        self.assertEqual(first["full_run"]["initial"]["clears"], 0)
+        self.assertEqual(first["full_run"]["initial"]["requested"], 48)
+        self.assertIsNone(first["full_run"]["latest"]["selected_best"])
+        reads = store.cache.reads
+        store.get()
+        self.assertEqual(store.cache.reads, reads)
+        outside = study / "unrelated.json"
+        outside.write_text('{"monitoring_only":true}')
+        telemetry.unlink()
+        telemetry.symlink_to(outside)
+        self.assertIsNone(store.observer_telemetry())
+        self.assertIn("Rejected observer telemetry symlink", store.errors[-1])
+
     def test_http_smoke_routes_read_only(self):
         for name in ("journal.json", "progress.json", "config.json"):
             (self.campaign / name).write_text("{}")
