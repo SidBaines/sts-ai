@@ -158,3 +158,65 @@ class FinalEvidenceTests(unittest.TestCase):
             path.write_text(json.dumps(metrics));record['metrics_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
             (root/'campaign.json').write_text(json.dumps(state))
             self.assertFalse(collect_campaign(root,stage='final',allow_final=True)['final_report_complete'])
+
+    def test_actual_campaign_final_act1_commands_use_frozen_default_max_act(self):
+        import os
+        from dataclasses import replace
+        from unittest.mock import patch
+        from scripts import run_nonllm_campaign as scheduler
+        from scripts.report_nonllm_campaign import final_evidence
+        from sts_policy.campaign_identity import condition_signature
+        from sts_policy.curriculum import TaskSpec,world_split
+        from tests.unit.test_final_campaign_core_freeze import FinalCampaignCoreFreezeTests
+        class CapturedInitialFinals(Exception):pass
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            checkpoints=FinalCampaignCoreFreezeTests().fixture(root)
+            world=next(seed for seed in range(1000,1100) if world_split(seed)=='final')
+            bank_task=TaskSpec(seed=world)
+            (root/'bank/battles.jsonl').write_text(json.dumps(bank_task.to_dict())+'\n')
+            captured={}
+            def capture(name,command,*args,**kwargs):
+                if name=='final_run_act3':raise CapturedInitialFinals
+                captured[name]=list(map(str,command))
+            with patch.object(scheduler,'ROOT',root),patch.object(scheduler,'BANK',root/'bank'),\
+                 patch.object(scheduler,'__file__',str(root/'scripts/run_nonllm_campaign.py')),\
+                 patch.dict(os.environ,{'STS_LIGHTSPEED_BUILD':str(root/'backend')}):
+                runner=scheduler.Campaign(root/'output')
+                runner.state['active_panel_directory']=str(root/'panels')
+                with patch.object(runner,'run',side_effect=capture):
+                    with self.assertRaises(CapturedInitialFinals):runner.final(**checkpoints)
+            freeze=runner.state['frozen_identities']
+            interface=hashlib.sha256()
+            for role,row in sorted(freeze['panel_files'].items()):
+                if role.startswith('src/sts_env/') and role.endswith('.py'):
+                    interface.update(role.removeprefix('src/sts_env/').encode());interface.update(b'\0')
+                    interface.update(Path(row['path']).read_bytes());interface.update(b'\0')
+            environment={'native_module_sha256':freeze['backend']['module']['sha256'],
+                         'sourced_env_manifest':freeze['backend']['provenance'],
+                         'sourced_env_manifest_sha256':freeze['backend']['manifest']['sha256'],
+                         'python_interface_sha256':interface.hexdigest()}
+            self.assertEqual(set(captured),{'final_battle_act1','final_ooc_act1','final_run_act1'})
+            for name,command in captured.items():
+                self.assertNotIn('--max-act',command)
+                kind=command[command.index('--task-kind')+1]
+                horizon=int(command[command.index('--horizon')+1])
+                if kind=='battle':
+                    task=replace(bank_task,horizon=horizon,max_act=1,battle_simulations=200)
+                    ids=[hashlib.sha256(json.dumps(task.to_dict(),sort_keys=True,separators=(',',':')).encode()).hexdigest()]
+                else:ids=freeze['generated_definitions']['panels'][kind+'_act1']['task_ids']
+                config={'split':'final','seed':777,'task_kind':kind,'max_act':1,'horizon':horizon,'simulations':200,
+                        'checkpoint':command[command.index('--checkpoint')+1],'gamma':1.0,'reward_mode':'potential',
+                        'terminal_hp_weight':0.0,'progress_floor_weight':0.05,'goal_act_clear':True}
+                metrics={'command':'evaluate','config':config,'training_environment':environment,
+                         'rounds':[{'task_ids':ids,'episodes':[{'task_id':task_id,'world_seed':index,'task_kind':kind,
+                                    'terminated':True,'outcome':'battle_victory' if kind=='battle' else 'act_clear'}
+                                    for index,task_id in enumerate(ids)],'faults':[]}]}
+                record={'status':'complete','command':command,'condition_signature':condition_signature(command)}
+                evidence=final_evidence(name,metrics,record,classify_panel(metrics),freeze)
+                self.assertTrue(evidence['final_evidence_verified'],evidence['readiness_errors'])
+                metrics['config']['max_act']=3
+                self.assertFalse(final_evidence(name,metrics,record,classify_panel(metrics),freeze)['final_evidence_verified'])
+                metrics['config']['max_act']=1
+                wrong=command+['--max-act','3'];record.update(command=wrong,condition_signature=condition_signature(wrong))
+                self.assertFalse(final_evidence(name,metrics,record,classify_panel(metrics),freeze)['final_evidence_verified'])

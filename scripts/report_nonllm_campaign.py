@@ -115,7 +115,11 @@ def final_evidence(name, metrics, record, classified, frozen):
                           '--horizon':str(horizon), '--simulations':str(frozen['generated_definitions']['simulations'])}
         expected_flags['--kind' if baseline else '--task-kind'] = kind
         for key, value in expected_flags.items():
-            if str(flags.get(key)) != value: errors.append('command differs from frozen protocol: '+key)
+            # The frozen train CLI defaults max_act to 1. Regular final
+            # Act 1 evaluate commands intentionally omit this option. All
+            # other protocol flags remain explicit; baseline defaults differ.
+            effective=flags.get(key, 1 if key=='--max-act' and not baseline else None)
+            if str(effective) != value: errors.append('command differs from frozen protocol: '+key)
         config=metrics.get('config', {})
         if not baseline:
             defaults={'gamma':1.0,'reward_mode':'potential','terminal_hp_weight':0.0,'progress_floor_weight':0.05,'goal_act_clear':True}
