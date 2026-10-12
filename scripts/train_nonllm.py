@@ -133,6 +133,7 @@ def main() -> None:
     parser.add_argument("--simulations", type=int, default=50)
     parser.add_argument("--teacher-simulations", type=int, help="collect DAgger labels during PPO")
     parser.add_argument("--gamma", type=float, default=1.)
+    parser.add_argument("--gae-lambda", type=float, default=.95)
     parser.add_argument("--ppo-epochs", type=int, default=4)
     parser.add_argument("--kl-guard-before-update", action="store_true")
     parser.add_argument("--entropy-coef", type=float, default=.01)
@@ -141,6 +142,8 @@ def main() -> None:
     args = parser.parse_args()
     if min(args.seconds, args.updates, args.batch_size, args.workers, args.episodes, args.threads) <= 0:
         parser.error("time, updates, batch size, workers, episodes and threads must be positive")
+    if not math.isfinite(args.gae_lambda) or not 0. <= args.gae_lambda <= 1.:
+        parser.error("GAE lambda must be finite and within [0, 1]")
     if args.command == "bc" and args.teacher is None:
         parser.error("BC requires --teacher")
     if args.resume and args.checkpoint is None:
@@ -239,7 +242,7 @@ def main() -> None:
                                               forward=forward_policy, device=args.device)
     else:
         tasks = tasks_for(args)
-        ppo = PPOConfig(gamma=args.gamma, learning_rate=args.learning_rate,
+        ppo = PPOConfig(gamma=args.gamma, gae_lambda=args.gae_lambda, learning_rate=args.learning_rate,
                         minibatch_size=args.batch_size, epochs=args.ppo_epochs,
                         entropy_weight=args.entropy_coef, clip_ratio=args.clip_ratio,
                         kl_guard_before_update=args.kl_guard_before_update)
