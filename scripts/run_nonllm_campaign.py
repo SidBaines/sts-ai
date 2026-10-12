@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import sys
 import time
-from sts_policy.campaign_identity import condition_signature, legacy_cache_valid
+from sts_policy.campaign_identity import condition_signature, legacy_cache_valid, semantic_arguments
 from sts_policy.final_freeze import capture_final_freeze, verify_final_freeze, FreezeChangedError
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -123,6 +123,11 @@ class Campaign:
                 pinned = previous.get('condition_signature')
                 if pinned is not None:
                     compatible = pinned['digest'] == signature['digest']
+                    if pinned.get('version') == 'campaign_condition_v1':
+                        # v1 pinned argv order. Migrate only identical effective
+                        # knobs AND the full previously recorded input hashes.
+                        compatible = (semantic_arguments(pinned.get('arguments', [])) == signature['arguments']
+                                      and pinned.get('inputs') == signature['inputs'])
                 else:
                     # These options have separate CPU/native parity evidence.
                     # Only legacy records normalize them; new signatures pin
@@ -134,6 +139,7 @@ class Campaign:
                 if metrics_valid and compatible:
                     previous['metrics_sha256'] = digest
                     previous['condition_signature'] = signature
+                    self.save()
                     return json.loads(metrics.read_text())
         allowance = min(seconds + 90, phase_end - time.time(), DEADLINE - time.time())
         if allowance <= 2:
