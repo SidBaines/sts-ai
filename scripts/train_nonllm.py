@@ -19,7 +19,7 @@ from sts_policy.encoding import ENCODER_VERSION
 from sts_policy.losses import PPOConfig
 from sts_policy.model import CandidateActorCritic
 from sts_policy.model_agent import (collate_public, forward_policy, cached_public_collator,
-                                    CompositeActorCritic)
+                                    CompositeActorCritic, policy_from_payload)
 from sts_policy.training import (train_bc, evaluate_bc, save_checkpoint, load_checkpoint,
                                  file_identity, seed_training)
 from sts_policy.training import warm_optimizer
@@ -49,8 +49,7 @@ def source_model(args) -> tuple[torch.nn.Module, dict[str, Any] | None]:
         payload = load_checkpoint(args.checkpoint)
         if payload["metadata"].get("encoder_version") != ENCODER_VERSION:
             raise ValueError("checkpoint encoder version mismatch")
-        model = CandidateActorCritic(**payload["model_config"])
-        model.load_state_dict(payload["model_state"])
+        model = policy_from_payload(payload)
         return model.to(args.device), payload
     return CandidateActorCritic(args.size, args.context).to(args.device), None
 
@@ -167,13 +166,29 @@ def main() -> None:
             state = load_checkpoint(path)
             if state["metadata"].get("encoder_version") != ENCODER_VERSION:
                 raise ValueError("composite policy encoder mismatch")
-            policy = CandidateActorCritic(**state["model_config"])
-            policy.load_state_dict(state["model_state"])
+            policy = policy_from_payload(state)
+            if not isinstance(policy, CandidateActorCritic):
+                raise ValueError("two-source evaluation requires candidate policy heads")
             policies.append(policy.to(args.device))
         model = CompositeActorCritic(*policies).to(args.device)
+    model_config = model.metadata() if hasattr(model, "metadata") else {}
     metrics: dict[str, Any] = {"command": args.command, "config": {k: str(v) if isinstance(v, Path) else v
                                                                            for k, v in vars(args).items()},
-                               "encoder_version": ENCODER_VERSION, "task_version": TASK_VERSION}
+                               "encoder_version": ENCODER_VERSION, "task_version": TASK_VERSION,
+                               "model_config": model_config}
+    lineage = {}
+    if payload is not None:
+        lineage["parent_policy_checkpoint"] = {"path": str(args.checkpoint),
+                                                "sha256": file_identity(args.checkpoint),
+                                                "model_config": payload["model_config"]}
+        if "composition_provenance" in payload["metadata"]:
+            lineage["composition_provenance"] = payload["metadata"]["composition_provenance"]
+    from sts_policy.composition import training_environment_record
+    lineage["training_environment"] = training_environment_record()
+    metrics["training_environment"] = lineage["training_environment"]
+    lineage["model_kind"] = model_config.get("kind", "candidate")
+    if lineage["model_kind"] == "composite":
+        lineage["model_config_version"] = 2
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     step = payload["step"] if payload and args.resume else 0
     identity = file_identity(args.teacher) if args.command == "bc" else (
@@ -261,7 +276,7 @@ def main() -> None:
                     step += update["steps"]
                     result["update"] = update
                     save_checkpoint(args.output, model, model_config=model.metadata(), optimizer=optimizer, step=step,
-                                    metadata={"encoder_version": ENCODER_VERSION, "data_identity": identity,
+                                    metadata={**lineage, "encoder_version": ENCODER_VERSION, "data_identity": identity,
                                               "reward_config": reward_config, "stage": args.command,
                                               "optimizer_carry": optimizer_carry,
                                               "config": metrics["config"]})
@@ -272,7 +287,7 @@ def main() -> None:
                 worker.close()
     if args.command == "bc":
         save_checkpoint(args.output, model, model_config=model.metadata(), optimizer=optimizer, step=step,
-                        metadata={"encoder_version": ENCODER_VERSION, "data_identity": identity,
+                        metadata={**lineage, "encoder_version": ENCODER_VERSION, "data_identity": identity,
                                   "reward_config": reward_config, "stage": args.command, "config": metrics["config"]})
     metrics["elapsed_seconds"], metrics["optimizer_step"] = time.monotonic() - started, step
     write_metrics(args.metrics or args.output.with_suffix(".metrics.json"), metrics)

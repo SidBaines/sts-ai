@@ -66,7 +66,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
     episodes, faults = [], []
     failed_steps, resets = 0, 0
     timings = {"reset_wait_seconds": 0., "step_wait_seconds": 0., "teacher_wait_seconds": 0.,
-               "policy_seconds": 0., "bootstrap_seconds": 0.}
+               "policy_seconds": 0., "bootstrap_seconds": 0., "fault_wait_seconds": 0.}
     forward_counts = {"actor_batches": 0, "actor_observations": 0, "bootstrap_batches": 0,
                       "bootstrap_observations": 0, "reused_bootstrap_values": 0}
 
@@ -89,14 +89,18 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
             return
         active[slot] = {"task": task, "future": workers[slot].submit("reset", task),
                         "trajectory": [], "labels": [], "obs": None, "last_info": {},
-                        "reward": 0., "steps": 0}
+                        "reward": 0., "steps": 0, "action_trace": hashlib.sha256()}
         resets += 1
 
-    def fault(slot: int, error: Exception) -> None:
+    def fault(slot: int, error: Exception, *, stage: str, wait_seconds: float) -> None:
         nonlocal failed_steps
         entry = active.pop(slot)
         failed_steps += len(entry["trajectory"])
+        timings["fault_wait_seconds"] += wait_seconds
         faults.append({"world_seed": entry["task"].seed, "error": type(error).__name__,
+                       "fault_stage": stage, "wait_seconds": wait_seconds,
+                       "action_trace_sha256": entry["action_trace"].hexdigest(),
+                       "attempted_action_index": entry.get("sample", (None, None))[1],
                        "task_id": task_identity(entry["task"]),
                        "message": str(error), "excluded_transitions": len(entry["trajectory"]),
                        "task_kind": entry["task"].kind})
@@ -115,6 +119,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         state = entry["obs"].get("state", {}) if entry["obs"] is not None else {}
         episodes.append({"world_seed": entry["task"].seed, "task_kind": entry["task"].kind,
                          "task_id": task_identity(entry["task"]),
+                         "action_trace_sha256": entry["action_trace"].hexdigest(),
                          "reward": entry["reward"], "steps": entry["steps"],
                          "termination_reason": "collector_budget" if budget_truncation else info.get("termination_reason", ""),
                          "outcome": info.get("task_outcome") or info.get("outcome", ""),
@@ -144,7 +149,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 if not observation.get("legal_actions"):
                     finish(slot, info)
             except Exception as error:
-                fault(slot, error)
+                fault(slot, error, stage="reset", wait_seconds=time.monotonic() - wait_started)
         if time.monotonic() - started >= max_seconds:
             if deferred_bootstrap:
                 pending_slots = [slot for slot, entry in active.items() if entry.get("awaiting_bootstrap")]
@@ -194,7 +199,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                                                      "phase": active[slot]["obs"].get("phase", ""),
                                                      "source": "dagger"})
                 except Exception as error:
-                    fault(slot, error)
+                    fault(slot, error, stage="teacher_action", wait_seconds=time.monotonic() - wait_started)
         steps = {}
         for slot, (position, log_prob, value) in zip(slots, packed):
             if slot not in active:
@@ -210,7 +215,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 results[slot] = future.result()
                 timings["step_wait_seconds"] += time.monotonic() - wait_started
             except Exception as error:
-                fault(slot, error)
+                fault(slot, error, stage="step", wait_seconds=time.monotonic() - wait_started)
         if results:
             next_slots = list(results)
             bootstrap_slots = ([slot for slot in next_slots if results[slot][3] and not results[slot][2]]
@@ -222,6 +227,9 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 entry = active[slot]
                 position, action, log_prob, value = entry.pop("sample")
                 old_observation = entry["obs"]
+                action_record = {"phase": old_observation.get("phase"),
+                                 "action": old_observation["legal_actions"][position]}
+                entry["action_trace"].update((json.dumps(action_record, sort_keys=True, separators=(",", ":")) + "\n").encode())
                 entry["trajectory"].append(Transition(old_observation, position, action, log_prob, value,
                                                        [True] * len(old_observation["legal_actions"]),
                                                        float(reward), bool(terminated), bool(truncated),

@@ -339,7 +339,8 @@ class TrainingTests(unittest.TestCase):
             original, deferred = collected
             self.assertEqual(original["transitions"], deferred["transitions"])
             self.assertEqual(original["episodes"], deferred["episodes"])
-            self.assertEqual(original["faults"], deferred["faults"])
+            semantic_faults = lambda rows: [{key: value for key, value in row.items() if key != "wait_seconds"} for row in rows]
+            self.assertEqual(semantic_faults(original["faults"]), semantic_faults(deferred["faults"]))
             self.assertEqual(original["teacher_records"], deferred["teacher_records"])
             self.assertGreater(deferred["forward_counts"]["reused_bootstrap_values"], 0)
             self.assertEqual(deferred["forward_counts"]["bootstrap_batches"], 0)

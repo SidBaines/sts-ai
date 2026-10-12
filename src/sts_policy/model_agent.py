@@ -79,8 +79,7 @@ class ModelAgent:
         version = payload["metadata"].get("encoder_version")
         if version != ENCODER_VERSION:
             raise ValueError(f"checkpoint encoder {version!r} differs from {ENCODER_VERSION!r}")
-        self.model = CandidateActorCritic(**payload["model_config"])
-        self.model.load_state_dict(payload["model_state"], strict=True)
+        self.model = policy_from_payload(payload)
         self.model.to(device).eval()
         self.device, self.deterministic = device, deterministic
         self.reset(seed)
@@ -133,6 +132,11 @@ class CompositeActorCritic(torch.nn.Module):
         super().__init__()
         self.combat, self.ooc = combat, ooc
 
+    def metadata(self) -> dict[str, Any]:
+        if not isinstance(self.combat, CandidateActorCritic) or not isinstance(self.ooc, CandidateActorCritic):
+            raise ValueError("serializable composite heads must be CandidateActorCritic policies")
+        return {"kind": "composite", "combat": self.combat.metadata(), "ooc": self.ooc.metadata()}
+
     def forward(self, state, actions, mask):
         # public_candidate_v2 numeric feature 7 is the documented combat flag.
         phase = state[:, 7] > .5
@@ -174,3 +178,44 @@ def make_agent(checkpoint: str | None = None, device: str = "cpu", deterministic
     if checkpoint is None:
         raise ValueError("a policy checkpoint is required")
     return ModelAgent(checkpoint, device, deterministic, seed)
+
+
+def policy_from_config(config: dict[str, Any]) -> torch.nn.Module:
+    """Discriminated policy configuration; absent kind preserves legacy candidates."""
+    if not isinstance(config, dict):
+        raise ValueError("policy model_config must be a dictionary")
+    options = dict(config)
+    kind = options.pop("kind", "candidate")
+    if kind == "candidate":
+        from .encoding import STATE_DIM, ACTION_DIM
+        if set(options) - {"size", "context", "state_dim", "action_dim"}:
+            raise ValueError("unknown candidate model configuration fields")
+        if options.get("state_dim", STATE_DIM) != STATE_DIM or options.get("action_dim", ACTION_DIM) != ACTION_DIM:
+            raise ValueError("policy feature dimensions differ from the current public encoder")
+        return CandidateActorCritic(**options)
+    if kind == "composite":
+        if set(options) != {"combat", "ooc"}:
+            raise ValueError("composite config requires exactly combat and ooc heads")
+        combat = policy_from_config(options["combat"])
+        ooc = policy_from_config(options["ooc"])
+        if not isinstance(combat, CandidateActorCritic) or not isinstance(ooc, CandidateActorCritic):
+            raise ValueError("nested composite policy heads are unsupported")
+        return CompositeActorCritic(combat, ooc)
+    raise ValueError(f"unsupported policy model kind: {kind!r}")
+
+
+def policy_from_payload(payload: dict[str, Any]) -> torch.nn.Module:
+    """Validate the public encoder and exact model structure before loading weights."""
+    from .training import CHECKPOINT_VERSION
+    if payload.get("format_version") != CHECKPOINT_VERSION:
+        raise ValueError("unsupported policy checkpoint version")
+    metadata = payload.get("metadata", {})
+    if not isinstance(metadata, dict) or metadata.get("encoder_version") != ENCODER_VERSION:
+        raise ValueError("checkpoint encoder version mismatch")
+    config = payload.get("model_config")
+    model = policy_from_config(config)
+    kind = config.get("kind", "candidate")
+    if metadata.get("model_kind", kind) != kind:
+        raise ValueError("checkpoint metadata/model-config kind mismatch")
+    model.load_state_dict(payload["model_state"], strict=True)
+    return model

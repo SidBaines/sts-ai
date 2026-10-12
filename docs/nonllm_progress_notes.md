@@ -292,3 +292,23 @@ active. OOC andjointfull-run stages remainrequired; nofinallearnerpanel yet.
   replacement of selected/frozen/current/best checkpoint paths. These final
   supervisor protections are staged; the already-loaded live parent continues
   OOC work and should load them at its next safe restart boundary.
+
+## 2026-10-12 00:41 UTC — explicit native revision, no silent binary replacement
+
+- Found the cause of OOC non-repeatability: automatic resolver stack-constructed
+  BattleContext leaves Player.cc indeterminate. Entropic Brew and attack/skill/
+  power potion discovery index class-specific pools using that field.
+- Ironclad full-control contexts are value-initialized through pybind11; enum
+  zero is Ironclad. Full-run native-teacher collection uses this full-control
+  path; lookahead switches to automatic search and is affected. This only
+  establishes class initialization, not global freedom from simulator UB.
+- Quarantine all old native-auto OOC/lookahead evidence and checkpoints from
+  clean-model selection; preserve them for diagnosis. Old binary8dba remains
+  untouched. Environment-base fix targets a new0.1.1 release after tests.
+- Paused dispatcher51535 at00:40:57 while old OOC0002 finished normally.
+  Fresh campaign will retain full-control combat17 and shared BC initialization,
+  use fresh native-matched banks, and restart OOC from clean supervised weights.
+- New campaign CLI accepts explicit bank/hard-bank/panel/lookahead paths.
+  retained_combat bypasses earlier combat stages, so completed clean combat
+  work need not be repeated. Deadline remains06:30; phaseends remain02:08:46,
+  04:08:46,05:08:46 for OOC, jointAct1, jointAct3.

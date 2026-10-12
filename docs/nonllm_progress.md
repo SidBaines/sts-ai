@@ -1,6 +1,6 @@
 # Non-LLM curriculum experiment progress log
 
-Updated 2026-10-12 00:12:44 UTC. Campaign status: **running**; phase: **combat**.
+Updated 2026-10-12 01:03:15 UTC. Campaign status: **running**; phase: **ooc**.
 
 Allocation: 2026-10-11 20:08:46 UTC → 2026-10-12 06:30:00 UTC. Branch `codex/nonllm-curriculum`, immutable starting release `env-v0.1.0`.
 
@@ -12,6 +12,8 @@ This page is generated from the atomic campaign journal and raw metrics. It incl
 {
   "combat": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/combat_0017.pt",
   "combat_health": "data/nonllm_v1/campaign/health_ablation_4b0ab67c028d/reference.pt",
+  "ooc": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05.pt",
+  "ooc_pilot": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05.pt",
   "shared_bc": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/bc_large_none_lr0.0001.pt"
 }
 ```
@@ -2892,7 +2894,7 @@ Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI
 
 ### 2026-10-12 00:12:30 UTC — ooc_lookahead_matched_dev
 
-Status: **running**. PID 53639; last supervisor heartbeat 2026-10-12 00:12:40 UTC.
+Status: **complete**. Finished 2026-10-12 00:12:45 UTC; exit code 0.
 
 Exact command:
 
@@ -2909,6 +2911,370 @@ Fault evidence: [{"error": "SimulatorTimeout", "excluded_transitions": 30, "mess
 Total job wall time 13.00s.
 
 Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lookahead_matched_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lookahead_matched_dev.log`.
+
+### 2026-10-12 00:12:45 UTC — ooc_warmstart_reference_dev
+
+Status: **complete**. Finished 2026-10-12 00:13:00 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_scripted_matched_bc.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_warmstart_reference_dev.metrics.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_warmstart_reference_dev.metrics.json --task-kind ooc --split dev --world-start 10000 --episodes 32 --seed 777 --horizon 1024 --max-act 1 --simulations 200 --gamma 1 --goal-act-clear --terminal-hp-weight 0 --device cpu --inference-device cpu --workers 8 --threads 2 --seconds 120.0 --fast-observations --fast-replay --deferred-bootstrap
+```
+
+Live collection: 1 rounds, 31 non-fault episodes, 1 surfaced faults, 0 truncations; outcomes {'defeat': 12, 'act_clear': 19}; 1,847 valid transitions.
+
+Mean terminal/cutoff floor 15.48; mean fight HP cost 30.81.
+
+Fault evidence: [{"error": "SimulatorTimeout", "excluded_transitions": 11, "message": "Curriculum step exceeded 10s", "task_id": "1cab65a18600a73714b249dd96c7484ab7ec43720e61acafebac834a506a50f0", "task_kind": "ooc", "world_seed": 10121}].
+
+Total job wall time 12.47s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_warmstart_reference_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_warmstart_reference_dev.log`.
+
+### 2026-10-12 00:13:00 UTC — ooc_lr0.0001_progress0.05
+
+Status: **complete**. Finished 2026-10-12 00:14:35 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_scripted_matched_bc.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.05.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.05.metrics.json --task-kind ooc --split train --world-start 22000 --episodes 64 --seed 11 --horizon 512 --max-act 1 --simulations 200 --gamma 1 --clip-ratio .1 --entropy-coef .01 --goal-act-clear --learning-rate 0.0001 --reward-mode progress --progress-floor-weight 0.05 --terminal-hp-weight 0 --device mps --inference-device cpu --workers 8 --threads 2 --batch-size 1024 --updates 100000 --seconds 90.0 --fast-observations --fast-replay --deferred-bootstrap --warm-optimizer
+```
+
+Live collection: 12 rounds, 764 non-fault episodes, 4 surfaced faults, 0 truncations; outcomes {'act_clear': 514, 'defeat': 250}; 48,665 valid transitions.
+
+Mean terminal/cutoff floor 16.19; mean fight HP cost 25.44.
+
+PPO: 103 optimizer steps; last update {"approx_kl": 0.01027401895055391, "clip_fraction": 0.0096435546875, "early_stop": true, "elapsed_seconds": 1.2670454168692231, "entropy": 0.03932938305661082, "policy_loss": 0.012153716466855258, "preparation_seconds": 0.6987012499012053, "ratio_mean": 0.9988293573260307, "samples": 4151, "steps": 8, "value_loss": 0.07500418275594711}.
+
+Fault evidence: [{"error": "SimulatorTimeout", "excluded_transitions": 41, "message": "Curriculum step exceeded 10s", "task_id": "5f6a994a5ccf4bffa4943b69a394b29b024597c093bd7f5c49b84f60678144fc", "task_kind": "ooc", "world_seed": 22049}, {"error": "SimulatorTimeout", "excluded_transitions": 41, "message": "Curriculum step exceeded 10s", "task_id": "5f6a994a5ccf4bffa4943b69a394b29b024597c093bd7f5c49b84f60678144fc", "task_kind": "ooc", "world_seed": 22049}, {"error": "SimulatorTimeout", "excluded_transitions": 25, "message": "Curriculum step exceeded 10s", "task_id": "630a38b4fe71a86b7dd51be4c17a3d1680ef84b0a4a441dcd6819e8e20384d2c", "task_kind": "ooc", "world_seed": 22081}, {"error": "SimulatorTimeout", "excluded_transitions": 41, "message": "Curriculum step exceeded 10s", "task_id": "5f6a994a5ccf4bffa4943b69a394b29b024597c093bd7f5c49b84f60678144fc", "task_kind": "ooc", "world_seed": 22049}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 90.03s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.05.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.05.log`.
+
+### 2026-10-12 00:14:36 UTC — ooc_lr0.0001_progress0.05_dev
+
+Status: **complete**. Finished 2026-10-12 00:14:41 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.05.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.05_dev.metrics.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.05_dev.metrics.json --task-kind ooc --split dev --world-start 10000 --episodes 32 --seed 777 --horizon 1024 --max-act 1 --simulations 200 --gamma 1 --goal-act-clear --terminal-hp-weight 0 --device cpu --inference-device cpu --workers 8 --threads 2 --seconds 120.0 --fast-observations --fast-replay --deferred-bootstrap
+```
+
+Live collection: 1 rounds, 32 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'defeat': 13, 'act_clear': 19}; 2,000 valid transitions.
+
+Mean terminal/cutoff floor 16.16; mean fight HP cost 32.53.
+
+Total job wall time 2.14s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.05_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.05_dev.log`.
+
+### 2026-10-12 00:14:41 UTC — ooc_lr0.0003_progress0.05
+
+Status: **complete**. Finished 2026-10-12 00:16:16 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_scripted_matched_bc.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05.metrics.json --task-kind ooc --split train --world-start 22000 --episodes 64 --seed 11 --horizon 512 --max-act 1 --simulations 200 --gamma 1 --clip-ratio .1 --entropy-coef .01 --goal-act-clear --learning-rate 0.0003 --reward-mode progress --progress-floor-weight 0.05 --terminal-hp-weight 0 --device mps --inference-device cpu --workers 8 --threads 2 --batch-size 1024 --updates 100000 --seconds 90.0 --fast-observations --fast-replay --deferred-bootstrap --warm-optimizer
+```
+
+Live collection: 14 rounds, 865 non-fault episodes, 4 surfaced faults, 7 truncations; outcomes {'act_clear': 492, 'defeat': 366, 'GameOutcome.UNDECIDED': 7}; 53,577 valid transitions.
+
+Mean terminal/cutoff floor 15.87; mean fight HP cost 33.15.
+
+PPO: 48 optimizer steps; last update {"early_stop": true, "elapsed_seconds": 0.378306332975626, "preparation_seconds": 0.3694246250670403, "samples": 2080, "steps": 0}.
+
+Fault evidence: [{"error": "SimulatorTimeout", "excluded_transitions": 52, "message": "Curriculum step exceeded 10s", "task_id": "e4dc36c8b520193addf181fd365144cca7964c9b414a6496af887de50a3b4a84", "task_kind": "ooc", "world_seed": 22073}, {"error": "SimulatorTimeout", "excluded_transitions": 24, "message": "Curriculum step exceeded 10s", "task_id": "630a38b4fe71a86b7dd51be4c17a3d1680ef84b0a4a441dcd6819e8e20384d2c", "task_kind": "ooc", "world_seed": 22081}, {"error": "SimulatorTimeout", "excluded_transitions": 24, "message": "Curriculum step exceeded 10s", "task_id": "630a38b4fe71a86b7dd51be4c17a3d1680ef84b0a4a441dcd6819e8e20384d2c", "task_kind": "ooc", "world_seed": 22081}, {"error": "SimulatorTimeout", "excluded_transitions": 52, "message": "Curriculum step exceeded 10s", "task_id": "e4dc36c8b520193addf181fd365144cca7964c9b414a6496af887de50a3b4a84", "task_kind": "ooc", "world_seed": 22073}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 90.49s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05.log`.
+
+### 2026-10-12 00:16:16 UTC — ooc_lr0.0003_progress0.05_dev
+
+Status: **complete**. Finished 2026-10-12 00:16:31 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05_dev.metrics.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05_dev.metrics.json --task-kind ooc --split dev --world-start 10000 --episodes 32 --seed 777 --horizon 1024 --max-act 1 --simulations 200 --gamma 1 --goal-act-clear --terminal-hp-weight 0 --device cpu --inference-device cpu --workers 8 --threads 2 --seconds 120.0 --fast-observations --fast-replay --deferred-bootstrap
+```
+
+Live collection: 1 rounds, 31 non-fault episodes, 1 surfaced faults, 0 truncations; outcomes {'defeat': 10, 'act_clear': 21}; 1,886 valid transitions.
+
+Mean terminal/cutoff floor 15.58; mean fight HP cost 25.19.
+
+Fault evidence: [{"error": "SimulatorTimeout", "excluded_transitions": 63, "message": "Curriculum step exceeded 10s", "task_id": "55870348ff47dfab96580daf375d9c9d62622e3fb2f8b71bb91573b47d0c3d6f", "task_kind": "ooc", "world_seed": 10177}].
+
+Total job wall time 12.50s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05_dev.log`.
+
+### 2026-10-12 00:16:31 UTC — ooc_lr0.001_progress0.05
+
+Status: **complete**. Finished 2026-10-12 00:18:06 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_scripted_matched_bc.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.001_progress0.05.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.001_progress0.05.metrics.json --task-kind ooc --split train --world-start 22000 --episodes 64 --seed 11 --horizon 512 --max-act 1 --simulations 200 --gamma 1 --clip-ratio .1 --entropy-coef .01 --goal-act-clear --learning-rate 0.001 --reward-mode progress --progress-floor-weight 0.05 --terminal-hp-weight 0 --device mps --inference-device cpu --workers 8 --threads 2 --batch-size 1024 --updates 100000 --seconds 90.0 --fast-observations --fast-replay --deferred-bootstrap --warm-optimizer
+```
+
+Live collection: 21 rounds, 1294 non-fault episodes, 2 surfaced faults, 8 truncations; outcomes {'act_clear': 861, 'defeat': 425, 'GameOutcome.UNDECIDED': 8}; 78,585 valid transitions.
+
+Mean terminal/cutoff floor 16.07; mean fight HP cost 25.57.
+
+PPO: 40 optimizer steps; last update {"early_stop": true, "elapsed_seconds": 0.2236695410683751, "preparation_seconds": 0.11688275006599724, "samples": 592, "steps": 0}.
+
+Fault evidence: [{"error": "SimulatorTimeout", "excluded_transitions": 14, "message": "Curriculum step exceeded 10s", "task_id": "aab11778018afcdd0bf97dbae620b7c5e7ee93fa0d457d8152ef2b2b2a520690", "task_kind": "ooc", "world_seed": 22042}, {"error": "SimulatorTimeout", "excluded_transitions": 47, "message": "Curriculum step exceeded 10s", "task_id": "edf15da126f82f6fe17abd201ce6816ed04f81e6f01655ee3ff723c7e4ff2a96", "task_kind": "ooc", "world_seed": 22019}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 90.40s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.001_progress0.05.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.001_progress0.05.log`.
+
+### 2026-10-12 00:18:06 UTC — ooc_lr0.001_progress0.05_dev
+
+Status: **complete**. Finished 2026-10-12 00:18:11 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.001_progress0.05.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.001_progress0.05_dev.metrics.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.001_progress0.05_dev.metrics.json --task-kind ooc --split dev --world-start 10000 --episodes 32 --seed 777 --horizon 1024 --max-act 1 --simulations 200 --gamma 1 --goal-act-clear --terminal-hp-weight 0 --device cpu --inference-device cpu --workers 8 --threads 2 --seconds 120.0 --fast-observations --fast-replay --deferred-bootstrap
+```
+
+Live collection: 1 rounds, 32 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'defeat': 12, 'act_clear': 20}; 1,961 valid transitions.
+
+Mean terminal/cutoff floor 16.09; mean fight HP cost 29.84.
+
+Total job wall time 2.09s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.001_progress0.05_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.001_progress0.05_dev.log`.
+
+### 2026-10-12 00:18:11 UTC — ooc_lr0.0001_sparse
+
+Status: **complete**. Finished 2026-10-12 00:19:47 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_scripted_matched_bc.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_sparse.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_sparse.metrics.json --task-kind ooc --split train --world-start 22000 --episodes 64 --seed 11 --horizon 512 --max-act 1 --simulations 200 --gamma 1 --clip-ratio .1 --entropy-coef .01 --goal-act-clear --learning-rate 0.0001 --reward-mode sparse --progress-floor-weight 0.05 --terminal-hp-weight 0 --device mps --inference-device cpu --workers 8 --threads 2 --batch-size 1024 --updates 100000 --seconds 90.0 --fast-observations --fast-replay --deferred-bootstrap --warm-optimizer
+```
+
+Live collection: 10 rounds, 635 non-fault episodes, 5 surfaced faults, 0 truncations; outcomes {'act_clear': 413, 'defeat': 222}; 40,018 valid transitions.
+
+Mean terminal/cutoff floor 16.07; mean fight HP cost 27.20.
+
+PPO: 77 optimizer steps; last update {"early_stop": true, "elapsed_seconds": 0.7858251668512821, "preparation_seconds": 0.675448166904971, "samples": 4020, "steps": 0}.
+
+Fault evidence: [{"error": "SimulatorTimeout", "excluded_transitions": 16, "message": "Curriculum step exceeded 10s", "task_id": "ec9df317fb06b7ab2f897aadf45425626efd1e1cf3932556e646fe2a6cdae6b2", "task_kind": "ooc", "world_seed": 22074}, {"error": "SimulatorTimeout", "excluded_transitions": 53, "message": "Curriculum step exceeded 10s", "task_id": "e4dc36c8b520193addf181fd365144cca7964c9b414a6496af887de50a3b4a84", "task_kind": "ooc", "world_seed": 22073}, {"error": "SimulatorTimeout", "excluded_transitions": 16, "message": "Curriculum step exceeded 10s", "task_id": "ec9df317fb06b7ab2f897aadf45425626efd1e1cf3932556e646fe2a6cdae6b2", "task_kind": "ooc", "world_seed": 22074}, {"error": "SimulatorTimeout", "excluded_transitions": 40, "message": "Curriculum step exceeded 10s", "task_id": "5f6a994a5ccf4bffa4943b69a394b29b024597c093bd7f5c49b84f60678144fc", "task_kind": "ooc", "world_seed": 22049}, {"error": "SimulatorTimeout", "excluded_transitions": 24, "message": "Curriculum step exceeded 10s", "task_id": "630a38b4fe71a86b7dd51be4c17a3d1680ef84b0a4a441dcd6819e8e20384d2c", "task_kind": "ooc", "world_seed": 22081}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 90.75s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_sparse.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_sparse.log`.
+
+### 2026-10-12 00:19:47 UTC — ooc_lr0.0001_sparse_dev
+
+Status: **complete**. Finished 2026-10-12 00:20:02 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_sparse.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_sparse_dev.metrics.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_sparse_dev.metrics.json --task-kind ooc --split dev --world-start 10000 --episodes 32 --seed 777 --horizon 1024 --max-act 1 --simulations 200 --gamma 1 --goal-act-clear --terminal-hp-weight 0 --device cpu --inference-device cpu --workers 8 --threads 2 --seconds 120.0 --fast-observations --fast-replay --deferred-bootstrap
+```
+
+Live collection: 1 rounds, 31 non-fault episodes, 1 surfaced faults, 0 truncations; outcomes {'defeat': 14, 'act_clear': 17}; 1,821 valid transitions.
+
+Mean terminal/cutoff floor 15.26; mean fight HP cost 35.45.
+
+Fault evidence: [{"error": "SimulatorTimeout", "excluded_transitions": 16, "message": "Curriculum step exceeded 10s", "task_id": "1cab65a18600a73714b249dd96c7484ab7ec43720e61acafebac834a506a50f0", "task_kind": "ooc", "world_seed": 10121}].
+
+Total job wall time 12.49s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_sparse_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_sparse_dev.log`.
+
+### 2026-10-12 00:20:02 UTC — ooc_lr0.0001_progress0.02
+
+Status: **complete**. Finished 2026-10-12 00:34:03 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_scripted_matched_bc.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.02.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.02.metrics.json --task-kind ooc --split train --world-start 22000 --episodes 64 --seed 11 --horizon 512 --max-act 1 --simulations 200 --gamma 1 --clip-ratio .1 --entropy-coef .01 --goal-act-clear --learning-rate 0.0001 --reward-mode progress --progress-floor-weight 0.02 --terminal-hp-weight 0 --device mps --inference-device cpu --workers 8 --threads 2 --batch-size 1024 --updates 100000 --seconds 90.0 --fast-observations --fast-replay --deferred-bootstrap --warm-optimizer
+```
+
+Live collection: 20 rounds, 1279 non-fault episodes, 1 surfaced faults, 0 truncations; outcomes {'act_clear': 873, 'defeat': 406}; 81,635 valid transitions.
+
+Mean terminal/cutoff floor 16.25; mean fight HP cost 24.66.
+
+PPO: 177 optimizer steps; last update {"approx_kl": 0.0014614661631640047, "clip_fraction": 0.007339342497289181, "early_stop": true, "elapsed_seconds": 1.0603073749225587, "entropy": 0.035875802394002676, "policy_loss": 0.0010170929599553347, "preparation_seconds": 0.7053694170899689, "ratio_mean": 0.9991263002157211, "samples": 4089, "steps": 4, "value_loss": 0.06753212306648493}.
+
+Fault evidence: [{"error": "SimulatorTimeout", "excluded_transitions": 25, "message": "Curriculum step exceeded 10s", "task_id": "630a38b4fe71a86b7dd51be4c17a3d1680ef84b0a4a441dcd6819e8e20384d2c", "task_kind": "ooc", "world_seed": 22081}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 90.08s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.02.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.02.log`.
+
+### 2026-10-12 00:34:03 UTC — ooc_lr0.0001_progress0.02_dev
+
+Status: **complete**. Finished 2026-10-12 00:34:08 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.02.pt --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.02_dev.metrics.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.02_dev.metrics.json --task-kind ooc --split dev --world-start 10000 --episodes 32 --seed 777 --horizon 1024 --max-act 1 --simulations 200 --gamma 1 --goal-act-clear --terminal-hp-weight 0 --device cpu --inference-device cpu --workers 8 --threads 2 --seconds 120.0 --fast-observations --fast-replay --deferred-bootstrap
+```
+
+Live collection: 1 rounds, 32 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'defeat': 17, 'act_clear': 15}; 1,881 valid transitions.
+
+Mean terminal/cutoff floor 15.34; mean fight HP cost 41.69.
+
+Total job wall time 2.07s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.02_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0001_progress0.02_dev.log`.
+
+### 2026-10-12 00:34:08 UTC — ooc_initial_dev
+
+Status: **complete**. Finished 2026-10-12 00:34:23 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_initial_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_initial_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05.pt --device cpu --threads 2 --workers 8 --episodes 32 --seed 777 --seconds 90 --task-kind ooc --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --horizon 1024 --world-start 10000 --fast-replay
+```
+
+Live collection: 1 rounds, 31 non-fault episodes, 1 surfaced faults, 0 truncations; outcomes {'defeat': 10, 'act_clear': 21}; 1,887 valid transitions.
+
+Mean terminal/cutoff floor 15.58; mean fight HP cost 25.19.
+
+Fault evidence: [{"action_trace_sha256": "4ef93df2cd0cf0919f96a31a4c21b565b4aa81205118c8c5c665ed85be75d048", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 57, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "55870348ff47dfab96580daf375d9c9d62622e3fb2f8b71bb91573b47d0c3d6f", "task_kind": "ooc", "wait_seconds": 10.005190582945943, "world_seed": 10177}].
+
+Total job wall time 12.90s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_initial_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_initial_dev.log`.
+
+### 2026-10-12 00:34:23 UTC — ooc_0000
+
+Status: **complete**. Finished 2026-10-12 00:37:28 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0000.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0000.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind ooc --seed 11 --world-start 20000 --horizon 1024 --gamma 1.0 --clip-ratio 0.1 --entropy-coef 0.01 --terminal-hp-weight 0.0 --learning-rate 0.0003 --reward-mode progress --progress-floor-weight 0.05 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 18 rounds, 2202 non-fault episodes, 6 surfaced faults, 8 truncations; outcomes {'defeat': 848, 'act_clear': 1346, 'GameOutcome.UNDECIDED': 8}; 136,811 valid transitions.
+
+Mean terminal/cutoff floor 16.08; mean fight HP cost 29.98.
+
+PPO: 87 optimizer steps; last update {"early_stop": true, "elapsed_seconds": 0.453256709035486, "preparation_seconds": 0.3383164170663804, "samples": 1920, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "1ed49b5d88d7286905ab728a5482aaed2a7bb6e7091e54162cf8cdb05118274c", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 23, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "dc5f31f82b9fd64cbe56fa2c6a713ead319aeee2569f72ba5df9ae001f05e53f", "task_kind": "ooc", "wait_seconds": 10.006483291042969, "world_seed": 20127}, {"action_trace_sha256": "1ef60eca7b1a2234551a8fb5fe59669aff33c0912a144b271ee13ab144c4fef5", "attempted_action_index": 1, "error": "SimulatorTimeout", "excluded_transitions": 40, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "963103611c433f5b73b5ccc0a8f1a0dc5e36db67bef72e32fbfef2ad7f36cb06", "task_kind": "ooc", "wait_seconds": 10.00438900012523, "world_seed": 20098}, {"action_trace_sha256": "c6bc8895a74c4f6922a7e401c722c505f73f8f06b766227add87ee50fa997d9b", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 13, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "13b7fd159da2ea9509f44e83a41fef7f6346d4c8d38d69ed1620fa411fc9f0d3", "task_kind": "ooc", "wait_seconds": 10.005408791825175, "world_seed": 20119}, {"action_trace_sha256": "8c6c432fc156d94e9e5a7d400fb7d322df845b62f2ff35bcb3dd5e82d5561d84", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 7, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "edac1598b20d9affb9eab3ca08ce0c85733e41f015c3daaf87f90d1996c16447", "task_kind": "ooc", "wait_seconds": 10.005122874863446, "world_seed": 20110}, {"action_trace_sha256": "ce4486b911646e7cef5b78b472bfb2f41cd4891bc23d50354d5da8db630e6597", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 56, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "e6a13e4cd17d06ed1ee8c15aa7a2c85650a2058cd00a1051a1d5ce3825047713", "task_kind": "ooc", "wait_seconds": 10.004888124996796, "world_seed": 20056}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.61s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0000.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0000.log`.
+
+### 2026-10-12 00:37:28 UTC — ooc_0000_dev
+
+Status: **complete**. Finished 2026-10-12 00:37:33 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0000_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0000_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0000.pt --device cpu --threads 2 --workers 8 --episodes 32 --seed 777 --seconds 90 --task-kind ooc --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --horizon 1024 --world-start 10000 --fast-replay
+```
+
+Live collection: 1 rounds, 32 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'defeat': 12, 'act_clear': 20}; 1,907 valid transitions.
+
+Mean terminal/cutoff floor 15.41; mean fight HP cost 28.75.
+
+Total job wall time 2.58s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0000_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0000_dev.log`.
+
+### 2026-10-12 00:37:33 UTC — ooc_0001
+
+Status: **complete**. Finished 2026-10-12 00:40:39 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0001.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0001.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0000.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind ooc --seed 12 --world-start 20128 --horizon 1024 --gamma 1.0 --clip-ratio 0.1 --entropy-coef 0.01 --terminal-hp-weight 0.0 --learning-rate 0.0003 --reward-mode progress --progress-floor-weight 0.05 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 9 rounds, 1032 non-fault episodes, 12 surfaced faults, 8 truncations; outcomes {'defeat': 355, 'act_clear': 669, 'GameOutcome.UNDECIDED': 8}; 63,707 valid transitions.
+
+Mean terminal/cutoff floor 15.98; mean fight HP cost 26.54.
+
+PPO: 39 optimizer steps; last update {"early_stop": true, "elapsed_seconds": 0.2844787500798702, "preparation_seconds": 0.18037541606463492, "samples": 1008, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "30b99d3a9d619af16ea1166e970deb7e1ddf7b7aa953034063985c7443eedad6", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 5, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "5da0e82d309958aa09f6150825f7a77fd600d43a69fad6ec5c749ef6996371c8", "task_kind": "ooc", "wait_seconds": 10.005468709161505, "world_seed": 20192}, {"action_trace_sha256": "6ba1e944d90a05f5a9a1e69aba096470a59d7a4e360bf0b5f7160b5801c823fd", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 11, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "38641529fdf60a050ca2834f720bbf690cb7d5ce3d7b6dc377039655185b5eb2", "task_kind": "ooc", "wait_seconds": 10.005384749965742, "world_seed": 20171}, {"action_trace_sha256": "cc6b3477ff3004da46161da70bf3b5dc79bb16ac15903c286ca2c6101a7b11c4", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 7, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "a110bcf77180bc9b8c5f474c1085e98e67b9a2f5e7636e0011c7635114f76e5c", "task_kind": "ooc", "wait_seconds": 9.991535709006712, "world_seed": 20136}, {"action_trace_sha256": "688ef84da69a8d25260b67612b46ce018df66d300e9f7762b453422a472fbe40", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 56, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "e2450e7b7e421f9866c4d91840cb1943ac5eb4ac54f91eda6dda9933dd0056ca", "task_kind": "ooc", "wait_seconds": 10.005331791937351, "world_seed": 20202}, {"action_trace_sha256": "8745c5bd15002a2b011a29a4545d9ea43e9eed82e2ef9e963730dbf672d35d42", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 7, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "a110bcf77180bc9b8c5f474c1085e98e67b9a2f5e7636e0011c7635114f76e5c", "task_kind": "ooc", "wait_seconds": 10.004680332960561, "world_seed": 20136}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.44s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0001.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0001.log`.
+
+### 2026-10-12 00:40:39 UTC — ooc_0001_dev
+
+Status: **complete**. Finished 2026-10-12 00:40:54 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0001_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0001_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0001.pt --device cpu --threads 2 --workers 8 --episodes 32 --seed 777 --seconds 90 --task-kind ooc --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --horizon 1024 --world-start 10000 --fast-replay
+```
+
+Live collection: 1 rounds, 31 non-fault episodes, 1 surfaced faults, 0 truncations; outcomes {'defeat': 17, 'act_clear': 14}; 1,866 valid transitions.
+
+Mean terminal/cutoff floor 15.77; mean fight HP cost 42.94.
+
+Fault evidence: [{"action_trace_sha256": "59376f68b8d394e680dea577b9086c8b06de59246f0edace0aa570dc33e1549f", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 59, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "55870348ff47dfab96580daf375d9c9d62622e3fb2f8b71bb91573b47d0c3d6f", "task_kind": "ooc", "wait_seconds": 10.0047323750332, "world_seed": 10177}].
+
+Total job wall time 12.99s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0001_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0001_dev.log`.
+
+### 2026-10-12 00:40:54 UTC — ooc_0002
+
+Status: **running**. PID 60003; last supervisor heartbeat 2026-10-12 00:40:54 UTC.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0002.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0002.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_lr0.0003_progress0.05.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind ooc --seed 13 --world-start 20256 --horizon 1024 --gamma 1.0 --clip-ratio 0.1 --entropy-coef 0.01 --terminal-hp-weight 0.0 --learning-rate 0.0003 --reward-mode progress --progress-floor-weight 0.05 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 15 rounds, 1800 non-fault episodes, 8 surfaced faults, 7 truncations; outcomes {'act_clear': 1141, 'defeat': 652, 'GameOutcome.UNDECIDED': 7}; 113,732 valid transitions.
+
+Mean terminal/cutoff floor 16.07; mean fight HP cost 27.93.
+
+PPO: 69 optimizer steps; last update {"early_stop": true, "elapsed_seconds": 0.23324058298021555, "preparation_seconds": 0.13065512501634657, "samples": 605, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "df95b170dcff8d5925d36ee12cf3ae07692d9e6f3088e00a9242183bcc422c9c", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 18, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "5d4cee117ad9f5640c4c840977deb28100b21c149e04de9c14f84775b5748d76", "task_kind": "ooc", "wait_seconds": 10.004850582918152, "world_seed": 20409}, {"action_trace_sha256": "b4e06dabf84faee23645887be153053925683df0fc5deacd9ad52689e670af0b", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 18, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "5d4cee117ad9f5640c4c840977deb28100b21c149e04de9c14f84775b5748d76", "task_kind": "ooc", "wait_seconds": 10.00642825011164, "world_seed": 20409}, {"action_trace_sha256": "b4e06dabf84faee23645887be153053925683df0fc5deacd9ad52689e670af0b", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 18, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "5d4cee117ad9f5640c4c840977deb28100b21c149e04de9c14f84775b5748d76", "task_kind": "ooc", "wait_seconds": 10.005144875030965, "world_seed": 20409}, {"action_trace_sha256": "b4e06dabf84faee23645887be153053925683df0fc5deacd9ad52689e670af0b", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 18, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "5d4cee117ad9f5640c4c840977deb28100b21c149e04de9c14f84775b5748d76", "task_kind": "ooc", "wait_seconds": 10.002754166955128, "world_seed": 20409}, {"action_trace_sha256": "b4e06dabf84faee23645887be153053925683df0fc5deacd9ad52689e670af0b", "attempted_action_index": 0, "error": "SimulatorTimeout", "excluded_transitions": 18, "fault_stage": "step", "message": "Curriculum step exceeded 10s", "task_id": "5d4cee117ad9f5640c4c840977deb28100b21c149e04de9c14f84775b5748d76", "task_kind": "ooc", "wait_seconds": 10.004041124833748, "world_seed": 20409}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 181.36s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0002.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/ooc_0002.log`.
 
 ## Reproduce or resume
 

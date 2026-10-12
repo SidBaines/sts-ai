@@ -3,7 +3,27 @@
 Latest milestones first. [Detailed log](nonllm_progress.md) ·
 [Decision/recovery notes](nonllm_progress_notes.md) · [Plan](nonllm_curriculum_plan.md).
 Deadline: **12 October, 06:30 UTC**. All results below are development results;
-final evaluation remains embargoed.
+final evaluation remains embargoed. **Native-auto OOC/lookahead evidence before
+00:41 UTC is quarantined after the character-class bug described below.**
+
+## 2026-10-12 00:41 UTC — native character-class bug; OOC results quarantined
+
+Repeated OOC evaluations differed across fresh processes. The automatic combat
+binding constructed a player with an **uninitialized character class**, then
+used it to index class-specific potion/card pools. This can corrupt decisions
+or hang. Longer timeouts did not restore repeatability.
+
+**Decision:** preserve the old binary and all results, build a corrected backend
+separately, and restart OOC with fresh revision-matched data. Earlier native-auto
+OOC and lookahead results are exploratory and must not support competence claims.
+The full-control combat policy is retained: its Python-created contexts initialize
+Ironclad correctly for this specific defect. Other simulator limitations remain.
+
+The fix initializes the class from the game, initializes automatic combat safely,
+and checks UB flags before returning a playout. It will receive a new release
+tag only after regression, smoke and reproducibility checks. The deadline stays
+**06:30 UTC**; joint full-run training and independent final assessment are still
+pending. [Detailed revision notes](nonllm_native_revision.md).
 
 ## 2026-10-12 00:07 UTC — combat phase finished; OOC warm starts running
 

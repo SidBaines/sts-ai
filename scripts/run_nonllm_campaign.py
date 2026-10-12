@@ -16,6 +16,7 @@ import subprocess
 import sys
 import time
 from sts_policy.campaign_identity import condition_signature, legacy_cache_valid
+from sts_policy.final_freeze import capture_final_freeze, verify_final_freeze, FreezeChangedError
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = ROOT / '.venv/bin/python'
@@ -102,6 +103,8 @@ class Campaign:
         return None
 
     def run(self, name, command, seconds, phase_end=DEADLINE):
+        if name.startswith('final_') and self.state.get('frozen_identities'):
+            verify_final_freeze(self.state['frozen_identities'], backend_build_dir=self.state['native_build'])
         metrics = self.destination / (name + '.metrics.json')
         try:
             signature = condition_signature(command)
@@ -422,9 +425,82 @@ class Campaign:
         self.save()
         return best
 
+    def joint_screen(self, single, composite, references, end):
+        """Equal-budget full-control pilots for shared versus phase specialists."""
+        basic = {'gamma': 1., 'clip_ratio': .1, 'entropy_coef': .01, 'learning_rate': 1e-4,
+                 'reward_mode': 'progress', 'progress_floor_weight': .05, 'terminal_hp_weight': 0.}
+        saved = self.state.get('phase_progress', {}).get('joint_act1')
+        if saved is not None:
+            return Path(saved['best']), self.state.get('joint_effective_settings', basic)
+        self.state['phase'] = 'joint_shared_composite_screen'
+        panel = [{'name': 'reference_' + label, 'checkpoint': str(path), 'score': score, 'role': 'reference'}
+                 for label, score, path in references]
+        for label, source in [('single', single), ('composite', composite)]:
+            checkpoint, result = self.train('joint_pilot_' + label, 'ppo', source, seconds=90, end=end,
+                          task_kind='run', world_start=30000, episodes=64, horizon=2048,
+                          max_act=1, seed=11, deferred_bootstrap=True, **basic)
+            if checkpoint is not None:
+                evaluation = self.evaluate('joint_pilot_' + label + '_dev', checkpoint, 'run',
+                                           episodes=32, end=end, horizon=2048, max_act=1)
+                if evaluation is not None and panel_complete(evaluation):
+                    panel.append({'name': label, 'checkpoint': str(checkpoint), 'score': self.score(evaluation),
+                                  'role': 'pilot', 'settings': basic})
+            self.state['joint_pilot_panel'] = panel
+            self.save()
+        eligible = [row for row in panel if row['score'] > -1e8]
+        if not eligible:
+            raise RuntimeError('No completed full-control joint development cohort')
+        # Stable ordering retains a simpler untrained reference on an exact tie.
+        best = max(eligible, key=lambda row: row['score'])
+        self.state['joint_effective_settings'] = basic
+        self.state['selected']['joint_pilot'] = best['checkpoint']
+        self.save()
+        return Path(best['checkpoint']), basic
+
+    def freeze_final_selection(self, shared, combat, ooc):
+        """Keep chosen policies, task definitions and backend immutable for finals."""
+        checkpoints = {'shared': shared, 'combat': combat, 'ooc': ooc}
+        existing = self.state.get('frozen_identities')
+        if existing is not None:
+            verify_final_freeze(existing, backend_build_dir=self.state['native_build'])
+            for label, path in checkpoints.items():
+                if str(Path(path).resolve()) != existing['checkpoints'][label]['path']:
+                    raise FreezeChangedError('Final checkpoint selection changed: ' + label)
+            return existing
+        from sts_policy.curriculum import TaskSpec, world_split, TASK_VERSION
+        panels = Path(self.state.get('active_panel_directory', str(PANELS)))
+        files = {'act1_battles': BANK/'battles.jsonl', 'act1_manifest': BANK/'manifest.json',
+                 'later_act_battles': panels/'final_hard.jsonl', 'panel_manifest': panels/'panels.json'}
+        files.update({str(path.relative_to(ROOT)): path for path in sorted((ROOT/'src/sts_policy').glob('*.py'))})
+        for path in (ROOT/'scripts/train_nonllm.py', ROOT/'scripts/evaluate_nonllm_baselines.py', Path(__file__)):
+            files[str(path.relative_to(ROOT))] = path
+        worlds, seed = [], 10000
+        while len(worlds) < 21:
+            if world_split(seed) == 'final':
+                worlds.append(seed)
+            seed += 1
+        definitions = {'task_version': TASK_VERSION, 'split': 'final', 'world_start': 10000,
+                       'worlds': worlds, 'episodes': 21, 'shuffle_seed': 777,
+                       'horizon': 2048, 'simulations': 200, 'goal_act_clear': True,
+                       'native_boss_multiplier': 2.0, 'panels': {}}
+        for label, kind, max_act in [('ooc_act1','ooc',1),('run_act1','run',1),('run_act3','run',3)]:
+            tasks = [TaskSpec(seed=world, kind=kind, horizon=2048, max_act=max_act,
+                              battle_simulations=200).to_dict() for world in worlds]
+            identities = [hashlib.sha256(json.dumps(task,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+                          for task in tasks]
+            definitions['panels'][label] = {'kind': kind, 'max_act': max_act, 'task_ids': identities}
+        expected = json.loads((BANK/'manifest.json').read_text())['provenance']['native_provenance']
+        snapshot = capture_final_freeze(checkpoints, files, self.state['native_build'],
+                    generated_definitions=definitions, expected_backend_provenance=expected)
+        self.state['frozen_selection'] = {**{key: str(path) for key,path in checkpoints.items()}, 'at': snapshot['frozen_at']}
+        self.state['frozen_identities'] = snapshot
+        atomic(self.destination/'frozen_identities.json', snapshot)
+        self.save()
+        return snapshot
+
     def final(self, shared, combat, ooc):
         self.state['phase'] = 'frozen_final_evaluation'
-        self.state['frozen_selection'] = {'shared': str(shared), 'combat': str(combat), 'ooc': str(ooc), 'at': time.time()}
+        self.freeze_final_selection(shared, combat, ooc)
         self.save()
         for kind, checkpoint, episodes in [('battle', combat, 160), ('ooc', ooc, 21), ('run', shared, 21)]:
             self.evaluate('final_' + kind + '_act1', checkpoint, kind, 'final', episodes, seconds=300)
@@ -575,40 +651,48 @@ class Campaign:
 
     def main(self):
         shared = self.screen()
-        if HARD_BANK.exists():
-            hardened, _ = self.train('combat_act3_bc', 'bc', shared, seconds=180,
-                                     teacher=HARD_BANK/'teacher.jsonl', dev_teacher=BANK/'teacher.jsonl', phase='combat')
-            if hardened:
-                before = self.evaluate_combat('combat_hardening_before_dev', shared)
-                after = self.evaluate_combat('combat_hardening_after_dev', hardened)
-                if self.score(after) >= self.score(before) - 5:
-                    shared = hardened
-        combat_start, combat_settings = self.ppo_screen('combat', shared, 'battle', INITIAL+14400,
-                                                   tasks=BANK/'battles.jsonl', horizon=256)
-
-        if (EXPANDED_PANELS/'panels.json').exists() and 'combat' not in self.state.get('phase_progress',{}):
-            self.state['active_panel_directory']=str(EXPANDED_PANELS)
-            promoted=[]
-            for candidate in self.state['combat_pilot_panel'][:3]:
-                checkpoint=Path(candidate['checkpoint'])
-                evaluation=self.evaluate_combat(checkpoint.stem+'_expanded_dev',checkpoint,episodes=64)
-                promoted.append((self.score(evaluation),checkpoint,candidate['settings']))
-            promoted.sort(key=lambda x:x[0],reverse=True)
-            combat_start,combat_settings=promoted[0][1],promoted[0][2]
-            self.state['combat_expanded_promotion']=[{'score':score,'checkpoint':str(path),'settings':recipe} for score,path,recipe in promoted]
+        retained = self.state.get('retained_combat')
+        if retained is not None:
+            combat = Path(retained['checkpoint'])
+            if not combat.is_file():
+                raise RuntimeError('Retained combat checkpoint is missing')
+            self.state['selected']['combat'] = str(combat)
             self.save()
-        rehearsal=ROOT/'data/nonllm_curriculum/native_rehearsal/teacher.jsonl'
-        if rehearsal.exists():self.state['native_rehearsal']=str(rehearsal)
-        self.state['combat_effective_settings']=combat_settings
-        combat = self.curriculum('combat', combat_start, INITIAL+14400, 'battle',
-                                 tasks=BANK/'battles.jsonl', horizon=256, teacher_simulations=200,
-                                 **combat_settings)
+        else:
+            if HARD_BANK.exists():
+                hardened, _ = self.train('combat_act3_bc', 'bc', shared, seconds=180,
+                                         teacher=HARD_BANK/'teacher.jsonl', dev_teacher=BANK/'teacher.jsonl', phase='combat')
+                if hardened:
+                    before = self.evaluate_combat('combat_hardening_before_dev', shared)
+                    after = self.evaluate_combat('combat_hardening_after_dev', hardened)
+                    if self.score(after) >= self.score(before) - 5:
+                        shared = hardened
+            combat_start, combat_settings = self.ppo_screen('combat', shared, 'battle', INITIAL+14400,
+                                                       tasks=BANK/'battles.jsonl', horizon=256)
+
+            if (EXPANDED_PANELS/'panels.json').exists() and 'combat' not in self.state.get('phase_progress',{}):
+                self.state['active_panel_directory']=str(EXPANDED_PANELS)
+                promoted=[]
+                for candidate in self.state['combat_pilot_panel'][:3]:
+                    checkpoint=Path(candidate['checkpoint'])
+                    evaluation=self.evaluate_combat(checkpoint.stem+'_expanded_dev',checkpoint,episodes=64)
+                    promoted.append((self.score(evaluation),checkpoint,candidate['settings']))
+                promoted.sort(key=lambda x:x[0],reverse=True)
+                combat_start,combat_settings=promoted[0][1],promoted[0][2]
+                self.state['combat_expanded_promotion']=[{'score':score,'checkpoint':str(path),'settings':recipe} for score,path,recipe in promoted]
+                self.save()
+            rehearsal=ROOT/'data/nonllm_curriculum/native_rehearsal/teacher.jsonl'
+            if rehearsal.exists():self.state['native_rehearsal']=str(rehearsal)
+            self.state['combat_effective_settings']=combat_settings
+            combat = self.curriculum('combat', combat_start, INITIAL+14400, 'battle',
+                                     tasks=BANK/'battles.jsonl', horizon=256, teacher_simulations=200,
+                                     **combat_settings)
         if 'ooc' not in self.state.get('phase_progress', {}):
             self.state['phase'] = 'ooc_warmstarts'
             self.save()
         specialist, _ = self.train('ooc_specialist_bc', 'bc', shared, seconds=120, phase='ooc')
         ooc_start = specialist or shared
-        if LOOKAHEAD_BANK.exists():
+        if LOOKAHEAD_BANK.exists() and not self.state.get('quarantine_lookahead', False):
             matched_scripted=self.destination/'ooc_matched_scripted_teacher.jsonl'
             with (LOOKAHEAD_BANK/'teacher.jsonl').open() as source_rows,matched_scripted.open('w') as output:
                 for line in source_rows:
@@ -637,20 +721,44 @@ class Campaign:
             initial_panel.append((self.score(evaluation), checkpoint))
         composite_dev=self.evaluate_composite('joint_start_composite_dev',combat,ooc,end=INITIAL+28800)
         self.state['composite_initial_dev_score']=self.score(composite_dev)
-        initial_panel.sort(reverse=True)
+        initial_panel.sort(key=lambda row: row[0], reverse=True)
         self.state['joint_start_panel'] = [{'score': score, 'checkpoint': str(path)} for score, path in initial_panel]
+        from sts_policy.composition import compose_checkpoint
+        composite = self.destination/'joint_initial_composite.pt'
+        composition_path = composite.with_suffix('.composition.json')
+        if not composite.is_file() or not composition_path.is_file():
+            report = compose_checkpoint(combat, ooc, composite)
+            atomic(composition_path, report)
+        else:
+            report = json.loads(composition_path.read_text())
+        self.state['joint_composition'] = report
+        references = [('single_' + str(index), score, path) for index, (score,path) in enumerate(initial_panel)]
+        references.append(('composite', self.score(composite_dev), composite))
         self.save()
-        full = self.curriculum('joint_act1', initial_panel[0][1], INITIAL+28800, 'run',
-                              world_start=30000, horizon=2048, reward_mode='progress', learning_rate=1e-4)
+        joint_start, joint_settings = self.joint_screen(initial_panel[0][1], composite, references, INITIAL+28800)
+        full = self.curriculum('joint_act1', joint_start, INITIAL+28800, 'run',
+                              world_start=30000, horizon=2048, **joint_settings)
         full = self.curriculum('joint_act3', full, INITIAL+32400, 'run',
-                              world_start=40000, horizon=4096, max_act=3, reward_mode='progress', learning_rate=1e-4)
+                              world_start=40000, horizon=4096, max_act=3, **joint_settings)
         self.final(full, combat, ooc)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=ROOT/'data/nonllm_v1/campaign')
+    parser.add_argument('--bank', type=Path, help='Fresh Act 1 teacher bank for this native revision')
+    parser.add_argument('--hard-bank', type=Path, help='Fresh later-act teacher bank for this revision')
+    parser.add_argument('--panels', type=Path, help='Frozen panels for this revision')
+    parser.add_argument('--lookahead-bank', type=Path, help='Revision-matched optional OOC lookahead bank')
     args = parser.parse_args()
+    if args.bank is not None:
+        BANK = args.bank.resolve()
+    if args.hard_bank is not None:
+        HARD_BANK = args.hard_bank.resolve()
+    if args.panels is not None:
+        PANELS = EXPANDED_PANELS = args.panels.resolve()
+    if args.lookahead_bank is not None:
+        LOOKAHEAD_BANK = args.lookahead_bank.resolve()
     args.output.mkdir(parents=True, exist_ok=True)
     campaign_lock = (args.output/'campaign.lock').open('w')
     fcntl.flock(campaign_lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)

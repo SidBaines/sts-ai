@@ -10,15 +10,19 @@ action representation, alternatives, budgets and evaluation gates. The maintaine
 and compact evidence; the [automatic progress log](nonllm_progress.md) records
 exact commands and measurements, including failures.
 
-As of 2026-10-12 00:07 UTC, architecture and combat hyperparameter selection are
+As of 2026-10-12 00:41 UTC, architecture and combat hyperparameter selection are
 complete, and combat training has finished. The selected combat checkpoint wins
 44/48 Act 1 and 30/32 later-act development fights, matching native reference
 win counts on these panels. Expanded banks include Act 3 development/final
 fights from 15/12 worlds. Matched HP controls did not pass the integrated Act 1
 selection gate. These are repeated selection results, not final-test estimates.
 
-OOC specialist BC is running; matched native/lookahead warm starts and five PPO
-controls follow. Subsequent OOC PPO and joint full-run training remain pending.
+A native automatic-combat character-class bug was diagnosed. Old OOC and
+lookahead results are quarantined; the original native binary and artifacts
+remain intact. A separately built corrected backend and fresh data will restart
+OOC from supervised full-control weights. The retained combat evidence is clean
+for this specific class-initialization defect, with remaining UB limits noted.
+Joint full-run training is still pending.
 Final data is embargoed until
 selection freezes. The last full regression gate passed **289 tests**, with native
 gates enabled, plus a bounded core smoke and reproducible full-control model CLI
