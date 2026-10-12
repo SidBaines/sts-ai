@@ -12,6 +12,8 @@ and experiment-specific reward shaping belong in adapters or branches created
 from a release tag. The `environment-base` branch receives environment fixes;
 `env-v0.1.0` identifies the first tested release.
 
+On the `codex/nonllm-curriculum` experiment branch, the optional non-LLM adapter trains and runs candidate-action policies. See [agent and training usage](docs/nonllm_agent_usage.md), the [latest-first experiment summary](docs/nonllm_summary.md), and the [detailed curriculum plan](docs/nonllm_curriculum_plan.md). Active native-assisted experiments use the corrected `env-v0.1.1` backend; the original release remains available.
+
 ## Install and build
 
 Use Python 3.10–3.13, Git, CMake, and a C++ compiler. On macOS install the Xcode
