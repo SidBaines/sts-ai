@@ -33,6 +33,7 @@ class LightspeedHybridEnv:
         build_dir: str | None = None,
         combat_observation: str = "legacy",
         public_combat_state: bool | None = None,
+        preserve_card_instances: bool = False,
     ) -> None:
         if combat_control not in ("search", "llm"):
             raise ValueError(f"combat_control must be 'search' or 'llm', got {combat_control!r}")
@@ -62,6 +63,9 @@ class LightspeedHybridEnv:
         # adds the human-visible card type, and v3 adds opt-in computed damage plus
         # arithmetic derived only from the displayed/structured public values.
         self.combat_observation = combat_observation
+        # The legacy low-level view remains available for historical checks.
+        # The v2 core opts in to exact instance routing and typed mechanics.
+        self.preserve_card_instances = preserve_card_instances
         # Live combat state when an in-combat decision is pending; None otherwise.
         # Its presence is what distinguishes a combat decision from an out-of-combat
         # one (see `phase`).
@@ -170,14 +174,10 @@ class LightspeedHybridEnv:
     def _action_views(self) -> tuple[list[Any], list[LegalAction], list[int]]:
         """Build the display action list and a map back to raw-action indices.
 
-        In combat, collapse actions whose descriptions are byte-identical: two
-        copies of the same card played from different hand slots (or otherwise
-        equivalent actions) produce the same description and the same resulting
-        state, so listing both only inflates and confuses the menu (~36% of combat
-        decisions had a duplicate). The chosen display index maps to the FIRST raw
-        action carrying that description. This is safe because same-named enemy
-        targets are disambiguated in the action text (``-> NAME [enemy i]``), so an
-        identical description really does mean an interchangeable action.
+        The repaired view preserves every legal raw action. Description equality
+        is insufficient for equivalence: free-once/retained instances can produce
+        different next resources and hands. Legacy description deduplication is
+        retained only when preserve_card_instances is false for historical views.
 
         Out of combat the list stays 1:1 (indices and order unchanged), so the
         out-of-combat trace shape and reproducibility are untouched.
@@ -185,7 +185,8 @@ class LightspeedHybridEnv:
         raw = self.raw_actions()
         event = dict(self.gc.public_event()) if self.bc is None and hasattr(self.gc, "public_event") else {}
         ctx = self._action_context()
-        dedup = self.bc is not None  # combat only
+        exact_instances = getattr(self, "preserve_card_instances", False)
+        dedup = self.bc is not None and not exact_instances
         display: list[LegalAction] = []
         display_to_raw: list[int] = []
         seen: set[str] = set()
@@ -203,6 +204,18 @@ class LightspeedHybridEnv:
                         ctx,
                         include_card_type=observation in _TYPED_COMBAT_OBSERVATIONS,
                     )
+                if exact_instances and str(action.action_type()).rsplit(".", 1)[-1] == "CARD":
+                    mechanics = dict(self.bc.public_action(action))
+                    card = mechanics["card"]
+                    source_index = int(mechanics["source_index"])
+                    tags = [f"hand {source_index}"]
+                    if card["free_to_play_once"]:
+                        tags.append("free once")
+                    if card["retain"]:
+                        tags.append("retained")
+                    if mechanics["free_to_play"] and not card["x_cost"]:
+                        description = re.sub(r"\(cost -?\d+\)", "(cost 0)", description, count=1)
+                    description += " [" + "; ".join(tags) + "]"
             else:
                 description = action.describe(ctx)
                 match = re.fullmatch(r"event option (\d+)", description)
@@ -221,6 +234,18 @@ class LightspeedHybridEnv:
     def legal_actions(self) -> list[LegalAction]:
         _, display, _ = self._action_views()
         return display
+
+    def public_inventory(self) -> dict[str, Any]:
+        """Copy only the native public inventory view, never arbitrary objects."""
+        return dict(self.gc.public_inventory())
+
+    def public_action_metadata(self) -> list[dict[str, Any]]:
+        """Typed current choices aligned to the repaired public menu indices."""
+        if not getattr(self, "preserve_card_instances", False):
+            raise RuntimeError("typed action metadata requires the repaired instance menu")
+        raw, display, mapping = self._action_views()
+        context = self._action_context()
+        return [dict(context.public_action(raw[raw_index])) for raw_index in mapping]
 
     def display_index_for_bits(self, bits: int) -> int:
         """Map native search actions, including collapsed duplicates, to the menu."""
@@ -369,13 +394,10 @@ class LightspeedHybridEnv:
         self.advance_to_decision()
         if self.bc is None:
             raise RuntimeError("public_combat_cards requires a pending combat decision")
-        return dict(
-            self.bc.public_cards(
-                include_card_type=(
-                    self.combat_observation in _TYPED_COMBAT_OBSERVATIONS
-                )
-            )
-        )
+        kwargs = {"include_card_type": self.combat_observation in _TYPED_COMBAT_OBSERVATIONS}
+        if getattr(self, "preserve_card_instances", False):
+            kwargs["include_mechanics"] = True
+        return dict(self.bc.public_cards(**kwargs))
 
     def public_combat_player(self) -> dict[str, Any]:
         """Return public player resources, named powers, stance, and counters."""
@@ -509,14 +531,7 @@ class LightspeedHybridEnv:
                     {
                         "recent_actions": list(self._combat_recent_actions),
                         "player": dict(self.bc.public_player()),
-                        "cards": dict(
-                            self.bc.public_cards(
-                                include_card_type=(
-                                    self.combat_observation
-                                    in _TYPED_COMBAT_OBSERVATIONS
-                                )
-                            )
-                        ),
+                        "cards": self.public_combat_cards(),
                         "relics": [dict(relic) for relic in self.bc.public_relics()],
                         "potions": dict(self.bc.public_potions()),
                     }

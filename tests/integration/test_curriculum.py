@@ -132,10 +132,11 @@ class NativeCurriculumTests(unittest.TestCase):
                         self.assertEqual(left, right)
                         break
                 self.assertTrue(term_a or trunc_a)
-            # Both modes must exclude the same known flagged-invalid native world.
+            # This world used to hit the unconditional Ironclad Discovery flag.
+            # The repaired native path is healthy, and caches must preserve it.
             bad_ref = collect_world(reference, 2005, epsilon_ooc=0.05, epsilon_combat=0.02)
             bad_fast = collect_world(fast, 2005, epsilon_ooc=0.05, epsilon_combat=0.02)
-            self.assertEqual(bad_ref["status"], "simulator_fault")
+            self.assertEqual(bad_ref["status"], "ok")
             self.assertEqual(bad_fast["status"], bad_ref["status"])
-            self.assertEqual(bad_fast["error"], bad_ref["error"])
+            self.assertEqual(bad_fast.get("error"), bad_ref.get("error"))
             self.assertEqual(bad_fast["records"], bad_ref["records"])

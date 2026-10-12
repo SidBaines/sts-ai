@@ -1,5 +1,7 @@
 # Environment base: contract and maintenance
 
+The current experiment branch also contains an **unreleased 0.2.0 candidate** with a changed public menu/typed mechanics contract. See [public-v2 migration and validation](environment_public_v2.md). Historical env-v0.1.0/env-v0.1.1 tags and their worktrees remain unchanged; this candidate is not a new signed release or complete simulator-fidelity certification.
+
 This branch extracts the reusable Slay the Spire environment from the original
 research harness. Its scope is game state, legal actions, stepping, baseline
 policies, build provenance, replay, and an agent CLI. Model clients, datasets,

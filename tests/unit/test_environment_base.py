@@ -36,6 +36,10 @@ class FakeBackend:
                 "cur_hp": 80, "max_hp": 80, "undefined_behavior_evoked": self.undefined}
     def legal_actions(self):
         return [Action()]
+    def public_inventory(self):
+        return {"deck": [], "relics": [], "potions": {"slots": [], "capacity": 3}}
+    def public_action_metadata(self):
+        return [{"kind": "out_of_combat"}]
     def describe_state(self):
         return "state\nAscension: 0"
     def map_graph(self):
@@ -218,7 +222,7 @@ class EnvironmentTests(unittest.TestCase):
         backend.legal_actions = lambda: [Action(bits=123)]
         env, _ = self.make(backend)
         observation, _ = env.reset(seed=3)
-        self.assertEqual(set(observation["legal_actions"][0]), {"index", "description"})
+        self.assertEqual(set(observation["legal_actions"][0]), {"index", "description", "public"})
         # Draw-selector native bits can name different private draw-vector slots
         # for otherwise identical public cards. They must not reach a policy.
         backend.legal_actions = lambda: [Action(bits=987)]

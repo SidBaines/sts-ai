@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..7dca98a 100644
+index a9afe35..27b8625 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1435 @@
+@@ -9,24 +9,1690 @@
 
  #include <sstream>
  #include <algorithm>
@@ -292,7 +292,8 @@ index a9afe35..7dca98a 100644
 +    }
 +}
 +
-+pybind11::dict publicCardDict(const CardInstance &card, bool includeCardType=false) {
++pybind11::dict publicCardDict(const CardInstance &card, bool includeCardType=false,
++                             bool includeMechanics=false) {
 +    pybind11::dict d;
 +    d["name"] = publicCardName(card);
 +    d["label"] = publicCardLabel(card, includeCardType);
@@ -304,13 +305,31 @@ index a9afe35..7dca98a 100644
 +    d["cost_for_turn"] = static_cast<int>(card.costForTurn);
 +    d["free_to_play_once"] = card.freeToPlayOnce;
 +    d["retain"] = card.retain;
++    if (includeMechanics) {
++        d["base_name"] = std::string(card.getName());
++        d["rarity"] = titleCase(cardRarityStrings[static_cast<int>(getCardRarity(card.getId()))]);
++        d["x_cost"] = card.isXCost();
++        d["requires_target"] = card.requiresTarget();
++        d["exhaust"] = card.doesExhaust();
++        d["ethereal"] = card.isEthereal();
++        d["self_retain"] = card.hasSelfRetain();
++        // Only displayed instance counters cross the public boundary. Internal
++        // card unique IDs and arbitrary specialData are deliberately excluded.
++        if (card.getId() == CardId::RAMPAGE || card.getId() == CardId::RITUAL_DAGGER
++                || card.getId() == CardId::GENETIC_ALGORITHM) {
++            d["special_data"] = static_cast<int>(card.specialData);
++        } else {
++            d["special_data"] = pybind11::none();
++        }
++    }
 +    return d;
 +}
 +
-+pybind11::list publicCardGroupList(const CardGroups &groups, bool includeCardType=false) {
++pybind11::list publicCardGroupList(const CardGroups &groups, bool includeCardType=false,
++                                 bool includeMechanics=false) {
 +    pybind11::list out;
 +    for (const auto &entry : groups) {
-+        auto d = publicCardDict(entry.second.first, includeCardType);
++        auto d = publicCardDict(entry.second.first, includeCardType, includeMechanics);
 +        d["count"] = entry.second.second;
 +        out.append(d);
 +    }
@@ -325,7 +344,8 @@ index a9afe35..7dca98a 100644
 +    const BattleContext &bc, const search::Action &a, bool includeCardType=false,
 +    bool includeComputedDamage=false);
 +
-+pybind11::dict publicCards(const BattleContext &bc, bool includeCardType=false) {
++pybind11::dict publicCards(const BattleContext &bc, bool includeCardType=false,
++                         bool includeMechanics=false) {
 +    pybind11::dict result;
 +    result["order_semantics"] = "hand is indexed; draw/discard/exhaust are unordered aggregates";
 +    result["turn"] = bc.turn;
@@ -338,7 +358,7 @@ index a9afe35..7dca98a 100644
 +
 +    pybind11::list hand;
 +    for (int i = 0; i < bc.cards.cardsInHand; ++i) {
-+        auto d = publicCardDict(bc.cards.hand[i], includeCardType);
++        auto d = publicCardDict(bc.cards.hand[i], includeCardType, includeMechanics);
 +        d["index"] = i;
 +        hand.append(d);
 +    }
@@ -346,15 +366,15 @@ index a9afe35..7dca98a 100644
 +    result["draw"] = publicCardGroupList(
 +        aggregatePublicCards(
 +            bc.cards.drawPile.begin(), bc.cards.drawPile.end(), includeCardType),
-+        includeCardType);
++        includeCardType, includeMechanics);
 +    result["discard"] = publicCardGroupList(
 +        aggregatePublicCards(
 +            bc.cards.discardPile.begin(), bc.cards.discardPile.end(), includeCardType),
-+        includeCardType);
++        includeCardType, includeMechanics);
 +    result["exhaust"] = publicCardGroupList(
 +        aggregatePublicCards(
 +            bc.cards.exhaustPile.begin(), bc.cards.exhaustPile.end(), includeCardType),
-+        includeCardType);
++        includeCardType, includeMechanics);
 +    if (bc.inputState == InputState::CARD_SELECT) {
 +        pybind11::dict selection;
 +        selection["type"] = std::string(
@@ -1400,6 +1420,241 @@ index a9afe35..7dca98a 100644
 +    return result;
 +}
 +
++// Typed public mechanics for the versioned environment adapter. These views
++// never contain native action bits, RNG state, card unique IDs or draw order.
++pybind11::dict publicGameCard(const Card &card) {
++    return publicCardDict(CardInstance(card), true, true);
++}
++
++pybind11::dict publicInventory(const GameContext &gc) {
++    pybind11::dict result;
++    pybind11::list deck;
++    for (int i = 0; i < gc.deck.size(); ++i) {
++        auto card = publicGameCard(gc.deck.cards[i]);
++        card["index"] = i;  // visible deck/selection routing, not hidden draw order
++        card["bottled"] = gc.deck.isCardBottled(i);
++        deck.append(card);
++    }
++    result["deck"] = deck;
++    pybind11::list relics;
++    for (const auto &relic : gc.relics.relics) {
++        pybind11::dict d;
++        d["name"] = std::string(getRelicName(relic.id));
++        d["counter"] = relic.data;
++        relics.append(d);
++    }
++    result["relics"] = relics;
++    pybind11::dict potions;
++    potions["capacity"] = static_cast<int>(gc.potionCapacity);
++    pybind11::list slots;
++    int occupied = 0;
++    for (int i = 0; i < gc.potionCapacity && i < 5; ++i) {
++        pybind11::dict d;
++        const auto potion = gc.potions[i];
++        const bool empty = potion == Potion::EMPTY_POTION_SLOT || potion == Potion::INVALID;
++        d["index"] = i;
++        d["empty"] = empty;
++        if (empty) { d["name"] = pybind11::none(); }
++        else { d["name"] = std::string(safePotionName(potion)); ++occupied; }
++        slots.append(d);
++    }
++    potions["slots"] = slots;
++    potions["occupied"] = occupied;
++    result["potions"] = potions;
++    result["boss"] = std::string(monsterEncounterStrings[static_cast<int>(gc.boss)]);
++    return result;
++}
++
++pybind11::dict publicBattleAction(const BattleContext &bc, const search::Action &a) {
++    if (!a.isValidAction(bc)) { throw std::runtime_error("public action is not currently legal"); }
++    pybind11::dict d;
++    switch (a.getActionType()) {
++        case search::ActionType::CARD: {
++            const auto &card = bc.cards.hand[a.getSourceIdx()];
++            d["kind"] = "play_card";
++            d["source_kind"] = "hand";
++            d["source_index"] = a.getSourceIdx();
++            d["card"] = publicCardDict(card, true, true);
++            d["free_to_play"] = card.isFreeToPlay(bc);
++            d["energy_cost"] = card.isFreeToPlay(bc) ? 0
++                : card.isXCost() ? static_cast<int>(bc.player.energy)
++                : static_cast<int>(card.costForTurn);
++            d["x_energy"] = card.isXCost() ? static_cast<int>(bc.player.energy) : 0;
++            pybind11::list targets;
++            int base = -1;
++            if (card.getType() == CardType::ATTACK && !card.isXCost()) {
++                if (card.getId() == CardId::RITUAL_DAGGER) { base = card.specialData; }
++                else if (card.getId() == CardId::MIND_BLAST) { base = bc.cards.drawPile.size(); }
++                else if (!hasSpecialDamageFormula(card.getId())) {
++                    base = getBaseDamage(card.getId(), card.isUpgraded());
++                } else { base = getSpecialDamageBase(bc, card); }
++            }
++            if (card.requiresTarget()) {
++                d["target_index"] = a.getTargetIdx();
++            }
++            const bool targetsAll = !card.requiresTarget()
++                && (getUntargetedDamageBase(card) >= 0
++                    || card.getId() == CardId::WHIRLWIND || card.getId() == CardId::SHOCKWAVE);
++            d["targets_all"] = targetsAll;
++            for (int i = 0; i < bc.monsters.monsterCount; ++i) {
++                if (!bc.monsters.arr[i].isAlive()
++                        || (!card.requiresTarget() && !targetsAll)
++                        || (card.requiresTarget() && i != a.getTargetIdx())) { continue; }
++                pybind11::dict target;
++                target["index"] = i;
++                const bool known = base >= 0 && (card.requiresTarget()
++                    || getUntargetedDamageBase(card) >= 0);
++                target["damage_known"] = known;
++                if (known) {
++                    const int hits = getHitCount(card.getId(), card.isUpgraded());
++                    const int per = bc.calculateCardDamage(card, i, base);
++                    target["damage_per_hit"] = per;
++                    target["hits"] = hits;
++                    target["damage_total"] = per * hits;
++                }
++                targets.append(target);
++            }
++            d["targets"] = targets;
++            break;
++        }
++        case search::ActionType::POTION: {
++            d["kind"] = a.getTargetIdx() > 5
++                ? "discard_potion" : "drink_potion";
++            d["source_kind"] = "potion";
++            d["source_index"] = a.getSourceIdx();
++            d["potion"] = std::string(safePotionName(bc.potions[a.getSourceIdx()]));
++            if (potionRequiresTarget(bc.potions[a.getSourceIdx()])
++                    && a.getTargetIdx() >= 0 && a.getTargetIdx() < bc.monsters.monsterCount) {
++                d["target_index"] = a.getTargetIdx();
++            }
++            break;
++        }
++        case search::ActionType::SINGLE_CARD_SELECT: {
++            d["kind"] = "select_card";
++            const auto task = bc.cardSelectInfo.cardSelectTask;
++            const int idx = a.getSelectIdx();
++            d["selection_type"] = std::string(cardSelectTaskStrings[static_cast<int>(task)]);
++            // A draw/exhaust selection index is engine routing. Its numeric
++            // value must not expose hidden pile order. The visible choice label
++            // and public card identity remain available to the adapter.
++            const CardInstance *card = nullptr;
++            switch (task) {
++                case CardSelectTask::CODEX:
++                case CardSelectTask::DISCOVERY:
++                    if (idx >= 0 && idx < static_cast<int>(bc.cardSelectInfo.cards.size())) {
++                        d["card"] = publicCardDict(CardInstance(bc.cardSelectInfo.cards[idx]), true, true);
++                        d["source_kind"] = "offer";
++                    } else { d["kind"] = "skip_card"; }
++                    break;
++                case CardSelectTask::ARMAMENTS: case CardSelectTask::DUAL_WIELD:
++                case CardSelectTask::EXHAUST_ONE: case CardSelectTask::FORETHOUGHT:
++                case CardSelectTask::WARCRY:
++                    if (idx >= 0 && idx < bc.cards.cardsInHand) { card = &bc.cards.hand[idx]; }
++                    d["source_kind"] = "hand";
++                    d["source_index"] = idx;
++                    break;
++                case CardSelectTask::HEADBUTT: case CardSelectTask::HOLOGRAM:
++                case CardSelectTask::LIQUID_MEMORIES_POTION:
++                    if (idx >= 0 && idx < static_cast<int>(bc.cards.discardPile.size())) { card = &bc.cards.discardPile[idx]; }
++                    d["source_kind"] = "discard";
++                    break;
++                case CardSelectTask::SECRET_TECHNIQUE: case CardSelectTask::SECRET_WEAPON:
++                    if (idx >= 0 && idx < static_cast<int>(bc.cards.drawPile.size())) { card = &bc.cards.drawPile[idx]; }
++                    d["source_kind"] = "draw";
++                    break;
++                case CardSelectTask::EXHUME:
++                    if (idx >= 0 && idx < static_cast<int>(bc.cards.exhaustPile.size())) { card = &bc.cards.exhaustPile[idx]; }
++                    d["source_kind"] = "exhaust";
++                    break;
++                default: break;
++            }
++            if (card != nullptr) { d["card"] = publicCardDict(*card, true, true); }
++            break;
++        }
++        case search::ActionType::MULTI_CARD_SELECT: {
++            d["kind"] = "select_cards";
++            d["selection_type"] = std::string(cardSelectTaskStrings[static_cast<int>(bc.cardSelectInfo.cardSelectTask)]);
++            pybind11::list selected;
++            for (int i = 0; i < bc.cards.cardsInHand && i < 10; ++i) {
++                if (a.bits & (1u << i)) {
++                    auto card = publicCardDict(bc.cards.hand[i], true, true);
++                    card["index"] = i;
++                    selected.append(card);
++                }
++            }
++            d["selected_cards"] = selected;
++            break;
++        }
++        case search::ActionType::END_TURN:
++            d["kind"] = "end_turn";
++            break;
++    }
++    return d;
++}
++
++pybind11::dict publicGameAction(const GameContext &gc, const search::GameAction &a) {
++    if (!a.isValidAction(gc)) { throw std::runtime_error("public action is not currently legal"); }
++    pybind11::dict d;
++    const int i = a.getIdx1(), j = a.getIdx2();
++    d["screen"] = std::string(screenStateName(gc.screenState));
++    d["kind"] = "out_of_combat";
++    if (a.isPotionAction()) {
++        d["kind"] = a.isPotionDiscard() ? "discard_potion" : "drink_potion";
++        d["potion"] = std::string(safePotionName(gc.potions[i]));
++        return d;
++    }
++    if (gc.screenState == ScreenState::CARD_SELECT && i < gc.info.toSelectCards.size()) {
++        d["kind"] = "select_card";
++        d["card"] = publicGameCard(gc.info.toSelectCards[i].card);
++        d["selection_type"] = static_cast<int>(gc.info.selectScreenType);
++    } else if (gc.screenState == ScreenState::REWARDS) {
++        const auto &r = gc.info.rewardsContainer;
++        switch (a.getRewardsActionType()) {
++            case search::GameAction::RewardsActionType::CARD:
++                if (i < r.cardRewardCount && j < r.cardRewards[i].size()) {
++                    d["kind"] = "take_card"; d["card"] = publicGameCard(r.cardRewards[i][j]);
++                } else { d["kind"] = "skip_card"; }
++                break;
++            case search::GameAction::RewardsActionType::GOLD:
++                d["kind"] = "take_gold"; d["gold_gain"] = r.gold[i]; break;
++            case search::GameAction::RewardsActionType::RELIC:
++                d["kind"] = "take_relic"; d["relic"] = std::string(getRelicName(r.relics[i])); break;
++            case search::GameAction::RewardsActionType::POTION:
++                d["kind"] = "take_potion"; d["potion"] = std::string(safePotionName(r.potions[i])); break;
++            default: break;
++        }
++    } else if (gc.screenState == ScreenState::BOSS_RELIC_REWARDS && i < 3) {
++        d["kind"] = "take_relic"; d["relic"] = std::string(getRelicName(gc.info.bossRelics[i]));
++    } else if (gc.screenState == ScreenState::SHOP_ROOM) {
++        const auto &shop = gc.info.shop;
++        switch (a.getRewardsActionType()) {
++            case search::GameAction::RewardsActionType::CARD:
++                d["kind"] = "buy_card"; d["card"] = publicGameCard(shop.cards[i]); d["price"] = shop.cardPrice(i); break;
++            case search::GameAction::RewardsActionType::RELIC:
++                d["kind"] = "buy_relic"; d["relic"] = std::string(getRelicName(shop.relics[i])); d["price"] = shop.relicPrice(i); break;
++            case search::GameAction::RewardsActionType::POTION:
++                d["kind"] = "buy_potion"; d["potion"] = std::string(safePotionName(shop.potions[i])); d["price"] = shop.potionPrice(i); break;
++            case search::GameAction::RewardsActionType::CARD_REMOVE:
++                d["kind"] = "remove_card"; d["price"] = shop.removeCost; break;
++            case search::GameAction::RewardsActionType::SKIP:
++                d["kind"] = "leave"; break;
++            default: break;
++        }
++    } else if (gc.screenState == ScreenState::MAP_SCREEN) {
++        d["kind"] = "map";
++        if (gc.curMapNodeY < 14) { d["map_x"] = i; d["map_y"] = gc.curMapNodeY + 1; }
++    } else if (gc.screenState == ScreenState::REST_ROOM) {
++        if (i == 0) {
++            d["kind"] = "rest";
++            const int baseHeal = gc.fractionMaxHp(0.3f)
++                + (gc.hasRelic(RelicId::REGAL_PILLOW) ? 15 : 0);
++            d["heal"] = gc.hasRelic(RelicId::MARK_OF_THE_BLOOM) ? 0
++                : std::max(0, std::min(baseHeal, static_cast<int>(gc.maxHp - gc.curHp)));
++        } else if (i == 1) { d["kind"] = "smith"; }
++    }
++    return d;
++}
++
 +} // namespace
 +
  PYBIND11_MODULE(slaythespire, m) {
@@ -1438,7 +1693,7 @@ index a9afe35..7dca98a 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -39,7 +1450,232 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -39,7 +1705,235 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("boss_simulation_multiplier", &search::ScumSearchAgent2::bossSimulationMultiplier, "bonus multiplier to the simulation count for boss fights")
          .def_readwrite("pause_on_card_reward", &search::ScumSearchAgent2::pauseOnCardReward, "causes the agent to pause so as to cede control to the user when it encounters a card reward choice")
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
@@ -1590,7 +1845,10 @@ index a9afe35..7dca98a 100644
 +           "contents, relic inventory/live counters, and current-turn counters")
 +        .def("public_cards", &publicCards,
 +             pybind11::arg("include_card_type") = false,
++             pybind11::arg("include_mechanics") = false,
 +             "structured public cards: indexed hand plus sorted/aggregated unordered piles; never draw order")
++        .def("public_action", &publicBattleAction, pybind11::arg("action"),
++             "typed current public action mechanics; no bits, unique IDs, hidden pile positions or future state")
 +        .def("public_player", &publicPlayer,
 +             "structured public player resources, named powers/statuses, stance, and current-turn counters")
 +        .def("public_relics", &publicRelics,
@@ -1672,7 +1930,7 @@ index a9afe35..7dca98a 100644
 
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
-@@ -55,6 +1691,14 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1949,14 @@ PYBIND11_MODULE(slaythespire, m) {
               [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
               "add a card to the deck"
          )
@@ -1687,11 +1945,15 @@ index a9afe35..7dca98a 100644
          .def("remove_card",
              [](GameContext &gc, int idx) {
                  if (idx < 0 || idx >= gc.deck.size()) {
-@@ -75,6 +1719,43 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +1977,47 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
 +    gameContext.def("legal_actions", &search::GameAction::getAllActionsInState)
++        .def("public_inventory", &publicInventory,
++             "public deck, relic counters, potion slots and visible boss; no hidden RNG or future outcomes")
++        .def("public_action", &publicGameAction, pybind11::arg("action"),
++             "typed current public reward/shop/selection mechanics")
 +        .def("describe_state", &describeGameState)
 +        .def("map_graph", [](const GameContext &gc) {
 +            // Structured act map for the MAP_SCREEN. Python (sts_ai.glossary) walks
@@ -1731,7 +1993,7 @@ index a9afe35..7dca98a 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -84,7 +1765,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -84,7 +2027,8 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("cur_map_node_x", &GameContext::curMapNodeX)
          .def_readwrite("cur_map_node_y", &GameContext::curMapNodeY)
          .def_readwrite("cur_room", &GameContext::curRoom)
@@ -1741,7 +2003,7 @@ index a9afe35..7dca98a 100644
          .def_readwrite("boss", &GameContext::boss)
 
          .def_readwrite("cur_hp", &GameContext::curHp)
-@@ -836,5 +2518,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +2780,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
@@ -1872,8 +2134,55 @@ index ffa449b..711bb31 100644
 
          void stepOutOfCombatPolicy(GameContext &gc);
          void cardSelectPolicy(GameContext &gc);
+diff --git a/src/combat/Actions.cpp b/src/combat/Actions.cpp
+index 93db96f..e8360ec 100644
+--- a/src/combat/Actions.cpp
++++ b/src/combat/Actions.cpp
+@@ -5,6 +5,9 @@
+ #include "combat/Actions.h"
+ #include "combat/BattleContext.h"
+ #include "game/Game.h"
++#include "constants/CardPools.h"
++
++#include <stdexcept>
+
+ using namespace sts;
+
+@@ -564,7 +567,31 @@ Action Actions::PutRandomCardsInDrawPile(CardType type, int count) {
+ Action Actions::DiscoveryAction(CardType type, int amount) {
+     return {[=] (BattleContext &bc) {
+         bc.haveUsedDiscoveryAction = true;
+-        bc.openDiscoveryScreen(sts::generateDiscoveryCards(bc.cardRandomRng, bc.player.cc, type), amount);
++        // INVALID denotes the Discovery card's untyped class pool. Upstream
++        // marked every use as undefined, although the Ironclad implementation
++        // supplies a complete selection path. Other class pools remain missing.
++        if (type == CardType::INVALID && bc.player.cc != CharacterClass::IRONCLAD) {
++            bc.undefinedBehaviorEvoked = true;
++            throw std::runtime_error("Discovery class-card generation only supports Ironclad");
++        }
++        const auto offers = sts::generateDiscoveryCards(bc.cardRandomRng, bc.player.cc, type);
++        if (type == CardType::INVALID) {
++            for (int i = 0; i < 3; ++i) {
++                bool inSupportedPool = false;
++                for (int j = 0; j < CombatCardPool::getPoolSize(bc.player.cc); ++j) {
++                    inSupportedPool |= offers[i] == CombatCardPool::getCardAt(bc.player.cc, j);
++                }
++                bool duplicate = false;
++                for (int j = 0; j < i; ++j) {
++                    duplicate |= offers[i] == offers[j];
++                }
++                if (!inSupportedPool || offers[i] == CardId::INVALID || duplicate) {
++                    bc.undefinedBehaviorEvoked = true;
++                    throw std::runtime_error("Discovery produced invalid class-card offers");
++                }
++            }
++        }
++        bc.openDiscoveryScreen(offers, amount);
+     }};
+ }
+
 diff --git a/src/combat/BattleContext.cpp b/src/combat/BattleContext.cpp
-index 965faef..b5860ef 100644
+index 965faef..1d88da6 100644
 --- a/src/combat/BattleContext.cpp
 +++ b/src/combat/BattleContext.cpp
 @@ -6,12 +6,52 @@
@@ -1968,6 +2277,15 @@ index 965faef..b5860ef 100644
          }
 
          if (inputState != InputState::EXECUTING_ACTIONS) {
+@@ -1283,7 +1335,7 @@ void BattleContext::useSkillCard() {
+             break;
+
+         case CardId::DISCOVERY:
+-            undefinedBehaviorEvoked = true;
++            // DiscoveryAction validates the supported pool before opening its menu.
+             addToBot(Actions::DiscoveryAction(CardType::INVALID, 1));
+             break;
+
 @@ -2232,13 +2284,17 @@ void BattleContext::obtainPotion(Potion p) {
  }
 

@@ -3,9 +3,11 @@ import random
 import json
 from pathlib import Path
 import unittest
+from unittest.mock import patch
+from sts_env._backend.lightspeed import LightspeedHybridEnv
 from sts_env.env import SimulatorError
 from sts_policy.curriculum import TaskSpec
-from sts_policy.workers import CurriculumWorker
+from sts_policy.workers import CurriculumEpisode, CurriculumWorker
 from tests.support import requires_simulator
 
 
@@ -44,33 +46,22 @@ class FastReplayTests(unittest.TestCase):
             self.paired(spec)
 
     def test_native_fault_prefix_remains_fault_in_both_paths(self):
-        prefix, previews = [], []
-        with CurriculumWorker({"fast_observations": True}) as worker:
-            seed = 2005
-            rng = random.Random(seed ^ 0x1F513)
-            obs, _ = worker.reset(TaskSpec(seed=seed, kind="run"))
-            for _ in range(1500):
-                action = worker.teacher_action(50)
-                if rng.random() < (0.05 if obs["phase"] == "out_of_combat" else 0.02):
-                    action = rng.randrange(len(obs["legal_actions"]))
-                prefix.append(action)
-                previews.append(obs["phase"] == "out_of_combat")
-                try:
-                    obs, _, term, trunc, _ = worker.step(action)
-                except SimulatorError:
-                    break
-                if term or trunc:
-                    self.fail("Expected seeded invalid trajectory")
-            else:
-                self.fail("Expected seeded native fault")
-        spec = TaskSpec(seed=2005, kind="run", prefix=tuple(prefix), ooc_previews=tuple(previews))
+        # The former world-2005 fixture depended on a false Discovery flag now
+        # repaired. Inject a reported sticky fault after a real native action to
+        # test both replay guards deterministically, independently of RNG/layout.
+        original = LightspeedHybridEnv.step
+        def reported_fault(env, index):
+            result = original(env, index)
+            env._undefined_behavior_evoked = True
+            return result
+        spec = TaskSpec(seed=3, kind="run", prefix=(0,))
         messages = []
         for fast in (False, True):
-            with CurriculumWorker({"fast_observations": True, "fast_replay": fast}) as worker:
+            episode = CurriculumEpisode({"fast_replay": fast})
+            with patch.object(LightspeedHybridEnv, "step", reported_fault):
                 with self.assertRaises(SimulatorError) as raised:
-                    worker.reset(spec)
+                    episode.reset(spec)
                 messages.append(str(raised.exception))
-                self.assertIsNone(worker._process)
         self.assertEqual(messages[0], messages[1])
         self.assertIn("undefined behavior", messages[0])
 

@@ -45,3 +45,9 @@ The 18:01 UTC phase diagnosis used 64 matched TRAIN starts and the exact192 DEV 
 ## Independent critique on 12 October
 
 A separate [training critique](nonllm_training_critique_2026-10-12.md) reviews the first campaign and both longer runs. New bounded CPU probes confirm non-equivalent action deduplication, exact encoder information loss, selected critic menu limitations, delayed strategic credit, and missing learning/evidence telemetry. The review branch preserves executable probes and output hashes. These are proposals and diagnosis only: no optimizer update, campaign resumption, new final evaluation, or runtime source revision occurred. V2 remains operator-paused with its remaining allocation unchanged.
+
+## Authorized repaired training study
+
+The user subsequently authorized implementing the critique in the current worktree with primary CPU/GPU access until approximately 13 October 07:30 UTC. The old v1/v2 studies remain preserved. The [new plan](nonllm_v3_plan.md) and [latest summary](nonllm_v3_summary.md) track implementation and scientific acceptance separately.
+
+The unreleased candidate environment 0.2.0/public-v2/native-API-2 repairs action-instance identity, exposes typed public inventory/current action mechanics, and incorporates supported Discovery generation. It passes 483 host/native tests (one optional artifact skip), bounded smoke, reached-state distinct-resource regression, deterministic fresh-process replay, and fresh/reverse patch checks. Old banks require explicit regeneration; richer encoding, compatible warm start and protected credit comparisons remain next. No old experiment has resumed and no new training condition is claimed successful.

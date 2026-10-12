@@ -8,8 +8,8 @@ import operator
 import os
 from typing import Any, Callable
 
-ENVIRONMENT_VERSION = "0.1.1"
-OBSERVATION_VERSION = "sts_env_public_v1"
+ENVIRONMENT_VERSION = "0.2.0"
+OBSERVATION_VERSION = "sts_env_public_v2"
 
 
 class SimulatorError(RuntimeError):
@@ -29,6 +29,7 @@ def _make_backend(config: dict[str, Any], seed: int) -> Any:
         max_act=config["max_act"], battle_simulations=config["battle_simulations"],
         combat_control="search" if config["mode"] == "ooc" else "llm",
         combat_observation="combat_public_v3", build_dir=config["build_dir"],
+        preserve_card_instances=True,
     )
     return CombatPublicV5Env(native)
 
@@ -67,12 +68,23 @@ class _Episode:
         state.pop("world_seed", None)
         state.pop("combat_observation", None)
         state["observation_version"] = OBSERVATION_VERSION
+        state["inventory"] = deepcopy(self.env.public_inventory())
+        # GameContext inventory is a battle-entry snapshot. Potion use and live
+        # relic counters must use the already public current combat view.
+        combat = state.get("combat")
+        if combat:
+            for key in ("potions", "relics"):
+                if key in combat:
+                    state["inventory"][key] = deepcopy(combat[key])
         graph = self.env.map_graph()
         if graph is not None:
             state["map"] = deepcopy(graph)
         if state.get("undefined_behavior_evoked"):
             raise SimulatorError("Simulator reported undefined behavior; trajectory is invalid")
         actions = [] if self.env.is_terminal() else self.env.legal_actions()
+        mechanics = [] if not actions else self.env.public_action_metadata()
+        if len(actions) != len(mechanics):
+            raise SimulatorError("Typed action mechanics do not match the public menu")
         text = self.env.describe_state()
         from sts_env._backend.glossary_v5 import augment
         text = augment(text, [asdict(action) for action in actions], phase=self.env.phase(),
@@ -85,8 +97,9 @@ class _Episode:
                 lines.append(f"({node['x']},{node['y']}) {node['room']} -> {destinations}")
             text += "\n\n-- VISIBLE ROUTES --\n" + "\n".join(lines)
         return {"state": state, "text": text, "phase": self.env.phase(),
-                "legal_actions": [{"index": action.index, "description": action.description}
-                                  for action in actions]}
+                "legal_actions": [{"index": action.index, "description": action.description,
+                                   "public": deepcopy(public)}
+                                  for action, public in zip(actions, mechanics)]}
 
     def _status(self, observation: dict[str, Any]) -> tuple[bool, bool, str]:
         state = observation["state"]

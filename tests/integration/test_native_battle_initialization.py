@@ -63,9 +63,9 @@ class NativeBattleInitializationTests(unittest.TestCase):
                 self.assertTrue(all(f"[{card_type}]" in card for card in candidates))
                 self.assertFalse(bc.undefined_behavior_evoked)
 
-    def test_auto_combat_rejects_live_undefined_behavior_before_exit(self):
+    def test_auto_combat_rejects_unsupported_discovery_before_exit(self):
         sts = self.sts
-        gc = self.first_battle(sts.CharacterClass.IRONCLAD)
+        gc = self.first_battle(sts.CharacterClass.SILENT)
         for _ in range(len(gc.deck)):
             gc.remove_card(0)
         gc.obtain_card(sts.Card(sts.CardId.DISCOVERY))
@@ -73,7 +73,7 @@ class NativeBattleInitializationTests(unittest.TestCase):
         agent = sts.Agent()
         agent.simulation_count_base = 50
         before_hp = gc.cur_hp
-        with self.assertRaisesRegex(RuntimeError, "native battle playout evoked undefined behavior"):
+        with self.assertRaisesRegex(RuntimeError, "Discovery class-card generation only supports Ironclad"):
             sts.resolve_current_battle(gc, agent)
         self.assertEqual(gc.screen_state, sts.ScreenState.BATTLE)
         self.assertEqual(gc.cur_hp, before_hp)
