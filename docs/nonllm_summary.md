@@ -3,6 +3,12 @@
 Newest updates first. [Automatic log](nonllm_progress.md) · [Detailed decisions](nonllm_progress_notes.md) · [Plan](nonllm_curriculum_plan.md) · [Agent usage](nonllm_agent_usage.md).
 Deadline: **12 October, 06:30 UTC**. All results below are **development results**. The designated final benchmark remains embargoed; [the audit](nonllm_protocol_audit.md) records a separate early smoke-test exception.
 
+## 2026-10-12 05:03 UTC — measured costs extend three-act training
+
+Recent 48-world three-act DEV checks finish in **20 seconds**; the native reference takes **12.3 seconds** with two workers, and 32 later-act fights take **4.5 seconds**. The original final reserve would leave substantial training time unused.
+
+**Decision:** extend three-act training to approximately **06:00 UTC**, then reserve 30 minutes for the unchanged 22 final panels, CLI verification and report. The **06:30 cutoff is unchanged**. This decision precedes all final results; cohorts, rewards, horizons and seeds stay fixed. Full-game competence remains unproven.
+
 ## 2026-10-12 04:50 UTC — later-act diagnosis; bridges rejected
 
 Fresh later-act combat checks give **27/32 wins** for the retained combat specialist and **28/32** for both joint checkpoints, with zero faults/truncations. This does not support restoring the old combat head. The earlier specialist composition also had zero three-act victories and reached lower floors than the joint model. Native control had 1/48 victory and one fault.

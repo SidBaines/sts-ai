@@ -2,6 +2,8 @@
 
 ## Objective, scope, and resource contract
 
+**Allocation amendment, 12 October 05:03 UTC:** before any final evaluation, extend the three-act training stage to approximately 06:00 UTC, reserving 30 minutes before the unchanged 06:30 cutoff. Measured completed DEV checks take 20 seconds for 48 full-control three-act worlds, 12.3 seconds for 48 native-reference worlds with only two workers, and 4.5 seconds for 32 later-act fights. Twenty-two final panels plus CLI/report checks fit a deliberately larger reserve than these observed costs. This changes time allocation only; frozen cohorts, seeds, horizons, rewards and no-final-tuning rules remain unchanged. Preserve the earlier plan/history below.
+
 **Execution amendment, 12 October 03:05 UTC:** the branch still originates at immutable `env-v0.1.0`, but active native-assisted training/evaluation uses signed `env-v0.1.1` after an uninitialized-character bug was repaired. Earlier native-auto evidence is quarantined. Retained full-control combat evidence was checked separately; [revision evidence](nonllm_native_revision.md) records the scope. The planned final embargo has one diagnostic exception: an early learned-agent seed-3 smoke touched the broad hash-final bucket outside the designated benchmark. See [the protocol audit](nonllm_protocol_audit.md). These amendments preserve the initial plan below while making the executed conditions explicit.
 
 Train and evaluate a non-language policy controlling both combat and out-of-combat

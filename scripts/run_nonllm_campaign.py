@@ -806,7 +806,7 @@ class Campaign:
         joint_start, joint_settings = self.joint_screen(initial_panel[0][1], composite, references, INITIAL+28800)
         full = self.curriculum('joint_act1', joint_start, INITIAL+28800, 'run',
                               world_start=30000, horizon=2048, **joint_settings)
-        full = self.curriculum('joint_act3', full, INITIAL+32400, 'run',
+        full = self.curriculum('joint_act3', full, DEADLINE-1800, 'run',
                               world_start=40000, horizon=4096, max_act=3, **joint_settings)
         self.final(full, combat, ooc)
 
