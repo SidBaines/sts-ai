@@ -33,3 +33,8 @@ The original experiments remain on their research branches.
   build; the pure Python wheel does not embed an architecture-specific binary.
 - Source histories remain in Git; clean means experiment-free checkout, not a
   rewritten history. Never alter unrelated worktrees or the research checkout.
+
+- The native `undefinedBehaviorEvoked` flag also marks unsupported simulator
+  behaviour; it is not proof of C++ memory UB. Discovery support is certified
+  only for Ironclad's existing pool. Preserve explicit unsupported-class faults
+  and provenance boundaries when changing that path; see docs/discovery_fix.md.
