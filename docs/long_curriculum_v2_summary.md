@@ -1,5 +1,22 @@
 # Full-game RL v2 — latest first
 
+## 2026-10-12 18:01 UTC — regression attributed; no long-run restart
+
+Matched whole-model swaps identify **OOC drift as the broad survival/progression regression**. Combat-only change improves average progression but also loses the two original wins. The exact 192-world DEV replay reproduced both original and regressed reference traces; the table uses the same 190 fault-free worlds:
+
+| Combat / OOC | Mean floor | Act 1 clears | Act 2 clears | Full wins |
+| --- | ---: | ---: | ---: | ---: |
+| Original / original | 27.63 | 151 | 13 | 2 |
+| New / original | 28.48 | 151 | 22 | 0 |
+| Original / new | 24.72 | 130 | 5 | 0 |
+| New / new | 25.24 | 130 | 12 | 0 |
+
+Independent 64-world TRAIN swaps (59 shared valid) agree on the OOC progression loss. Isolated saved-combat wins slightly improve, 24/32→25/32. Both rare original winning worlds become ordinary defeats if either phase changes, so average-floor gains cannot substitute for full-win retention. These small repeated panels do not establish population mastery.
+
+Recommendation: keep v2 paused; a new short pilot should restart from the original, initially freeze combat, use conservative OOC updates plus frozen-original TRAIN distribution rehearsal, and log phase-specific drift/gradients/credit. Direct full-run and retention checks must stop a regressing pilot before the remaining hours are spent. Freezing combat alone cannot preserve wins. **3.959 active hours remain unchanged.** No new training condition has been started.
+
+The diagnostic runner and four new regressions passed **471 tests** (one optional skip) and the bounded core smoke. Exact tensors, tasks, interface/native hashes, fault exclusions and reference traces were verified; detailed findings and prevention options are in the [diagnosis](long_curriculum_v2_forgetting_diagnosis.md), [progress log](long_curriculum_v2_progress.md) and [dashboard](http://127.0.0.1:8786/).
+
 ## 2026-10-12 17:42 UTC — user paused training; causal diagnosis underway
 
 The user requested combat versus out-of-combat attribution and a way to prevent forgetting rather than spending the remaining allocation on an unproductive setup. V2 is now **operator-paused**, all recorded controller/workers verified absent. The final retained CP128 SHA is `afc854b4…`; **14,252.174 active seconds (3.959 hours)** remain. The budget is stationary; no automatic resumption or extension is allowed.
