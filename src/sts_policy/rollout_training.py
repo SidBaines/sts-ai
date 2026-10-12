@@ -53,7 +53,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                      config: PPOConfig = PPOConfig(), device: str = "cpu",
                      max_seconds: float = 120., deterministic: bool = False,
                      teacher_simulations: int | None = None,
-                     deferred_bootstrap: bool = False, reuse_encodings: bool = True) -> dict[str, Any]:
+                     deferred_bootstrap: bool = False, reuse_encodings: bool = True,
+                     capture_continuations: bool = False) -> dict[str, Any]:
     """The actor is frozen throughout collection; failures quarantine whole episodes.
 
     Worker operations execute concurrently. A collector budget truncation uses
@@ -68,6 +69,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
     active: dict[int, dict[str, Any]] = {}
     transitions: list[Transition] = []
     labels: list[dict[str, Any]] = []
+    continuations: list[dict[str, Any]] = []
     episodes, faults = [], []
     failed_steps, resets = 0, 0
     timings = {"reset_wait_seconds": 0., "step_wait_seconds": 0., "teacher_wait_seconds": 0.,
@@ -93,7 +95,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         except StopIteration:
             return
         active[slot] = {"task": task, "future": workers[slot].submit("reset", task),
-                        "trajectory": [], "labels": [], "obs": None, "last_info": {},
+                        "trajectory": [], "labels": [], "continuations": [], "obs": None, "last_info": {},
                         "reward": 0., "steps": 0, "action_trace": hashlib.sha256()}
         resets += 1
 
@@ -121,6 +123,9 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         _set_advantages(trajectory, config)
         transitions.extend(trajectory)
         labels.extend(entry["labels"])
+        if (capture_continuations and not budget_truncation and trajectory and
+                trajectory[-1].terminated and not trajectory[-1].truncated):
+            continuations.extend(entry["continuations"])
         state = entry["obs"].get("state", {}) if entry["obs"] is not None else {}
         episodes.append({"world_seed": entry["task"].seed, "task_kind": entry["task"].kind,
                          "task_id": task_identity(entry["task"]),
@@ -237,6 +242,12 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 entry = active[slot]
                 position, action, log_prob, value = entry.pop("sample")
                 old_observation = entry["obs"]
+                if capture_continuations:
+                    from .long_run_tasks import capture_learner_continuation
+                    frontier = capture_learner_continuation(entry["task"], old_observation,
+                        observation, info, terminated=bool(terminated), truncated=bool(truncated))
+                    if frontier is not None:
+                        entry["continuations"].append(frontier)
                 action_record = {"phase": old_observation.get("phase"),
                                  "action": old_observation["legal_actions"][position]}
                 entry["action_trace"].update((json.dumps(action_record, sort_keys=True, separators=(",", ":")) + "\n").encode())
@@ -262,7 +273,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
     requested = len(tasks)
     cohort_completed = (resets == requested and len(episodes) + len(faults) == requested
                         and all(episode["termination_reason"] != "collector_budget" for episode in episodes))
-    return {"transitions": transitions, "teacher_records": labels, "episodes": episodes,
+    return {**({"continuations": continuations} if capture_continuations else {}),
+            "transitions": transitions, "teacher_records": labels, "episodes": episodes,
             "requested_tasks": requested, "unstarted_tasks": requested - resets,
             "cohort_completed": cohort_completed,
             "task_ids": [task_identity(task) for task in tasks],

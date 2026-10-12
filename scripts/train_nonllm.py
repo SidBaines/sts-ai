@@ -67,7 +67,11 @@ def teacher_rows(path: Path, phase: str, split: str) -> list[dict[str, Any]]:
 def tasks_for(args) -> list[TaskSpec]:
     if args.tasks:
         tasks = [TaskSpec.from_dict(row) for row in read_rows(args.tasks)]
-        if args.task_kind != "battle":
+        if getattr(args, "preserve_task_prefixes", False):
+            if any(task.kind != args.task_kind for task in tasks):
+                raise ValueError("Preserved task kind differs from --task-kind")
+            # Keep every replay frontier and per-task goal/horizon/search budget.
+        elif args.task_kind != "battle":
             tasks = list({task.seed: task for task in tasks}.values())
             tasks = [TaskSpec(seed=task.seed, kind=args.task_kind, horizon=args.horizon,
                               max_act=args.max_act, battle_simulations=args.simulations) for task in tasks]
@@ -95,6 +99,10 @@ def main() -> None:
     parser.add_argument("--teacher", type=Path)
     parser.add_argument("--dev-teacher", type=Path)
     parser.add_argument("--tasks", type=Path)
+    parser.add_argument("--continuation-output", type=Path,
+                        help="PPO TRAIN-only healthy learner Act2/3 frontiers as JSONL")
+    parser.add_argument("--preserve-task-prefixes", action="store_true",
+                        help="retain every task-file replay prefix and per-task bounds")
     parser.add_argument("--checkpoint", type=Path)
     parser.add_argument("--combat-checkpoint", type=Path)
     parser.add_argument("--ooc-checkpoint", type=Path)
@@ -140,6 +148,15 @@ def main() -> None:
     parser.add_argument("--clip-ratio", type=float, default=.2)
     parser.add_argument("--timeout", type=float, default=10.)
     args = parser.parse_args()
+    if args.preserve_task_prefixes and args.tasks is None:
+        parser.error("--preserve-task-prefixes requires --tasks")
+    if args.continuation_output is not None and (args.command != "ppo" or args.split != "train" or args.task_kind != "run"):
+        parser.error("--continuation-output requires PPO TRAIN full-run tasks")
+    if args.continuation_output is not None:
+        destination = args.continuation_output.resolve()
+        references = (args.output, args.checkpoint, args.tasks, args.metrics, args.teacher, args.dev_teacher)
+        if any(path is not None and path.resolve() == destination for path in references):
+            parser.error("Continuation output must be separate from checkpoint, task, teacher and metrics files")
     if min(args.seconds, args.updates, args.batch_size, args.workers, args.episodes, args.threads) <= 0:
         parser.error("time, updates, batch size, workers, episodes and threads must be positive")
     if not math.isfinite(args.gae_lambda) or not 0. <= args.gae_lambda <= 1.:
@@ -261,12 +278,24 @@ def main() -> None:
                     break
                 random.Random(args.seed + iteration).shuffle(tasks)
                 model.to(args.inference_device)
+                actor_identity = None
+                if args.continuation_output is not None:
+                    from sts_policy.long_run_tasks import policy_parameters_sha256
+                    actor_identity = policy_parameters_sha256(model)
                 result = collect_rollouts(model, workers, tasks, collate=collate_public,
                                            forward=forward_policy, config=ppo, device=args.inference_device,
                                            max_seconds=remaining if args.command == "evaluate" else min(remaining, 120.),
                                            deterministic=args.command == "evaluate",
                                            teacher_simulations=args.teacher_simulations,
-                                           deferred_bootstrap=args.deferred_bootstrap)
+                                           deferred_bootstrap=args.deferred_bootstrap,
+                                           capture_continuations=args.continuation_output is not None)
+                captured = result.pop("continuations", [])
+                if args.continuation_output is not None:
+                    from sts_policy.long_run_tasks import write_learner_continuations
+                    result["learner_continuations"] = write_learner_continuations(
+                        captured, args.continuation_output,
+                        source_checkpoint=args.checkpoint, source_iteration=iteration,
+                        source_policy_sha256=actor_identity, source_optimizer_step=step)
                 transitions, labels = result.pop("transitions"), result.pop("teacher_records")
                 result["transitions"] = len(transitions)
                 result["teacher_records"] = len(labels)

@@ -13,6 +13,11 @@ from scripts.update_nonllm_progress import render
 
 
 class CampaignRecoveryTests(unittest.TestCase):
+    def setUp(self):
+        clock = patch.object(campaign.time, "time", return_value=campaign.INITIAL + 3600)
+        clock.start()
+        self.addCleanup(clock.stop)
+
     def test_failed_command_does_not_return_stale_success_metrics(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)

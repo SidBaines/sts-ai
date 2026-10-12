@@ -21,6 +21,11 @@ def complete_panel(wins):
 
 
 class OOCCampaignIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        clock = patch.object(campaign.time, "time", return_value=campaign.INITIAL + 3600)
+        clock.start()
+        self.addCleanup(clock.stop)
+
     def make_runner(self, directory):
         with patch.dict(os.environ,{'STS_LIGHTSPEED_BUILD':'test'}):
             return campaign.Campaign(Path(directory))
@@ -120,6 +125,8 @@ class OOCCampaignIntegrationTests(unittest.TestCase):
             root=Path(directory)
             source=root/'input.jsonl';source.write_text('original')
             started=time.time()+1
+            # Match the explicitly frozen fixture clock for legacy mtime checks.
+            os.utime(source, (started - 1, started - 1))
             metrics=root/'old.metrics.json';metrics.write_text(json.dumps({'completed':True}))
             command=['python','train','--tasks',str(source),'--simulations','200','--seed','11']
             record={'name':'old','status':'complete','command':command,'started':started,'finished':time.time()+2,
@@ -149,6 +156,7 @@ class OOCCampaignIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             runner=self.make_runner(directory)
             now=time.time();output=Path(directory)/'ooc_0000.pt';output.write_text('checkpoint')
+            os.utime(output, (now, now))
             metrics=Path(directory)/'ooc_0000.metrics.json';metrics.write_text('{}')
             runner.state['commands'].append({'name':'ooc_0000','status':'complete','command':['train','--seconds','180'],
                 'started':now-200,'finished':now,'metrics_sha256':hashlib.sha256(metrics.read_bytes()).hexdigest()})

@@ -14,6 +14,11 @@ from sts_policy.campaign_identity import CACHE_VERSION, condition_signature, sem
 
 
 class CampaignCacheOrderTests(unittest.TestCase):
+    def setUp(self):
+        clock = patch.object(campaign.time, "time", return_value=campaign.INITIAL + 3600)
+        clock.start()
+        self.addCleanup(clock.stop)
+
     def command(self, checkpoint, **settings):
         return ['python', 'train.py', 'ppo', '--checkpoint', str(checkpoint),
                 *[token for key, value in settings.items() for token in ['--' + key.replace('_', '-'), str(value)]]]

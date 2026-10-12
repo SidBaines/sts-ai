@@ -18,6 +18,8 @@ from sts_policy.rollout_training import task_identity
 
 class CampaignRevisionTests(unittest.TestCase):
     def fixture(self, root, stack):
+        # The historical production deadline must not make this fixture expire.
+        stack.enter_context(patch.object(campaign.time, "time", return_value=campaign.INITIAL + 3600))
         scripts=root/'scripts';scripts.mkdir()
         for name in ('train_nonllm.py','evaluate_nonllm_baselines.py','run_nonllm_campaign.py'):
             (scripts/name).write_text('# synthetic source\n')

@@ -46,3 +46,6 @@ wandb/
 # Working area for uncommitted session notes, handoffs, and run ops state.
 # Durable findings belong in docs/, not here.
 scratch/
+
+# Shared local runtime symlink
+.venv
