@@ -172,6 +172,9 @@ def main() -> None:
     tasks = matched_tasks(bank=args.tasks, kind=args.kind, split=args.split,
                           episodes=args.episodes, seed=args.seed, world_start=args.world_start,
                           horizon=args.horizon, simulations=args.simulations, max_act=args.max_act)
+    # Match learned evaluator provenance before any simulator worker starts.
+    from sts_policy.composition import training_environment_record
+    training_environment = training_environment_record()
     started = time.monotonic()
     deadline = started + args.seconds
     chunks = [list(enumerate(tasks))[lane::args.workers] for lane in range(args.workers)]
@@ -194,7 +197,12 @@ def main() -> None:
     episodes = [row for _, tag, row in results if tag == "episode"]
     faults = [row for _, tag, row in results if tag == "fault"]
     metrics = {"command": "baseline", "config": {key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()},
-               "encoder_version": ENCODER_VERSION, "episodes": episodes, "faults": faults,
+               "encoder_version": ENCODER_VERSION,
+               "training_environment": training_environment,
+               "native_provenance": training_environment.get("sourced_env_manifest"),
+               "python_interface_sha256": training_environment["python_interface_sha256"],
+               "runtime_python_version": training_environment["runtime_python_version"],
+               "episodes": episodes, "faults": faults,
                "requested_tasks": len(tasks), "unstarted_tasks": len(tasks) - len(results),
                "task_ids": [task_identity(task) for task in tasks],
                "elapsed_seconds": time.monotonic() - started,

@@ -183,7 +183,27 @@ class Campaign:
                            for p in sorted((ROOT/'src/sts_policy').glob('*.py'))}
         source_identity.update({str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else str(p): hashlib.sha256(p.read_bytes()).hexdigest()
                                 for p in (ROOT/'scripts/train_nonllm.py', Path(__file__)) if p.exists()})
+        frozen = self.state.get('frozen_identities') if name.startswith('final_') else None
+        backend_dir = Path(frozen['backend']['build_dir'] if frozen else self.state['native_build']).resolve()
+        child_environment = os.environ.copy()
+        child_environment['STS_LIGHTSPEED_BUILD'] = str(backend_dir)
+        # Record only the explicit override, never unrelated inherited secrets.
+        backend_identity = {'build_dir': str(backend_dir), 'provenance_status': 'unavailable'}
+        manifest_path = backend_dir / 'build_manifest.json'
+        if manifest_path.is_file():
+            manifest_bytes = manifest_path.read_bytes()
+            provenance = json.loads(manifest_bytes)
+            module_name = provenance.get('module_file', '')
+            if not module_name or Path(module_name).name != module_name:
+                raise RuntimeError('Campaign backend manifest has invalid module_file')
+            module_sha256 = hashlib.sha256((backend_dir / module_name).read_bytes()).hexdigest()
+            if module_sha256 != provenance.get('module_sha256'):
+                raise RuntimeError('Campaign backend binary differs from its manifest')
+            backend_identity.update(provenance_status='verified', native_provenance=provenance,
+                manifest_sha256=hashlib.sha256(manifest_bytes).hexdigest(), module_sha256=module_sha256)
         record = {'source_identity': source_identity, 'condition_signature': signature,
+                  'effective_environment': {'STS_LIGHTSPEED_BUILD': str(backend_dir)},
+                  'effective_backend_identity': backend_identity,
                   'name': name, 'command': [str(x) for x in command], 'started': time.time(),
                   'status': 'running', 'metrics': str(metrics)}
         self.state['commands'].append(record)
@@ -191,7 +211,7 @@ class Campaign:
         log = self.destination / (name + '.log')
         with log.open('a') as output:
             process = subprocess.Popen([str(x) for x in command], cwd=ROOT, stdout=output,
-                                       stderr=subprocess.STDOUT, start_new_session=True)
+                                       stderr=subprocess.STDOUT, start_new_session=True, env=child_environment)
             record['pid'] = process.pid
             self.save()
             started = time.monotonic()
