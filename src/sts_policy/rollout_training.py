@@ -1,7 +1,7 @@
 """Batched policy sampling, fault-aware isolated collection, and masked PPO."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import random
 import time
 import hashlib
@@ -33,6 +33,9 @@ class Transition:
     world_seed: int
     advantage: float = 0.
     returns: float = 0.
+    # In-memory public features only: not part of observation/on-disk schemas.
+    encoded_observation: Any = field(default=None, repr=False, compare=False)
+    encoding_observation_id: int | None = field(default=None, repr=False, compare=False)
 
 
 def _set_advantages(episode: list[Transition], config: PPOConfig) -> None:
@@ -50,13 +53,15 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                      config: PPOConfig = PPOConfig(), device: str = "cpu",
                      max_seconds: float = 120., deterministic: bool = False,
                      teacher_simulations: int | None = None,
-                     deferred_bootstrap: bool = False) -> dict[str, Any]:
+                     deferred_bootstrap: bool = False, reuse_encodings: bool = True) -> dict[str, Any]:
     """The actor is frozen throughout collection; failures quarantine whole episodes.
 
     Worker operations execute concurrently. A collector budget truncation uses
     the actual next state's value. The sampling batch is transferred to CPU only
     once, never separately for each environment/action candidate.
     """
+    from .model_agent import collate_public, collate_public_with_encodings
+    retain_encodings = reuse_encodings and collate is collate_public
     model.eval()
     started = time.monotonic()
     pending = iter(tasks)
@@ -171,7 +176,11 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         slots = list(active)
         observations = [active[slot]["obs"] for slot in slots]
         policy_started = time.monotonic()
-        logits, values, mask = forward(model, collate(observations, device))
+        if retain_encodings:
+            policy_batch, actor_encodings = collate_public_with_encodings(observations, device)
+        else:
+            policy_batch, actor_encodings = collate(observations, device), [None] * len(observations)
+        logits, values, mask = forward(model, policy_batch)
         distribution = masked_distribution(logits, mask)
         positions = logits.masked_fill(~mask, -1e9).argmax(-1) if deterministic else distribution.sample()
         log_probs = distribution.log_prob(positions)
@@ -201,12 +210,13 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 except Exception as error:
                     fault(slot, error, stage="teacher_action", wait_seconds=time.monotonic() - wait_started)
         steps = {}
-        for slot, (position, log_prob, value) in zip(slots, packed):
+        for slot, (position, log_prob, value), encoded in zip(slots, packed, actor_encodings):
             if slot not in active:
                 continue
             observation = active[slot]["obs"]
             action = int(observation["legal_actions"][int(position)]["index"])
             active[slot]["sample"] = (int(position), action, float(log_prob), float(value))
+            active[slot]["sample_encoding"] = encoded
             steps[slot] = workers[slot].submit("step", action)
         results = {}
         for slot, future in steps.items():
@@ -233,7 +243,9 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 entry["trajectory"].append(Transition(old_observation, position, action, log_prob, value,
                                                        [True] * len(old_observation["legal_actions"]),
                                                        float(reward), bool(terminated), bool(truncated),
-                                                       0. if terminated else float(explicit_values.get(slot, 0.)), entry["task"].seed))
+                                                       0. if terminated else float(explicit_values.get(slot, 0.)), entry["task"].seed,
+                                                       encoded_observation=entry.pop("sample_encoding"),
+                                                       encoding_observation_id=id(old_observation) if retain_encodings else None))
                 entry["awaiting_bootstrap"] = deferred_bootstrap and not (terminated or truncated)
                 entry["reward"] += float(reward)
                 entry["steps"] += 1
@@ -258,6 +270,10 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
             "elapsed_seconds": time.monotonic() - started,
             "timings": timings,
             "forward_counts": forward_counts, "deferred_bootstrap": deferred_bootstrap,
+            "retained_encodings": sum(t.encoded_observation is not None for t in transitions),
+            "retained_encoding_bytes": sum(t.encoded_observation.state_features.nbytes +
+                t.encoded_observation.action_features.nbytes + t.encoded_observation.action_indices.nbytes
+                for t in transitions if t.encoded_observation is not None),
             "discount_unit": "one_external_decision; native_combat_is_one_macro_transition"}
 
 
@@ -273,8 +289,15 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
     # Each PPO buffer is immutable throughout its epochs. Encode public state
     # once instead of repeating Python feature extraction every minibatch/epoch.
     from .model_agent import collate_public, cached_public_collator
+    reused_encoding_count = 0
     if collate is collate_public:
-        collate = cached_public_collator([transition.observation for transition in transitions])
+        for transition in transitions:
+            if transition.encoded_observation is not None:
+                if transition.encoding_observation_id != id(transition.observation):
+                    raise ValueError("cached encoding observation identity changed after sampling")
+                reused_encoding_count += 1
+        collate = cached_public_collator([transition.observation for transition in transitions],
+                                        preencoded=[transition.encoded_observation for transition in transitions])
     preparation_seconds = time.monotonic() - started
     optimizer = optimizer or torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
     advantages = torch.tensor([t.advantage for t in transitions], device=device)
@@ -329,6 +352,7 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
                 if metrics else {})
     return {"steps": steps, "samples": len(transitions), "elapsed_seconds": time.monotonic() - started,
             "preparation_seconds": preparation_seconds,
+            "reused_encoding_count": reused_encoding_count,
             "config": asdict(config), "early_stop": stopped,
             "algorithm_version": "masked_ppo_v2_before_update_kl" if config.kl_guard_before_update else "masked_ppo_v1_after_update_kl",
             "rejected_minibatches": rejected_minibatches, "rejected_kl": rejected_kl,

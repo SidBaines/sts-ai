@@ -1,0 +1,44 @@
+{
+  "allocated_arrays_objects_coverage_bytes_estimate": 7631328,
+  "collated_tensors_bit_equal": true,
+  "encoding_seconds": 0.4440783748868853,
+  "estimated_payload_bytes_20000": 61084687.5,
+  "mean_legal_actions": 3.904296875,
+  "median_preparation_speedup": 360.042163801689,
+  "numpy_payload_bytes": 6255072,
+  "observations": 2048,
+  "old_ppo_preparation_seconds": 0.019816125044599175,
+  "old_preparation_seconds": [
+    0.39856600016355515,
+    0.3876565000973642,
+    0.3863076251000166,
+    0.39270754088647664,
+    0.3882003331091255
+  ],
+  "ppo_accepted_updates": 8,
+  "ppo_losses_gradients_optimizer_weights_bit_equal": true,
+  "ppo_real_dev_samples": 128,
+  "reused_ppo_preparation_seconds": 0.00015012500807642937,
+  "reused_preparation_seconds": [
+    0.0011633338872343302,
+    0.0011684999335557222,
+    0.001078207977116108,
+    0.0010531670413911343,
+    0.0010502079967409372
+  ],
+  "source": "data/nonllm_curriculum/teacher_act1_200_native011_seed10000/teacher.jsonl",
+  "split": "dev",
+  "worlds": [
+    10023,
+    10034,
+    10046,
+    10049,
+    10062,
+    10065,
+    10070,
+    10104,
+    10117,
+    10121,
+    10129
+  ]
+}

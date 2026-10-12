@@ -5,24 +5,39 @@ from typing import Any, Sequence
 
 import torch
 
-from .encoding import ENCODER_VERSION, collate_observations, encode_observation
+from .encoding import ENCODER_VERSION, EncodedObservation, collate_observations, encode_observation
 from .model import CandidateActorCritic
 from .training import load_checkpoint
 from .losses import masked_distribution
 
 
+def collate_public_with_encodings(observations: Sequence[dict[str, Any]], device: str = "cpu"):
+    """Return the exact public encodings used to assemble this inference batch."""
+    encoded = [encode_observation(observation) for observation in observations]
+    return collate_observations(encoded, device=device), encoded
+
+
 def collate_public(observations: Sequence[dict[str, Any]], device: str = "cpu"):
-    return collate_observations([encode_observation(observation) for observation in observations], device=device)
+    return collate_public_with_encodings(observations, device)[0]
 
 
-def cached_public_collator(observations: Sequence[dict[str, Any]], *, tensor_cache: bool = False):
+def cached_public_collator(observations: Sequence[dict[str, Any]], *, tensor_cache: bool = False,
+                           preencoded: Sequence[EncodedObservation | None] | None = None):
     """Preencode a fixed immutable BC dataset once, retaining objects against ID reuse.
 
-    Rollout inference should use collate_public: learner observations continuously
-    change, and an unbounded rollout cache would waste memory.
+    Optional aligned encodings reuse the exact arrays retained from sampling.
+    Originals remain strongly referenced, preventing object-ID reuse. This cache
+    is local to an immutable dataset/buffer, never a global rollout cache.
     """
     originals = tuple(observations)
-    encoded = {id(obs): encode_observation(obs) for obs in originals}
+    if preencoded is not None and len(preencoded) != len(originals):
+        raise ValueError("preencoded observations must align with the immutable buffer")
+    supplied = preencoded if preencoded is not None else [None] * len(originals)
+    encoded = {}
+    for obs, cached in zip(originals, supplied):
+        if cached is not None and cached.action_indices.tolist() != [int(action["index"]) for action in obs["legal_actions"]]:
+            raise ValueError("cached encoding legal menu identity differs from observation")
+        encoded[id(obs)] = cached if cached is not None else encode_observation(obs)
     groups = {}
     locations = {}
     tensors = {}
