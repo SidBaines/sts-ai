@@ -36,3 +36,7 @@ Evidence: [`seed_inventory_snapshot.json`](../data/long_rl_v1/preflight/seed_inv
 ## Later manifest-only coverage update
 
 At 2026-10-12T12:30:47Z, 217 committed chunks had requested 27,776 attempts from 13,220 distinct worlds: 12,586 fresh and 634 native. Sampled learner frontier worlds remain a subset of the fresh worlds. This update counts requested coverage from immutable manifests; the earlier bounded audit above additionally checked actual starts, completion health and source files. Evidence: `data/long_rl_v1/preflight/seed_inventory_latest.json`.
+
+## 2026-10-12 14:20:59 UTC — later requested-world inventory
+
+The signed-task-digest-bound manifest inventory now covers417committed chunks and53,376requested attempts:27,632unique worlds comprise26,998fresh worlds plus634native worlds,withnooverlap. The5,440sampledlearner worlds arealready amongfresh worlds andaddzero newseeds. Theact2_full phase has96freshworlds per128-task chunk in thecheckedmixture(57goal2+26goal3+13rehearsal);32tasksarecontinuations. Counts describe requestedcoverage,notfault-free completions. Rawmanifestdigests andidentities: data/long_rl_v1/preflight/seed_inventory_latest.json. The earlier12:04 outcome audit remains a separate bounded snapshot.

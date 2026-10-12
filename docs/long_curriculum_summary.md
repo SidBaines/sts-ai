@@ -1,5 +1,20 @@
 # Long curriculum — latest first
 
+## 2026-10-12 14:21 UTC — more fresh starts; latest candidate achieves two full victories
+
+Training crossed the planned three-active-hour boundary into **act2_full**, which places more weight on fresh Act 1 starts. A verified128-task batch now has32 Act2 continuations,57 fresh Act2-goal runs,26 fresh three-act runs and13 Act1 rehearsals:96 fresh worlds per chunk. No scientific settings or source pins changed.
+
+| Fixed 48-world full-three-act DEV | Wins / requested | Defeats | Faults / cutoffs | Mean reached floor |
+| --- | ---: | ---: | --- | ---: |
+| Initial reference | 0/48 | 48 | 0 / 0 | 28.60 |
+| Selected best CP236, reused exact-SHA result | 0/48 | 48 | 0 / 0 | 30.90 |
+| Candidate captured at controller round353, evaluated13:44 UTC | 1/48 | 47 | 0 / 0 | 28.58 |
+| Candidate captured at controller round405, evaluated14:14 UTC | 2/48 | 46 | 0 / 0 | 29.73 |
+
+Recent candidate victory counts are0,1,0,1,2; this is encouraging but still rare and variable on repeated DEV worlds. Selected-best remains11/48 fresh-start Act2 clears with42/48 paired Act1 retention; the observer does not promote candidates. The latest full3 checkpoint copy, raw metric SHA and exact initial-matched task multiset passed independent checks; both winning worlds were defeated by the initial model. Final data remains embargoed.
+
+At14:20:59 UTC,417 committed chunks requested53,376 episodes from**27,632 distinct TRAIN worlds =26,998 fresh +634 native**. Sampled learner starts reuse5,440 already-fresh worlds and addzero seeds. This manifest inventory counts requested worlds, not healthy completions. The live API reported11.43million valid transitions,27,628 accepted optimizer steps andabout6.30 active hours remaining. Learner, observer and dashboard identities are healthy; no repair was needed. [Seed audit](long_curriculum_seed_audit.md), [dashboard](http://127.0.0.1:8786/) and[generated detail](long_curriculum_live.md).
+
 ## 2026-10-12 13:21 UTC — interactive dashboard deployed and verified
 
 [The live explorer](http://127.0.0.1:8786/) now offers training-range zoom/pan/brush, trailing rolling averages, independent left/right axes, source/start/goal/floor/horizon filters, signed HP-cost/return/floor/step histograms, configurable scatter plots, sample tables and loaded-cohort CSV export. INITIAL, SELECTED BEST and LATEST CANDIDATE full-run results remain prominent; detailed status and interpretation text are collapsed. [Controls and metric guide](long_rl_dashboard.md).
