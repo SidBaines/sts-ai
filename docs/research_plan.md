@@ -1,32 +1,15 @@
 # Non-LLM curriculum research goals and current state
 
-This experiment branch starts from immutable `env-v0.1.0`. The active objective
-is non-LLM learning for combat and out-of-combat play on the local M5 Pro/48 GB
-Mac. Sid extended the initial ten-hour allocation to **2026-10-12 06:30 UTC**.
+The first local campaign is **complete**. Work is isolated on `codex/nonllm-curriculum`; the original `astra-6sep` checkout is preserved. Signed environment releases `env-v0.1.0` and corrected `env-v0.1.1` remain immutable. Core stays dependency-free; PyTorch/NumPy and Gymnasium are optional extras.
 
-[The detailed curriculum plan](nonllm_curriculum_plan.md) records hypotheses,
-action representation, alternatives, budgets and evaluation gates. The maintained
-[latest-first human summary](nonllm_summary.md) records current state, decisions
-and compact evidence; the [automatic progress log](nonllm_progress.md) records
-exact commands and measurements, including failures.
+The [curriculum plan](nonllm_curriculum_plan.md) considers action representations, architecture/method alternatives, hyperparameters and bounded selection. Executed stages include supervised candidate policies, combat DAgger/PPO, corrected-native OOC PPO and joint full-control Acts 1–3 PPO. Separate 2.3M candidate heads are trained together in the final composite. Scope is Ironclad, ascension0, ordinary Acts1–3.
 
-As of 2026-10-12 05:03 UTC, isolated combat and corrected-native OOC training are complete. The retained combat specialist wins **44/48 Act 1** and **30/32 later-act** development fights. The selected OOC policy clears **31/32** development worlds with no faults after a matched opt-in PPO stopping correction; native and public-heuristic references clear 15/32 and 22/32. These are reused selection results, not final-test estimates.
+Selection froze at **2026-10-12 05:58:19 UTC**, after the last GPU learner ended at05:58:04, before the06:30 deadline. All22 declared final panels passed independent exact-cohort, command/status/hash, checkpoint, source, native-binary and Python-interface gates. Four full three-act CLI runs on two previously checked DEV worlds plus two replays passed; traces matched across processes and native-controlled decisions were zero. **362 tests** and the mandatory bounded core smoke passed. See [completion audit](nonllm_completion_audit.md).
 
-Signed `env-v0.1.1` repairs native automatic-combat character initialization and rejects reported undefined behavior before committing a battle. Old automatic OOC/lookahead results are quarantined; the old binary and tag remain intact. Fresh banks use module `40ab5056…` and interface `1fa75a1d…`.
+Held-out results: **145/160 isolated Act1 fights**, **25/32 later-act fights**, **17/21 Act1 clears with native combat**, and **20/21 Act1 clears under full learned control**. Three-act full control has **0 victories,20 defeats,1 simulator fault**; no truncations. The specialist comparator has0victories/21defeats/0faults. Strong Act1 competence is supported; full-game competence is not established. [Final report and uncertainty](nonllm_final_evaluation.md).
 
-Composed full-control policy training is running: **45/48 development Act 1 clears**, with zero faults/truncations and zero native-controlled decisions, versus its 29/48 initial reference. Three-act training started at approximately 04:07 UTC. Its initial 48-world evaluation has 3 Act 1 defeats, 43 Act 2 defeats and 2 Act 3 defeats, with zero victories/faults/truncations. Selection freezes for final evaluation at approximately 06:00 UTC. Measured completed DEV evaluation costs justify extending three-act training before any final results are read; retain 30 minutes for the fixed final panels, CLI and report. Training and allocated evaluation stop by **06:30 UTC**. The three-act stage and final benchmark are not complete yet. Fresh later-act combat retention remains 28/32 for the joint policy. Two short OOC Act 2/3 bridges did not improve full-control three-act outcomes and were rejected; the main run continues.
+[Latest-first summary](nonllm_summary.md), [detailed progress](nonllm_progress.md), [decision history](nonllm_progress_notes.md), [usage](nonllm_agent_usage.md) and [artifact hashes](nonllm_artifacts.json) preserve the experiment. Checkpoints, banks and binaries are gitignored local outputs; copy them before removing the worktree. Frozen shared role denotes the joint composite, not a single shared encoder.
 
-The designated final benchmark remains embargoed until selection freezes. An earlier learned-agent integration smoke used seed 3, which hashes to the broader final partition but is outside that benchmark; [the protocol audit](nonllm_protocol_audit.md) records the exception and evidence limits. The full hash-final partition cannot be described as untouched.
+Native0.1.1 repairs automatic-combat character initialization and rejects reported undefined behavior. Old auto-combat evidence is quarantined; legacy full-control combat transfer remains scoped, not a general simulator certification. The broad hash-final partition has an early seed-3 diagnostic exception outside the quantitative benchmark ([audit](nonllm_protocol_audit.md)). Final horizons and censoring differ from development and are reported explicitly.
 
-The latest regression gate passed **353 tests**, with native gates enabled. Bounded core smoke and earlier model CLI checks passed; final selected-model CLI and reproducibility verification remain pending. [Throughput evidence](nonllm_throughput.md) explains CPU rollout/MPS update routing, replay optimizations and limitations. [Public encoding reuse](nonllm_encoding_reuse.md) removed repeated feature extraction with exact update parity; the first completed optimized chunk reached 1,460 accepted transitions/s. [Agent usage](nonllm_agent_usage.md) documents the training adapter and public CLI. Preserve the immutable environment releases and original research checkout.
-
-Simulator flags detect reported errors rather than certify complete simulator fidelity. Faults are quarantined and counted separately from ordinary game defeats. Scope remains Ironclad, ascension 0, ordinary Acts 1–3.
-
-## Corrected environment revision
-
-Environment base 0.1.1 initializes native automatic combat's character class
-and rejects reported UB before committing a battle. It preserves `env-v0.1.0`
-and the old native module. New module `40ab5056c17dc481e27933c4c662f7a9fa801c3f0b72b10b446e1c0b0c8670bd`
-uses patch `77fddbd67c82bebcc4ff31eea6bb0f6d25e8216e44825d6459f184f47756ce16`.
-Fresh banks and a separate OOC campaign prevent mixed-backend comparisons.
-Release evidence and limitations are in [the 0.1.1 notes](release_v0.1.1.md).
+Future research should investigate later-act OOC/deck strategy, continuation starts, credit assignment and learner-induced combat states with a new evaluation protocol. Short OOC bridges and GAE pilots were rejected before final selection. No post-final training or hyperparameter tuning occurred. Other algorithms/representations were considered rather than all implemented; this campaign does not claim game mastery or complete simulator fidelity.

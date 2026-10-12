@@ -1,0 +1,397 @@
+{
+  "cli_operations": 6,
+  "cli_pairs_identical": true,
+  "cli_runs": [
+    {
+      "decision_phases": {
+        "combat": 198,
+        "out_of_combat": 119
+      },
+      "native_steps": 0,
+      "normalized_trace_sha256": "24f9aca4ee31d80be79ca12748bc42da73c92133b56d34aa3fe07d315c219d00",
+      "raw_sha256": "0a66dc3273560b6ddd16dc631f4a797eadf3a5e0d20d9f1ad73561f6a83ea31e",
+      "seed": 10121,
+      "status": "terminated",
+      "steps": 317,
+      "termination_reason": "defeat"
+    },
+    {
+      "decision_phases": {
+        "combat": 198,
+        "out_of_combat": 119
+      },
+      "native_steps": 0,
+      "normalized_trace_sha256": "24f9aca4ee31d80be79ca12748bc42da73c92133b56d34aa3fe07d315c219d00",
+      "raw_sha256": "ff4a940a3ebf74891267732ae706d6f68d549bb7b25c2c0f77ce82bf5ae6d38d",
+      "seed": 10121,
+      "status": "terminated",
+      "steps": 317,
+      "termination_reason": "defeat"
+    },
+    {
+      "decision_phases": {
+        "combat": 253,
+        "out_of_combat": 103
+      },
+      "native_steps": 0,
+      "normalized_trace_sha256": "3b217f6a253eda5f08d145358e83a92cb003bae86dcec8d42ce5bc34f17aacc0",
+      "raw_sha256": "f54061038dedfe7d57d46f53e5ac39300d9ae25b42acb423f11c6333bf52a309",
+      "seed": 10011,
+      "status": "terminated",
+      "steps": 356,
+      "termination_reason": "defeat"
+    },
+    {
+      "decision_phases": {
+        "combat": 253,
+        "out_of_combat": 103
+      },
+      "native_steps": 0,
+      "normalized_trace_sha256": "3b217f6a253eda5f08d145358e83a92cb003bae86dcec8d42ce5bc34f17aacc0",
+      "raw_sha256": "4af04ac3f388817b08758adabc44f7a0b9798e0a89907776288d815d328e8fae",
+      "seed": 10011,
+      "status": "terminated",
+      "steps": 356,
+      "termination_reason": "defeat"
+    }
+  ],
+  "cli_scope_max_act": 3,
+  "cli_scope_max_steps": 4096,
+  "final_panels_verified": 22,
+  "final_phase": "frozen_final_evaluation",
+  "final_report_complete": true,
+  "freeze_verified": true,
+  "last_training_command": {
+    "finished": 1791784684.317739,
+    "name": "joint_act3_0031",
+    "status": "complete"
+  },
+  "panel_errors": [],
+  "panels": [
+    {
+      "classified": 160,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_battle_act1",
+      "outcomes": {
+        "battle_defeat": 15,
+        "battle_victory": 145
+      },
+      "requested": 160,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_ooc_act1",
+      "outcomes": {
+        "act_clear": 17,
+        "defeat": 4
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_run_act1",
+      "outcomes": {
+        "act_clear": 20,
+        "defeat": 1
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 1,
+      "journal_metrics_sha_matches": true,
+      "name": "final_run_act3",
+      "outcomes": {
+        "defeat": 20
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_composite",
+      "outcomes": {
+        "defeat": 21
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 160,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_combat_extended_act1",
+      "outcomes": {
+        "battle_defeat": 15,
+        "battle_victory": 145
+      },
+      "requested": 160,
+      "truncated": 0
+    },
+    {
+      "classified": 32,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_combat_extended_hard",
+      "outcomes": {
+        "battle_defeat": 7,
+        "battle_victory": 25
+      },
+      "requested": 32,
+      "truncated": 0
+    },
+    {
+      "classified": 160,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_random_battle",
+      "outcomes": {
+        "battle_defeat": 67,
+        "battle_victory": 93
+      },
+      "requested": 160,
+      "truncated": 0
+    },
+    {
+      "classified": 160,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_native_battle",
+      "outcomes": {
+        "battle_defeat": 11,
+        "battle_victory": 149
+      },
+      "requested": 160,
+      "truncated": 0
+    },
+    {
+      "classified": 160,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_heuristic_battle",
+      "outcomes": {
+        "battle_defeat": 19,
+        "battle_victory": 141
+      },
+      "requested": 160,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_random_ooc",
+      "outcomes": {
+        "act_clear": 1,
+        "defeat": 20
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 1,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_native_ooc",
+      "outcomes": {
+        "act_clear": 6,
+        "defeat": 14
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_heuristic_ooc",
+      "outcomes": {
+        "act_clear": 13,
+        "defeat": 8
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_random_run",
+      "outcomes": {
+        "defeat": 21
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 1,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_native_run",
+      "outcomes": {
+        "act_clear": 6,
+        "defeat": 14
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_heuristic_run",
+      "outcomes": {
+        "act_clear": 4,
+        "defeat": 17
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_random_run_act3",
+      "outcomes": {
+        "defeat": 21
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 1,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_native_run_act3",
+      "outcomes": {
+        "defeat": 20
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 21,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_heuristic_run_act3",
+      "outcomes": {
+        "defeat": 21
+      },
+      "requested": 21,
+      "truncated": 0
+    },
+    {
+      "classified": 32,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_random_hard",
+      "outcomes": {
+        "battle_defeat": 22,
+        "battle_victory": 10
+      },
+      "requested": 32,
+      "truncated": 0
+    },
+    {
+      "classified": 32,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_native_hard",
+      "outcomes": {
+        "battle_defeat": 6,
+        "battle_victory": 26
+      },
+      "requested": 32,
+      "truncated": 0
+    },
+    {
+      "classified": 32,
+      "cohort_complete": true,
+      "command_status": "complete",
+      "evidence_verified": true,
+      "faults": 0,
+      "journal_metrics_sha_matches": true,
+      "name": "final_baseline_heuristic_hard",
+      "outcomes": {
+        "battle_defeat": 12,
+        "battle_victory": 20
+      },
+      "requested": 32,
+      "truncated": 0
+    }
+  ],
+  "status": "finished"
+}
