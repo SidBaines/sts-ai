@@ -1,5 +1,21 @@
 # Full-game RL v2 — latest first
 
+## 2026-10-12 17:12 UTC — first confirmation declines; champion remains original
+
+The new run is operationally healthy, but its first larger evaluation gives **no evidence of useful improvement**. The round 55 snapshot lost both baseline winning worlds and had lower mean ending floor. Act 1 retention also declined. These are descriptive results from a small, repeatedly inspected DEV set, not a final generalization estimate.
+
+| Fixed DEV panel | Original baseline | Round 55 learner | Faults: original / learner |
+| --- | ---: | ---: | ---: |
+| Three-act victories, 192 requested | 2/192 | 0/192 | 2 / 0 |
+| Mean ending floor, common-valid 190 worlds | 27.63 | 25.24 | — |
+| Act 1 clears, 192 requested | 151/192 | 131/192 | 2 / 0 |
+
+All evaluations completed without cutoffs or unstarted tasks. On the 190 common-valid retention worlds, clears fell from 151 to 130: a paired loss of 21. The original checkpoint remains champion. Neither prespecified severe-decline threshold has been crossed; the 30-minute no-win-improvement warning is active and a read-only diagnostic investigation is underway. No running scientific settings have changed.
+
+At 17:10 UTC, the learner had retained 8,091 optimizer updates across 73 chunks and 2,320,273 valid transitions, with one initial cold optimizer start, 72 warm restores and zero rollbacks. Approximately 4.43 active hours remained. These counters demonstrate continued training, not better play. The dashboard distinguishes newer unevaluated weights from this evaluated snapshot.
+
+[Live dashboard](http://127.0.0.1:8786/) · [Detailed progress](long_curriculum_v2_progress.md) · [Generated live record](long_curriculum_v2_live.md). Simulator [PR #1](https://github.com/SidBaines/sts-ai/pull/1) now passes 202 tests, including Discovery-generated Whirlwind energy semantics; v2 retains its frozen backend.
+
 ## 2026-10-12 16:49 UTC — pilot accepted; longer continuous run is live
 
 The pilot started at16:23:40 UTC and completed26chunks,862,697valid transitions and3,086optimizer updates in887.108active seconds. Every completed update remains in the learner's exact checkpoint ancestry; the saved optimizer step is also3,086. One initial cold optimizer start was followed by25warm restores, withzero learner rollbacks. All owned pilot processes exited and source/protocol hashes remained fixed.
