@@ -33,3 +33,12 @@ environment release and original research checkout.
 Known limitation: auto-native combat does not expose its temporary UB flag.
 Zero surfaced hybrid faults do not certify fault-free native playouts. Explicit
 full-control faults are quarantined. Scope is Ironclad ascension 0, Acts 1–3.
+
+## Corrected environment revision
+
+Environment-base0.1.1 initializes native automatic combat's character class
+and rejects reported UB before committing a battle. It preservesenv-v0.1.0
+and the old native module. New module40ab5056c17dc481e27933c4c662f7a9fa801c3f0b72b10b446e1c0b0c8670bd
+uses patch77fddbd67c82bebcc4ff31eea6bb0f6d25e8216e44825d6459f184f47756ce16.
+Fresh banks and a separate OOC campaign prevent mixed-backend comparisons.
+Release evidence and limitations are in [the0.1.1 notes](release_v0.1.1.md).
