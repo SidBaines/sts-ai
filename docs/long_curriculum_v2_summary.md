@@ -1,5 +1,20 @@
 # Full-game RL v2 — latest first
 
+## 2026-10-12 17:32 UTC — one-hour stagnation check; policy drift measured
+
+No confirmed full-game improvement has appeared. The one-hour inspection warning is active; a second confirmation cycle is underway. The last completed 192-world result remains 0 wins against the original 2, with 131 Act 1 clears against 151. The original remains champion. Later screens returned 1/48, matching the screen baseline win count while ending around floor 25.5 versus 32.48 initially; this is not confirmation evidence.
+
+A bounded, read-only probe compared the original and first confirmed learner on 384 fixed TRAIN public states. Both policy heads changed materially:
+
+| Diagnostic across act-specific state buckets | Combat | Out-of-combat |
+| --- | ---: | ---: |
+| Changed greedy choice | 18.8–26.6% | 12.5–14.1% |
+| Original-to-learner distribution KL | 0.177–0.791 | 0.217–0.289 |
+
+Small local PPO KL (~0.005) did not prevent cumulative drift from the original policy. This makes forgetting a plausible explanation, but does not distinguish combat errors from deck/pathing changes or prove an algorithm bug. Low bootstrapped value loss is not evidence of calibrated long-run predictions. The probe used two CPU threads for 2.35 seconds and no new environment trajectories.
+
+At this check, 115 completed chunks retained 12,281 updates, with one initial cold start, 114 warm restores and zero rollbacks; about 4.08 active hours remained. Exact source, protocol, DEV, original/checkpoint ancestry and native binary hashes matched; owned controller/dashboard identities and dashboard HTTP response were verified. No condition changes, attention acknowledgement or budget extension occurred. Evidence is retained in the run's preflight directory. [Dashboard](http://127.0.0.1:8786/) · [Detailed progress](long_curriculum_v2_progress.md) · [Generated detail](long_curriculum_v2_live.md).
+
 ## 2026-10-12 17:12 UTC — first confirmation declines; champion remains original
 
 The new run is operationally healthy, but its first larger evaluation gives **no evidence of useful improvement**. The round 55 snapshot lost both baseline winning worlds and had lower mean ending floor. Act 1 retention also declined. These are descriptive results from a small, repeatedly inspected DEV set, not a final generalization estimate.
