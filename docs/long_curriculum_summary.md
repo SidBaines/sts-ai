@@ -1,5 +1,13 @@
 # Long curriculum — latest first
 
+## 2026-10-12 11:20 UTC — live dashboard available
+
+The main run continues in the background. The read-only dashboard is open at **http://127.0.0.1:8786**, refreshing every eight seconds. It shows the active allocation, checkpoint/heartbeat ages, valid transitions, accepted updates, training returns and percentiles, loss/KL/entropy/clip metrics, throughput/timings, matched DEV decisions and separate conditional training families. Missing metrics are explicitly unavailable; rehearsal clears and continuation success are not full-game win estimates.
+
+Two subagents implemented and reviewed it. Validation: 410 host tests successful with one optional artifact skip; six focused dashboard tests and JS syntax passed; the bounded core smoke passed. Root verified the live API and rendered charts, including readable labels in the narrow in-app panel. Responsive assets can be edited without changing the learner. [Dashboard usage and extension guide](long_rl_dashboard.md).
+
+The API returned RUNNING, an error-free snapshot, and approximately 9.3 active hours remaining. Hourly monitoring also checks dashboard availability and keeps this summary and the detailed log current. The frozen learner source, rewards, earlier experiment and final-cohort embargo remain unchanged.
+
 ## 2026-10-12 10:57 UTC — main run running after accepted pilot
 
 The detached main controller started at **10:53:40 UTC** (PID 79441). The validated 10:57 snapshot recorded six completed main chunks, 33 total rounds and **9.693 active hours remaining**. The authorized budget stayed **36,000 seconds**; consumed pilot time was preserved and no extension was added.
