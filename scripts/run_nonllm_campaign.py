@@ -518,6 +518,10 @@ class Campaign:
         files = {'act1_battles': BANK/'battles.jsonl', 'act1_manifest': BANK/'manifest.json',
                  'later_act_battles': panels/'final_hard.jsonl', 'panel_manifest': panels/'panels.json'}
         files.update({str(path.relative_to(ROOT)): path for path in sorted((ROOT/'src/sts_policy').glob('*.py'))})
+        # Public observations, native loading and semantic wrappers live in
+        # sts_env; generated run/OOC tasks have no per-prefix provenance gate.
+        # Pin every Python core file as well as the experiment adapters.
+        files.update({str(path.relative_to(ROOT)): path for path in sorted((ROOT/'src/sts_env').rglob('*.py'))})
         for path in (ROOT/'scripts/train_nonllm.py', ROOT/'scripts/evaluate_nonllm_baselines.py', Path(__file__)):
             files[str(path.relative_to(ROOT))] = path
         worlds, seed = [], 10000
@@ -528,7 +532,9 @@ class Campaign:
         definitions = {'task_version': TASK_VERSION, 'split': 'final', 'world_start': 10000,
                        'worlds': worlds, 'episodes': 21, 'shuffle_seed': 777,
                        'horizon': 2048, 'simulations': 200, 'goal_act_clear': True,
-                       'native_boss_multiplier': 2.0, 'panels': {}}
+                       'native_boss_multiplier': 2.0, 'gamma': 1.0,
+                       'reward_mode': 'potential', 'terminal_hp_weight': 0.0,
+                       'progress_floor_weight': 0.05, 'panels': {}}
         for label, kind, max_act in [('ooc_act1','ooc',1),('run_act1','run',1),('run_act3','run',3)]:
             tasks = [TaskSpec(seed=world, kind=kind, horizon=2048, max_act=max_act,
                               battle_simulations=200).to_dict() for world in worlds]
@@ -556,7 +562,10 @@ class Campaign:
                    '--metrics', self.destination/'final_composite.metrics.json', '--combat-checkpoint', combat,
                    '--ooc-checkpoint', ooc, '--device', 'cpu', '--workers', 8, '--threads', 2,
                    '--episodes', 21, '--world-start', 10000, '--split', 'final', '--task-kind', 'run',
-                   '--max-act', 3, '--horizon', 2048, '--simulations', 200, '--seconds', 600, '--fast-observations']
+                   '--max-act', 3, '--horizon', 2048, '--simulations', 200, '--seed', 777,
+                   '--gamma', 1.0, '--reward-mode', 'potential', '--terminal-hp-weight', 0.0,
+                   '--progress-floor-weight', 0.05, '--goal-act-clear',
+                   '--seconds', 600, '--fast-observations']
         self.run('final_composite', command, 600)
         for kind in ('battle', 'ooc', 'run'):
             for baseline in ('random', 'native', 'heuristic'):
