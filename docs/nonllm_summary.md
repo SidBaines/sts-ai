@@ -1,7 +1,20 @@
 # Non-LLM Slay the Spire — experiment summary
 
 Latest updates first. [Automatic log](nonllm_progress.md) · [Detailed decisions](nonllm_progress_notes.md) · [Plan](nonllm_curriculum_plan.md).
-Deadline: **12 October, 06:30 UTC**. Results below are **development selection results**; final worlds remain embargoed. Old native-auto evidence is quarantined.
+Deadline: **12 October, 06:30 UTC**. Results below are **development selection results**. The designated final benchmark remains embargoed; an earlier learned-agent smoke used a separate hash-final seed ([protocol exception](nonllm_protocol_audit.md)). Old native-auto evidence is quarantined.
+
+## 2026-10-12 03:04 UTC — full-control Act 1 reaches 38/48
+
+The best jointly trained policy now clears **38/48** matched development worlds, up from **29/48** at the composed warm start. All 48 runs completed, with **zero simulator faults or truncations** and no native-controlled decisions. Later checkpoints vary, so selection retains the best rather than the last checkpoint.
+
+| Current selected development result | Successes / requested | Faults |
+| --- | ---: | ---: |
+| Isolated Act 1 combat | 44/48 | 0 |
+| Later-act combat | 30/32 | 0 |
+| OOC with native combat | 31/32 | 0 |
+| Learned combat and OOC, Act 1 | **38/48** | **0** |
+
+These are different task cohorts. Three-act training and held-out evaluation remain pending. Resume recovery preserved an inadvertently repeated training chunk; command-order normalization now prevents that repeat while still checking settings and input hashes.
 
 ## 2026-10-12 02:32 UTC — full-control learning is improving
 

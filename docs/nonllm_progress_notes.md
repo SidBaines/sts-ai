@@ -356,3 +356,11 @@ active. OOC andjointfull-run stages remainrequired; nofinallearnerpanel yet.
   80850loadedearliercode; activatefixatnextsafejointboundarybefore04:08.
 - Shortsummarycondensedtolateststate/majorchoices/evidencetables; detailed
   chronologyremainsinhuman/automaticlogs.
+
+## 2026-10-12 03:04 UTC — Act 1 progress and recovery audit
+
+Selected `joint_act1_0007.pt` completes the fixed 48-world panel with 38 act clears, 10 ordinary defeats, zero faults/truncations. The initial composed reference completed 29 clears and 19 defeats on the identical requested task set. Round 9 has 35 clears and is not selected. Its training chunk accepted 207,748 transitions and executed 443 optimizer updates; training remains live.
+
+The 02:51 supervisor reload activated the three-act development evaluator. A v1 cache compared raw option order, so JSON-sorted effective settings caused `joint_act1_0008` to repeat despite equivalent values. Prior artifacts were moved into `history/`, selected round 7 was preserved, and the new chunk finished normally. Cache v2 canonicalizes effective options and migrates pinned v1 only with matching canonical values and complete path/SHA input identities. No extra restart was made for this repair; it loads on the next required supervisor restart.
+
+A separate audit found two earlier learned-agent seed-3 CLI smoke traces. Seed 3 hashes to the broad final partition, so that partition was not wholly untouched. It is outside the designated final cohort (worlds >=10000), was not used in recorded training/selection aggregates, and the exception is recorded in `nonllm_protocol_audit.md` with an evidence snapshot. Future learned-agent integration fixtures must explicitly verify train/dev membership.
