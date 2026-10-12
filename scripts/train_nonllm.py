@@ -240,7 +240,8 @@ def main() -> None:
                 model.to(args.inference_device)
                 result = collect_rollouts(model, workers, tasks, collate=collate_public,
                                            forward=forward_policy, config=ppo, device=args.inference_device,
-                                           max_seconds=min(remaining, 120.), deterministic=args.command == "evaluate",
+                                           max_seconds=remaining if args.command == "evaluate" else min(remaining, 120.),
+                                           deterministic=args.command == "evaluate",
                                            teacher_simulations=args.teacher_simulations,
                                            deferred_bootstrap=args.deferred_bootstrap)
                 transitions, labels = result.pop("transitions"), result.pop("teacher_records")

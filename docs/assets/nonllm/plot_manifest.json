@@ -1,0 +1,21 @@
+{
+  "artifacts": [
+    "data/nonllm_v1/report/combat_development.svg",
+    "data/nonllm_v1/report/combat_development.png",
+    "data/nonllm_v1/report/architecture_development.svg",
+    "data/nonllm_v1/report/architecture_development.png",
+    "data/nonllm_v1/report/health_development.svg",
+    "data/nonllm_v1/report/health_development.png"
+  ],
+  "csv_files": [
+    "combat_development.csv",
+    "architecture_development.csv",
+    "health_development.csv"
+  ],
+  "latest_combat": "combat_0018",
+  "png_backend": "Pillow 12.3.0",
+  "scope": "development only; no final metrics read",
+  "script_sha256": "6fcd029596a8edd6a6ba3fa91b22d7af9c9a294cb6d7663b86d327921192b2cb",
+  "source_files": 46,
+  "source_json": "development_source.json"
+}

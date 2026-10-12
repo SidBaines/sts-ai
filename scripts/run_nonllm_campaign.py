@@ -11,9 +11,11 @@ import json
 import os
 from pathlib import Path
 import signal
+import shutil
 import subprocess
 import sys
 import time
+from sts_policy.campaign_identity import condition_signature, legacy_cache_valid
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = ROOT / '.venv/bin/python'
@@ -77,24 +79,103 @@ class Campaign:
         self.state['heartbeat'] = time.time()
         atomic(self.journal, self.state)
 
+    def completed_frontier_seconds(self, name):
+        """Recover a completed chunk's immutable budget before rebuilding argv."""
+        metrics = self.destination / (name + '.metrics.json')
+        checkpoint = self.destination / (name + '.pt')
+        if not metrics.is_file() or not checkpoint.is_file():
+            return None
+        digest = hashlib.sha256(metrics.read_bytes()).hexdigest()
+        for record in reversed(self.state['commands']):
+            if record.get('name') != name or record.get('status') != 'complete':
+                continue
+            if digest != record.get('metrics_sha256') or checkpoint.stat().st_mtime > record.get('finished', 0) + 5:
+                continue
+            command = list(map(str, record.get('command', [])))
+            indices = [index for index, token in enumerate(command[:-1]) if token == '--seconds']
+            if indices:
+                token = command[indices[-1] + 1]
+                seconds = float(token)
+                if seconds > 0:
+                    record['recovered_frontier_budget_seconds'] = seconds
+                    return int(token) if token.isdigit() else seconds
+        return None
+
     def run(self, name, command, seconds, phase_end=DEADLINE):
         metrics = self.destination / (name + '.metrics.json')
-        previous = next((x for x in self.state['commands'] if x['name'] == name and x['status'] == 'complete'), None)
-        if previous and metrics.exists():
+        try:
+            signature = condition_signature(command)
+        except (OSError, IndexError) as error:
+            self.state['commands'].append({'name': name, 'command': list(map(str, command)),
+                'started': time.time(), 'finished': time.time(), 'status': 'failed',
+                'metrics': str(metrics), 'exit_code': None, 'input_identity_error': repr(error)})
+            self.save()
+            return None
+        previous_records = [x for x in self.state['commands'] if x['name'] == name and x['status'] == 'complete']
+        if previous_records and metrics.exists():
             digest = hashlib.sha256(metrics.read_bytes()).hexdigest()
-            expected = previous.get('metrics_sha256')
-            legacy_valid = metrics.stat().st_mtime <= previous.get('finished', 0) + 5
-            if (digest == expected or (expected is None and legacy_valid)) and cohort_arguments(previous['command'])==cohort_arguments(command):
-                previous['metrics_sha256'] = digest
-                return json.loads(metrics.read_text())
+            for previous in reversed(previous_records):
+                expected = previous.get('metrics_sha256')
+                metrics_valid = digest == expected or (expected is None and metrics.stat().st_mtime <= previous.get('finished', 0) + 5)
+                pinned = previous.get('condition_signature')
+                if pinned is not None:
+                    compatible = pinned['digest'] == signature['digest']
+                else:
+                    # These options have separate CPU/native parity evidence.
+                    # Only legacy records normalize them; new signatures pin
+                    # every argument and effective input's SHA256.
+                    performance = {'--fast-replay', '--fast-observations', '--deferred-bootstrap'}
+                    normalized = [token for token in command if str(token) not in performance]
+                    old = {**previous, 'command': [token for token in previous['command'] if str(token) not in performance]}
+                    compatible = legacy_cache_valid(old, normalized)
+                if metrics_valid and compatible:
+                    previous['metrics_sha256'] = digest
+                    previous['condition_signature'] = signature
+                    return json.loads(metrics.read_text())
         allowance = min(seconds + 90, phase_end - time.time(), DEADLINE - time.time())
         if allowance <= 2:
             return None
+        # A new scientific condition may reuse a human job name. Preserve any
+        # currently verifiable completed artifacts before a child can replace
+        # them; cached matching conditions returned above never reach this path.
+        if previous_records and metrics.is_file():
+            digest = hashlib.sha256(metrics.read_bytes()).hexdigest()
+            previous = next((record for record in reversed(previous_records)
+                             if record.get('metrics_sha256') == digest), None)
+            if previous is not None:
+                checkpoint = self.destination/(name+'.pt')
+                references = [*self.state.get('selected', {}).values(), *self.state.get('frozen_selection', {}).values()]
+                references += [phase.get(key) for phase in self.state.get('phase_progress', {}).values()
+                               for key in ('current', 'best')]
+                protected = checkpoint.is_file() and any(isinstance(value, (str, Path)) and
+                    Path(value).resolve() == checkpoint.resolve() for value in references)
+                if protected:
+                    self.state['commands'].append({'name':name,'command':list(map(str,command)),
+                        'started':time.time(),'finished':time.time(),'status':'blocked_protected_artifact',
+                        'metrics':str(metrics),'exit_code':None,
+                        'error':'Completed checkpoint is selected/frozen/current; use a unique condition output name.'})
+                    self.save()
+                    raise RuntimeError('Cannot overwrite a selected/frozen/current completed checkpoint; rename the condition artifact first.')
+                archive = self.destination/'history'/(name + '-' + str(previous.get('started',0)).replace('.','_'))
+                archive.mkdir(parents=True, exist_ok=True)
+                artifacts = [metrics, self.destination/(name+'.pt'), self.destination/(name+'.log')]
+                preserved = {}
+                for artifact in artifacts:
+                    if not artifact.is_file():
+                        continue
+                    target = archive/artifact.name
+                    if not target.exists():
+                        temporary = target.with_suffix(target.suffix+'.tmp')
+                        shutil.copy2(artifact, temporary)
+                        temporary.replace(target)
+                    preserved[str(artifact)] = {'path':str(target),'sha256':hashlib.sha256(target.read_bytes()).hexdigest()}
+                previous['preserved_artifacts'] = preserved
         source_identity = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                            for p in sorted((ROOT/'src/sts_policy').glob('*.py'))}
         source_identity.update({str(p.relative_to(ROOT)) if p.is_relative_to(ROOT) else str(p): hashlib.sha256(p.read_bytes()).hexdigest()
                                 for p in (ROOT/'scripts/train_nonllm.py', Path(__file__)) if p.exists()})
-        record = {'source_identity': source_identity, 'name': name, 'command': [str(x) for x in command], 'started': time.time(),
+        record = {'source_identity': source_identity, 'condition_signature': signature,
+                  'name': name, 'command': [str(x) for x in command], 'started': time.time(),
                   'status': 'running', 'metrics': str(metrics)}
         self.state['commands'].append(record)
         self.save()
@@ -157,6 +238,10 @@ class Campaign:
         return (path, result) if path.exists() and result is not None else (None, result)
 
     def evaluate(self, name, checkpoint, kind='battle', split='dev', episodes=48, seconds=90, end=DEADLINE, **kwargs):
+        if kind == 'ooc' and split == 'dev':
+            episodes = 32
+            kwargs['horizon'] = 1024
+            kwargs['world_start'] = 10000
         command = [PYTHON, ROOT / 'scripts/train_nonllm.py', 'evaluate', '--output',
                    self.destination / (name + '.unused.pt'), '--metrics', self.destination / (name + '.metrics.json'),
                    '--checkpoint', checkpoint, '--device', 'cpu', '--threads', 2,
@@ -185,7 +270,10 @@ class Campaign:
                              tasks=hard_path, max_act=3) if hard_path.exists() else None
         if primary is None:
             return None
-        score = self.score(primary) if hard is None else .5*(self.score(primary)+self.score(hard))
+        if not panel_complete(primary) or (hard_path.exists() and (hard is None or not panel_complete(hard))):
+            score = -1e9
+        else:
+            score = self.score(primary) if hard is None else .5*(self.score(primary)+self.score(hard))
         combined = {'selection_score':score, 'primary_score':self.score(primary),
                     'hard_score':self.score(hard) if hard else None,
                     'rounds':primary.get('rounds',[])+(hard.get('rounds',[]) if hard else []),
@@ -205,6 +293,8 @@ class Campaign:
     def score(metrics):
         if not metrics:
             return -1e9
+        if metrics.get('command') == 'evaluate' and not panel_complete(metrics):
+            return -1e9
         if 'selection_score' in metrics:
             return metrics['selection_score']
         episodes = [episode for row in metrics.get('rounds', []) for episode in row.get('episodes', [])]
@@ -218,9 +308,16 @@ class Campaign:
         faults = [fault for row in metrics.get('rounds', []) for fault in row.get('faults', [])]
         if len(faults) > max(2, .1 * (len(episodes) + len(faults))):
             return -1000
-        return 100 * wins / max(1, len(episodes)) + .1 * floor - .01 * sum(hp) / max(1, len(hp))
+        requested = sum(len(row.get('task_ids', [])) for row in metrics.get('rounds', []))
+        # A native fault remains a separately reported fault. Including its
+        # requested task in selection coverage prevents disappearing hard states
+        # from improving a policy's development score.
+        return 100 * wins / max(1, requested or len(episodes)) + .1 * floor - .01 * sum(hp) / max(1, len(hp))
 
     def screen(self):
+        saved = self.state.get('selected', {}).get('shared_bc')
+        if self.state.get('architecture_panel') and saved is not None and Path(saved).is_file():
+            return Path(saved)
         self.state['phase'] = 'architecture_screens'
         end = INITIAL + 7200
         candidates = []
@@ -289,7 +386,10 @@ class Campaign:
                 round_settings['max_act'] = 1 if round_settings['tasks'].is_relative_to(BANK) else 3
             if kind != 'battle':
                 round_settings['world_start'] = settings.get('world_start',20000) + round_index*128
-            path, _ = self.train(tag, 'ppo', current, seconds=min(180, end-time.time()-120), end=end,
+            seconds = self.completed_frontier_seconds(tag)
+            if seconds is None:
+                seconds = min(180, end-time.time()-120)
+            path, _ = self.train(tag, 'ppo', current, seconds=seconds, end=end,
                                  task_kind=kind, seed=11 + round_index, **round_settings)
             if path is None:
                 raise RuntimeError('PPO failed; inspect ' + tag)
@@ -410,6 +510,69 @@ class Campaign:
         self.save()
         return panel[0][1],panel[0][2]
 
+    def ooc_screen(self, source, end):
+        """Select PPO settings on one fixed live OOC development cohort."""
+        from sts_policy.ooc_controls import ooc_screen_plan, ooc_evaluation_command
+        saved_phase = self.state.get('phase_progress', {}).get('ooc')
+        if saved_phase is not None:
+            settings = self.state.get('ooc_effective_settings')
+            if settings is None:
+                # Recover actual historical settings rather than silently
+                # changing an already-started phase on a software resume.
+                metrics = Path(saved_phase['best']).with_suffix('.metrics.json')
+                config = json.loads(metrics.read_text())['config']
+                keys = ('learning_rate', 'reward_mode', 'gamma', 'clip_ratio', 'entropy_coef',
+                        'progress_floor_weight', 'terminal_hp_weight')
+                settings = {key: config[key] for key in keys}
+                self.state['ooc_effective_settings'] = settings
+                self.save()
+            return Path(saved_phase['best']), settings
+        self.state['phase'] = 'ooc_hyperparameter_screen'
+        source = Path(source)
+        basic = {'gamma': 1., 'clip_ratio': .1, 'entropy_coef': .01, 'terminal_hp_weight': 0.}
+        default = {**basic, 'learning_rate': 1e-4, 'reward_mode': 'progress', 'progress_floor_weight': .05}
+        def acceptable(metrics):
+            if metrics is None or not panel_complete(metrics):
+                return False
+            episodes = sum(len(row.get('episodes', [])) for row in metrics.get('rounds', []))
+            faults = sum(len(row.get('faults', [])) for row in metrics.get('rounds', []))
+            return faults <= max(2, .1 * (episodes + faults))
+        reference_command = ooc_evaluation_command(source, self.destination/'ooc_warmstart_reference_dev.metrics.json', root=ROOT)
+        reference = self.run('ooc_warmstart_reference_dev', reference_command, 120, end)
+        panel = [{'name': 'warmstart_reference', 'role': 'reference', 'recipe': default,
+                  'checkpoint': str(source), 'source': str(source), 'evaluation_command': reference_command,
+                  'cohort_complete': reference is not None and panel_complete(reference),
+                  'eligible': acceptable(reference), 'score': self.score(reference) if acceptable(reference) else None,
+                  'evaluation': reference}]
+        self.state['ooc_reference'] = {'checkpoint': str(source),
+            'sha256': hashlib.sha256(source.read_bytes()).hexdigest() if source.exists() else None}
+        for plan in ooc_screen_plan(source, self.destination, root=ROOT):
+            checkpoint = Path(plan['checkpoint'])
+            training = self.run(plan['name'], plan['training_command'], 90, end)
+            evaluation = None
+            if training is not None and checkpoint.exists():
+                evaluation = self.run(plan['name'] + '_dev', plan['evaluation_command'], 120, end)
+            settings = {**basic, 'learning_rate': plan['learning_rate'],
+                        'reward_mode': plan['reward_mode'], 'progress_floor_weight': plan['progress_floor_weight']}
+            entry = {'recipe': settings, 'checkpoint': str(checkpoint), 'source': str(source),
+                     'name': plan['name'], 'role': 'pilot', 'training_command': plan['training_command'],
+                     'evaluation_command': plan['evaluation_command'],
+                     'cohort_complete': evaluation is not None and panel_complete(evaluation),
+                     'eligible': acceptable(evaluation),
+                     'evaluation': evaluation}
+            entry['score'] = self.score(evaluation) if entry['eligible'] else None
+            panel.append(entry)
+            self.state['ooc_pilot_panel'] = panel
+            self.save()
+        eligible = [entry for entry in panel if entry['eligible']]
+        if not eligible:
+            raise RuntimeError('No completed matched OOC hyperparameter panel; inspect job records')
+        best = max(eligible, key=lambda entry: entry['score'])
+        self.state['ooc_effective_settings'] = best['recipe']
+        self.state['selected']['ooc_pilot'] = best['checkpoint']
+        self.save()
+        return Path(best['checkpoint']), best['recipe']
+
     def main(self):
         shared = self.screen()
         if HARD_BANK.exists():
@@ -440,6 +603,9 @@ class Campaign:
         combat = self.curriculum('combat', combat_start, INITIAL+14400, 'battle',
                                  tasks=BANK/'battles.jsonl', horizon=256, teacher_simulations=200,
                                  **combat_settings)
+        if 'ooc' not in self.state.get('phase_progress', {}):
+            self.state['phase'] = 'ooc_warmstarts'
+            self.save()
         specialist, _ = self.train('ooc_specialist_bc', 'bc', shared, seconds=120, phase='ooc')
         ooc_start = specialist or shared
         if LOOKAHEAD_BANK.exists():
@@ -461,8 +627,9 @@ class Campaign:
             self.state['ooc_teacher_panel']=[{'score':score,'checkpoint':str(path),'teacher':label} for score,path,label in teacher_panel]
             if teacher_panel:ooc_start=teacher_panel[0][1]
             self.save()
+        ooc_start, ooc_settings = self.ooc_screen(ooc_start, INITIAL+21600)
         ooc = self.curriculum('ooc', ooc_start, INITIAL+21600, 'ooc',
-                             world_start=20000, horizon=1024, reward_mode='progress', learning_rate=3e-4)
+                             world_start=20000, horizon=1024, **ooc_settings)
         initial_panel = []
         for label, checkpoint in [('shared_bc', shared), ('combat', combat), ('ooc', ooc)]:
             evaluation = self.evaluate('joint_start_' + label + '_dev', checkpoint, 'run', episodes=32,

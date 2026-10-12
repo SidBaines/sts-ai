@@ -63,7 +63,8 @@ def render(campaign, output, cache):
              'This page is generated from the atomic campaign journal and raw metrics. '
              'It includes failures and incomplete jobs. [Decision notes and recovery instructions](nonllm_progress_notes.md) '
              'record reasoning; [the experiment plan](nonllm_curriculum_plan.md) records hypotheses. '
-             'Development results are not final-test results. Simulator faults are separate from ordinary game defeats.', '',
+             'Development results are not final-test results. Simulator faults are separate from ordinary game defeats. '
+             '[Short latest-first summary](nonllm_summary.md) records the major decisions and supporting evidence.', '',
              '## Current selection', '', '```json', json.dumps(state.get('selected', {}), indent=2, sort_keys=True), '```', '',
              '## Experiment timeline', '']
     for record in state['commands']:

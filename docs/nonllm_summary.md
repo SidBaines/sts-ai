@@ -5,6 +5,72 @@ Latest milestones first. [Detailed log](nonllm_progress.md) ·
 Deadline: **12 October, 06:30 UTC**. All results below are development results;
 final evaluation remains embargoed.
 
+## 2026-10-12 00:07 UTC — combat phase finished; OOC warm starts running
+
+The selected combat specialist is round 17. It matches the native
+reference win counts on these development panels; repeated selection and small
+world counts still require held-out confirmation.
+
+| Matched development panel | Selected combat | Native reference |
+| --- | ---: | ---: |
+| Act 1 wins / 48 | 44 | 44 |
+| Later-act wins / 32 | 30 | 30 |
+
+Its mean HP cost is **12.48 / 15.72** for Act 1 / later-act fights, versus
+**11.15 / 20.56** for the initial short pilot. Higher wins did not uniformly
+improve health preservation. No surfaced faults or truncations in these panels.
+
+**Current work:** train the OOC specialist warm start, compare matched native
+and lookahead labels, then select among five short PPO settings. Joint full-run
+training and independent final evaluation remain pending. A resume-budget bug
+repeated one 92-second chunk; the best checkpoint stayed safe, original metrics
+were archived separately, and resume handling now preserves recorded budgets and protects selected checkpoints.
+Those last supervisor fixes will activate at the next safe restart boundary.
+
+## 2026-10-12 00:00 UTC — development curve and evaluation audit
+
+Combat performance varies between checkpoints; the campaign retains the best
+completed development result. This snapshot uses identical cohorts for connected
+points and shows selection scores, not success percentages. The latest point
+is not necessarily the best checkpoint.
+
+![Matched combat development scores](assets/nonllm/combat_development.png)
+
+[Chart data](assets/nonllm/combat_development.csv) ·
+[Reproduction manifest](assets/nonllm/plot_manifest.json). Horizontal axis: hours
+since campaign start. This committed snapshot ends at round 18; regenerate
+with `scripts/plot_nonllm_development.py` for current local results.
+
+Independent review found unequal evaluation time caps and selection scores that
+could benefit from dropped tasks. Fixes now give evaluation its declared budget
+and require complete development cohorts, with faults still reported separately.
+All **289 regression tests passed**, with native gates enabled, plus the bounded
+rollout smoke. The completed training checkpoint was recovered, and the reviewed
+supervisor resumed at **00:05 UTC**. OOC/full-control learning and final assessment
+remain pending.
+
+## 2026-10-11 23:53 UTC — combat improvement and the next phase
+
+Later-act training now samples Acts 1, 2 and 3, with corrective native labels
+mixed into a fixed rehearsal reservoir. The best development checkpoint has
+improved wins and HP cost relative to the selected short pilot:
+
+| Matched development panel | Initial pilot | Current best (round 14) |
+| --- | ---: | ---: |
+| Act 1 wins / 48 | 41 | 43 |
+| Later-act wins / 32 | 29 | 29 |
+| Act 1 mean HP cost | 11.15 | 10.75 |
+| Later-act mean HP cost | 20.56 | 16.25 |
+
+All four evaluations completed with zero surfaced faults or truncations. These
+are repeatedly used selection panels, so improvements need independent final
+confirmation. Combat training ends at **00:08:46 UTC**.
+
+**Next:** OOC warm starts compare native and lookahead labels on identical
+frontiers. Five matched 90-second PPO controls then compare learning rates and
+progress versus sparse rewards before longer OOC training. Integrated learner
+control and final held-out evaluation are still pending.
+
 ## 2026-10-11 23:25 UTC — health bonuses tested; main combat training continues
 
 The learned combat policy loses materially more HP than native search. Two

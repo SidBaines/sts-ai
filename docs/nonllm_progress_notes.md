@@ -219,3 +219,76 @@ comparisons; current source and logs are being committed as a recovery point.
 **268 tests passed** in24.716s withnativegates enabled. Maincombat frontier
 isadvancingagain afterhealthstudy; currentnext_round10 andnewguard source
 active. OOC andjointfull-run stages remainrequired; nofinallearnerpanel yet.
+
+## 2026-10-11 23:53 UTC — maintained summary and OOC preparation
+
+- Sid requested a short human summary with newest milestones first.
+  `docs/nonllm_summary.md` is manually maintained at major decisions/phase
+  changes; the automatic command log remains the detailed audit source.
+- Combat best round 14 improves matched dev Act 1 wins 41→43/48 and later-act
+  mean HP cost 20.56→16.25, holding later-act wins at 29/32. Selection panels
+  are reused, so this is not an independent final estimate.
+- OOC phase will compare five equal 90-second PPO pilots from one warm start:
+  progress 0.05 at learning rates 1e-4/3e-4/1e-3, sparse at 1e-4, progress
+  0.02 at 1e-4. Same 64 train worlds, seed, native combat budget and 32-world
+  development cohort. The supervisor owns all GPU execution and selection.
+- Commissioned CPU-only plotting and scientific split/reward/cohort audits;
+  no agents may launch overlapping GPU jobs or access final learner outcomes.
+
+## 2026-10-12 00:03 UTC — evaluation gates and reproducible chart
+
+- Saved a development-only combat chart, source CSV and manifest in
+  `docs/assets/nonllm/`, linked from the short summary. Connected points share
+  exact cohorts; changing panels are not silently combined.
+- Full suite passed 284 tests in 24.53s with native gates, plus bounded random
+  seed-3 smoke. Supervisor was paused while its already-running combat round 19
+  completed normally; preserve that checkpoint and recover the journal before
+  restart. Subsequent cache tests will separately cover semantic input identity.
+- Evaluation now uses its declared full budget; PPO retains bounded 120-second
+  collection rounds. Selection rejects incomplete cohorts and counts requested
+  tasks in its coverage score. Faults remain separately classified.
+- Live OOC reset confirmed search control and no learner combat menus. Ordinary
+  native simulation budget 200 has default boss multiplier 2, whereas explicit
+  teacher queries use 200. Net HP change is not cumulative damage, especially at
+  healed act transitions; interpret integrated HP results accordingly.
+- CLI logs may contain a single very large JSON metrics line. Inspect parsed
+  metrics fields rather than printing an unrestricted tail of the job log.
+
+- Final reviewed source passed **286 tests** in 18.05s. Recovered completed
+  combat round 19 from its final elapsed metric/checkpoint; restarted only our
+  supervisor at 00:05 UTC (PID 51535), writer PID 51536. The automatic log now
+  links the short summary. Absolute deadline remains 06:30 UTC.
+- Cache reuse now pins semantic arguments and input SHA256s. Legacy records
+  require matching semantic knobs and inputs predating their launch; only three
+  separately validated performance flags are normalized during migration.
+  Completed architecture selection resumes directly instead of rerunning old
+  screens after their budget expired.
+- Final audit still must confirm actual nonzero PPO updates in OOC, joint Act 1
+  and joint Act 3, not merely completed evaluation panels. Before final access,
+  freeze file hashes for checkpoints and panel definitions, alongside paths.
+
+## 2026-10-12 00:07 UTC — phase transition and recovery correction
+
+- Combat phase finished; round 17 selected (44/48 Act 1, 30/32 later-act).
+  OOC specialist BC is now running. Isolated wins do not establish integrated
+  competence, and selected-panel evidence is not an independent test.
+- Restart at 00:05 recomputed the last chunk's budget from 180 to 92.04 seconds.
+  Strict new signatures correctly rejected that changed condition, but the
+  curriculum reused its filename and repeated the chunk from the same source.
+  Original 180-second metrics are preserved in
+  `data/nonllm_v1/campaign/archive/combat_0019_original180.metrics.json`
+  (SHA256 32e6b3aba75d738b1ff1af0cd2d002cb1cbefee9923c0b0ec1e95f17871a85cc).
+  The non-selected original round-19 checkpoint was overwritten; the selected
+  round-17 checkpoint and all earlier checkpoints remain intact. Keep both
+  budgets' metrics distinguishable. The repeated job completed in 92.54 seconds.
+- A recovered frontier must reuse a validated completed command's recorded time
+  budget, not recompute it and overwrite a completed condition. Regression and
+  a completed-artifact overwrite guard are being added. Existing parent continues
+  OOC work; apply these supervisor changes at the next safe boundary if needed.
+
+- The final full gate passed **289 tests** in 20.42s. New resume regressions
+  recover the original budget token exactly (`180`, not `180.0`), archive
+  verifiable completed artifacts before unselected-name replacement, and reject
+  replacement of selected/frozen/current/best checkpoint paths. These final
+  supervisor protections are staged; the already-loaded live parent continues
+  OOC work and should load them at its next safe restart boundary.

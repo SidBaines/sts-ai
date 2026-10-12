@@ -75,3 +75,23 @@ learned evaluation CLI configurations and matched exactly; actual episode
 world/floor multisets matched too. Order can differ because the training CLI
 reshuffles the selected panel before collection. Match the set of exact task
 identities, not completion order.
+
+### OOC control and HP interpretation audit (2026-10-12)
+
+OOC TaskSpecs use environment mode `ooc`, `combat_control=search`: the policy
+never receives combat action menus. CLI simulations 200 means ordinary native
+search 200, with the released default boss multiplier 2 (400); a per-action
+teacher query of 200 is a different operation. Keep this distinction in reference
+comparisons. The immutable backend has not changed.
+
+`hp_cost` is **net starting minus ending HP**, not cumulative incoming damage.
+For OOC/full runs, act-boundary healing can erase prior HP losses; successful
+Act 1 clears may therefore all show zero net cost. Terminal HP shaping can also
+be constant at these healed endpoints. Use actual clears, survival/floor outcomes
+and explicit within-battle measurements; do not infer OOC HP preservation from
+this field alone.
+
+Evaluation now uses its declared collection budget rather than the 120-second
+PPO-round cap. Development selection requires exact requested task coverage and
+uses wins/requested tasks for its conservative selection score. Simulator faults
+remain separate outcomes, never fabricated defeats or training transitions.
