@@ -1,5 +1,13 @@
 # Full-game RL v2 — latest first
 
+## 2026-10-12 20:58 UTC — work paused for critical review; complete agent handoff
+
+The user requested a comprehensive write-up and commit before a new agent continues. Both longer runs are operator-paused and the scheduled monitor is PAUSED. The read-only dashboard remains available. **3.959 active hours remain unspent; no next pilot has been implemented or authorized.**
+
+The [agent handoff](experiment_handoff.md) consolidates clean releases, first-study learning and limits, throughput work, both longer-run failures, simulator fixes, exact phase attribution, unknowns and the evidence needed before another allocation. The [verified machine/artifact manifest](handoff/state_20261012.json) records exact weights, dependency paths, hashes and budget; the [frozen controller report](handoff/v2_live_snapshot_20261012.md) preserves detailed history and explains its stale shutdown-error header.
+
+The diagnosis was corrected to match the selected no-context architecture: actor and critic share the state encoder only, not the action encoder. Critic interference remains a hypothesis. Independent review found the remaining evidence, cohort boundaries and pause state consistent. Documentation/links/hashes are being checked; no training, evaluation, source changes or final-data access occurred for this handoff.
+
 ## 2026-10-12 18:01 UTC — regression attributed; no long-run restart
 
 Matched whole-model swaps identify **OOC drift as the broad survival/progression regression**. Combat-only change improves average progression but also loses the two original wins. The exact 192-world DEV replay reproduced both original and regressed reference traces; the table uses the same 190 fault-free worlds:

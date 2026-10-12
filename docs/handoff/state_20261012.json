@@ -1,0 +1,328 @@
+{
+  "active_worktree": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI",
+  "allocation": {
+    "combined_authorized_seconds": 36000.0,
+    "no_extensions": true,
+    "remaining_seconds": 14252.173799542012,
+    "v1_used_seconds": 17575.872087707976,
+    "v2_authorized_transferred_seconds": 18424.127912292024,
+    "v2_used_seconds": 4171.954112750012
+  },
+  "artifacts": {
+    "budget_transfer": {
+      "bytes": 820,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/preflight/budget_transfer.json",
+      "sha256": "fe8673380a693b08ee18cec6a22719c9ed51ee4d07d6ca297ea73cd609f9dd9f"
+    },
+    "combat_acceptance": {
+      "bytes": 2735,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/diagnosis/combat/acceptance.json",
+      "sha256": "2838c948cd0ea77126d996a17fac1baf177b3ae6f2827debaca2ca0a664132c2"
+    },
+    "dev_crossover_acceptance": {
+      "bytes": 4009,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/diagnosis/dev_crossover/independent_acceptance.json",
+      "sha256": "591d6a46273cca11535dbb81642ea8be0cff9f2df15608e8b3f88011da1d512e"
+    },
+    "diagnostic_NN": {
+      "bytes": 18422453,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/diagnosis/phase_crossover/checkpoints/NN.pt",
+      "sha256": "859dd3b50b1d41a2700e547a0e130c10b4816d0b72bd9f2a9cb562158423c21f"
+    },
+    "diagnostic_NO": {
+      "bytes": 18422453,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/diagnosis/phase_crossover/checkpoints/NO.pt",
+      "sha256": "3381389b301802296791f9ec59657e18ac143a712ab60575c3ddaaa3cf84dc22"
+    },
+    "diagnostic_ON": {
+      "bytes": 18422453,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/diagnosis/phase_crossover/checkpoints/ON.pt",
+      "sha256": "6c28d1bdce8645ff230da1f3f19f97de2ae54ebc51c7562ae6ba57565d24ee40"
+    },
+    "diagnostic_OO": {
+      "bytes": 18422453,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/diagnosis/phase_crossover/checkpoints/OO.pt",
+      "sha256": "d4fbfa1a64d695b1a308239245b4e7911e9236dfd4fac70a63352f9dd233ee9a"
+    },
+    "first_confirmed_regressed_cp54": {
+      "bytes": 55240251,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000054_main_a0_31377b0ff63cb815.pt",
+      "sha256": "b7985c17a97a2c96b77b171ebe828546fefe2b1ef1818ec413401ecd2e53d75d"
+    },
+    "latest_paused_cp128": {
+      "bytes": 55240251,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000128_main_a0_f2183d73dce67f4f.pt",
+      "sha256": "afc854b4597a8f0474fa8489b286338089817311478a897cedfa64273014adf0"
+    },
+    "morning_original": {
+      "bytes": 55239675,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0030.pt",
+      "sha256": "57f1e9613a69e31230b591ef0ff2cca27e23ddc81c3a24366cee173bc9909e70"
+    },
+    "native_study_binary": {
+      "bytes": 1089648,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/external/sts_lightspeed_v011/build/slaythespire.cpython-312-darwin.so",
+      "sha256": "40ab5056c17dc481e27933c4c662f7a9fa801c3f0b72b10b446e1c0b0c8670bd"
+    },
+    "pause_acceptance": {
+      "bytes": 1027,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/preflight/diagnosis_pause_acceptance.json",
+      "sha256": "f017bf7c15bfaa5fce1d864f750cf6d819fcfdf35fdb93fa1c818ef81f8d6e73"
+    },
+    "policy_drift_probe": {
+      "bytes": 4463,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/preflight/policy_drift_probe.json",
+      "sha256": "7ded53eb71911bf2cfbacd1d7009134120e44e75f365790b72dbe379528465b5"
+    },
+    "train_crossover_acceptance": {
+      "bytes": 1977,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/diagnosis/phase_crossover/independent_acceptance.json",
+      "sha256": "a6aba2e38a5acf6f5b5bf164ec7d37c9afc48a791d3cfa04ba865611b5547e05"
+    },
+    "v2_protocol": {
+      "bytes": 55728,
+      "exists": true,
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/configs/long_curriculum_v2_protocol.json",
+      "sha256": "94bc8c83ad113bf7c1676abece169d0d2f062eda565308bf513c604c66dd7efd"
+    }
+  },
+  "branch": "codex/long-curriculum-v2",
+  "captured_utc": "2026-10-12T20:55:23.085898+00:00",
+  "champion": {
+    "active_at": 0.0,
+    "checkpoint": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0030.pt",
+    "promotions": 0,
+    "sha256": "57f1e9613a69e31230b591ef0ff2cca27e23ddc81c3a24366cee173bc9909e70"
+  },
+  "data_warning": "This manifest verifies local files but does not back up gitignored weights, banks, binaries or runtime. Preserve dependency worktrees; source commits alone are insufficient.",
+  "deleted_second_confirmation": {
+    "checkpoint_index": 114,
+    "checkpoint_sha256": "1462ccd4636d256a3b3233b288995921d4a19d4085a294c3bfa382d72fa973aa",
+    "do_not_substitute_cp54_or_cp128_without_labeling": true,
+    "evaluation_round": 115,
+    "metrics_preserved": true,
+    "model_bytes_deleted_by_retention": true
+  },
+  "dev_bank_hashes": {
+    "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/confirm_full3.jsonl": "b7fc436f56b6f860e030f17dad540b09a569add2c4aa57d68ab6822e361f6d73",
+    "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/retention_act1.jsonl": "9780032b250a9fa70a6096c6957438b87be49338f876cde924640ff8ed8d2ae3",
+    "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/screen_full3.jsonl": "3e9ebfe5285b8d15fb4e7999fd4979bb6818f0c9896b3b8621536fa8e1420385"
+  },
+  "first_study_final_already_completed": true,
+  "handoff_parent_commit": "b9020207bffe1af89c33ff63384db519c24b3e78",
+  "learner": {
+    "checkpoint": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000128_main_a0_f2183d73dce67f4f.pt",
+    "cold_optimizer_count": 1,
+    "last_advanced_at": 1791826768.887959,
+    "lineage_chunks": 129,
+    "optimizer_restore_count": 128,
+    "parent_sha256": "eeab75a82b85c7880f81d754604a31d96cbb8b2800f76976eb663c2b3e6d0861",
+    "rollback_count": 0,
+    "sha256": "afc854b4597a8f0474fa8489b286338089817311478a897cedfa64273014adf0",
+    "transitions": 4030949,
+    "updates": 13514
+  },
+  "monitor": {
+    "id": "slay-the-spire-local-rl-progress",
+    "normal_interval_minutes": 30,
+    "paused_monitor_must_not_be_reenabled_automatically": true,
+    "status": "PAUSED"
+  },
+  "new_final_embargo_intact": true,
+  "policy_architecture": {
+    "action_dim": 128,
+    "actor_critic_shared_encoder_selected": "state only; action encoder reaches critic only in optional mean-context variant",
+    "context_each": "none",
+    "heads_independent": true,
+    "kind": "composite",
+    "parameters_each": 2298882,
+    "size_each": "large",
+    "state_dim": 256
+  },
+  "proposed_anti_forgetting_controls_implemented": false,
+  "runtime": {
+    "device_updates": "mps",
+    "inference": "cpu",
+    "numpy": "2.5.4",
+    "python": "3.12.13",
+    "threads": 1,
+    "torch": "2.14.0",
+    "venv_resolves_to": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv",
+    "workers": 8
+  },
+  "schema": "sts_research_handoff_v1",
+  "source_identity": {
+    "backend": {
+      "build_dir": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/external/sts_lightspeed_v011/build",
+      "manifest_sha256": "fad8f2956ad3bc609c5b0d7e8ac31cee28f10175384db2c6324a691358f80453",
+      "provenance": {
+        "backend_api": 1,
+        "cmake_version": "cmake version 3.31.6",
+        "compiler_version": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+        "json_commit": "0b345b20c888f7dc8888485768e4bf9a6be29de0",
+        "module_file": "slaythespire.cpython-312-darwin.so",
+        "module_sha256": "40ab5056c17dc481e27933c4c662f7a9fa801c3f0b72b10b446e1c0b0c8670bd",
+        "patch_sha256": "77fddbd67c82bebcc4ff31eea6bb0f6d25e8216e44825d6459f184f47756ce16",
+        "platform": "macosx-11.0-arm64",
+        "pybind11_tag": "v2.13.6",
+        "python_cache_tag": "cpython-312",
+        "python_version": "3.12.13",
+        "upstream_commit": "7476a81954020087da31d41d16fddf475746ec2d"
+      }
+    },
+    "config": {
+      "backend_build": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/external/sts_lightspeed_v011/build",
+      "batch_size": 1024,
+      "battery_pause_at": 25.0,
+      "budget_transfer_path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/preflight/budget_transfer.json",
+      "budget_transfer_sha256": "fe8673380a693b08ee18cec6a22719c9ed51ee4d07d6ca297ea73cd609f9dd9f",
+      "capture_continuations": true,
+      "checkpoint": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0030.pt",
+      "chunk_seconds": 180.0,
+      "clip_ratio": 0.1,
+      "confirmation_interval_seconds": 1800.0,
+      "dev_episodes": 48,
+      "dev_interval": 3,
+      "dev_world_start": 400000,
+      "device": "mps",
+      "duration_hours": 5.117813308970007,
+      "duty_cycle": 1.0,
+      "entropy_coef": 0.01,
+      "entrypoint_source_sha256": "5ff2901f34caf36f3e7b8158a4ef31996292e5a165e949e12075dc5f0e5e5822",
+      "episodes": 128,
+      "evaluation_seconds": 300.0,
+      "floor_regression": 1.0,
+      "gae_lambda": 0.95,
+      "gamma": 1.0,
+      "gpu_lock_path": "/private/tmp/sts_policy_long_gpu.lock",
+      "hard_wall_deadline": null,
+      "horizon": 4096,
+      "initial_active_seconds": 18424.127912292024,
+      "learning_rate": 0.0001,
+      "min_free_gib": 10.0,
+      "nice": 10,
+      "plateau_attention_seconds": 3600.0,
+      "plateau_warning_seconds": 1800.0,
+      "pool_bank": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_curriculum/teacher_act3_200_native011_seed12000",
+      "pool_panels": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_curriculum/panels_native011",
+      "prevent_sleep": true,
+      "progress_floor_weight": 0.05,
+      "promising_min_interval_seconds": 900.0,
+      "protocol": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/configs/long_curriculum_v2_protocol.json",
+      "retention_clear_drop": 2,
+      "retries": 1,
+      "screen_interval_seconds": 600.0,
+      "seed": 11,
+      "severe_cycles": 2,
+      "severe_floor_drop": 8.0,
+      "severe_retention_fraction": 0.15,
+      "simulations": 200,
+      "stall_seconds": 240.0,
+      "startup_grace_seconds": 150.0,
+      "terminal_hp_weight": 0.0,
+      "threads": 1,
+      "train_world_start": 100000000,
+      "workers": 8
+    },
+    "initial_checkpoint_sha256": "57f1e9613a69e31230b591ef0ff2cca27e23ddc81c3a24366cee173bc9909e70",
+    "protocol_sha256": "94bc8c83ad113bf7c1676abece169d0d2f062eda565308bf513c604c66dd7efd",
+    "sources": {
+      "scripts/run_long_curriculum.py": "4c1c88d2a0f5c25ccb7f3fd3704125bb2e14255cf4ebf7f2681e478e77090404",
+      "scripts/train_nonllm.py": "b134925a3f82cbd79f0bffcd2f1ddd5f8d6e96f1dcaba56badec97efd16dff55",
+      "src/sts_env/__init__.py": "e6f17bca83d17125731699cf334682fdbb9fafec1d33e2a3120d4c371a96d9aa",
+      "src/sts_env/__main__.py": "88cf6985e5de1567c92e4dcaafb22bc74f75e7edc5b249f9817b6fc780ff6d30",
+      "src/sts_env/_backend/__init__.py": "edb7a128608ad248b4522046ecccf49b069e7336785501c25f87c19b6901ce25",
+      "src/sts_env/_backend/combat_public_v4.py": "d1393b9d7f5f9c614fc2fcd239b7e53dd25b7de9e65da7ab3b022cc8836826d2",
+      "src/sts_env/_backend/combat_public_v5.py": "2c88a72ea702e6ca496345f850d713c132ab2ce72904c1f9c4f0da5975e79400",
+      "src/sts_env/_backend/glossary.py": "b4123700d7fcf72c08170e72d118575f27f272762bdc4a9d0ebd43dd70ec0158",
+      "src/sts_env/_backend/glossary_v4.py": "370b3eed79c90a74050ae9e0f99472d0d547613f378ccac3e059f46368c2b3eb",
+      "src/sts_env/_backend/glossary_v5.py": "d2ff8927f1bbf11b584dc10f0648b98a5c6f38a1969f1551e38b6a6f6903f537",
+      "src/sts_env/_backend/lightspeed.py": "a22e55068358958b69d96ff25d9181080309547c51c953ccee26b32a2b585d48",
+      "src/sts_env/_backend/lightspeed_import.py": "4d35a351e0591243c59491fa3ed3159929630ac118327b4fa8dc5aa83b4bc36c",
+      "src/sts_env/_backend/ooc.py": "15ad6f2f67a0b1a13be6def307a00e0ff8df774dd27bdd91ed6616d150e4dd53",
+      "src/sts_env/_backend/schemas.py": "b47d076e502bc60f9cab195ba9ad65dd00a6301ae93b6afb96f8701c64da6b9d",
+      "src/sts_env/_backend/turn_math.py": "14475d2df4c0d823b222ff0ba6119542a836ea5e860accee815b29aa4ed69317",
+      "src/sts_env/_backend/turn_math_v4.py": "491ff78376b7e812ab0934fcc68dd45a4a536268f854f602ebbf44f07e345ef0",
+      "src/sts_env/agents.py": "dc289f31da1188c1e2381ea634bf59979e4c634ba96e6bace77b2bd79e05b87e",
+      "src/sts_env/cli.py": "0b11214367148853e8629651fc36ef3f3651c0558dd5e85c94174408854d46e2",
+      "src/sts_env/env.py": "5fde55ecc6ca6d30e85520a99b3b14b7adff0067c1e1de8739aa0ca4f28e65b7",
+      "src/sts_env/gymnasium.py": "649800ad3a441207c485817c403c0301df386dd02c4dcbeb24d2729dc5d2f7e8",
+      "src/sts_env/provenance.py": "e31fdb619effd39a7e777caf516633584cc8f947931c9ea3d814287b7fee8da8",
+      "src/sts_policy/aggregation.py": "2b459aa525e61693db687ae12cac70feaaafe727d6b93c5a2b787c6d3afc8682",
+      "src/sts_policy/campaign_identity.py": "ee3b1bede424f999fb0bc95b71c041acf4969d2331cf83ff08278fca0e7a6d63",
+      "src/sts_policy/composition.py": "ae3e8027c26d2cead467fbfcc880cf688d95da76232fdfd88938df41b2399754",
+      "src/sts_policy/curriculum.py": "90a4eea6cf4473a4c6c2a2b750c679c12fc9bb77a9cb65a68335613e2f700ce6",
+      "src/sts_policy/data.py": "e9b11b8a965b0563c54c18f31216617ed9231e740c053745fd89bf0367fa3068",
+      "src/sts_policy/encoding.py": "ba9cf80d896b9fb02aa4598b3c349cf96b5c0f310df8b73546630abc4b2df82e",
+      "src/sts_policy/fast_observations.py": "c4515aba12ea6a6f1473181466c93b9319628cdab3cf5d9e2f9d22111fea22d8",
+      "src/sts_policy/final_freeze.py": "23325058c545339495f6800b6f172906384ba3f3ed0fedfcdac8b106906e1f25",
+      "src/sts_policy/long_run_control.py": "e8be5994d205e329809a31145c84511c20968c3c770af7d8a7ec1d0ea5ef1dd4",
+      "src/sts_policy/long_run_tasks.py": "6953c9738a53cc49e195b1fa4a7a191670396841e4785d404bd11973fac435f9",
+      "src/sts_policy/long_run_v2.py": "31e0f6ec19471d2bf956f97e8e582d9e440218f028fdb2ae227b69947271d37e",
+      "src/sts_policy/long_run_v2_tasks.py": "7faae692df2f8fe57b5b283e22287a309a0e3aa5334f22e81c326efc0f28eebb",
+      "src/sts_policy/lookahead.py": "8344cd8edc570024474f7bd31e942f3404c1b7300dfe52455a2292fba330add9",
+      "src/sts_policy/losses.py": "7e201f0a35cb3883a88526270c79e55daca8fe873b19e3ae183d610cfe6d8e80",
+      "src/sts_policy/model.py": "322d5e0e154458b285ddfc78b8e48de015d69d70a925503dcdf6664fceb71029",
+      "src/sts_policy/model_agent.py": "4ad3a3c12847c5fd1c774b2c5d4b3f7e6c0d31bf422c2076ac789ac6cf6d1b15",
+      "src/sts_policy/ooc_controls.py": "e2a1e21e425a0778e1ac3f9b1c20ed78f21a57b4e8915ac81c9a09651f5f34c0",
+      "src/sts_policy/rollout_training.py": "348df6f9ff2e9a5e5f1e8d36a1a11d6d8ff3e45aee190c8fe8fb9de56e0a12b6",
+      "src/sts_policy/training.py": "7c6f558b0662ddcafee0b07a7c5810bd0b2987e73b857456ad012c2dfb55e74a",
+      "src/sts_policy/workers.py": "aa0736adc32c008d7a6607197d8e437fb3a474ad58291ecab57bd20d6d2bdb62"
+    }
+  },
+  "user_state": "Explicit pause for review and handoff; no training/resumption/extension authorized",
+  "v1_status": "operator_paused",
+  "v2_status": "operator_paused",
+  "worktrees": [
+    {
+      "branch": "astra-6sep",
+      "head_before_handoff_commit": "92540eae9b5a13b70ff8523d62a587b268de6980",
+      "path": "/Users/sidbaines/Documents/SlayTheSpireAI",
+      "purpose": "Original unrelated dirty research checkout; do not stage/reset it"
+    },
+    {
+      "branch": "environment-base",
+      "head_before_handoff_commit": "b31a898fef9fc748ae9f155909f5f58ae40b3300",
+      "path": "/Users/sidbaines/.codex/worktrees/environment-base/SlayTheSpireAI",
+      "purpose": "Clean environment release"
+    },
+    {
+      "branch": "codex/nonllm-curriculum",
+      "head_before_handoff_commit": "c8c76bc98b42cc73cf5b6410271200f14e78ea42",
+      "path": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI",
+      "purpose": "Frozen first study and shared local artifacts/runtime"
+    },
+    {
+      "branch": "codex/long-curriculum",
+      "head_before_handoff_commit": "1693f1c4e3bb9854a1547d0e8b80344980ae4a9b",
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum/SlayTheSpireAI",
+      "purpose": "Paused v1; budget remainder transferred"
+    },
+    {
+      "branch": "codex/long-curriculum-v2",
+      "head_before_handoff_commit": "b9020207bffe1af89c33ff63384db519c24b3e78",
+      "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI",
+      "purpose": "Paused v2, causal diagnosis and this handoff"
+    },
+    {
+      "branch": "codex/fix-act1-boss-undefined-behavior",
+      "head_before_handoff_commit": "54df6ef1f4dd876295a7a84fc60a27e67a2feeb1",
+      "path": "/Users/sidbaines/.codex/worktrees/environment-boss-ub/SlayTheSpireAI",
+      "purpose": "Separate tested Discovery fix draft PR1"
+    }
+  ]
+}

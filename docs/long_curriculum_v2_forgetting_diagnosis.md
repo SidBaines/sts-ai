@@ -51,7 +51,7 @@ These rare two-win outcomes establish exact losses on these worlds, not a precis
 
 ## Why the existing safeguards missed forgetting
 
-Combat and OOC networks are independent; there is no cross-phase shared encoder. Within each network, actor and critic share both state and action encoders. Critic gradients can therefore alter action probabilities, even with PPO actor clipping. Current scalar losses do not establish that critic interference caused the loss.
+Combat and OOC networks are independent; there is no cross-phase shared encoder. Within each selected no-menu-context network, actor and critic share the state encoder. The critic does not consume action embeddings; those are shared with the critic only in the optional mean-context variant. Critic gradients can therefore alter action probabilities through state features, even with PPO actor clipping. Current scalar losses do not establish that critic interference caused the loss.
 
 The PPO KL/ratio guard compares a new update with the immediately preceding rollout policy. It does not constrain accumulated change from the original. Median local KL was about .0049 across 129 chunks; the independent fixed TRAIN probe measured original-to-learner KL up to .79 in combat and .29 in OOC. Global advantage normalization, minibatch means and gradient clipping are weighted by actual decision counts, rather than curriculum episode quotas. Current logs do not quantify phase gradient balance.
 

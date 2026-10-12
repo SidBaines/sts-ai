@@ -1,5 +1,7 @@
 # Slay the Spire Environment
 
+Current experiment status: both longer RL runs and their monitor are paused for review. Start with the [committed experiment handoff](docs/experiment_handoff.md) for the full history, exact artifacts, unresolved learning issues and current authority. The unused allocation does not authorize an automatic restart.
+
 A maintained environment base for custom agents, LLM adapters, and reinforcement
 learning experiments. The Python core has no runtime dependencies. Game logic
 comes from a pinned, patched [sts_lightspeed](https://github.com/gamerpuppy/sts_lightspeed)
