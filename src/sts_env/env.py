@@ -8,7 +8,7 @@ import operator
 import os
 from typing import Any, Callable
 
-ENVIRONMENT_VERSION = "0.1.0"
+ENVIRONMENT_VERSION = "0.1.1"
 OBSERVATION_VERSION = "sts_env_public_v1"
 
 

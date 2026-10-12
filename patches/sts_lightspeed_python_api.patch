@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..c86284a 100644
+index a9afe35..7dca98a 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1429 @@
+@@ -9,24 +9,1435 @@
 
  #include <sstream>
  #include <algorithm>
@@ -1413,10 +1413,16 @@ index a9afe35..c86284a 100644
 +            return false;
 +        }
 +
-+        BattleContext bc;
-+        bc.init(gc);
++        BattleContext bc{};
 +        try {
++            bc.init(gc);
++            if (bc.undefinedBehaviorEvoked) {
++                throw std::runtime_error("native battle init evoked undefined behavior");
++            }
 +            agent.playoutBattle(bc);
++            if (bc.undefinedBehaviorEvoked) {
++                throw std::runtime_error("native battle playout evoked undefined behavior");
++            }
 +            bc.exitBattle(gc);
 +        } catch (const std::exception &exc) {
 +            std::ostringstream os;
@@ -1432,7 +1438,7 @@ index a9afe35..c86284a 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -39,7 +1444,179 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -39,7 +1450,232 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("boss_simulation_multiplier", &search::ScumSearchAgent2::bossSimulationMultiplier, "bonus multiplier to the simulation count for boss fights")
          .def_readwrite("pause_on_card_reward", &search::ScumSearchAgent2::pauseOnCardReward, "causes the agent to pause so as to cede control to the user when it encounters a card reward choice")
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
@@ -1511,6 +1517,52 @@ index a9afe35..c86284a 100644
 +            oss << "<slaythespire.BattleAction bits=" << a.bits << ">";
 +            return oss.str();
 +        });
++
++    pybind11::enum_<Potion>(m, "Potion")
++        .value("INVALID", Potion::INVALID)
++        .value("EMPTY_POTION_SLOT", Potion::EMPTY_POTION_SLOT)
++        .value("AMBROSIA", Potion::AMBROSIA)
++        .value("ANCIENT_POTION", Potion::ANCIENT_POTION)
++        .value("ATTACK_POTION", Potion::ATTACK_POTION)
++        .value("BLESSING_OF_THE_FORGE", Potion::BLESSING_OF_THE_FORGE)
++        .value("BLOCK_POTION", Potion::BLOCK_POTION)
++        .value("BLOOD_POTION", Potion::BLOOD_POTION)
++        .value("BOTTLED_MIRACLE", Potion::BOTTLED_MIRACLE)
++        .value("COLORLESS_POTION", Potion::COLORLESS_POTION)
++        .value("CULTIST_POTION", Potion::CULTIST_POTION)
++        .value("CUNNING_POTION", Potion::CUNNING_POTION)
++        .value("DEXTERITY_POTION", Potion::DEXTERITY_POTION)
++        .value("DISTILLED_CHAOS", Potion::DISTILLED_CHAOS)
++        .value("DUPLICATION_POTION", Potion::DUPLICATION_POTION)
++        .value("ELIXIR_POTION", Potion::ELIXIR_POTION)
++        .value("ENERGY_POTION", Potion::ENERGY_POTION)
++        .value("ENTROPIC_BREW", Potion::ENTROPIC_BREW)
++        .value("ESSENCE_OF_DARKNESS", Potion::ESSENCE_OF_DARKNESS)
++        .value("ESSENCE_OF_STEEL", Potion::ESSENCE_OF_STEEL)
++        .value("EXPLOSIVE_POTION", Potion::EXPLOSIVE_POTION)
++        .value("FAIRY_POTION", Potion::FAIRY_POTION)
++        .value("FEAR_POTION", Potion::FEAR_POTION)
++        .value("FIRE_POTION", Potion::FIRE_POTION)
++        .value("FLEX_POTION", Potion::FLEX_POTION)
++        .value("FOCUS_POTION", Potion::FOCUS_POTION)
++        .value("FRUIT_JUICE", Potion::FRUIT_JUICE)
++        .value("GAMBLERS_BREW", Potion::GAMBLERS_BREW)
++        .value("GHOST_IN_A_JAR", Potion::GHOST_IN_A_JAR)
++        .value("HEART_OF_IRON", Potion::HEART_OF_IRON)
++        .value("LIQUID_BRONZE", Potion::LIQUID_BRONZE)
++        .value("LIQUID_MEMORIES", Potion::LIQUID_MEMORIES)
++        .value("POISON_POTION", Potion::POISON_POTION)
++        .value("POTION_OF_CAPACITY", Potion::POTION_OF_CAPACITY)
++        .value("POWER_POTION", Potion::POWER_POTION)
++        .value("REGEN_POTION", Potion::REGEN_POTION)
++        .value("SKILL_POTION", Potion::SKILL_POTION)
++        .value("SMOKE_BOMB", Potion::SMOKE_BOMB)
++        .value("SNECKO_OIL", Potion::SNECKO_OIL)
++        .value("SPEED_POTION", Potion::SPEED_POTION)
++        .value("STANCE_POTION", Potion::STANCE_POTION)
++        .value("STRENGTH_POTION", Potion::STRENGTH_POTION)
++        .value("SWIFT_POTION", Potion::SWIFT_POTION)
++        .value("WEAK_POTION", Potion::WEAK_POTION);
 +
 +    pybind11::class_<BattleContext> battleContext(m, "BattleContext");
 +    battleContext.def(pybind11::init<>())
@@ -1596,6 +1648,13 @@ index a9afe35..c86284a 100644
 +        .def_property_readonly("outcome", [](const BattleContext &bc) { return bc.outcome; })
 +        .def_property_readonly("input_state", [](const BattleContext &bc) { return bc.inputState; })
 +        .def_property_readonly("turn", [](const BattleContext &bc) { return bc.turn; })
++        .def_property_readonly("player_character_class", [](const BattleContext &bc) { return bc.player.cc; })
++        .def("obtain_potion", [](BattleContext &bc, Potion potion) {
++            if (potion < Potion::AMBROSIA || potion > Potion::WEAK_POTION) {
++                throw std::invalid_argument("potion must be a nonempty valid potion");
++            }
++            bc.obtainPotion(potion);
++        }, "obtain a potion in a free combat slot using normal capacity rules")
 +        .def_property_readonly("undefined_behavior_evoked", [](const BattleContext &bc) { return bc.undefinedBehaviorEvoked; })
 +        .def_property_readonly("player_cur_hp", [](const BattleContext &bc) { return bc.player.curHp; })
 +        .def_property_readonly("player_max_hp", [](const BattleContext &bc) { return bc.player.maxHp; })
@@ -1613,16 +1672,22 @@ index a9afe35..c86284a 100644
 
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
-@@ -55,6 +1632,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1691,14 @@ PYBIND11_MODULE(slaythespire, m) {
               [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
               "add a card to the deck"
          )
++        .def("obtain_potion", [](GameContext &gc, Potion potion) {
++            if (potion < Potion::AMBROSIA || potion > Potion::WEAK_POTION) {
++                throw std::invalid_argument("potion must be a nonempty valid potion");
++            }
++            gc.obtainPotion(potion);
++        }, "obtain a potion in a free inventory slot using normal capacity rules")
 +        .def("obtain_relic", &GameContext::obtainRelic,
 +             "add a relic to the inventory, applying its normal acquisition effects")
          .def("remove_card",
              [](GameContext &gc, int idx) {
                  if (idx < 0 || idx >= gc.deck.size()) {
-@@ -75,6 +1654,43 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +1719,43 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
@@ -1666,7 +1731,7 @@ index a9afe35..c86284a 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -84,7 +1700,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -84,7 +1765,8 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("cur_map_node_x", &GameContext::curMapNodeX)
          .def_readwrite("cur_map_node_y", &GameContext::curMapNodeY)
          .def_readwrite("cur_room", &GameContext::curRoom)
@@ -1676,7 +1741,7 @@ index a9afe35..c86284a 100644
          .def_readwrite("boss", &GameContext::boss)
 
          .def_readwrite("cur_hp", &GameContext::curHp)
-@@ -836,5 +2453,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +2518,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
@@ -1726,6 +1791,19 @@ index 767bbcd..5c2f71f 100644
          CardQueueItem curCardQueueItem;
 
          std::bitset<32> miscBits; // 0 stolen gold check,
+diff --git a/include/combat/Player.h b/include/combat/Player.h
+index fda6fb6..72208b7 100644
+--- a/include/combat/Player.h
++++ b/include/combat/Player.h
+@@ -31,7 +31,7 @@ namespace sts {
+     class BattleContext;
+
+     struct Player {
+-        CharacterClass cc;
++        CharacterClass cc = CharacterClass::IRONCLAD;
+
+         int16_t gold = 0;
+         int curHp = 80;
 diff --git a/include/game/GameContext.h b/include/game/GameContext.h
 index 04fceda..a280e63 100644
 --- a/include/game/GameContext.h
@@ -1795,7 +1873,7 @@ index ffa449b..711bb31 100644
          void stepOutOfCombatPolicy(GameContext &gc);
          void cardSelectPolicy(GameContext &gc);
 diff --git a/src/combat/BattleContext.cpp b/src/combat/BattleContext.cpp
-index 965faef..7871360 100644
+index 965faef..b5860ef 100644
 --- a/src/combat/BattleContext.cpp
 +++ b/src/combat/BattleContext.cpp
 @@ -6,12 +6,52 @@
@@ -1851,7 +1929,15 @@ index 965faef..7871360 100644
 
  // assume all bc fields have just been initialized by in class member initializers
  void BattleContext::init(const GameContext &gc) {
-@@ -49,6 +89,7 @@ void BattleContext::init(const GameContext &gc, MonsterEncounter encounterToInit
+@@ -21,6 +61,7 @@ void BattleContext::init(const GameContext &gc) {
+ void BattleContext::init(const GameContext &gc, MonsterEncounter encounterToInit) {
+     undefinedBehaviorEvoked = false;
+     haveUsedDiscoveryAction = false;
++    player.cc = gc.cc;
+     seed = gc.seed;
+     floorNum = gc.floorNum;
+     encounter = encounterToInit;
+@@ -49,6 +90,7 @@ void BattleContext::init(const GameContext &gc, MonsterEncounter encounterToInit
      potionCount = gc.potionCount;
      potionCapacity = gc.potionCapacity;
      potions = gc.potions;
@@ -1859,7 +1945,7 @@ index 965faef..7871360 100644
 
      player.curHp = gc.curHp;
      player.maxHp = gc.maxHp;
-@@ -732,9 +773,19 @@ void BattleContext::executeActions() {
+@@ -732,9 +774,19 @@ void BattleContext::executeActions() {
                  break;
              }
 
@@ -1882,7 +1968,7 @@ index 965faef..7871360 100644
          }
 
          if (inputState != InputState::EXECUTING_ACTIONS) {
-@@ -2232,13 +2283,17 @@ void BattleContext::obtainPotion(Potion p) {
+@@ -2232,13 +2284,17 @@ void BattleContext::obtainPotion(Potion p) {
  }
 
  void BattleContext::discardPotion(int idx) {
@@ -1901,7 +1987,7 @@ index 965faef..7871360 100644
      discardPotion(idx);
 
      // todo - dont need to add to bot because always will have nothing in actionQueue?
-@@ -2429,9 +2484,7 @@ void BattleContext::drinkPotion(int idx, int target) {
+@@ -2429,9 +2485,7 @@ void BattleContext::drinkPotion(int idx, int target) {
          case Potion::EMPTY_POTION_SLOT:
          case Potion::FAIRY_POTION:
          default:
