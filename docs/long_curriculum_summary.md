@@ -1,5 +1,38 @@
 # Long curriculum — latest first
 
+## 2026-10-12 10:57 UTC — main run running after accepted pilot
+
+The detached main controller started at **10:53:40 UTC** (PID 79441). The validated 10:57 snapshot recorded six completed main chunks, 33 total rounds and **9.693 active hours remaining**. The authorized budget stayed **36,000 seconds**; consumed pilot time was preserved and no extension was added.
+
+The accepted 15-minute pilot completed **27 chunks, 736,386 valid transitions and 1,785 optimizer steps**. Its owned processes had stopped cleanly and source pins were unchanged. Selected best remains round 14: **9/48 Act 2 clears and 42/48 Act 1 clears**, with zero faults/cutoffs in those DEV checks. This is a small DEV selection gain, not a whole-game or significance claim.
+
+Main chunk 32 demonstrated changed actor weights, 24,970 valid transitions and 16 accepted updates. Device, source hashes and reward coefficients remain unchanged: eight workers, dedicated GPU duty 1, floor reward .05, terminal ±1, gamma 1, GAE .95, HP weight 0. Final evaluation remains embargoed.
+
+Evidence: `preflight/pilot_acceptance.json` and `preflight/main_resume_verification.json` under `data/long_rl_v1/`. The hourly monitor stays quiet unless progress is meaningful or attention is needed; it respects manual pause and never auto-extends.
+
+## 2026-10-12 10:48 UTC — first valid pilot DEV promotion
+
+Round 14 passed the exact matched 48-world development and fixed Act 1 retention gates:
+
+| Full-start DEV target | Initial anchor | Round 14 | Defeats | Faults / cutoffs | Mean reached floor |
+| --- | ---: | ---: | ---: | --- | ---: |
+| Act 2 | 8/48 clears | 9/48 clears | 39 | 0 / 0 | 28.77 |
+| Act 1 retention | 41/48 clears | 42/48 clears | 6 | 0 / 0 | 16.88 |
+
+Selected checkpoint: `act2_continuations_00000014_pilot_a0_9b67285648d9a428.pt`, SHA256 `9019cdec9c4c2b92520249919d7c97d6f6e626907511b510a44d88258cede278`. Its current bytes match the published job artifact hash. Primary/retention raw metric SHA and requested task IDs were independently verified against the journal; both cohorts completed with native module `40ab…70bd` and no missing, faulted or censored cases.
+
+Earlier rounds 2/5/8/11 rolled back; round 8 lost Act 1 retention (37/48). Round 17 subsequently rolled back from 7/48 Act 2 and 39/48 Act 1 to the selected round-14 model. The guards preserve the initial reference while allowing this small improvement. **One extra clear in 48 reused DEV worlds is a descriptive selection result, not statistical significance or a three-act victory claim.** Initial concerns based on the first two rollbacks were qualified by additional pilot data; no reward or scientific-method change/critic probe was applied.
+
+Raw evidence: `data/long_rl_v1/campaign/metrics/act2_continuations_00000014_825ea8832fcb2305.metrics.json` and `act2_continuations_00000014_retention_40b628a90e6fcd3e.metrics.json`, referenced by the durable journal. At the latest check 21 rounds were booked and the pilot remained running; root controls pilot acceptance/main transition.
+
+## 2026-10-12 10:38 UTC — required pilot running; source frozen for execution
+
+Root launched the 900-second wall-clock pilot at **10:37:00 UTC**, using the same **10-hour active allocation** intended for the main invocation: dedicated GPU duty `1`, eight workers, one CPU thread, niceness 10 and unchanged rewards. Source commit: `f23cad1`. The final native-host preflight passed **404 tests in 11.445 seconds** (one optional artifact test skipped), and the bounded core smoke passed 21 decisions with an ordinary defeat and no error.
+
+At the 10:38 check, three training jobs had completed, two rounds were fully booked in the journal and the first scheduled primary DEV evaluation was running. The selected best was still the initial saved joint checkpoint; **no DEV improvement is claimed yet**. The controller records actual actor-weight changes, accepted updates, valid transitions and source/task hashes separately from model quality.
+
+The active-time/resource-gap regression now rebases stage/job deadlines after excluded pauses; explicit extensions append only the final mixed stage. Fixed Act 1 retention, coherent fault/censor guards, bounded new-goal transfer, immutable task/native pool/learner files and published checkpoint identities passed scientific review. Root owns pilot acceptance and the pilot-to-main transition. Machine status: `data/long_rl_v1/campaign/progress.json`; detailed/latest-first controller view: `docs/long_curriculum_live.md`.
+
 ## 2026-10-12 10:24 UTC — checkpoint write probe and active-budget review
 
 A bounded CPU probe serialized and durably wrote the existing 55.24 MB checkpoint payload using atomic replacement:

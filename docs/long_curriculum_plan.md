@@ -57,4 +57,32 @@ Checkpoint retention keeps current, selected best, hourly recovery points and th
 
 **Current data interface:** `sts_policy.long_run_tasks` supplies immutable `sample_training_tasks`, `write_task_batch`, `fixed_dev_panels` and learner-frontier capture/merge. `train_nonllm.py --preserve-task-prefixes` preserves per-task prefixes/goals/horizons; `--continuation-output` records healthy TRAIN-only learner starts. The sampler/capture 11-test suite passed independently; this does not validate an unreviewed controller.
 
-**Recovery interface:** `scripts/run_long_curriculum.py` and `sts_policy.long_run_control` are under active-budget/extension review. Exact pause/resume/extension commands will be documented after that interface and its regression tests are finalized. Until then, do not substitute the first campaign's executable or its expired deadline. Root coordinates launch, pilot acceptance and the final operational limits.
+## Running and recovery interface
+
+Source commit `f23cad1` passed 404 native-host tests (one optional artifact skip), the bounded core smoke, and focused owned-process/active-budget regressions before root launched the 15-minute pilot at 10:37 UTC. The pilot wall cap is 900 seconds; its actual active time consumes the same 10-hour allocation. Root owns pilot acceptance and main launch. Scientific source files remain unchanged during execution.
+
+Read status or request a manual pause from the long worktree:
+
+```sh
+PYTHONPATH=src .venv/bin/python scripts/run_long_curriculum.py --output data/long_rl_v1/campaign --action status
+PYTHONPATH=src .venv/bin/python scripts/run_long_curriculum.py --output data/long_rl_v1/campaign --action pause
+```
+
+Pause checks the recorded controller birth before signaling its owned process. Inspect `journal.json`/`progress.json` and verify that its learner/native descendants have stopped. Do not remove the run directory, selected checkpoint or task artifacts.
+
+Resume the exact saved argv after the controller has stopped; the saved command has no pilot wall cap and does not repeat an extension:
+
+```sh
+PYTHONPATH=src .venv/bin/python - <<'PYTHON'
+import json, os, subprocess
+from pathlib import Path
+record = json.loads(Path("data/long_rl_v1/campaign/main_command.json").read_text())
+environment = os.environ.copy()
+environment.update(record["environment"])
+subprocess.run(record["argv"], cwd=record["cwd"], env=environment, check=True)
+PYTHON
+```
+
+To extend after stopping, use that same saved argv with `--extend-hours N` appended for the explicitly desired positive number of hours, then resume. Each explicit extension is a new ledger entry and adds only final mixed-stage time; it does not reset consumed time, rewind stages or change reward coefficients/protocol. Avoid reissuing an extension unintentionally. Current/best/recovery SHA and immutable input checks must pass before another learner launches.
+
+Useful records: `data/long_rl_v1/campaign/journal.json` (durable state/budget/ownership), `main_command.json` (exact main/resume argv), `progress.json` (compact status), `events.json` (decisions/amendments), and `docs/long_curriculum_live.md` (latest-first controller output). Final worlds remain embargoed until a separate selection freeze. Root coordinates checkpoint selection, resource limits and any later explicitly named scientific condition.
