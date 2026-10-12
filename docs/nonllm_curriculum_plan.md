@@ -2,6 +2,8 @@
 
 ## Objective, scope, and resource contract
 
+**Execution amendment, 12 October 03:05 UTC:** the branch still originates at immutable `env-v0.1.0`, but active native-assisted training/evaluation uses signed `env-v0.1.1` after an uninitialized-character bug was repaired. Earlier native-auto evidence is quarantined. Retained full-control combat evidence was checked separately; [revision evidence](nonllm_native_revision.md) records the scope. The planned final embargo has one diagnostic exception: an early learned-agent seed-3 smoke touched the broad hash-final bucket outside the designated benchmark. See [the protocol audit](nonllm_protocol_audit.md). These amendments preserve the initial plan below while making the executed conditions explicit.
+
 Train and evaluate a non-language policy controlling both combat and out-of-combat
 decisions, using the immutable `env-v0.1.0` environment release. Work lives on
 `codex/nonllm-curriculum`; the original research checkout and environment release
