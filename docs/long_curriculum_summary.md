@@ -1,5 +1,11 @@
 # Long curriculum — latest first
 
+## 2026-10-12 12:47 UTC — first monitored full victory; exploratory dashboard upgrade underway
+
+The 12:43 periodic check observed **1/48 full three-act victories** for the candidate captured at round 242, versus the initial 0/48. It also had 47 defeats, zero faults/cutoffs/unstarted tasks and mean floor 28.46. Selected-best CP236 still scored 0/48, mean floor 30.90; its primary Act 2 DEV had improved to 11/48 with paired Act 1 retention 42/48. The candidate's isolated victory is encouraging descriptive evidence, while neither role has established reliable full-run completion.
+
+Three subagents are upgrading the dashboard into an interactive explorer with training-range zoom, rolling averages, independent left/right axes, start/goal/source filters, distributions and logged health-cost metrics. This changes dashboard assets/telemetry only; the learner remains running on its pinned source and constant rewards. At round 246 the ledger recorded 2.125 active hours used, about 7.875 remaining of the original 10 hours.
+
 ## 2026-10-12 12:17 UTC — periodic three-act evaluation and audited seed coverage
 
 An independent CPU-only observer now checks selected-best and latest completed training-candidate snapshots every 30 minutes on the same 48 fresh-start DEV worlds. It does not alter learner selection, rewards or the final embargo. The dashboard now separates INITIAL, evaluated SELECTED BEST and evaluated LATEST CANDIDATE; exact checkpoint hashes, capture/evaluation times, reuse and newer-unevaluated-weight warnings prevent stale results being presented as current.
