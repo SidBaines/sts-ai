@@ -27,7 +27,10 @@ scripts/build_lightspeed.sh
 
 The build script pins upstream and pybind11, applies the versioned binding and
 bug-fix patch, and builds the native module in `external/sts_lightspeed/build`.
-Use the same interpreter to build and run. The Python package does not bundle a
+Use the same interpreter to build and run. The build script may install its pinned
+CMake package into the interpreter selected by `PYTHON`. Use this checkout's own
+isolated `.venv`; any `PYTHON` override should point there. Do not borrow an
+active or frozen experiment runtime for a build. The Python package does not bundle a
 native binary. If you install a wheel or keep the simulator elsewhere, set
 `STS_LIGHTSPEED_BUILD` to its build directory.
 

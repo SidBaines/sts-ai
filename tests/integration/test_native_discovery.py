@@ -40,9 +40,9 @@ class NativeDiscoveryTests(unittest.TestCase):
     def setUp(self):
         self.sts = import_lightspeed()
 
-    def discovery_battle(self, upgraded=False, full_hand=False, character_class=None):
+    def discovery_battle(self, upgraded=False, full_hand=False, character_class=None, seed=3):
         sts = self.sts
-        gc = sts.GameContext(character_class or sts.CharacterClass.IRONCLAD, 3, 0)
+        gc = sts.GameContext(character_class or sts.CharacterClass.IRONCLAD, seed, 0)
         for _ in range(100):
             if gc.screen_state == sts.ScreenState.BATTLE:
                 break
@@ -100,6 +100,40 @@ class NativeDiscoveryTests(unittest.TestCase):
         self.assertEqual(len(selected), 1)
         self.assertEqual(selected[0]["cost_for_turn"], 1)
         self.assertFalse(bc.undefined_behavior_evoked)
+
+    def test_discovery_whirlwind_keeps_x_cost_and_spends_energy_after_turn_boundary(self):
+        # Game AbstractCard.setCostForTurn changes only nonnegative costs;
+        # Discovery does not make X-cost cards free. Seed 112 offers Whirlwind
+        # against Cultist, avoiding damage modifiers and reactive enemy blocks.
+        for defer_to_next_turn in (False, True):
+            with self.subTest(defer_to_next_turn=defer_to_next_turn):
+                bc = self.discovery_battle(seed=112)
+                bc.legal_actions()[0].execute(bc)
+                choices = bc.legal_actions()
+                next(a for a in choices if "Whirlwind" in a.describe(bc)).execute(bc)
+                card = bc.public_cards(True)["hand"][0]
+                self.assertEqual(card["name"], "Whirlwind")
+                self.assertEqual(card["cost"], -1)
+                self.assertEqual(card["cost_for_turn"], -1)
+                self.assertFalse(card["free_to_play_once"])
+                self.assertEqual(bc.player_energy, 2)
+                if defer_to_next_turn:
+                    next(a for a in bc.legal_actions() if "end turn" in a.describe(bc)).execute(bc)
+                    card = next(card for card in bc.public_cards(True)["hand"]
+                                if card["name"] == "Whirlwind")
+                    self.assertEqual(card["cost_for_turn"], -1)
+                    self.assertFalse(card["free_to_play_once"])
+                    self.assertEqual(bc.player_energy, 3)
+                before = bc.enemies()[0]
+                self.assertEqual(before["name"], "CULTIST")
+                self.assertEqual(before["block"], 0)
+                self.assertEqual(before["weak"], 0)
+                self.assertEqual(before["vulnerable"], 0)
+                energy_on_use = bc.player_energy
+                next(a for a in bc.legal_actions() if "play Whirlwind" in a.describe(bc)).execute(bc)
+                self.assertEqual(bc.player_energy, 0)
+                self.assertEqual(before["cur_hp"] - bc.enemies()[0]["cur_hp"], 5 * energy_on_use)
+                self.assertFalse(bc.undefined_behavior_evoked)
 
     def test_duplicated_discovery_sends_overflow_to_discard_at_temporary_zero_cost(self):
         bc = self.discovery_battle(full_hand=True)

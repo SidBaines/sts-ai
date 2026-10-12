@@ -34,7 +34,7 @@ The generator's pool order and RNG calls are unchanged.
 
 The pinned simulator's [card definitions](https://github.com/gamerpuppy/sts_lightspeed/blob/7476a81954020087da31d41d16fddf475746ec2d/include/constants/Cards.h)
 make base Discovery exhaust and upgraded Discovery retain its ordinary discard
-behaviour. Tests check both, all three selected offers, one temporary card at zero
+behaviour. Tests check both, all three selected offers, one fixed-cost temporary card at zero
 cost for the current turn, base-cost restoration on the next turn, and duplicated
 Discovery when the hand is full. They also check every unsupported character
 class retains explicit failure. Card-generation pools for other classes remain
@@ -51,7 +51,7 @@ Patch SHA256:
 Fresh and reverse patch application pass; the patch has no dependency submodule
 pointer hunk or one-space blank context lines.
 
-The required full suite passes **201 tests** with `STS_REQUIRE_SIMULATOR=1`.
+The required full suite passes **202 tests** with `STS_REQUIRE_SIMULATOR=1`.
 The bounded random seed 3, Act 1, 50-simulation OOC smoke ends in ordinary defeat
 after 21 decisions; replay verifies all 21 steps. Both confirmed prefixes now
 open a valid Discovery menu. A deterministic first-action continuation clears
@@ -66,6 +66,25 @@ complete public-state/reward/boundary hashes:
 These continuations validate execution and determinism, not the score of the
 original learned policy. The permanent integration test repeats the fresh-process
 check with finite operation and subprocess deadlines.
+
+## X-cost follow-up
+
+A bounded seed 112 fixture offers Whirlwind against Cultist. Unlike fixed-cost
+cards, it keeps the X-cost sentinel (`-1`), stays non-free, spends all available
+energy, and deals one five-damage hit per energy. Tests cover immediate play with
+two energy and deferred play after the turn boundary with three energy; its X
+cost remains intact across that boundary. No native mechanics change is needed.
+
+This matches the published game Java implementation: [DiscoveryAction](https://github.com/Voyage-for-the-ideal/aiplayspire/blob/73ac9589a707d42776498e7225e76ebaa1ef0544/cardcrawl/actions/unique/DiscoveryAction.java#L65)
+calls `setCostForTurn(0)`, [AbstractCard](https://github.com/Voyage-for-the-ideal/aiplayspire/blob/73ac9589a707d42776498e7225e76ebaa1ef0544/cardcrawl/cards/AbstractCard.java#L2314)
+changes only nonnegative costs, and [WhirlwindAction](https://github.com/Voyage-for-the-ideal/aiplayspire/blob/73ac9589a707d42776498e7225e76ebaa1ef0544/cardcrawl/actions/unique/WhirlwindAction.java#L37)
+uses energy-on-use and consumes available energy when the card is not free.
+The focused test makes no broader claim about every relic or enemy interaction.
+
+`build_lightspeed.sh` may install its pinned CMake package into the interpreter
+selected by `PYTHON`. Use a build worktree's own isolated `.venv`, including when
+setting `PYTHON`; never borrow an active or frozen experiment runtime. This
+follow-up uses only the candidate worktree's runtime and existing native binary.
 
 ## Version and experiment boundary
 
