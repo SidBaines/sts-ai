@@ -1,105 +1,83 @@
 # Non-LLM Slay the Spire — experiment summary
 
-Latest updates first. [Automatic log](nonllm_progress.md) · [Detailed decisions](nonllm_progress_notes.md) · [Plan](nonllm_curriculum_plan.md).
-Deadline: **12 October, 06:30 UTC**. Results below are **development selection results**. The designated final benchmark remains embargoed; an earlier learned-agent smoke used a separate hash-final seed ([protocol exception](nonllm_protocol_audit.md)). Old native-auto evidence is quarantined.
+Newest updates first. [Automatic log](nonllm_progress.md) · [Detailed decisions](nonllm_progress_notes.md) · [Plan](nonllm_curriculum_plan.md) · [Agent usage](nonllm_agent_usage.md).
+Deadline: **12 October, 06:30 UTC**. All results below are **development results**. The designated final benchmark remains embargoed; [the audit](nonllm_protocol_audit.md) records a separate early smoke-test exception.
+
+## 2026-10-12 04:50 UTC — later-act diagnosis; bridges rejected
+
+Fresh later-act combat checks give **27/32 wins** for the retained combat specialist and **28/32** for both joint checkpoints, with zero faults/truncations. This does not support restoring the old combat head. The earlier specialist composition also had zero three-act victories and reached lower floors than the joint model. Native control had 1/48 victory and one fault.
+
+Two independent 30-second bridges trained OOC decisions with native combat, then tested the same full-control three-act panel:
+
+| Bridge | PPO updates | Training transitions | Victories | Faults |
+| --- | ---: | ---: | ---: | ---: |
+| Through Act 2 | 22 | 34,438 | 0/48 | 0 |
+| Through Act 3 | 37 | 37,068 | 0/48 | 1 |
+
+**Decision:** reject both and resume the main run; preserve all candidates. These short pilots do not establish that the approach cannot work. **353 tests pass**. Final evaluation and selected-model CLI verification remain pending.
 
 ## 2026-10-12 04:19 UTC — three-act training exposes the next bottleneck
 
-Act 1 selection finished at **45/48 clears**, with zero faults/truncations. Three-act training is now running. On the initial matched 48-world three-act development panel:
+Act 1 selection finished at **45/48 clears**, with zero faults/truncations. The initial three-act panel ended in **3 Act 1 defeats, 43 Act 2 defeats and 2 Act 3 defeats**, with no victories, faults or truncations. Act 1 competence is retained; full-game competence is not yet demonstrated. Continue three-act PPO.
 
-| Outcome at stage entry | Worlds |
-| --- | ---: |
-| Defeat in Act 1 | 3 |
-| Defeat in Act 2 | 43 |
-| Defeat in Act 3 | 2 |
-| Three-act victory / simulator fault / truncation | **0 / 0 / 0** |
+![Corrected full-control Act 1 development curve](assets/nonllm/native011_act1_development.png)
 
-The policy retains its Act 1 competence but has not demonstrated full-game competence. **Decision:** continue three-act PPO and compare the earlier specialists and native reference on these development worlds to diagnose later-act failures. These checks do not use final worlds.
+Matched 48-world development cohort; red markers identify separate fault/censoring cases. [Chart data](assets/nonllm/campaign_panels.csv). Selection retains the best checkpoint, rather than the last. Final horizon is 2,048 decisions versus 4,096 for three-act development; censoring must remain visible.
 
-All **346 tests** passed after explicitly pinning child processes to the recorded backend. Final evaluation remains planned for about 05:08 UTC. Its horizon is 2,048 decisions, versus 4,096 for three-act development; final tables must report censoring separately.
+## 2026-10-12 03:39 UTC — faster training, 42/48 clears
 
-## 2026-10-12 03:39 UTC — 42/48 clears and faster training
+Reuse the exact public features computed during collection. Actions, losses, gradients, optimizer states and updated weights matched exactly in CPU checks; peak numeric cache was about 71 MB.
 
-The selected full-control policy clears **42/48** matched Act 1 development worlds, versus **29/48** before joint training. All 48 completed with zero faults/truncations and zero native-controlled decisions. Three-act training and final evaluation remain pending.
-
-| Throughput check | Earlier chunks | First completed feature-reuse chunk |
+| Throughput | Earlier chunks | First completed reuse chunk |
 | --- | ---: | ---: |
 | Accepted transitions/second | 1,157–1,225 | **1,460** |
-| PPO feature preparation per chunk | 39–40 s | **0.75 s** |
+| PPO feature preparation | 39–40 s | **0.75 s** |
 
-**Decision:** reuse the exact public features computed during collection. CPU comparisons produced identical actions, losses, gradients, optimizer states and updated weights; peak numeric cache was about 71 MB. The live throughput comparison uses evolving policies/worlds, so it is not evidence of improved learning quality. [Measured evidence](nonllm_encoding_reuse.md).
+Live policies/worlds differ, so this is observed throughput improvement, not a learning-quality comparison. [Evidence](nonllm_encoding_reuse.md). Supervisor reloads occur between completed jobs; final safeguards bind source, checkpoints, task cohorts and the child’s native build.
 
-All **337 tests** and the bounded core smoke passed. The supervisor reloaded at a completed evaluation boundary without interrupting a training child. Final safeguards now bind core Python files as well as policy, checkpoint, task and native-binary identities.
+## 2026-10-12 03:04 UTC — 38/48 clears and resume repair
 
-## 2026-10-12 03:04 UTC — full-control Act 1 reaches 38/48
+Full-control Act 1 selection reached **38/48**, with zero faults/truncations/native-controlled decisions. A resume-cache ordering issue repeated one chunk; its earlier artifacts were archived. The repair normalizes effective option order while retaining settings and input-hash checks.
 
-The best jointly trained policy now clears **38/48** matched development worlds, up from **29/48** at the composed warm start. All 48 runs completed, with **zero simulator faults or truncations** and no native-controlled decisions. Later checkpoints vary, so selection retains the best rather than the last checkpoint.
+## 2026-10-12 02:32 UTC — joint learning improves the composed policy
 
-| Current selected development result | Successes / requested | Faults |
+On matched cohorts: shared/composed warm starts clear **7/32 versus 21/32**; long joint training improves **29/48 to 37/48**. The 32- and 48-world panels are different. **Decision:** retain separate phase heads and jointly train them. [Checkpoint format](nonllm_composite_checkpoints.md).
+
+## 2026-10-12 02:12 UTC — OOC selected; corrections rejected
+
+Corrected OOC training improved **12/32 → 29/32**. Matched follow-ups from the same checkpoint:
+
+| Follow-up | Clears / 32 | Faults |
 | --- | ---: | ---: |
-| Isolated Act 1 combat | 44/48 | 0 |
-| Later-act combat | 30/32 | 0 |
-| OOC with native combat | 31/32 | 0 |
-| Learned combat and OOC, Act 1 | **38/48** | **0** |
-
-These are different task cohorts. Three-act training and held-out evaluation remain pending. Resume recovery preserved an inadvertently repeated training chunk; command-order normalization now prevents that repeat while still checking settings and input hashes.
-
-## 2026-10-12 02:32 UTC — full-control learning is improving
-
-A composed policy now controls **both combat and OOC**. Separate specialists outperform a shared warm start; joint PPO then improves the composed policy:
-
-| Matched full-control panel | Before joint training | Latest selected |
-| --- | ---: | ---: |
-| Initial 32-world comparison: shared / composed | 7 / 21 clears | — |
-| Fixed 48-world long-training panel | 29 clears | **37 clears** |
-
-The 37/48 checkpoint completed with **zero faults and truncations**. Its latest chunk performed 364 optimizer updates over 207,730 accepted transitions. The 32- and 48-world panels are different cohorts and are not one improvement curve.
-
-**Decision:** continue composed full-control PPO. Act 3 follows at 04:08 UTC, with matching three-act development evaluation. Training all stages and final evaluation are still pending. [Composite checkpoint format](nonllm_composite_checkpoints.md).
-
-## 2026-10-12 02:12 UTC — OOC selected; short corrections rejected
-
-Clean OOC training improved from **12/32 to 29/32** development clears. Four matched follow-ups started from the same frozen policy:
-
-| Follow-up on 32 requested worlds | Clears | Faults |
-| --- | ---: | ---: |
-| Original PPO stopping behavior | 29 | 1 |
+| Original PPO stopping | 29 | 1 |
 | Stop before an over-target KL update | **31** | **0** |
 | Twenty scripted-label updates | 19 | 1 |
 | Twenty fresh lookahead-label updates | 16 | 0 |
 
-**Decision:** keep the earlier PPO guard; reject both label corrections. Fresh lookahead used 256 clean frontiers, four candidates, horizon 30 and native200. These short proxy/fit results do not establish that lookahead is generally ineffective.
+Keep the earlier PPO guard; reject both label corrections. Corrected random/native/heuristic references clear **3/15/22 of 32**, with **1/1/0 faults**. [OOC evidence](nonllm_ooc_corrected.md).
 
-Matched corrected references cleared **3/32 random, 15/32 native, 22/32 heuristic**, with **1/1/0** faults. Faults remain separate from defeats. [Corrected OOC audit](nonllm_ooc_corrected.md).
+## 2026-10-12 01:12 UTC — native bug repaired and evidence isolated
 
-## 2026-10-12 01:12 UTC — native bug repaired and results isolated
+Automatic combat used an uninitialized character class to index potion/card pools. Old native-auto OOC/lookahead evidence is quarantined. Retain old full-control Ironclad combat evidence only after source and paired-trace checks.
 
-Automatic combat had an **uninitialized character class**, used to index potion/card pools. This caused hangs and inconsistent traces. Old native-auto OOC/lookahead evidence is quarantined; the full-control Ironclad combat policy was retained after source and paired-trace checks.
-
-Released signed **env-v0.1.1** after **195 base / 307 research tests**, bounded smoke and three identical OOC repeats. Old binary/tag remain intact. Fresh banks contain **49,944 Act1 / 560,620 later-act labels**. OOC restarted separately from supervised weights.
-
-Recent throughput increased **353 → 1,074 accepted transitions/s**; failed-call waits fell **66.5% → 0.096%** of job time. Backend, checkpoint and seed differ, so this is operational evidence rather than a controlled learning comparison. Flagged unsupported combats now fail explicitly. [Release evidence](release_v0.1.1.md).
+Signed **env-v0.1.1** passed 195 base/307 research tests, bounded smoke and three identical OOC repeats. Preserve the old binary/tag. Fresh banks contain **49,944 Act 1 / 560,620 later-act labels**. [Release evidence](release_v0.1.1.md). Simulator flags detect reported errors, not complete game fidelity.
 
 ## 2026-10-12 00:07 UTC — combat specialist selected
 
-Selected combat17 won **44/48 Act1 and 30/32 later-act fights**, matching native reference win counts. Higher isolated wins did not uniformly preserve HP. Rechecking health-bonus alternatives with the improved OOC head later produced **21/32 clears for combat17**, versus **11/32 and 13/32** for the alternatives; keep combat17. Their training histories differ. [Coupling evidence](nonllm_health_coupling_corrected.md).
+Combat17 wins **44/48 Act 1 and 30/32 later-act fights** on the earlier panels. Higher-HP alternatives perform worse with the improved OOC head: **21/32 versus 11/32 and 13/32** clears. Keep combat17; training histories differ. [Coupling evidence](nonllm_health_coupling_corrected.md). Net endpoint HP includes healing and is not cumulative damage.
 
-![Matched combat selection scores](assets/nonllm/combat_development.png)
+## 2026-10-11 22:25 UTC — tighter clipping selected
 
-This full-control development snapshot ends at round18. [Chart data](assets/nonllm/combat_development.csv). Scores include floor/HP terms and are not win percentages.
+Ten combat controls tested learning rate, clipping, entropy, discount, rewards, HP and scratch learning. Select **clip 0.1, LR 1e-4, gamma 1, entropy 0.01** using expanded later-act evidence. Later-act panels cover 15 development/12 final worlds.
 
-## 2026-10-11 22:25 UTC — later-act evidence chooses tighter clipping
+## 2026-10-11 21:28 UTC — laptop recovery
 
-Ten combat controls tested learning rate, clipping, entropy, discount, rewards, HP preservation and scratch learning. Expanded later-act evidence selected **clip0.1, LR1e-4, gamma1, entropy0.01**. Act3 development/final fight panels cover **15/12 worlds**. Final data stays embargoed.
-
-## 2026-10-11 21:28 UTC — laptop recovery and deadline extension
-
-Completed checkpoints survived laptop closure. Power was reconnected and Sid extended the deadline to **06:30 UTC**. Recovery and failed invocations remain in the detailed log.
+Preserve completed checkpoints after laptop closure. Power reconnected; deadline extended to **06:30 UTC**.
 
 ## 2026-10-11 20:50 UTC — architecture and execution choices
 
-Six size/context screens selected a **2.3M candidate MLP**, not an LLM. Public legal candidates are scored without positional/seed leakage. Use **eight persistent CPU simulator workers, CPU rollout inference and MPS updates**. Actual leading-model collection measured **0.96s CPU / 1.39s MPS**. Replay and phase-dispatch optimizations preserved checked semantics.
+Six size/context screens select a **2.3M candidate MLP**, scoring public legal actions. Use **eight persistent CPU simulator workers, CPU rollout inference and MPS updates**. Leading-model collection measured 0.96 s CPU/1.39 s MPS. Replay and dispatch optimizations passed parity checks.
 
 ## 2026-10-11 20:08 UTC — scope
 
-Created `codex/nonllm-curriculum` from immutable `env-v0.1.0`, preserving the original work. Curriculum: battles → OOC with native combat → full-control Act1–3. Scope: **Ironclad, ascension0**. This first window is not a claim of game mastery or Act4 competence.
+Create `codex/nonllm-curriculum` from immutable `env-v0.1.0`, preserving original work. Curriculum: battles → OOC with native combat → full-control Acts 1–3. **Ironclad, ascension 0**; this first window does not claim mastery or Act 4 competence.
