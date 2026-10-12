@@ -1,0 +1,2842 @@
+{
+  "counts": {
+    "train_rows": 150000,
+    "map_rows": 4126,
+    "identical_map_candidate_pairs": 423,
+    "different_route_statistics_pairs": 8
+  },
+  "examples": [
+    {
+      "world_seed": 12091,
+      "step": 254,
+      "first_action": {
+        "description": "choose map node x=0 room=MONSTER",
+        "index": 0
+      },
+      "second_action": {
+        "description": "choose map node x=1 room=MONSTER",
+        "index": 1
+      },
+      "first_route_stats": {
+        "min_elites": 0,
+        "max_elites": 3,
+        "min_rests": 1,
+        "max_rests": 4,
+        "path_count": 85
+      },
+      "second_route_stats": {
+        "min_elites": 0,
+        "max_elites": 3,
+        "min_rests": 1,
+        "max_rests": 4,
+        "path_count": 98
+      },
+      "public_observation": {
+        "legal_actions": [
+          {
+            "description": "choose map node x=0 room=MONSTER",
+            "index": 0
+          },
+          {
+            "description": "choose map node x=1 room=MONSTER",
+            "index": 1
+          },
+          {
+            "description": "choose map node x=3 room=MONSTER",
+            "index": 2
+          },
+          {
+            "description": "choose map node x=6 room=MONSTER",
+            "index": 3
+          }
+        ],
+        "phase": "out_of_combat",
+        "state": {
+          "act": 2,
+          "ascension": 0,
+          "cur_hp": 80,
+          "done": false,
+          "floor": 17,
+          "gold": 238,
+          "map": {
+            "cur_y": -1,
+            "nodes": [
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 0
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 0
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 0
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 0
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "EVENT",
+                "x": 0,
+                "y": 1
+              },
+              {
+                "edges": [
+                  1,
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 1
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "SHOP",
+                "x": 3,
+                "y": 1
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 1
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "EVENT",
+                "x": 0,
+                "y": 2
+              },
+              {
+                "edges": [
+                  0,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 2
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 2
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 2
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 2
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 3
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 3
+              },
+              {
+                "edges": [
+                  4,
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 3
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 4
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 4
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 4
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 4
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "SHOP",
+                "x": 5,
+                "y": 4
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 5
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "ELITE",
+                "x": 1,
+                "y": 5
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "REST",
+                "x": 2,
+                "y": 5
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 5
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 5
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 6
+              },
+              {
+                "edges": [
+                  0,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 6
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "ELITE",
+                "x": 2,
+                "y": 6
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "EVENT",
+                "x": 6,
+                "y": 6
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 7
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 7
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "EVENT",
+                "x": 3,
+                "y": 7
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 7
+              },
+              {
+                "edges": [
+                  0,
+                  2
+                ],
+                "room": "TREASURE",
+                "x": 1,
+                "y": 8
+              },
+              {
+                "edges": [
+                  2,
+                  3,
+                  4
+                ],
+                "room": "TREASURE",
+                "x": 3,
+                "y": 8
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "TREASURE",
+                "x": 6,
+                "y": 8
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 9
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 9
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "ELITE",
+                "x": 3,
+                "y": 9
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "SHOP",
+                "x": 4,
+                "y": 9
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 9
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 10
+              },
+              {
+                "edges": [
+                  1,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 10
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 10
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "EVENT",
+                "x": 4,
+                "y": 10
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 10
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 11
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 11
+              },
+              {
+                "edges": [
+                  1,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 11
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "ELITE",
+                "x": 5,
+                "y": 11
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 11
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "EVENT",
+                "x": 0,
+                "y": 12
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 12
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 12
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 12
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "EVENT",
+                "x": 5,
+                "y": 12
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 13
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "ELITE",
+                "x": 4,
+                "y": 13
+              },
+              {
+                "edges": [
+                  5,
+                  6
+                ],
+                "room": "EVENT",
+                "x": 5,
+                "y": 13
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 1,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 5,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 6,
+                "y": 14
+              }
+            ]
+          },
+          "max_hp": 80,
+          "observation_version": "sts_env_public_v1",
+          "outcome": "GameOutcome.UNDECIDED",
+          "phase": "out_of_combat",
+          "room": "Room.BOSS_TREASURE",
+          "screen_state": "ScreenState.MAP_SCREEN",
+          "undefined_behavior_evoked": false
+        },
+        "text": "Act 2, floor 17, screen MAP_SCREEN, room BOSS_TREASURE, end-of-act boss Champ\nYour HP: 80/80, gold: 238\nDeck: (16): {Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash,True Grit,Iron Wave,Uppercut+,Armaments+,Shockwave+,Seeing Red,Demon Form,}\nRelics: {Burning Blood:0,Singing Bowl:0,Blue Candle:0,Kunai:0,Sozu:0,}\nPotions: Liquid Bronze\nMap:\nRoom types -- Monster: a normal combat; Elite: a harder combat that always drops a relic; Rest site: a campfire (rest to heal, or upgrade a card); Shop: spend gold on cards/relics/potions; Treasure: a chest with a relic; Unknown (?): contents are revealed only when you enter.\nYou choose one room to enter next; every path leads to the end-of-act boss shown above. The counts below are rooms reachable on at least one path from each choice (you will not necessarily pass through all of them).\nYour choices (match x= to the LEGAL ACTIONS):\n  x=0: next room Monster. Further along this branch, before the boss, you can reach: 5 Elite, 15 Monster, 11 Rest site, 1 Shop, 2 Treasure, 9 Unknown (?).\n  x=1: next room Monster. Further along this branch, before the boss, you can reach: 5 Elite, 15 Monster, 11 Rest site, 1 Shop, 2 Treasure, 9 Unknown (?).\n  x=3: next room Monster. Further along this branch, before the boss, you can reach: 4 Elite, 15 Monster, 7 Rest site, 3 Shop, 2 Treasure, 7 Unknown (?).\n  x=6: next room Monster. Further along this branch, before the boss, you can reach: 4 Elite, 16 Monster, 7 Rest site, 2 Shop, 2 Treasure, 7 Unknown (?).\n\n-- KEY (effects/statuses; numbers are shown next to each above) --\n  Burning Blood: At the end of combat, heal 6 HP.\n  Singing Bowl: You may skip a card reward to gain +2 max HP instead.\n  Kunai: Every 3rd Attack you play in a turn grants 1 Dexterity.\n  Sozu: Gain 1 extra energy each combat, but you can no longer obtain potions.\n  Liquid Bronze: Gain 3 Thorns.\n\n-- VISIBLE ROUTES --\nVisible act map: current row -1; coordinates (x,y).\n(0,0) MONSTER -> (0,1)\n(1,0) MONSTER -> (2,1)\n(3,0) MONSTER -> (3,1)\n(6,0) MONSTER -> (5,1)\n(0,1) EVENT -> (0,2), (1,2)\n(2,1) EVENT -> (1,2), (2,2)\n(3,1) SHOP -> (4,2)\n(5,1) MONSTER -> (6,2)\n(0,2) EVENT -> (0,3)\n(1,2) MONSTER -> (0,3), (2,3)\n(2,2) EVENT -> (2,3)\n(4,2) MONSTER -> (5,3)\n(6,2) MONSTER -> (5,3)\n(0,3) MONSTER -> (1,4)\n(2,3) EVENT -> (2,4), (3,4)\n(5,3) MONSTER -> (4,4), (5,4)\n(1,4) MONSTER -> (0,5), (1,5)\n(2,4) EVENT -> (2,5)\n(3,4) MONSTER -> (3,5)\n(4,4) MONSTER -> (3,5)\n(5,4) SHOP -> (6,5)\n(0,5) REST -> (0,6)\n(1,5) ELITE -> (1,6)\n(2,5) REST -> (1,6)\n(3,5) REST -> (2,6)\n(6,5) MONSTER -> (6,6)\n(0,6) MONSTER -> (0,7)\n(1,6) MONSTER -> (0,7), (2,7)\n(2,6) ELITE -> (2,7), (3,7)\n(6,6) EVENT -> (5,7)\n(0,7) REST -> (1,8)\n(2,7) MONSTER -> (3,8)\n(3,7) EVENT -> (3,8)\n(5,7) MONSTER -> (6,8)\n(1,8) TREASURE -> (0,9), (2,9)\n(3,8) TREASURE -> (2,9), (3,9), (4,9)\n(6,8) TREASURE -> (6,9)\n(0,9) REST -> (1,10)\n(2,9) MONSTER -> (2,10)\n(3,9) ELITE -> (3,10)\n(4,9) SHOP -> (4,10)\n(6,9) MONSTER -> (6,10)\n(1,10) MONSTER -> (0,11)\n(2,10) MONSTER -> (1,11), (2,11)\n(3,10) REST -> (2,11)\n(4,10) EVENT -> (5,11)\n(6,10) MONSTER -> (6,11)\n(0,11) MONSTER -> (0,12)\n(1,11) MONSTER -> (0,12)\n(2,11) EVENT -> (1,12), (3,12)\n(5,11) ELITE -> (4,12)\n(6,11) MONSTER -> (5,12)\n(0,12) EVENT -> (0,13)\n(1,12) MONSTER -> (0,13)\n(3,12) REST -> (4,13)\n(4,12) MONSTER -> (5,13)\n(5,12) EVENT -> (5,13)\n(0,13) MONSTER -> (0,14), (1,14)\n(4,13) ELITE -> (5,14)\n(5,13) EVENT -> (5,14), (6,14)\n(0,14) REST -> (3,15)\n(1,14) REST -> (3,15)\n(5,14) REST -> (3,15)\n(6,14) REST -> (3,15)"
+      }
+    },
+    {
+      "world_seed": 12187,
+      "step": 101,
+      "first_action": {
+        "description": "choose map node x=2 room=TREASURE",
+        "index": 0
+      },
+      "second_action": {
+        "description": "choose map node x=3 room=TREASURE",
+        "index": 1
+      },
+      "first_route_stats": {
+        "min_elites": 0,
+        "max_elites": 1,
+        "min_rests": 1,
+        "max_rests": 2,
+        "path_count": 15
+      },
+      "second_route_stats": {
+        "min_elites": 0,
+        "max_elites": 1,
+        "min_rests": 1,
+        "max_rests": 2,
+        "path_count": 12
+      },
+      "public_observation": {
+        "legal_actions": [
+          {
+            "description": "choose map node x=2 room=TREASURE",
+            "index": 0
+          },
+          {
+            "description": "choose map node x=3 room=TREASURE",
+            "index": 1
+          }
+        ],
+        "phase": "out_of_combat",
+        "state": {
+          "act": 1,
+          "ascension": 0,
+          "cur_hp": 80,
+          "done": false,
+          "floor": 8,
+          "gold": 50,
+          "map": {
+            "cur_y": 7,
+            "nodes": [
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 0
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 0
+              },
+              {
+                "edges": [
+                  4,
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 0
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "EVENT",
+                "x": 1,
+                "y": 1
+              },
+              {
+                "edges": [
+                  1,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 1
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 1
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "EVENT",
+                "x": 5,
+                "y": 1
+              },
+              {
+                "edges": [
+                  0,
+                  1,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 2
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 3,
+                "y": 2
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 2
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "EVENT",
+                "x": 0,
+                "y": 3
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 3
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "SHOP",
+                "x": 2,
+                "y": 3
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "EVENT",
+                "x": 3,
+                "y": 3
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "EVENT",
+                "x": 6,
+                "y": 3
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 4
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 4
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 4
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 4
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 4
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 5
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "ELITE",
+                "x": 1,
+                "y": 5
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "ELITE",
+                "x": 3,
+                "y": 5
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 4,
+                "y": 5
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "EVENT",
+                "x": 0,
+                "y": 6
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "REST",
+                "x": 1,
+                "y": 6
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 6
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 7
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 7
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "ELITE",
+                "x": 3,
+                "y": 7
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "TREASURE",
+                "x": 0,
+                "y": 8
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "TREASURE",
+                "x": 1,
+                "y": 8
+              },
+              {
+                "edges": [
+                  1,
+                  2
+                ],
+                "room": "TREASURE",
+                "x": 2,
+                "y": 8
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "TREASURE",
+                "x": 3,
+                "y": 8
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 9
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 9
+              },
+              {
+                "edges": [
+                  1,
+                  3
+                ],
+                "room": "ELITE",
+                "x": 2,
+                "y": 9
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 9
+              },
+              {
+                "edges": [
+                  0,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 10
+              },
+              {
+                "edges": [
+                  2,
+                  4
+                ],
+                "room": "SHOP",
+                "x": 3,
+                "y": 10
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 11
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 11
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 11
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 12
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 12
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "REST",
+                "x": 2,
+                "y": 12
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "EVENT",
+                "x": 3,
+                "y": 12
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "SHOP",
+                "x": 5,
+                "y": 12
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 13
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 13
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 13
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 13
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 1,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 4,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 6,
+                "y": 14
+              }
+            ]
+          },
+          "max_hp": 80,
+          "observation_version": "sts_env_public_v1",
+          "outcome": "GameOutcome.UNDECIDED",
+          "phase": "out_of_combat",
+          "room": "Room.MONSTER",
+          "screen_state": "ScreenState.MAP_SCREEN",
+          "undefined_behavior_evoked": false
+        },
+        "text": "Act 1, floor 8, screen MAP_SCREEN, room MONSTER, end-of-act boss The Guardian\nYour HP: 80/80, gold: 50\nDeck: (17): {Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash,Juggernaut,Headbutt,Swift Strike,Heavy Blade,Flame Barrier+,Clothesline,Clash,}\nRelics: {Burning Blood:0,}\nPotions: none\nMap:\nRoom types -- Monster: a normal combat; Elite: a harder combat that always drops a relic; Rest site: a campfire (rest to heal, or upgrade a card); Shop: spend gold on cards/relics/potions; Treasure: a chest with a relic; Unknown (?): contents are revealed only when you enter.\nYou choose one room to enter next; every path leads to the end-of-act boss shown above. The counts below are rooms reachable on at least one path from each choice (you will not necessarily pass through all of them).\nYour choices (match x= to the LEGAL ACTIONS):\n  x=2: next room Treasure. Further along this branch, before the boss, you can reach: 1 Elite, 9 Monster, 6 Rest site, 2 Shop, 2 Unknown (?).\n  x=3: next room Treasure. Further along this branch, before the boss, you can reach: 1 Elite, 9 Monster, 6 Rest site, 2 Shop, 2 Unknown (?).\n\n-- KEY (effects/statuses; numbers are shown next to each above) --\n  Burning Blood: At the end of combat, heal 6 HP.\n\n-- VISIBLE ROUTES --\nVisible act map: current row 7; coordinates (x,y).\n(1,0) MONSTER -> (1,1)\n(2,0) MONSTER -> (2,1)\n(4,0) MONSTER -> (4,1), (5,1)\n(1,1) EVENT -> (1,2)\n(2,1) EVENT -> (1,2), (3,2)\n(4,1) MONSTER -> (3,2)\n(5,1) EVENT -> (6,2)\n(1,2) MONSTER -> (0,3), (1,3), (2,3)\n(3,2) EVENT -> (2,3), (3,3)\n(6,2) MONSTER -> (6,3)\n(0,3) EVENT -> (0,4)\n(1,3) MONSTER -> (0,4)\n(2,3) SHOP -> (2,4), (3,4)\n(3,3) EVENT -> (4,4)\n(6,3) EVENT -> (5,4)\n(0,4) MONSTER -> (0,5), (1,5)\n(2,4) EVENT -> (3,5)\n(3,4) MONSTER -> (4,5)\n(4,4) MONSTER -> (4,5)\n(5,4) MONSTER -> (4,5)\n(0,5) REST -> (0,6)\n(1,5) ELITE -> (1,6)\n(3,5) ELITE -> (3,6)\n(4,5) REST -> (3,6)\n(0,6) EVENT -> (0,7)\n(1,6) REST -> (0,7)\n(3,6) MONSTER -> (2,7), (3,7)\n(0,7) MONSTER -> (0,8), (1,8)\n(2,7) MONSTER -> (2,8), (3,8)\n(3,7) ELITE -> (3,8)\n(0,8) TREASURE -> (0,9)\n(1,8) TREASURE -> (1,9)\n(2,8) TREASURE -> (1,9), (2,9)\n(3,8) TREASURE -> (2,9), (3,9)\n(0,9) MONSTER -> (1,10)\n(1,9) MONSTER -> (1,10)\n(2,9) ELITE -> (1,10), (3,10)\n(3,9) MONSTER -> (3,10)\n(1,10) MONSTER -> (0,11), (2,11)\n(3,10) SHOP -> (2,11), (4,11)\n(0,11) MONSTER -> (0,12), (1,12)\n(2,11) EVENT -> (2,12), (3,12)\n(4,11) MONSTER -> (5,12)\n(0,12) REST -> (0,13)\n(1,12) MONSTER -> (0,13)\n(2,12) REST -> (2,13)\n(3,12) EVENT -> (3,13)\n(5,12) SHOP -> (6,13)\n(0,13) MONSTER -> (0,14), (1,14)\n(2,13) MONSTER -> (1,14)\n(3,13) MONSTER -> (4,14)\n(6,13) MONSTER -> (6,14)\n(0,14) REST -> (3,15)\n(1,14) REST -> (3,15)\n(4,14) REST -> (3,15)\n(6,14) REST -> (3,15)"
+      }
+    },
+    {
+      "world_seed": 12290,
+      "step": 1,
+      "first_action": {
+        "description": "choose map node x=0 room=MONSTER",
+        "index": 0
+      },
+      "second_action": {
+        "description": "choose map node x=1 room=MONSTER",
+        "index": 1
+      },
+      "first_route_stats": {
+        "min_elites": 0,
+        "max_elites": 3,
+        "min_rests": 1,
+        "max_rests": 4,
+        "path_count": 85
+      },
+      "second_route_stats": {
+        "min_elites": 0,
+        "max_elites": 3,
+        "min_rests": 1,
+        "max_rests": 4,
+        "path_count": 98
+      },
+      "public_observation": {
+        "legal_actions": [
+          {
+            "description": "choose map node x=0 room=MONSTER",
+            "index": 0
+          },
+          {
+            "description": "choose map node x=1 room=MONSTER",
+            "index": 1
+          },
+          {
+            "description": "choose map node x=3 room=MONSTER",
+            "index": 2
+          },
+          {
+            "description": "choose map node x=6 room=MONSTER",
+            "index": 3
+          }
+        ],
+        "phase": "out_of_combat",
+        "state": {
+          "act": 1,
+          "ascension": 0,
+          "cur_hp": 80,
+          "done": false,
+          "floor": 0,
+          "gold": 99,
+          "map": {
+            "cur_y": -1,
+            "nodes": [
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 0
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 0
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 0
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 0
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "EVENT",
+                "x": 0,
+                "y": 1
+              },
+              {
+                "edges": [
+                  1,
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 1
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "SHOP",
+                "x": 3,
+                "y": 1
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 1
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "EVENT",
+                "x": 0,
+                "y": 2
+              },
+              {
+                "edges": [
+                  0,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 2
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 2
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 2
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 2
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 3
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 3
+              },
+              {
+                "edges": [
+                  4,
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 3
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 4
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 4
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 4
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 4
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "SHOP",
+                "x": 5,
+                "y": 4
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 5
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "ELITE",
+                "x": 1,
+                "y": 5
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "REST",
+                "x": 2,
+                "y": 5
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 5
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 5
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 6
+              },
+              {
+                "edges": [
+                  0,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 6
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "ELITE",
+                "x": 2,
+                "y": 6
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "EVENT",
+                "x": 6,
+                "y": 6
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 7
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 7
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "EVENT",
+                "x": 3,
+                "y": 7
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 7
+              },
+              {
+                "edges": [
+                  0,
+                  2
+                ],
+                "room": "TREASURE",
+                "x": 1,
+                "y": 8
+              },
+              {
+                "edges": [
+                  2,
+                  3,
+                  4
+                ],
+                "room": "TREASURE",
+                "x": 3,
+                "y": 8
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "TREASURE",
+                "x": 6,
+                "y": 8
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 9
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 9
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "ELITE",
+                "x": 3,
+                "y": 9
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "SHOP",
+                "x": 4,
+                "y": 9
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 9
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 10
+              },
+              {
+                "edges": [
+                  1,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 10
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 10
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "EVENT",
+                "x": 4,
+                "y": 10
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 10
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 11
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 11
+              },
+              {
+                "edges": [
+                  1,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 11
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "ELITE",
+                "x": 5,
+                "y": 11
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 11
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "EVENT",
+                "x": 0,
+                "y": 12
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 12
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 12
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 12
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "EVENT",
+                "x": 5,
+                "y": 12
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 13
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "ELITE",
+                "x": 4,
+                "y": 13
+              },
+              {
+                "edges": [
+                  5,
+                  6
+                ],
+                "room": "EVENT",
+                "x": 5,
+                "y": 13
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 1,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 5,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 6,
+                "y": 14
+              }
+            ]
+          },
+          "max_hp": 80,
+          "observation_version": "sts_env_public_v1",
+          "outcome": "GameOutcome.UNDECIDED",
+          "phase": "out_of_combat",
+          "room": "Room.INVALID",
+          "screen_state": "ScreenState.MAP_SCREEN",
+          "undefined_behavior_evoked": false
+        },
+        "text": "Act 1, floor 0, screen MAP_SCREEN, room none, end-of-act boss The Guardian\nYour HP: 80/80, gold: 99\nDeck: (10): {Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash,}\nRelics: {Burning Blood:0,Omamori:2,}\nPotions: none\nMap:\nRoom types -- Monster: a normal combat; Elite: a harder combat that always drops a relic; Rest site: a campfire (rest to heal, or upgrade a card); Shop: spend gold on cards/relics/potions; Treasure: a chest with a relic; Unknown (?): contents are revealed only when you enter.\nYou choose one room to enter next; every path leads to the end-of-act boss shown above. The counts below are rooms reachable on at least one path from each choice (you will not necessarily pass through all of them).\nYour choices (match x= to the LEGAL ACTIONS):\n  x=0: next room Monster. Further along this branch, before the boss, you can reach: 5 Elite, 15 Monster, 11 Rest site, 1 Shop, 2 Treasure, 9 Unknown (?).\n  x=1: next room Monster. Further along this branch, before the boss, you can reach: 5 Elite, 15 Monster, 11 Rest site, 1 Shop, 2 Treasure, 9 Unknown (?).\n  x=3: next room Monster. Further along this branch, before the boss, you can reach: 4 Elite, 15 Monster, 7 Rest site, 3 Shop, 2 Treasure, 7 Unknown (?).\n  x=6: next room Monster. Further along this branch, before the boss, you can reach: 4 Elite, 16 Monster, 7 Rest site, 2 Shop, 2 Treasure, 7 Unknown (?).\n\n-- KEY (effects/statuses; numbers are shown next to each above) --\n  Burning Blood: At the end of combat, heal 6 HP.\n  Omamori: Negates the next 2 Curses you would add to your deck.\n\n-- VISIBLE ROUTES --\nVisible act map: current row -1; coordinates (x,y).\n(0,0) MONSTER -> (0,1)\n(1,0) MONSTER -> (2,1)\n(3,0) MONSTER -> (3,1)\n(6,0) MONSTER -> (5,1)\n(0,1) EVENT -> (0,2), (1,2)\n(2,1) EVENT -> (1,2), (2,2)\n(3,1) SHOP -> (4,2)\n(5,1) MONSTER -> (6,2)\n(0,2) EVENT -> (0,3)\n(1,2) MONSTER -> (0,3), (2,3)\n(2,2) EVENT -> (2,3)\n(4,2) MONSTER -> (5,3)\n(6,2) MONSTER -> (5,3)\n(0,3) MONSTER -> (1,4)\n(2,3) EVENT -> (2,4), (3,4)\n(5,3) MONSTER -> (4,4), (5,4)\n(1,4) MONSTER -> (0,5), (1,5)\n(2,4) EVENT -> (2,5)\n(3,4) MONSTER -> (3,5)\n(4,4) MONSTER -> (3,5)\n(5,4) SHOP -> (6,5)\n(0,5) REST -> (0,6)\n(1,5) ELITE -> (1,6)\n(2,5) REST -> (1,6)\n(3,5) REST -> (2,6)\n(6,5) MONSTER -> (6,6)\n(0,6) MONSTER -> (0,7)\n(1,6) MONSTER -> (0,7), (2,7)\n(2,6) ELITE -> (2,7), (3,7)\n(6,6) EVENT -> (5,7)\n(0,7) REST -> (1,8)\n(2,7) MONSTER -> (3,8)\n(3,7) EVENT -> (3,8)\n(5,7) MONSTER -> (6,8)\n(1,8) TREASURE -> (0,9), (2,9)\n(3,8) TREASURE -> (2,9), (3,9), (4,9)\n(6,8) TREASURE -> (6,9)\n(0,9) REST -> (1,10)\n(2,9) MONSTER -> (2,10)\n(3,9) ELITE -> (3,10)\n(4,9) SHOP -> (4,10)\n(6,9) MONSTER -> (6,10)\n(1,10) MONSTER -> (0,11)\n(2,10) MONSTER -> (1,11), (2,11)\n(3,10) REST -> (2,11)\n(4,10) EVENT -> (5,11)\n(6,10) MONSTER -> (6,11)\n(0,11) MONSTER -> (0,12)\n(1,11) MONSTER -> (0,12)\n(2,11) EVENT -> (1,12), (3,12)\n(5,11) ELITE -> (4,12)\n(6,11) MONSTER -> (5,12)\n(0,12) EVENT -> (0,13)\n(1,12) MONSTER -> (0,13)\n(3,12) REST -> (4,13)\n(4,12) MONSTER -> (5,13)\n(5,12) EVENT -> (5,13)\n(0,13) MONSTER -> (0,14), (1,14)\n(4,13) ELITE -> (5,14)\n(5,13) EVENT -> (5,14), (6,14)\n(0,14) REST -> (3,15)\n(1,14) REST -> (3,15)\n(5,14) REST -> (3,15)\n(6,14) REST -> (3,15)"
+      }
+    },
+    {
+      "world_seed": 12389,
+      "step": 2,
+      "first_action": {
+        "description": "choose map node x=1 room=MONSTER",
+        "index": 0
+      },
+      "second_action": {
+        "description": "choose map node x=3 room=MONSTER",
+        "index": 1
+      },
+      "first_route_stats": {
+        "min_elites": 0,
+        "max_elites": 2,
+        "min_rests": 1,
+        "max_rests": 4,
+        "path_count": 119
+      },
+      "second_route_stats": {
+        "min_elites": 0,
+        "max_elites": 2,
+        "min_rests": 1,
+        "max_rests": 4,
+        "path_count": 101
+      },
+      "public_observation": {
+        "legal_actions": [
+          {
+            "description": "choose map node x=1 room=MONSTER",
+            "index": 0
+          },
+          {
+            "description": "choose map node x=3 room=MONSTER",
+            "index": 1
+          },
+          {
+            "description": "choose map node x=6 room=MONSTER",
+            "index": 2
+          }
+        ],
+        "phase": "out_of_combat",
+        "state": {
+          "act": 1,
+          "ascension": 0,
+          "cur_hp": 80,
+          "done": false,
+          "floor": 0,
+          "gold": 99,
+          "map": {
+            "cur_y": -1,
+            "nodes": [
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 0
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 0
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 0
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 1
+              },
+              {
+                "edges": [
+                  3,
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 1
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "SHOP",
+                "x": 5,
+                "y": 1
+              },
+              {
+                "edges": [
+                  1,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 2
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 3,
+                "y": 2
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 2
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 2
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 3
+              },
+              {
+                "edges": [
+                  1,
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 3
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 3
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 3
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "SHOP",
+                "x": 1,
+                "y": 4
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 4
+              },
+              {
+                "edges": [
+                  2,
+                  3,
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 4
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 5
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "ELITE",
+                "x": 1,
+                "y": 5
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "REST",
+                "x": 2,
+                "y": 5
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 5
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "EVENT",
+                "x": 4,
+                "y": 5
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 6
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "REST",
+                "x": 1,
+                "y": 6
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 6
+              },
+              {
+                "edges": [
+                  3,
+                  4
+                ],
+                "room": "EVENT",
+                "x": 3,
+                "y": 6
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "EVENT",
+                "x": 4,
+                "y": 6
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "EVENT",
+                "x": 0,
+                "y": 7
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "REST",
+                "x": 2,
+                "y": 7
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 7
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 7
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "SHOP",
+                "x": 5,
+                "y": 7
+              },
+              {
+                "edges": [
+                  1,
+                  2
+                ],
+                "room": "TREASURE",
+                "x": 1,
+                "y": 8
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "TREASURE",
+                "x": 2,
+                "y": 8
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "TREASURE",
+                "x": 5,
+                "y": 8
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "TREASURE",
+                "x": 6,
+                "y": 8
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "EVENT",
+                "x": 1,
+                "y": 9
+              },
+              {
+                "edges": [
+                  1,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 9
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 9
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 9
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "EVENT",
+                "x": 1,
+                "y": 10
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "ELITE",
+                "x": 2,
+                "y": 10
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 10
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "ELITE",
+                "x": 6,
+                "y": 10
+              },
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 11
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 11
+              },
+              {
+                "edges": [
+                  4,
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 11
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 12
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "EVENT",
+                "x": 1,
+                "y": 12
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "EVENT",
+                "x": 3,
+                "y": 12
+              },
+              {
+                "edges": [
+                  3,
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 12
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "ELITE",
+                "x": 5,
+                "y": 12
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 13
+              },
+              {
+                "edges": [
+                  1,
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 13
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "EVENT",
+                "x": 3,
+                "y": 13
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 13
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "EVENT",
+                "x": 6,
+                "y": 13
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 1,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 5,
+                "y": 14
+              }
+            ]
+          },
+          "max_hp": 80,
+          "observation_version": "sts_env_public_v1",
+          "outcome": "GameOutcome.UNDECIDED",
+          "phase": "out_of_combat",
+          "room": "Room.INVALID",
+          "screen_state": "ScreenState.MAP_SCREEN",
+          "undefined_behavior_evoked": false
+        },
+        "text": "Act 1, floor 0, screen MAP_SCREEN, room none, end-of-act boss Hexaghost\nYour HP: 80/80, gold: 99\nDeck: (10): {Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash,Battle Trance,}\nRelics: {Burning Blood:0,}\nPotions: none\nMap:\nRoom types -- Monster: a normal combat; Elite: a harder combat that always drops a relic; Rest site: a campfire (rest to heal, or upgrade a card); Shop: spend gold on cards/relics/potions; Treasure: a chest with a relic; Unknown (?): contents are revealed only when you enter.\nYou choose one room to enter next; every path leads to the end-of-act boss shown above. The counts below are rooms reachable on at least one path from each choice (you will not necessarily pass through all of them).\nYour choices (match x= to the LEGAL ACTIONS):\n  x=1: next room Monster. Further along this branch, before the boss, you can reach: 4 Elite, 21 Monster, 9 Rest site, 2 Shop, 4 Treasure, 12 Unknown (?).\n  x=3: next room Monster. Further along this branch, before the boss, you can reach: 4 Elite, 21 Monster, 9 Rest site, 2 Shop, 4 Treasure, 12 Unknown (?).\n  x=6: next room Monster. Further along this branch, before the boss, you can reach: 3 Elite, 17 Monster, 7 Rest site, 2 Shop, 3 Treasure, 8 Unknown (?).\n\n-- KEY (effects/statuses; numbers are shown next to each above) --\n  Burning Blood: At the end of combat, heal 6 HP.\n\n-- VISIBLE ROUTES --\nVisible act map: current row -1; coordinates (x,y).\n(1,0) MONSTER -> (2,1)\n(3,0) MONSTER -> (4,1)\n(6,0) MONSTER -> (5,1)\n(2,1) MONSTER -> (2,2), (3,2)\n(4,1) MONSTER -> (3,2), (4,2)\n(5,1) SHOP -> (5,2)\n(2,2) MONSTER -> (1,3), (2,3)\n(3,2) EVENT -> (2,3), (3,3)\n(4,2) MONSTER -> (4,3)\n(5,2) MONSTER -> (4,3)\n(1,3) MONSTER -> (1,4)\n(2,3) EVENT -> (1,4), (2,4)\n(3,3) MONSTER -> (3,4)\n(4,3) MONSTER -> (3,4)\n(1,4) SHOP -> (0,5), (1,5)\n(2,4) MONSTER -> (2,5)\n(3,4) MONSTER -> (2,5), (3,5), (4,5)\n(0,5) REST -> (0,6)\n(1,5) ELITE -> (1,6)\n(2,5) REST -> (2,6), (3,6)\n(3,5) MONSTER -> (3,6)\n(4,5) EVENT -> (4,6)\n(0,6) MONSTER -> (0,7)\n(1,6) REST -> (0,7)\n(2,6) MONSTER -> (2,7)\n(3,6) EVENT -> (3,7), (4,7)\n(4,6) EVENT -> (5,7)\n(0,7) EVENT -> (1,8)\n(2,7) REST -> (2,8)\n(3,7) REST -> (2,8)\n(4,7) MONSTER -> (5,8)\n(5,7) SHOP -> (6,8)\n(1,8) TREASURE -> (1,9), (2,9)\n(2,8) TREASURE -> (2,9), (3,9)\n(5,8) TREASURE -> (6,9)\n(6,8) TREASURE -> (6,9)\n(1,9) EVENT -> (1,10)\n(2,9) MONSTER -> (1,10), (2,10)\n(3,9) REST -> (4,10)\n(6,9) MONSTER -> (6,10)\n(1,10) EVENT -> (1,11)\n(2,10) ELITE -> (3,11)\n(4,10) MONSTER -> (5,11)\n(6,10) ELITE -> (5,11)\n(1,11) MONSTER -> (0,12), (1,12)\n(3,11) MONSTER -> (3,12)\n(5,11) MONSTER -> (4,12), (5,12)\n(0,12) MONSTER -> (1,13)\n(1,12) EVENT -> (2,13)\n(3,12) EVENT -> (2,13)\n(4,12) MONSTER -> (3,13), (4,13)\n(5,12) ELITE -> (6,13)\n(1,13) MONSTER -> (1,14)\n(2,13) MONSTER -> (1,14), (3,14)\n(3,13) EVENT -> (3,14)\n(4,13) MONSTER -> (3,14)\n(6,13) EVENT -> (5,14)\n(1,14) REST -> (3,15)\n(3,14) REST -> (3,15)\n(5,14) REST -> (3,15)"
+      }
+    },
+    {
+      "world_seed": 12412,
+      "step": 273,
+      "first_action": {
+        "description": "choose map node x=1 room=MONSTER",
+        "index": 0
+      },
+      "second_action": {
+        "description": "choose map node x=3 room=MONSTER",
+        "index": 1
+      },
+      "first_route_stats": {
+        "min_elites": 0,
+        "max_elites": 3,
+        "min_rests": 1,
+        "max_rests": 4,
+        "path_count": 146
+      },
+      "second_route_stats": {
+        "min_elites": 0,
+        "max_elites": 3,
+        "min_rests": 1,
+        "max_rests": 4,
+        "path_count": 172
+      },
+      "public_observation": {
+        "legal_actions": [
+          {
+            "description": "choose map node x=1 room=MONSTER",
+            "index": 0
+          },
+          {
+            "description": "choose map node x=3 room=MONSTER",
+            "index": 1
+          },
+          {
+            "description": "choose map node x=4 room=MONSTER",
+            "index": 2
+          }
+        ],
+        "phase": "out_of_combat",
+        "state": {
+          "act": 2,
+          "ascension": 0,
+          "cur_hp": 80,
+          "done": false,
+          "floor": 17,
+          "gold": 413,
+          "map": {
+            "cur_y": -1,
+            "nodes": [
+              {
+                "edges": [
+                  0,
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 0
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 0
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 0
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 1
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "EVENT",
+                "x": 1,
+                "y": 1
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 1
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "EVENT",
+                "x": 3,
+                "y": 1
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 1
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 2
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 2
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 2
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 2
+              },
+              {
+                "edges": [
+                  1,
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 3
+              },
+              {
+                "edges": [
+                  2,
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 3
+              },
+              {
+                "edges": [
+                  4,
+                  6
+                ],
+                "room": "EVENT",
+                "x": 5,
+                "y": 3
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 4
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "SHOP",
+                "x": 2,
+                "y": 4
+              },
+              {
+                "edges": [
+                  3,
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 4
+              },
+              {
+                "edges": [
+                  6
+                ],
+                "room": "SHOP",
+                "x": 6,
+                "y": 4
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 5
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "REST",
+                "x": 1,
+                "y": 5
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 5
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "ELITE",
+                "x": 5,
+                "y": 5
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 5
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 6
+              },
+              {
+                "edges": [
+                  1,
+                  2,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 6
+              },
+              {
+                "edges": [
+                  4,
+                  6
+                ],
+                "room": "EVENT",
+                "x": 5,
+                "y": 6
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "SHOP",
+                "x": 1,
+                "y": 7
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 7
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 7
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "EVENT",
+                "x": 4,
+                "y": 7
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "MONSTER",
+                "x": 6,
+                "y": 7
+              },
+              {
+                "edges": [
+                  0,
+                  2
+                ],
+                "room": "TREASURE",
+                "x": 1,
+                "y": 8
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "TREASURE",
+                "x": 2,
+                "y": 8
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "TREASURE",
+                "x": 3,
+                "y": 8
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "TREASURE",
+                "x": 5,
+                "y": 8
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "REST",
+                "x": 0,
+                "y": 9
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 9
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 9
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 4,
+                "y": 9
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 10
+              },
+              {
+                "edges": [
+                  1,
+                  2,
+                  3
+                ],
+                "room": "MONSTER",
+                "x": 2,
+                "y": 10
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "ELITE",
+                "x": 4,
+                "y": 10
+              },
+              {
+                "edges": [
+                  0,
+                  1,
+                  2
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 11
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 11
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "REST",
+                "x": 3,
+                "y": 11
+              },
+              {
+                "edges": [
+                  0
+                ],
+                "room": "ELITE",
+                "x": 0,
+                "y": 12
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 12
+              },
+              {
+                "edges": [
+                  2,
+                  3
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 12
+              },
+              {
+                "edges": [
+                  5
+                ],
+                "room": "ELITE",
+                "x": 4,
+                "y": 12
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 0,
+                "y": 13
+              },
+              {
+                "edges": [
+                  1
+                ],
+                "room": "MONSTER",
+                "x": 1,
+                "y": 13
+              },
+              {
+                "edges": [
+                  2
+                ],
+                "room": "EVENT",
+                "x": 2,
+                "y": 13
+              },
+              {
+                "edges": [
+                  4
+                ],
+                "room": "MONSTER",
+                "x": 3,
+                "y": 13
+              },
+              {
+                "edges": [
+                  4,
+                  6
+                ],
+                "room": "MONSTER",
+                "x": 5,
+                "y": 13
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 1,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 2,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 4,
+                "y": 14
+              },
+              {
+                "edges": [
+                  3
+                ],
+                "room": "REST",
+                "x": 6,
+                "y": 14
+              }
+            ]
+          },
+          "max_hp": 80,
+          "observation_version": "sts_env_public_v1",
+          "outcome": "GameOutcome.UNDECIDED",
+          "phase": "out_of_combat",
+          "room": "Room.BOSS_TREASURE",
+          "screen_state": "ScreenState.MAP_SCREEN",
+          "undefined_behavior_evoked": false
+        },
+        "text": "Act 2, floor 17, screen MAP_SCREEN, room BOSS_TREASURE, end-of-act boss Automaton\nYour HP: 80/80, gold: 413\nDeck: (19): {Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash,Flame Barrier,Whirlwind,Sentinel,Wild Strike,Burning Pact,Blood for Blood,Feel No Pain+,Feel No Pain,Pummel,}\nRelics: {Runic Pyramid:0,Blue Candle:0,Busted Crown:0,}\nPotions: Distilled Chaos\nMap:\nRoom types -- Monster: a normal combat; Elite: a harder combat that always drops a relic; Rest site: a campfire (rest to heal, or upgrade a card); Shop: spend gold on cards/relics/potions; Treasure: a chest with a relic; Unknown (?): contents are revealed only when you enter.\nYou choose one room to enter next; every path leads to the end-of-act boss shown above. The counts below are rooms reachable on at least one path from each choice (you will not necessarily pass through all of them).\nYour choices (match x= to the LEGAL ACTIONS):\n  x=1: next room Monster. Further along this branch, before the boss, you can reach: 4 Elite, 18 Monster, 10 Rest site, 2 Shop, 4 Treasure, 10 Unknown (?).\n  x=3: next room Monster. Further along this branch, before the boss, you can reach: 4 Elite, 18 Monster, 10 Rest site, 2 Shop, 4 Treasure, 10 Unknown (?).\n  x=4: next room Monster. Further along this branch, before the boss, you can reach: 4 Elite, 16 Monster, 8 Rest site, 2 Shop, 4 Treasure, 8 Unknown (?).\n\n-- KEY (effects/statuses; numbers are shown next to each above) --\n  Runic Pyramid: You no longer discard your hand at the end of your turn.\n  Busted Crown: Gain 1 extra energy each combat, but card rewards offer 2 fewer cards.\n  Distilled Chaos: Play the top 3 cards of your draw pile.\n\n-- VISIBLE ROUTES --\nVisible act map: current row -1; coordinates (x,y).\n(1,0) MONSTER -> (0,1), (1,1)\n(3,0) MONSTER -> (2,1), (3,1)\n(4,0) MONSTER -> (4,1)\n(0,1) MONSTER -> (1,2)\n(1,1) EVENT -> (2,2)\n(2,1) MONSTER -> (2,2)\n(3,1) EVENT -> (4,2)\n(4,1) MONSTER -> (5,2)\n(1,2) MONSTER -> (2,3)\n(2,2) EVENT -> (2,3), (3,3)\n(4,2) MONSTER -> (3,3)\n(5,2) MONSTER -> (5,3)\n(2,3) EVENT -> (1,4), (2,4)\n(3,3) MONSTER -> (2,4), (4,4)\n(5,3) EVENT -> (4,4), (6,4)\n(1,4) MONSTER -> (0,5)\n(2,4) SHOP -> (1,5)\n(4,4) MONSTER -> (3,5), (5,5)\n(6,4) SHOP -> (6,5)\n(0,5) REST -> (1,6)\n(1,5) REST -> (2,6)\n(3,5) MONSTER -> (2,6)\n(5,5) ELITE -> (5,6)\n(6,5) MONSTER -> (5,6)\n(1,6) MONSTER -> (1,7)\n(2,6) EVENT -> (1,7), (2,7), (3,7)\n(5,6) EVENT -> (4,7), (6,7)\n(1,7) SHOP -> (1,8)\n(2,7) EVENT -> (2,8)\n(3,7) REST -> (2,8)\n(4,7) EVENT -> (3,8)\n(6,7) MONSTER -> (5,8)\n(1,8) TREASURE -> (0,9), (2,9)\n(2,8) TREASURE -> (2,9)\n(3,8) TREASURE -> (3,9)\n(5,8) TREASURE -> (4,9)\n(0,9) REST -> (1,10)\n(2,9) MONSTER -> (2,10)\n(3,9) REST -> (2,10)\n(4,9) MONSTER -> (4,10)\n(1,10) MONSTER -> (1,11)\n(2,10) MONSTER -> (1,11), (2,11), (3,11)\n(4,10) ELITE -> (3,11)\n(1,11) MONSTER -> (0,12), (1,12), (2,12)\n(2,11) EVENT -> (2,12)\n(3,11) REST -> (4,12)\n(0,12) ELITE -> (0,13)\n(1,12) MONSTER -> (1,13)\n(2,12) EVENT -> (2,13), (3,13)\n(4,12) ELITE -> (5,13)\n(0,13) MONSTER -> (1,14)\n(1,13) MONSTER -> (1,14)\n(2,13) EVENT -> (2,14)\n(3,13) MONSTER -> (4,14)\n(5,13) MONSTER -> (4,14), (6,14)\n(1,14) REST -> (3,15)\n(2,14) REST -> (3,15)\n(4,14) REST -> (3,15)\n(6,14) REST -> (3,15)"
+      }
+    }
+  ],
+  "teacher": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_curriculum/teacher_act3_200_native011_seed12000/teacher.jsonl",
+  "scope": "Read only, existing TRAIN artifacts. Path statistics are descriptive, no teacher or future observations."
+}

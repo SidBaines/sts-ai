@@ -1,0 +1,1184 @@
+{
+  "scope": "read-only frozen completed v2 jobs; descriptive unpaired rotating TRAIN windows, no causal comparison",
+  "journal": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/journal.json",
+  "journal_sha256": "5cc5dfae03786696cd01a8df790c5afe9d132579ad46298002f0aeeb9c5a9cb8",
+  "chunks": 129,
+  "valid_transitions": 4030949,
+  "optimizer_steps": 13514,
+  "groups": {
+    "(3, 'native_teacher')": {
+      "valid_episodes": 395,
+      "transitions": 63849,
+      "median_steps": 153,
+      "wins": 25,
+      "mean_return": -0.3854430379746835
+    },
+    "(1, 'fresh_scratch')": {
+      "valid_episodes": 11551,
+      "transitions": 3218660,
+      "median_steps": 274,
+      "wins": 12,
+      "mean_return": 0.2121721063111423
+    },
+    "(2, 'native_teacher')": {
+      "valid_episodes": 691,
+      "transitions": 129298,
+      "median_steps": 178,
+      "wins": 1,
+      "mean_return": -0.3808972503617944
+    },
+    "(2, 'learner')": {
+      "valid_episodes": 2518,
+      "transitions": 429973,
+      "median_steps": 166.0,
+      "wins": 2,
+      "mean_return": -0.35994837172359007
+    },
+    "(3, 'learner')": {
+      "valid_episodes": 1266,
+      "transitions": 189169,
+      "median_steps": 144.0,
+      "wins": 29,
+      "mean_return": -0.39913112164296993
+    }
+  },
+  "windows": {
+    "first20": {
+      "rounds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "update_metric_medians": {
+        "approx_kl": 0.004848409420476834,
+        "clip_fraction": 0.11310712245347745,
+        "entropy": 0.4965334368700331,
+        "policy_loss": -0.003551879931227163,
+        "value_loss": 0.004396485311897575
+      },
+      "early_stops": 4,
+      "mean_effective_epochs": 3.6125222816399285,
+      "collection_seconds": 419.72005562414415,
+      "update_seconds": 186.63251387747005,
+      "child_seconds": 620.0526585399639,
+      "fresh_valid_episodes": 1792,
+      "fresh_mean_floor": 25.875,
+      "fresh_act1_boundary_floor17_count": 1303,
+      "fresh_act2_boundary_floor34_count": 95,
+      "fresh_wins": 1
+    },
+    "last20": {
+      "rounds": [
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128
+      ],
+      "update_metric_medians": {
+        "approx_kl": 0.005217318225765296,
+        "clip_fraction": 0.1109354252985213,
+        "entropy": 0.4692280313478694,
+        "policy_loss": -0.003943288372723938,
+        "value_loss": 0.0037408442601897856
+      },
+      "early_stops": 7,
+      "mean_effective_epochs": 3.18130419531803,
+      "collection_seconds": 368.9618203761056,
+      "update_seconds": 145.5835632502567,
+      "child_seconds": 527.0923996670172,
+      "fresh_valid_episodes": 1792,
+      "fresh_mean_floor": 24.004464285714285,
+      "fresh_act1_boundary_floor17_count": 1096,
+      "fresh_act2_boundary_floor34_count": 59,
+      "fresh_wins": 3
+    },
+    "all": {
+      "rounds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128
+      ],
+      "update_metric_medians": {
+        "approx_kl": 0.0048706292617579396,
+        "clip_fraction": 0.11268837124641452,
+        "entropy": 0.4866230379451405,
+        "policy_loss": -0.004013906602912973,
+        "value_loss": 0.004133772788918577
+      },
+      "early_stops": 36,
+      "mean_effective_epochs": 3.381856485369575,
+      "collection_seconds": 2487.776280242484,
+      "update_seconds": 1037.6355770910159,
+      "child_seconds": 3610.7037678314373,
+      "fresh_valid_episodes": 11551,
+      "fresh_mean_floor": 24.201887282486364,
+      "fresh_act1_boundary_floor17_count": 7271,
+      "fresh_act2_boundary_floor34_count": 380,
+      "fresh_wins": 12
+    }
+  },
+  "inputs": [
+    {
+      "round": 0,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000000_pilot_a0_b5ca4e17443dcc7a.metrics.json",
+      "metrics_sha256": "77754a614d25a5a10214f7155a7fd5b11aff5384bc3262df39b4e03c9cc99d7d",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000000.jsonl.manifest.json",
+      "task_manifest_sha256": "3bd5deb3b813942a67d0da23f9ed2582120a0bfd08c874fd5a31b5b5b973d0ea"
+    },
+    {
+      "round": 1,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000001_pilot_a0_5720a12848ac268e.metrics.json",
+      "metrics_sha256": "f5026286ae378a5a6d01b110ae823449e4e5cf84d4a9682596e2b919a6bf7c17",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000001.jsonl.manifest.json",
+      "task_manifest_sha256": "1bac3a6844bb7819e8e4821e213438432d5d00cde8093190b1c9408c2b4f32f1"
+    },
+    {
+      "round": 2,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000002_pilot_a0_2a5e446568419c5b.metrics.json",
+      "metrics_sha256": "881172c3d65d711008e15a65ee59a40c760f4673ca0daadb41d79455e6b5c6bb",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000002.jsonl.manifest.json",
+      "task_manifest_sha256": "33717e6449da78f7a3951f51aa722d73f5f6289c00a93f3830325046e23f8de0"
+    },
+    {
+      "round": 3,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000003_pilot_a0_f2369a9bb48c539e.metrics.json",
+      "metrics_sha256": "392a8445d7b072abf52b13278af8bf01520c7bcb370d5e284ac5eec1b2ff993d",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000003.jsonl.manifest.json",
+      "task_manifest_sha256": "8b9ba2cba713b200950251c5e551c0a09bdf4de6afa878423bc20efe717141a4"
+    },
+    {
+      "round": 4,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000004_pilot_a0_307800a880fedfad.metrics.json",
+      "metrics_sha256": "2456fbe1c569d0cb074aa9ba7176da12d6934fd05070640cbca5fe551fbbe006",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000004.jsonl.manifest.json",
+      "task_manifest_sha256": "af591461bae3bc5b0172ed81a55dba4d3b05318c639b8b60bc8555a65ff55e65"
+    },
+    {
+      "round": 5,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000005_pilot_a0_bedf60b4f99f83c1.metrics.json",
+      "metrics_sha256": "8488c4583b8666ac5c3bb5aeec87344742e18864af2c4e8ead92e658d040ea09",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000005.jsonl.manifest.json",
+      "task_manifest_sha256": "c967a405e225ca4e64a40af58575c993e505b205335454e56c1b500cac24714a"
+    },
+    {
+      "round": 6,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000006_pilot_a0_e9a6439273227dee.metrics.json",
+      "metrics_sha256": "8854fcc5d23acd6af9fba732404be63ab9021a079479416c5093696bb6b423e1",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000006.jsonl.manifest.json",
+      "task_manifest_sha256": "da5d5d39e5c4b130a9882fa53587b8201b06eed808d7974ea8f55fb9a4c9037d"
+    },
+    {
+      "round": 7,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000007_pilot_a0_0975c75afc7ad509.metrics.json",
+      "metrics_sha256": "1e4ebb8cc94a30f8530722f1051463513e26ea9d61d2e311fd7dd3e5d911c883",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000007.jsonl.manifest.json",
+      "task_manifest_sha256": "7cf80e434a383f34bd31ff53dfc7621521cfa78ced8658eb13539e184d273c4c"
+    },
+    {
+      "round": 8,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000008_pilot_a0_5443a3754cbf7b99.metrics.json",
+      "metrics_sha256": "b4c062e1e4acbb032300a9060f8ea2757a4bde92c767e6b03a45ccb323ff3401",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000008.jsonl.manifest.json",
+      "task_manifest_sha256": "1f25ac0691273bad38bf80eaff7685a44c0539a606e696ab8a03d1f8721492b9"
+    },
+    {
+      "round": 9,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000009_pilot_a0_c68aa3ca7b487c47.metrics.json",
+      "metrics_sha256": "cee2265ea71215eff6cd38f5d2f5a38022620b1f397219c8d62fd0f9028a8c8f",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000009.jsonl.manifest.json",
+      "task_manifest_sha256": "e1c53f802f319b5383c7e6039d6e76a7bf0c35a450e7aec5e4b16b287335b5be"
+    },
+    {
+      "round": 10,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000010_pilot_a0_e3f9b9b76ef51d82.metrics.json",
+      "metrics_sha256": "4e52876a3e1f6f99ff705d28ac2c085705c302875ec536d9928cf0cdc009d0fe",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000010.jsonl.manifest.json",
+      "task_manifest_sha256": "11c2a2f8fa4ed61d63a641502a3dca79c7808c0a0ebe3f93a90198023a4486dd"
+    },
+    {
+      "round": 11,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000011_pilot_a0_85128f05e0097298.metrics.json",
+      "metrics_sha256": "e9960d11bfe9daba4e69a92043f8177f4570eb684b99d183f6fba2f907870fe0",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000011.jsonl.manifest.json",
+      "task_manifest_sha256": "81e4f1cec24521869ff8facceb7b92adf83326e3d5e53dd66b11a7e59f382cad"
+    },
+    {
+      "round": 12,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000012_pilot_a0_d4c533bc88fa359f.metrics.json",
+      "metrics_sha256": "81d59c032e5234c8730f2886d8426c98a1c5dcc7668b96108ea22fae1af1aee8",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000012.jsonl.manifest.json",
+      "task_manifest_sha256": "3b7951745e953d6f66f2a5479f77c92039e8aee620cd1d2eb629b076161f8122"
+    },
+    {
+      "round": 13,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000013_pilot_a0_21b55ce3babccdb7.metrics.json",
+      "metrics_sha256": "857b7d0998b5309a31aeb7894b3d21d5b106a5d9113eb538cc601f455b257f50",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000013.jsonl.manifest.json",
+      "task_manifest_sha256": "9e463be1f919b28408750fd271f22e0d5a668b17acab7a0ea6162008e3e0ef26"
+    },
+    {
+      "round": 14,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000014_pilot_a0_479f4c38c208665a.metrics.json",
+      "metrics_sha256": "68ea1d2dc861569fd160e5c4d303aab2b26a495f893763750f600565eea971c3",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000014.jsonl.manifest.json",
+      "task_manifest_sha256": "c1e832760fd4c9ad3c9b015dfcb245284cc5dfdc4cadfdf13da14c96e8af861e"
+    },
+    {
+      "round": 15,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000015_pilot_a0_7ff892eeaf817244.metrics.json",
+      "metrics_sha256": "85720eec2c7146b69d32970f1cbc2e947f12bce18c4e47164ddb006cd90bb168",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000015.jsonl.manifest.json",
+      "task_manifest_sha256": "0b04b2ea289f2dfb5397f23a8c3a816da4b2b982000fea9d34a058b79ef1b183"
+    },
+    {
+      "round": 16,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000016_pilot_a0_b76c7fbb18361ae4.metrics.json",
+      "metrics_sha256": "168a7bb2543652e6eb4318fa80e4b1c297faaa35317da71aeef930002a32c843",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000016.jsonl.manifest.json",
+      "task_manifest_sha256": "b32db661961220d8e97616c7f9f084ca03b222c7978c51c058c76443afed3bf7"
+    },
+    {
+      "round": 17,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000017_pilot_a0_bd72f5f00a7c6ce4.metrics.json",
+      "metrics_sha256": "23543a1f88b13bd14656630b163ad275a6d56008673dc070a2c006546be4da5d",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000017.jsonl.manifest.json",
+      "task_manifest_sha256": "631b6285d38babe6473cb8844c4265c508434c79ae3fedb25893e06ae49a3a74"
+    },
+    {
+      "round": 18,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000018_pilot_a0_2babb906ba1d888f.metrics.json",
+      "metrics_sha256": "4e727caf686bc379b3a42678e0f32e7b82dc42046bfc6ab3522d8d3d6180ddd0",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000018.jsonl.manifest.json",
+      "task_manifest_sha256": "f59dd36adb1c16bf5b36c116e9146708f00403525eb77d51caef6a14e527ced0"
+    },
+    {
+      "round": 19,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000019_pilot_a0_8ce98d1fdff6b6aa.metrics.json",
+      "metrics_sha256": "20f80977a678a093f05aa4405f6993bac11ea00fc67649675ef10d81e305d95f",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000019.jsonl.manifest.json",
+      "task_manifest_sha256": "20d276b4734410238b2f78e4538968744746bb617f24e0e88a60a914843febbd"
+    },
+    {
+      "round": 20,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000020_pilot_a0_10e6e0e6c3d45f02.metrics.json",
+      "metrics_sha256": "38a8327a416d5bced68b0f54fa6cc19393d5973b60dd9a9f8f8dddfd5dcbdf98",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000020.jsonl.manifest.json",
+      "task_manifest_sha256": "2878b43cdbf4aa90a736b10cf47c6c6c9342278c5f65c2550acaabf7b1ae3534"
+    },
+    {
+      "round": 21,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000021_pilot_a0_13503121f4ea07fa.metrics.json",
+      "metrics_sha256": "25b447285a6f5b86d77a1333149c8f332d4b0f740a0a037238a2947509ddea60",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000021.jsonl.manifest.json",
+      "task_manifest_sha256": "7bf12c6113c7e8cfc2811b821b1d829317639eb781fc24f6990c995a6d1bcc0d"
+    },
+    {
+      "round": 22,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000022_pilot_a0_4bbc20d630c41600.metrics.json",
+      "metrics_sha256": "a2fd20f300bcbb785ffe7ef2699069517e54e85c3cae86d42c343e84d3364b04",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000022.jsonl.manifest.json",
+      "task_manifest_sha256": "ce23b05d678a4386c97c1c9a089b95f8040ade26a0809afa19e6ff322a8bd3e4"
+    },
+    {
+      "round": 23,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000023_pilot_a0_bdb51cf55a4d740e.metrics.json",
+      "metrics_sha256": "98083081518604c9f91cfe91d57522d43f5b412f8b209e0d999c47cdad0c626b",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000023.jsonl.manifest.json",
+      "task_manifest_sha256": "f46d713c785ac7fc3fd81fd6ea68ea0a74dc1f3eb2dc558527486adb5a5bbd06"
+    },
+    {
+      "round": 24,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000024_pilot_a0_0a7d294204d7ccc1.metrics.json",
+      "metrics_sha256": "cb2b7cb365f08f29867577a7da26ea4d09b31b1356f599034563548731fb7e14",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000024.jsonl.manifest.json",
+      "task_manifest_sha256": "fbc36c43f876de715329f07d285282ee4c0312eb180d64ea43451f761e30307c"
+    },
+    {
+      "round": 25,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000025_pilot_a0_4e3adbeda8d3aa5b.metrics.json",
+      "metrics_sha256": "cbe1f4237c4961cbb1d37e7f1de0587de2e3f41aa2325ddb6e338edaf36f7ea1",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000025.jsonl.manifest.json",
+      "task_manifest_sha256": "4df59c72a1546571b3e99c02c5fc8f3567347fe3d9053ebc3300d12fedda3dad"
+    },
+    {
+      "round": 26,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000026_main_a0_da22e9b3ca400073.metrics.json",
+      "metrics_sha256": "48d99c69dee2377e8d34d4e85df3c922864844912a8172d1790f80c3e2e7855d",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000026.jsonl.manifest.json",
+      "task_manifest_sha256": "7359cbbd9988eb9dd68e5a988565a115e4c9fa8a877327b937ca2f825fee3c39"
+    },
+    {
+      "round": 27,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000027_main_a0_5ede41f2193e85b7.metrics.json",
+      "metrics_sha256": "1716b49f9962414f29ddffec8472ec1f807bab3ba1fd4efde1b6970c686e46f6",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000027.jsonl.manifest.json",
+      "task_manifest_sha256": "5fc3f84f6c87400469a4d3b807b0dc7cf44716d5b2e619bd4bf1e1560f51e5bb"
+    },
+    {
+      "round": 28,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000028_main_a0_fa7fa221d9cec84f.metrics.json",
+      "metrics_sha256": "5e5b4b30169efb2699b5c6c1f04234b291b550ae746a1f6efe41b81a4f0298df",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000028.jsonl.manifest.json",
+      "task_manifest_sha256": "73fad2394985f85143a41e5b98ed0d9079e61df03f29cd71bb3090456a387d88"
+    },
+    {
+      "round": 29,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000029_main_a0_f24671378fff470a.metrics.json",
+      "metrics_sha256": "70fe2dfb8aef6d27942ec8cecd8b8a1e622bb7fe03a3454d57dee467560a214f",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000029.jsonl.manifest.json",
+      "task_manifest_sha256": "4db1ada6bdee91cd99fb6bee41192aefe2d0353d0a1251703d0f59735a806bfe"
+    },
+    {
+      "round": 30,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000030_main_a0_8fe2611ad84460f0.metrics.json",
+      "metrics_sha256": "7b497d05bcc99db372d025f8d6a75a0792db53194adb93bbd8046d14e0115e0e",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000030.jsonl.manifest.json",
+      "task_manifest_sha256": "a94f965029e05f822ae1f157738bcf8a884436d8bfaa3fcbc7789650461a4981"
+    },
+    {
+      "round": 31,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000031_main_a0_69b44abcff38cfd9.metrics.json",
+      "metrics_sha256": "049dae6021523b76f8893047f1fb6124272766cc41d0f920e95dded41a78c4a6",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000031.jsonl.manifest.json",
+      "task_manifest_sha256": "6eb6a6bd15d8ad4b8122de4de430c133441b67896e4d210cc3e50d2871cfec53"
+    },
+    {
+      "round": 32,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000032_main_a0_4bbdd89ceb07ff7a.metrics.json",
+      "metrics_sha256": "03aac040063d8e4dce133e721db150c90bb0cd22edd2ce58096b41bd8fb4d413",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000032.jsonl.manifest.json",
+      "task_manifest_sha256": "2388fe7ab8904e0b5443ec1c63d9a6b9217aa7a506d9d51da223199e00e096e9"
+    },
+    {
+      "round": 33,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000033_main_a0_9561008ada5f94ca.metrics.json",
+      "metrics_sha256": "125a30589afe78ab315490156bbf6caa2d0a9f084cf5486727064b51bf7f0b37",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000033.jsonl.manifest.json",
+      "task_manifest_sha256": "d024d9936355da9377f664e421d31bdb37a871cfbf99bbf4dc3ec6310a5c6b86"
+    },
+    {
+      "round": 34,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000034_main_a0_d203a396cfecdb33.metrics.json",
+      "metrics_sha256": "5a7d2a8dee5f848fc5a5d0727e370d3286e43786a052d9e513ee591bc4075d48",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000034.jsonl.manifest.json",
+      "task_manifest_sha256": "06f6426cbdd2c048ca2b16088834994d594ca22ab27966531e7749526ded6acc"
+    },
+    {
+      "round": 35,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000035_main_a0_898122eaf9fa32fe.metrics.json",
+      "metrics_sha256": "3c540356d40946cef9377eb6495e93eb89b69a77b348b253d7ac3ad48da7b7b4",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000035.jsonl.manifest.json",
+      "task_manifest_sha256": "ce60893977b3a5418abbd5f1ec50554ae3b2ee76afa83106216620197005e22a"
+    },
+    {
+      "round": 36,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000036_main_a0_ba4eb38a8f8829ad.metrics.json",
+      "metrics_sha256": "9940c3c71f97f925698a42dad06aa8e5aeb1532a0d0d43dc1d286e9bf9c2ea33",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000036.jsonl.manifest.json",
+      "task_manifest_sha256": "332fd9779059d9c762d357c3b1abcacad0521dd24abe53dbe4e7c3c1e90071dd"
+    },
+    {
+      "round": 37,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000037_main_a0_36ba36296296540f.metrics.json",
+      "metrics_sha256": "9a7856fea55ef630060a29605bfa0bc0029bf4723f36ea57e16e9dbd4bd9765b",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000037.jsonl.manifest.json",
+      "task_manifest_sha256": "96c572a82c8c1153f01dec7e1c4dc6aeace63c32b27929fa85a72f31313c3adb"
+    },
+    {
+      "round": 38,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000038_main_a0_959a7d28fca1e610.metrics.json",
+      "metrics_sha256": "22ee271ca7559a08a604a4de68ca9c5a695fefe5211dd982fbd025507b1e6bff",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000038.jsonl.manifest.json",
+      "task_manifest_sha256": "0f82ff06dcd98d697703312c040d50ea564902fece86bb798e6862c377bdadc4"
+    },
+    {
+      "round": 39,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000039_main_a0_0ee5ace0a547ee6d.metrics.json",
+      "metrics_sha256": "4b6e1c659cd9b1769636bc59ae922df52ea7238351f242f8164b6dc488552a06",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000039.jsonl.manifest.json",
+      "task_manifest_sha256": "708e3dc0f7bc282ab4010b31ed533f4a9875e84b3822c895c27cd57ac729ccac"
+    },
+    {
+      "round": 40,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000040_main_a0_32d42d715b4bebd0.metrics.json",
+      "metrics_sha256": "5292549555fd73ec41571351b4d0f5db454eb9b634df09a027a3afa5b206a6dc",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000040.jsonl.manifest.json",
+      "task_manifest_sha256": "898003596fb1d76002617c0f41894001e632ed433b54ce31d6d8803144de51af"
+    },
+    {
+      "round": 41,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000041_main_a0_bc4fd5d80ddfc1fc.metrics.json",
+      "metrics_sha256": "b852c2743f4373ba6f55995e43fdbdbe53c575fa6065485615b11bff0713e19b",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000041.jsonl.manifest.json",
+      "task_manifest_sha256": "a38703dcc897364a8884a41320e9fd495194fc5fb47a310907d626e8b7f2c2fe"
+    },
+    {
+      "round": 42,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000042_main_a0_4c16472e4363909f.metrics.json",
+      "metrics_sha256": "ed1a303bbcfb0921b7578bcc68515b02c7f130675590e36cd961cb0b102ccc7d",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000042.jsonl.manifest.json",
+      "task_manifest_sha256": "d4cd99f636ed0a3fed9493bf789fa67aabd91176aca00e93ce1636a440f3b4b2"
+    },
+    {
+      "round": 43,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000043_main_a0_5d90e31bc2748d9c.metrics.json",
+      "metrics_sha256": "0d31bbc1d12128c378b81666b54440087a4197cabac0724842d00bb8e2d00a52",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000043.jsonl.manifest.json",
+      "task_manifest_sha256": "57950b082266b7ba251cf370e2e85fcf65ef0ad685aec654e3c23980e0c2fe7f"
+    },
+    {
+      "round": 44,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000044_main_a0_b7e8927fc8e2f6de.metrics.json",
+      "metrics_sha256": "2c18633f95d09899c841795d7f235a976fa844c15eeab769c2014ecc0fac4d9b",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000044.jsonl.manifest.json",
+      "task_manifest_sha256": "1fb230f08f30864526dd55c42f1ce57d211bf6e66fbbd4b102d134b6cffc579c"
+    },
+    {
+      "round": 45,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000045_main_a0_39b95f075057ef70.metrics.json",
+      "metrics_sha256": "d1e9a089b0bd2f624db87f8430265e509b4b20bf96728c141d26b6f936efc796",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000045.jsonl.manifest.json",
+      "task_manifest_sha256": "b49a2247b8652742a818867cef7a5ae26d6b879ea7bf39d8d0d24d79df85d148"
+    },
+    {
+      "round": 46,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000046_main_a0_3d9b01e7229460ea.metrics.json",
+      "metrics_sha256": "72839fef3a1163084ac373137466df00e52d5267666979bec461ed2ce989168d",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000046.jsonl.manifest.json",
+      "task_manifest_sha256": "0c4925ed11c8d4a09ae6d5da42a6e49b15851835548edcc7439c174f2990bfd0"
+    },
+    {
+      "round": 47,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000047_main_a0_2ce5ff9d2f5bfea1.metrics.json",
+      "metrics_sha256": "32ba18be799b6fddebd31b05361b5e2367192d62e2c3631beb294791762932e7",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000047.jsonl.manifest.json",
+      "task_manifest_sha256": "4f44e6ca73b478708fcc8b0de55e8cba31932ac9dc1a371fb73c6fc0d74b11f9"
+    },
+    {
+      "round": 48,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000048_main_a0_61878406945ca351.metrics.json",
+      "metrics_sha256": "a5463eed6210422dc4716225bf30f3fac5225722f8947ce7e316a5cd3ebec7d8",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000048.jsonl.manifest.json",
+      "task_manifest_sha256": "f3dd301337d3ac6729247e1a8d0af868a106f0daea08ad54ac9e9ee22a00b489"
+    },
+    {
+      "round": 49,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000049_main_a0_95372f9a2449d23c.metrics.json",
+      "metrics_sha256": "e193321d056e8bcdc7e92f2eece1424b237961125440b786b96bdb0636349d4b",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000049.jsonl.manifest.json",
+      "task_manifest_sha256": "7d685a6f553bf707c2f1b6eb80d7c323f58c6007fc22fcb4e0c142d3f2057f40"
+    },
+    {
+      "round": 50,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000050_main_a0_7297726df6fc7180.metrics.json",
+      "metrics_sha256": "9ad8f0e762c15e33bec9059032397a5517730fa64313a4dc976d186ffd166181",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000050.jsonl.manifest.json",
+      "task_manifest_sha256": "5a25eed8e402b4a0cb7df88a9d1b9470ee797e3c3cac689a1640d0bf568d812c"
+    },
+    {
+      "round": 51,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000051_main_a0_084c2c7e190cb362.metrics.json",
+      "metrics_sha256": "803ba8a5c94abd2a6837a641a425ce7963af0d52b39a35d23eda268c6ae9f87e",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000051.jsonl.manifest.json",
+      "task_manifest_sha256": "b53ddeb13a59213f0cc684077a2be1fcb46e251b4e81f21ae03b3fcb69f66b74"
+    },
+    {
+      "round": 52,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000052_main_a0_3048f5961326700f.metrics.json",
+      "metrics_sha256": "c91fb6161c59422f0810865c2d04ce22e222552620ba32dc7aecf2f30106818d",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000052.jsonl.manifest.json",
+      "task_manifest_sha256": "2b6e0742eee5aef45b1d463073f61fc2cca0eef9b6f82886b7fb65a9ee410a7a"
+    },
+    {
+      "round": 53,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000053_main_a0_5f54cf7f49730b79.metrics.json",
+      "metrics_sha256": "34e67fc59632f214c58c5f7e750eed17d1643f5455e1855b731097feb016ef48",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000053.jsonl.manifest.json",
+      "task_manifest_sha256": "98a92546fb57028c1727d09e64d4647a1c7f08865b41344224c89a6c28c7433f"
+    },
+    {
+      "round": 54,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000054_main_a0_31377b0ff63cb815.metrics.json",
+      "metrics_sha256": "b32341c05f74ac2c72d29b25dc5ccd88b575ca8cfb723e04d4e5d6ff0e03131c",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000054.jsonl.manifest.json",
+      "task_manifest_sha256": "029dbe87215e677c7dff93aa533d54bd8e00100bf8a8a4195ea1f0785f3c632a"
+    },
+    {
+      "round": 55,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000055_main_a0_0451182604075cb7.metrics.json",
+      "metrics_sha256": "e08613e45c323c531ce33a17510ae8cbc99b742b734ff22c6ee163c6ab17aa71",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000055.jsonl.manifest.json",
+      "task_manifest_sha256": "740fd4477d1d046f28f85c80e223cd48dc753745f85f67b0a1fbdc83b21d9a86"
+    },
+    {
+      "round": 56,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000056_main_a0_5351137569a3fa0c.metrics.json",
+      "metrics_sha256": "658b8b83b920b6cede03f43397122e31a3ef16306339edf8d756ea18d66b9fff",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000056.jsonl.manifest.json",
+      "task_manifest_sha256": "269e84f43b260513be351492da38a1dceee6da57ebd93682e2923cb690ace9bd"
+    },
+    {
+      "round": 57,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000057_main_a0_722beff0cd18596d.metrics.json",
+      "metrics_sha256": "3b15fe0bab7144720398567c1a728e052dac86ef679cbcb50689f130a4375470",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000057.jsonl.manifest.json",
+      "task_manifest_sha256": "bdbb5fb892fff809700d3ecfb41a39a955a5e2d436f0e2a590c043b1297f5007"
+    },
+    {
+      "round": 58,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000058_main_a0_c634c5fef793e535.metrics.json",
+      "metrics_sha256": "6499f2469afc6d5bdd995c1b3d0cabbca78ca1fd8017719205b3b2ce21d058aa",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000058.jsonl.manifest.json",
+      "task_manifest_sha256": "96d288f2f8860e3852a8ea5f5e144270e557bb4432f825bc05f4802da6eb15e8"
+    },
+    {
+      "round": 59,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000059_main_a0_fa9a62623a3d1e12.metrics.json",
+      "metrics_sha256": "c03e408388f88abc0f92bb12d458bd1fa7f8611639e795734d8a7dda74291b90",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000059.jsonl.manifest.json",
+      "task_manifest_sha256": "f1038a510d0796c6bbf47f9a708ac666632d300e1ca8117ce7cc29640bf06eab"
+    },
+    {
+      "round": 60,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000060_main_a0_c694be33cda6b3e2.metrics.json",
+      "metrics_sha256": "609cd097a621c35c3f751cad6835cedfc39f76b5f0462ea454ab13c4b2e9c06c",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000060.jsonl.manifest.json",
+      "task_manifest_sha256": "618b9e8eb32d4ef6b50e330207798282b2366a9c810f98d9ae962f2fc5761d83"
+    },
+    {
+      "round": 61,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000061_main_a0_686b6a2762c8859a.metrics.json",
+      "metrics_sha256": "eb046216ea7a8bcae32b4fa2884db3df4cbdde5678362b805542de64fba8d7c8",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000061.jsonl.manifest.json",
+      "task_manifest_sha256": "90041e44cdcec1165529ddd721af7ba85712c26d0997b4ce25352e9903d19334"
+    },
+    {
+      "round": 62,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000062_main_a0_d68a9015e94bdaea.metrics.json",
+      "metrics_sha256": "cfdde5a701ef8624c3f60b1a20fa93471a18a98a2439e6e827c287732075b607",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000062.jsonl.manifest.json",
+      "task_manifest_sha256": "1b2863e80d9cbd9d8b93e0454ff0d1a87df20e8c19449868f1ded85e8c22de93"
+    },
+    {
+      "round": 63,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000063_main_a0_7999d48c23cbaf70.metrics.json",
+      "metrics_sha256": "b6f25e9186bc8f0995ae88cb3d58a7b0052e4e429b2bf73084d5d73e173dbb35",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000063.jsonl.manifest.json",
+      "task_manifest_sha256": "445cdd4d8bea34d69276b5fefd97a5ed90728779a0d276816ee1cc5f264acf81"
+    },
+    {
+      "round": 64,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000064_main_a0_48766e6a8ea12c4d.metrics.json",
+      "metrics_sha256": "01ed4d66ce6c16e3ebe451e39d9544bd2f665c6cc56207341d5b0621373d9bbd",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000064.jsonl.manifest.json",
+      "task_manifest_sha256": "42b966135efc4b0590e8641781117524e4aa1e915c179067d2b8af7e60ba46b0"
+    },
+    {
+      "round": 65,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000065_main_a0_8e391b032a05e3e4.metrics.json",
+      "metrics_sha256": "9b818b041c9f74ad167cf0c24b625fb271c0560567e5404db6103242e3dc3b97",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000065.jsonl.manifest.json",
+      "task_manifest_sha256": "038d3aa28c401e01ee352cea2d21ce65767183a7318e203711ed1822a28d5854"
+    },
+    {
+      "round": 66,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000066_main_a0_9c9b509c7b8c940d.metrics.json",
+      "metrics_sha256": "78b2b5d08093663b44493733169a2470609f864936aa437f1dcb37e43345b825",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000066.jsonl.manifest.json",
+      "task_manifest_sha256": "932de1a36ae97c8b281b2164fa2b4a25ae1b81c0e7977b6615a1f7cd11c90c49"
+    },
+    {
+      "round": 67,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000067_main_a0_48b39366e742d4e2.metrics.json",
+      "metrics_sha256": "9e04ef91fbf934a7184f483ea8b5f8bd807f7ab1310663153d2a530cf57e82db",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000067.jsonl.manifest.json",
+      "task_manifest_sha256": "4ed68d94e17487bb45739e79f8266e39312f8459225df89aad321b194875f2fb"
+    },
+    {
+      "round": 68,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000068_main_a0_9c99bc85b96de819.metrics.json",
+      "metrics_sha256": "46fbe1b7c91ca84e6448b931cda3ac4bfc78c0de34bb596791f9973cf86537ed",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000068.jsonl.manifest.json",
+      "task_manifest_sha256": "837c9ae6da34726c2d1f98927b1daf791ed4cb2300961cfe0162f743d8d6637d"
+    },
+    {
+      "round": 69,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000069_main_a0_d8a66e8a45e68d26.metrics.json",
+      "metrics_sha256": "5be026187676d7292f432a13daf4b3ed893a9ed7033b62ca57886b15b320b194",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000069.jsonl.manifest.json",
+      "task_manifest_sha256": "a79aa7a005f30da2106e3aa9d12b900dbf0a9018149b0767db519b92dda20cc0"
+    },
+    {
+      "round": 70,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000070_main_a0_47cff1e839a01bec.metrics.json",
+      "metrics_sha256": "bb7e49ccc2fcc6081cb7c8a885f00eeaed7e53f906d5dcd7e1f599a98a2152ae",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000070.jsonl.manifest.json",
+      "task_manifest_sha256": "e550297a0b2259b8023dd6a60d421874aef0868b467efc9c82be040c879f1de3"
+    },
+    {
+      "round": 71,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000071_main_a0_bc6b061fd4ca8ce1.metrics.json",
+      "metrics_sha256": "267cc68510cc9fba81041020efe74ae045f56aa72ce9a0f5ccdb89f44d93c79d",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000071.jsonl.manifest.json",
+      "task_manifest_sha256": "d6b43c1a9328175e0f62d2f591e2d5a5b504cb8eade33d1bc9f0e73a6aec0f4b"
+    },
+    {
+      "round": 72,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000072_main_a0_c07846caaa0c237d.metrics.json",
+      "metrics_sha256": "f681af6a273a5f9a449b849273de4581bb1a08903fba7d851f8c29722f9cc921",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000072.jsonl.manifest.json",
+      "task_manifest_sha256": "1a26550889afc3d5e8dabf76034566c9b4777c28f37b1e3699985cf4292baf0b"
+    },
+    {
+      "round": 73,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000073_main_a0_980a8bdff5af960f.metrics.json",
+      "metrics_sha256": "a9f7023e1dd53c361527dd08ec23c1b661a17b936102c1272e712a2d5406b74c",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000073.jsonl.manifest.json",
+      "task_manifest_sha256": "fa78b9faa145ddd68f7c20eff3e285d6df41eeb8e07d4af3169d3626d2069014"
+    },
+    {
+      "round": 74,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000074_main_a0_4aad1c1304d1a4ec.metrics.json",
+      "metrics_sha256": "7d72f4e7cba194971ac1db389b2a0091d76cee3d55750ebf1ad0ca792b576915",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000074.jsonl.manifest.json",
+      "task_manifest_sha256": "f2ca8c63a27dd30cfe758323a6885794fff32995d55990355c99e914cb332126"
+    },
+    {
+      "round": 75,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000075_main_a0_32ca7b254351f810.metrics.json",
+      "metrics_sha256": "3b581a61f98196fca576f20b88522f8c645f23b1cb0354f9f75643c765d49e47",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000075.jsonl.manifest.json",
+      "task_manifest_sha256": "3bc34e24de3eb4dd976f2c5af237cd0f8799344b257e8054930fb3ff326a76f3"
+    },
+    {
+      "round": 76,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000076_main_a0_c792a86b9e798985.metrics.json",
+      "metrics_sha256": "1f338ddae4e706e9861411ba4aa3aa42e7d0b2880e8b9106034971d63b7408e9",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000076.jsonl.manifest.json",
+      "task_manifest_sha256": "a247d8bc08c260797b9617b87f87d7d6ac6b9cebdea0e7c5ff967e345e09060c"
+    },
+    {
+      "round": 77,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000077_main_a0_b546eada28362f7a.metrics.json",
+      "metrics_sha256": "704c81cfee4f8535173122ead49165f72b0c534b7161a679aa435ae63ffa8cec",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000077.jsonl.manifest.json",
+      "task_manifest_sha256": "8abf0cc23a1e43849e50922f5d07dc3ec3e0041003a9354ea7e096f7512a32de"
+    },
+    {
+      "round": 78,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000078_main_a0_73b4db3d74d38e5c.metrics.json",
+      "metrics_sha256": "25fb566cf818f5da91df49c06b29cb4acfa9e16298f725d308ed36327800aa1d",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000078.jsonl.manifest.json",
+      "task_manifest_sha256": "1b3b5abe7e23aade6f63d3254d45b13b658ec24fb9be48951e684ce5eb81cf70"
+    },
+    {
+      "round": 79,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000079_main_a0_74738dc330ef244c.metrics.json",
+      "metrics_sha256": "9dbeaf40a71b478ce34bc70596b28e46ede80fef01a70b07e47ebba634af0d66",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000079.jsonl.manifest.json",
+      "task_manifest_sha256": "4feb18bc1a4799630acd87bc8609c84f83fe31bbd86e0fd6fdf9422946cdfb61"
+    },
+    {
+      "round": 80,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000080_main_a0_2be1414222571308.metrics.json",
+      "metrics_sha256": "b358ab776f9f305df6bf7c151606819e4ab6d8c338629d27d34f8239fb8f48d7",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000080.jsonl.manifest.json",
+      "task_manifest_sha256": "2d689f531ecfbcfb600e16b3de64255181758aa5a90d67aef65ff1898abe8e25"
+    },
+    {
+      "round": 81,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000081_main_a0_69b77e0ccd6bee8c.metrics.json",
+      "metrics_sha256": "6afe9a39528c6f47efba61888602032fe6a32dba30635e60f055327b980b8f5c",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000081.jsonl.manifest.json",
+      "task_manifest_sha256": "ec8859921389f3c9f5e119229798c2b581fef08cd8412aba18127c26359d6322"
+    },
+    {
+      "round": 82,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000082_main_a0_4253a7a04f90ba3b.metrics.json",
+      "metrics_sha256": "ba1427a87a4b4aa49e5a3433509ed71065ea06a09350eaa331ade07c3e837397",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000082.jsonl.manifest.json",
+      "task_manifest_sha256": "c5899840df5c1e1192e6bf755f1b525e2d36d7f5e8f23e8dc13fb1d456a5cf17"
+    },
+    {
+      "round": 83,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000083_main_a0_f59114d25f3acd8c.metrics.json",
+      "metrics_sha256": "e5fa590890267eb75b392a30a0c124eac2173747353561c718b0eaee387d088c",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000083.jsonl.manifest.json",
+      "task_manifest_sha256": "11ee7a293e172ebd9bcefdd073fc16b28ac0d546b727cf2060a15c18455d6841"
+    },
+    {
+      "round": 84,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000084_main_a0_0d1a8eaf7cf786b0.metrics.json",
+      "metrics_sha256": "cb573a758b85e73fefb034b6411553f5e7899df39fe5d110f760a870d5b1d6a3",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000084.jsonl.manifest.json",
+      "task_manifest_sha256": "00624de30eea608e4ec84356cbae62ddafa84c1d36a80fa05311f97159c6fef2"
+    },
+    {
+      "round": 85,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000085_main_a0_a640e6eb758af9b7.metrics.json",
+      "metrics_sha256": "97d6a7de27e28f1f1965b722f4e7fb99a8d3e811798c76c94fb650f938ceca38",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000085.jsonl.manifest.json",
+      "task_manifest_sha256": "83d23aeda4e9d5e8be966de05467ac5cf20a5b38c6f37477ce34607bbb3df18d"
+    },
+    {
+      "round": 86,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000086_main_a0_29fda1ee95b5eddd.metrics.json",
+      "metrics_sha256": "6344cecaadd55b6e6bc07c7bdabbe80e46f9d8fa8175b6a249370eff09c8d419",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000086.jsonl.manifest.json",
+      "task_manifest_sha256": "c89fb1ca328617f8ad843106186293efa7cf79e2906e7a52eb0d228a264e475b"
+    },
+    {
+      "round": 87,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000087_main_a0_b7eb0a00b152bdb3.metrics.json",
+      "metrics_sha256": "37155a9edcee371cf7a8f52f7e0fa96308afce6d869dbc3edfcf516daead9ef4",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000087.jsonl.manifest.json",
+      "task_manifest_sha256": "812335637545495c4d1dbaa440ca40725bb530e353afe8238dbb75ef5ad30f7c"
+    },
+    {
+      "round": 88,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000088_main_a0_9b58ab8ee81976f4.metrics.json",
+      "metrics_sha256": "0d90fe48cbc45e2ec11d8e3de6bc6e2b389a1177eb1bb42666b134544b2f4f8c",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000088.jsonl.manifest.json",
+      "task_manifest_sha256": "f79b39b4c676e8e80b6f534c9af71179fe679294e974955f46367091f5482016"
+    },
+    {
+      "round": 89,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000089_main_a0_308a7286e8cfadc9.metrics.json",
+      "metrics_sha256": "5d756bcc49abcecb23a0039baa2aa78129c2bed422610562a069ed907ed88ef4",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000089.jsonl.manifest.json",
+      "task_manifest_sha256": "0aa83e17720446c890bdd501c38051727e8c5b1845097d0dc5d44a9e8dad86e1"
+    },
+    {
+      "round": 90,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000090_main_a0_d1acc3d15afe3642.metrics.json",
+      "metrics_sha256": "41876f75406f6cef3d265cedf9b7074eab262fa235f668fac7283c32b0de6062",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000090.jsonl.manifest.json",
+      "task_manifest_sha256": "e6a6f7d78bf78dd2ec8be32d2ede9490a470272f25ef1e265821a6e1af381b68"
+    },
+    {
+      "round": 91,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000091_main_a0_2736de15ff6cc306.metrics.json",
+      "metrics_sha256": "99c1831bc5297b3b7837a41ed584e7b5ab09899149a3a8541612f4ecc0c31ec9",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000091.jsonl.manifest.json",
+      "task_manifest_sha256": "6e3f320b56b4c65ef8d8164a9f805b039864a3609549644829e192a4121baa17"
+    },
+    {
+      "round": 92,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000092_main_a0_c58c30a521686d80.metrics.json",
+      "metrics_sha256": "82a6d77a066db2aa42034aeb946fbcb05bd1d680ce2d6755513ab048f82d46d8",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000092.jsonl.manifest.json",
+      "task_manifest_sha256": "b30d3a1c8df006aef3cf036812cca9a04c403e7d22f6fcc2e70b39dda7340c9a"
+    },
+    {
+      "round": 93,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000093_main_a0_ed1dd1371c408e16.metrics.json",
+      "metrics_sha256": "d5c97a37e8e72eb7a45ba73090fcb02923d573b8abc7b8c27ff3689483040df4",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000093.jsonl.manifest.json",
+      "task_manifest_sha256": "68e57f6aad31b611f6268042a22f8db6956f7f11c1f8b7c0d2e18a461817809a"
+    },
+    {
+      "round": 94,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000094_main_a0_4bbd9707b87745e0.metrics.json",
+      "metrics_sha256": "f225baec2e0f2b089aa41e68e81413c842dcaf025f0cb3cbc413ff72306ac6a8",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000094.jsonl.manifest.json",
+      "task_manifest_sha256": "5add6718a256017dbc704482340f02a4c38b73ff164c57ded2471623a431c6a2"
+    },
+    {
+      "round": 95,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000095_main_a0_3244e5e177883a5a.metrics.json",
+      "metrics_sha256": "53a927c13858924990d7af455c7a1f7a56c37b8f30b65abbc4cf016b8d687050",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000095.jsonl.manifest.json",
+      "task_manifest_sha256": "05523d77213daa926ad26fbe1bdd301f7fb913f35eeb67f2ee8072ef2f5e49a4"
+    },
+    {
+      "round": 96,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000096_main_a0_ca642b4fc0c6dc35.metrics.json",
+      "metrics_sha256": "cb5be3165ce48ed7e8d3e0d30717ff49ac8e0a70fb11dc4ed035d2565d30ba58",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000096.jsonl.manifest.json",
+      "task_manifest_sha256": "d22bca73dbe27481e4e08a65c6dbc18274670a195acce8d85fd6ed627d41099a"
+    },
+    {
+      "round": 97,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000097_main_a0_192c9e06b20bd64e.metrics.json",
+      "metrics_sha256": "36386cf20750b291a333b62fafa198b7057029b18306518f8780fd5f7888b297",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000097.jsonl.manifest.json",
+      "task_manifest_sha256": "e54f713b193d04d4b5cc4a992de0826db55ab4168810ab9fe5d21047176cf85a"
+    },
+    {
+      "round": 98,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000098_main_a0_5a9dab1ce6f9d1a5.metrics.json",
+      "metrics_sha256": "adc745c4ea0328a2ebf976d6e6f6435d7c4907000e6e96a0386041c5b6ccebe8",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000098.jsonl.manifest.json",
+      "task_manifest_sha256": "3ca5014a4944aa0dc2bf80189e89d61e3bf14730dd8e784bc77c174dec09ab12"
+    },
+    {
+      "round": 99,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000099_main_a0_56a383c2f76204f0.metrics.json",
+      "metrics_sha256": "abfa4f239ab085790f635c19f75ea3cb60de750c2da7e1f50bc2776ac6e15fbe",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000099.jsonl.manifest.json",
+      "task_manifest_sha256": "38873a43d0a1b8fdaced4841ccfc20ffcb1e761d4830f816e348c9fcacc0f84d"
+    },
+    {
+      "round": 100,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000100_main_a0_d8296865c322989c.metrics.json",
+      "metrics_sha256": "ee7769209798758c736e03aa6e4eca9524e0574fad8ad7c58fdab36392a88199",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000100.jsonl.manifest.json",
+      "task_manifest_sha256": "b51cf45bc3e41c9d4bccace0102d96634b1821a1fcfc2602081c956fc42fd3e3"
+    },
+    {
+      "round": 101,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000101_main_a0_051e55518eb3a899.metrics.json",
+      "metrics_sha256": "2fa3a9671c35e1b89975c557eff0d5b89235350a1cb666bdbbd77cdce19d7780",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000101.jsonl.manifest.json",
+      "task_manifest_sha256": "a781113421cf7bb8b04266a318c356dc80c790b0d273bd35c70d5c4b0115a5b5"
+    },
+    {
+      "round": 102,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000102_main_a0_ed762d1087a02866.metrics.json",
+      "metrics_sha256": "3ac1aa1ffefc26577a2b5a6df12d82fb7f23727448a2187eb56fba6df24c11e8",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000102.jsonl.manifest.json",
+      "task_manifest_sha256": "8da5d8ea1193377d8e3139a04ba18ba12ae7e0e06fc85defaff00a59daf13eb0"
+    },
+    {
+      "round": 103,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000103_main_a0_a10d1cf2a6d72a8f.metrics.json",
+      "metrics_sha256": "34f6094d204d80cecdb088697c826b3187f5dd6ea3145af2416375637b32b78c",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000103.jsonl.manifest.json",
+      "task_manifest_sha256": "320d0922305a76a671f8dd0dc1b153da3fd9a2952eddbf78a48e1397a8981c1f"
+    },
+    {
+      "round": 104,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000104_main_a0_b2ff878c30808f6c.metrics.json",
+      "metrics_sha256": "c637b6d16a1f7f9c6660a8ebfbe5717451b233685cfdc04abab1ba1e9013899e",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000104.jsonl.manifest.json",
+      "task_manifest_sha256": "7c133d48b5429bf10b038c8ec0b05e17df4a5e9437ae6861fad8f1de2da0c26b"
+    },
+    {
+      "round": 105,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000105_main_a0_9ded92e0f029282a.metrics.json",
+      "metrics_sha256": "28e58412ac77939075a1140bb84a89997fe76f829fa4919c16aedafecf04e1a5",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000105.jsonl.manifest.json",
+      "task_manifest_sha256": "71e7978f85dc263a2e77274908da637958837c42d9241225817d7f69cce1b84b"
+    },
+    {
+      "round": 106,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000106_main_a0_09eacb74e1365944.metrics.json",
+      "metrics_sha256": "9ceabde88ac381202db39361103f55c83d54e34bdbeace91dbbe221cc2320559",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000106.jsonl.manifest.json",
+      "task_manifest_sha256": "58d2442a3a8fa9cab1f216bb96a151c4fefccba7dd67e1e67ab68a81b6adc763"
+    },
+    {
+      "round": 107,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000107_main_a0_d67ee7d6b6bc2ae7.metrics.json",
+      "metrics_sha256": "5885764bf274295a507c11c8478b2b32b108321bbc7a7a3fa0ce0ca027a63f81",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000107.jsonl.manifest.json",
+      "task_manifest_sha256": "14fb8afbadd5645ba4ac168160713ec68dd89aa0a7c8d86b2698777bf90be49b"
+    },
+    {
+      "round": 108,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000108_main_a0_5cc4a0dd03f5a7b1.metrics.json",
+      "metrics_sha256": "76d20b00cdfdd74adb8f00a929e1d676f2ee4408595d065d2fdb675e89b27b44",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000108.jsonl.manifest.json",
+      "task_manifest_sha256": "145bb601789496d7a29ff2d4e660910a59655c6fe9923086d4711a42220391db"
+    },
+    {
+      "round": 109,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000109_main_a0_8240070324b3c74d.metrics.json",
+      "metrics_sha256": "3d6e4bedd7970384e18303bbe2dc96fb9bf5e9d75898c504a2b720bfc09357f7",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000109.jsonl.manifest.json",
+      "task_manifest_sha256": "433983f260a86bd7727f8262d556e1eceb900eee0647130eee10f9e59ac131db"
+    },
+    {
+      "round": 110,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000110_main_a0_7203a15cb763b114.metrics.json",
+      "metrics_sha256": "9d7856fdb0668114aeea0a468eba78ad90884594773bb3443837ccdc4aab185e",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000110.jsonl.manifest.json",
+      "task_manifest_sha256": "4ae75f6a7a3a6d1312275fbbdb4a96e5b20764956c1dd43f4488a2f084e1a8a1"
+    },
+    {
+      "round": 111,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000111_main_a0_3e5d5272062acbf6.metrics.json",
+      "metrics_sha256": "b57dad82dde1d004b53e5279f53a2b0faa0741c65da7bfacc2f760d72555fae8",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000111.jsonl.manifest.json",
+      "task_manifest_sha256": "9a13bbc5aebf30378b8b0a882e389866b66b79ceb44d68c8e97b249c4813951e"
+    },
+    {
+      "round": 112,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000112_main_a0_eade51a64d6cf15c.metrics.json",
+      "metrics_sha256": "d4f3ed1e41901f28b4b414373c2d1d19f081293be21979bed2d306f1381d8a11",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000112.jsonl.manifest.json",
+      "task_manifest_sha256": "d2a11735dd77b0d08209a5b628a04343b4af4ada095c66b6b0c2786db608f7a0"
+    },
+    {
+      "round": 113,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000113_main_a0_fb7c808d1a2ae1de.metrics.json",
+      "metrics_sha256": "25acb320b2041d4ce989ab6530d64ee3099a2229d39039d247ac2eb1bb4c32e2",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000113.jsonl.manifest.json",
+      "task_manifest_sha256": "48b8299d260f18dcf8db694c1a69291995f755f758b18ad7ac2a478e31ef68ec"
+    },
+    {
+      "round": 114,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000114_main_a0_0426daf0d7358a71.metrics.json",
+      "metrics_sha256": "1b43f7fc5f90f3218ea66c10d3f9f1989dfe3ca30332bda14af8224c34eddf44",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000114.jsonl.manifest.json",
+      "task_manifest_sha256": "740d0c9563a87d7f1896e89c844bab65a7e12b81a148d46c8ab49b576d91b2c4"
+    },
+    {
+      "round": 115,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000115_main_a0_3b1e3af0f68cf3ed.metrics.json",
+      "metrics_sha256": "85924fb23f56df378f9ea58d1571272324cccdc555dd8597d771346970b038b6",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000115.jsonl.manifest.json",
+      "task_manifest_sha256": "9d068d24332d766364842b8759f491be23ecf4c4fe358422a89d7ab620865aca"
+    },
+    {
+      "round": 116,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000116_main_a0_4ec7c267961b7b11.metrics.json",
+      "metrics_sha256": "e6650feceb18e9662eb5733e5bf8be96123a6cb8342d55399c147737d7ede55e",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000116.jsonl.manifest.json",
+      "task_manifest_sha256": "ea2710bcb18f23ff9706e464f172eb6e03a9efa6e4705ce6162b7956c2a833e0"
+    },
+    {
+      "round": 117,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000117_main_a0_65f3672643765f91.metrics.json",
+      "metrics_sha256": "fee67b645e4f4929fd82a9cf0e419263102a7fcc183fb42cd7738630b42a97ae",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000117.jsonl.manifest.json",
+      "task_manifest_sha256": "d8c3c127e734a89ecce453f46b02e37e073b7348d233916f9628330fc211a0b9"
+    },
+    {
+      "round": 118,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000118_main_a0_df4108bc702891dd.metrics.json",
+      "metrics_sha256": "116515cbbcd1e2861a2f24b43c8f393f0c6f236cdd72dc2c2892d21957d4d23f",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000118.jsonl.manifest.json",
+      "task_manifest_sha256": "63942ad8b0fc0513363d38533482bc95e36ec02b2b34b97223a7e457ea5668b3"
+    },
+    {
+      "round": 119,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000119_main_a0_a273d79d205cf1cf.metrics.json",
+      "metrics_sha256": "7a5bef18ec796b489022d9cb61b8ce916f6201a364411879b9026bcaa5850da7",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000119.jsonl.manifest.json",
+      "task_manifest_sha256": "6615a37579754d4ad6a6f61004d3a876b9a28f5aff17c7df5bbeb6b51e0d215a"
+    },
+    {
+      "round": 120,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000120_main_a0_b699d25e934d8800.metrics.json",
+      "metrics_sha256": "f7256b59717e469fbbe383774bedffd5254ac0a2a345e5e3a85a2a6766c6bcf8",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000120.jsonl.manifest.json",
+      "task_manifest_sha256": "cc09d5bc648c316dc441f4458a735be3205628dc0f3086164eb265e7853159aa"
+    },
+    {
+      "round": 121,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000121_main_a0_5f7040080809d4fd.metrics.json",
+      "metrics_sha256": "206e5fa7d49255a2fd6aeb50f4143339eab98f418be808a9eb5000490030605e",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000121.jsonl.manifest.json",
+      "task_manifest_sha256": "b28511ef384080debd45569e3eca9c613584f86a79cd1609d563afc0fab866ec"
+    },
+    {
+      "round": 122,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000122_main_a0_2f5811ad64b9400b.metrics.json",
+      "metrics_sha256": "979a978a72a2eec5aa31cc9bf71d2d9b9643a0d97f363c4470d5c80361477763",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000122.jsonl.manifest.json",
+      "task_manifest_sha256": "dcb36872c3417a2c6ea2cbcc5fdb29799a664073f3fa27f3cf05d7099aed13c3"
+    },
+    {
+      "round": 123,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000123_main_a0_76874ae08cefb9fd.metrics.json",
+      "metrics_sha256": "7507ae9afebb799190c5ac1fdfb792bd9a13a1ecebd402b1d560e056c0fd5dbd",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000123.jsonl.manifest.json",
+      "task_manifest_sha256": "d4d1af62d45741524c56f395302a25ae35442bbf7c277246e5c859aabf2f6251"
+    },
+    {
+      "round": 124,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000124_main_a0_9053d30df4a446c6.metrics.json",
+      "metrics_sha256": "885325531f048adfab7df01b6e6b6e545bbb757f87784023e1ff4a1193afed8a",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000124.jsonl.manifest.json",
+      "task_manifest_sha256": "0d33d2b76fdfe4e8a1c25ccd9be8a7d6d080c4c2c2efe496a448b578360d34e4"
+    },
+    {
+      "round": 125,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000125_main_a0_e4dbbf419a88917f.metrics.json",
+      "metrics_sha256": "396cf43d28377d2af3a28d7b3f646ecf7493ce9b71199dda11b9dc6e64af27ab",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000125.jsonl.manifest.json",
+      "task_manifest_sha256": "e81b55bd6fe1c0fa036c62ff53a8f8043a377383f7d6ca6bce5b2215d0760e6e"
+    },
+    {
+      "round": 126,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000126_main_a0_653eeaea4603ed35.metrics.json",
+      "metrics_sha256": "2ec85c50ed38c4e57084d62448fa00ebcbd1a70732a82e0fcd10662763a1128c",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000126.jsonl.manifest.json",
+      "task_manifest_sha256": "b085318880ccd456951d2591c43476675a60fc283b2f980eb82e118dc74d30fe"
+    },
+    {
+      "round": 127,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000127_main_a0_47e2017bacccede9.metrics.json",
+      "metrics_sha256": "3a30c7f668f2ea3171a9556c09f08d5ed582af0bc7845c623d276fc08964dc86",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000127.jsonl.manifest.json",
+      "task_manifest_sha256": "3ef6ccc7e17ba524a929152412e9d14a8477242cd3901ebbce2834f16b8495fe"
+    },
+    {
+      "round": 128,
+      "metrics": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000128_main_a0_f2183d73dce67f4f.metrics.json",
+      "metrics_sha256": "50227c72fc639427746316df7608fc57a37978f523d1006d6576bf4b6064e950",
+      "task_manifest": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/tasks/full3_continuous_00000128.jsonl.manifest.json",
+      "task_manifest_sha256": "7210f1d38bf425fdf30380e3eb948edd14bcd2000ba6cf1a767f3d6f173ce7c9"
+    }
+  ]
+}

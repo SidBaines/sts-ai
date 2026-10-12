@@ -1,0 +1,361 @@
+{
+  "actor_fixture": {
+    "batch_size": 8,
+    "checkpoint": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0030.pt",
+    "limitation": "balanced saved Act1 TRAIN fixture; cached-path difference is a ceiling, not an achieved rollout speedup",
+    "phase_counts": {
+      "combat": 256,
+      "out_of_combat": 256
+    },
+    "profile": [
+      {
+        "calls": 64,
+        "cumulative_seconds": 0.198570501,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/model_agent.py', 20, 'collate_public')"
+      },
+      {
+        "calls": 64,
+        "cumulative_seconds": 0.19841233200000002,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/model_agent.py', 14, 'collate_public_with_encodings')"
+      },
+      {
+        "calls": 512,
+        "cumulative_seconds": 0.19550040100000002,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/encoding.py', 148, 'encode_observation')"
+      },
+      {
+        "calls": 64,
+        "cumulative_seconds": 0.047602329000000006,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/model_agent.py', 85, 'forward_policy')"
+      },
+      {
+        "calls": 2203,
+        "cumulative_seconds": 0.04753588,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py', 1779, '_wrapped_call_impl')"
+      },
+      {
+        "calls": 2203,
+        "cumulative_seconds": 0.047448375,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py', 1787, '_call_impl')"
+      },
+      {
+        "calls": 64,
+        "cumulative_seconds": 0.047206949000000005,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/model_agent.py', 155, 'forward')"
+      },
+      {
+        "calls": 93,
+        "cumulative_seconds": 0.04391184,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/model.py', 48, 'forward')"
+      },
+      {
+        "calls": 372,
+        "cumulative_seconds": 0.040300421,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/.venv/lib/python3.12/site-packages/torch/nn/modules/container.py', 254, 'forward')"
+      },
+      {
+        "calls": 42720,
+        "cumulative_seconds": 0.032968941,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/encoding.py', 73, '_bag')"
+      },
+      {
+        "calls": 930,
+        "cumulative_seconds": 0.030851936000000003,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/.venv/lib/python3.12/site-packages/torch/nn/modules/linear.py', 130, 'forward')"
+      },
+      {
+        "calls": 930,
+        "cumulative_seconds": 0.030243604,
+        "function": "('~', 0, '<built-in method torch._C._nn.linear>')"
+      },
+      {
+        "calls": 24977,
+        "cumulative_seconds": 0.021808922,
+        "function": "('/Users/sidbaines/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/re/__init__.py', 174, 'search')"
+      },
+      {
+        "calls": 90671,
+        "cumulative_seconds": 0.015751339,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/encoding.py', 40, '_number')"
+      },
+      {
+        "calls": 217064,
+        "cumulative_seconds": 0.013058933,
+        "function": "('~', 0, \"<method 'get' of 'dict' objects>\")"
+      },
+      {
+        "calls": 24977,
+        "cumulative_seconds": 0.011828015,
+        "function": "('~', 0, \"<method 'search' of 're.Pattern' objects>\")"
+      },
+      {
+        "calls": 3653,
+        "cumulative_seconds": 0.011604809,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/.venv/lib/python3.12/site-packages/numpy/_core/fromnumeric.py', 2245, 'clip')"
+      },
+      {
+        "calls": 3653,
+        "cumulative_seconds": 0.010198672,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/.venv/lib/python3.12/site-packages/numpy/_core/fromnumeric.py', 48, '_wrapfunc')"
+      },
+      {
+        "calls": 12264,
+        "cumulative_seconds": 0.009062048000000001,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/encoding.py', 286, 'amount')"
+      },
+      {
+        "calls": 35244,
+        "cumulative_seconds": 0.007884727000000001,
+        "function": "('/Users/sidbaines/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/re/__init__.py', 280, '_compile')"
+      },
+      {
+        "calls": 3141,
+        "cumulative_seconds": 0.007884653,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/.venv/lib/python3.12/site-packages/numpy/_core/fromnumeric.py', 38, '_wrapit')"
+      },
+      {
+        "calls": 3068,
+        "cumulative_seconds": 0.007649356,
+        "function": "('~', 0, \"<method 'extend' of 'list' objects>\")"
+      },
+      {
+        "calls": 744,
+        "cumulative_seconds": 0.0070053070000000005,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/.venv/lib/python3.12/site-packages/torch/nn/modules/activation.py', 472, 'forward')"
+      },
+      {
+        "calls": 744,
+        "cumulative_seconds": 0.006845768,
+        "function": "('/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/.venv/lib/python3.12/site-packages/torch/nn/functional.py', 2429, 'silu')"
+      },
+      {
+        "calls": 744,
+        "cumulative_seconds": 0.006580501000000001,
+        "function": "('~', 0, '<built-in method torch._C._nn.silu>')"
+      }
+    ],
+    "rows": 512,
+    "single_choice_states": 130,
+    "source": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_curriculum/teacher_act1_200_native011_seed10000/teacher.jsonl",
+    "threads": 1,
+    "timings": {
+      "cached": {
+        "median_seconds": 0.03933737496845424,
+        "trials": [
+          0.04002245794981718,
+          0.03993941587395966,
+          0.03933737496845424,
+          0.03877175017260015,
+          0.03912237496115267
+        ]
+      },
+      "fresh": {
+        "median_seconds": 0.11246429197490215,
+        "trials": [
+          0.1118762909900397,
+          0.1091825410258025,
+          0.14475958398543298,
+          0.11820062482729554,
+          0.11246429197490215
+        ]
+      }
+    }
+  },
+  "allocation": {
+    "accounting": "monotonic_active_only; manual/resource/offline pauses excluded",
+    "authorized_seconds": 18424.127912292024,
+    "extensions": [],
+    "initial_seconds": 18424.127912292024,
+    "stage_boundaries": {
+      "full3_continuous": 18424.127912292024
+    },
+    "used_seconds": 4171.954112750012
+  },
+  "cli_elapsed_seconds": 3610.7037678314373,
+  "cold_import_seconds": [
+    0.610178624978289,
+    0.5652230000123382,
+    0.5892876249272376
+  ],
+  "confirmed_checkpoint_retention": [
+    {
+      "deletions": [],
+      "exists": true,
+      "round": 54,
+      "sha256": "b7985c17a97a2c96b77b171ebe828546fefe2b1ef1818ec413401ecd2e53d75d"
+    },
+    {
+      "deletions": [
+        {
+          "at": 1791826419.338364,
+          "bytes": 55240315,
+          "path": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000114_main_a0_0426daf0d7358a71.pt",
+          "reason": "owned_checkpoint_retention",
+          "sha256": "1462ccd4636d256a3b3233b288995921d4a19d4085a294c3bfa382d72fa973aa",
+          "status": "deleted"
+        }
+      ],
+      "exists": false,
+      "round": 114,
+      "sha256": "1462ccd4636d256a3b3233b288995921d4a19d4085a294c3bfa382d72fa973aa"
+    }
+  ],
+  "counts": {
+    "chunks": 129,
+    "excluded_transitions": 14453,
+    "faults": 91,
+    "rejected_minibatches": 36,
+    "requested": 16512,
+    "transitions": 4030949,
+    "unstarted": 0,
+    "updates": 13514
+  },
+  "deletion_bytes": 6905033231,
+  "evaluation_wall_seconds": {
+    "confirm_full3": [
+      31.152406215667725,
+      31.34622573852539
+    ],
+    "retention_act1": [
+      18.732858180999756,
+      18.89641499519348
+    ],
+    "screen_full3": [
+      12.489733695983887,
+      12.498517990112305,
+      12.501072883605957,
+      10.46562671661377,
+      10.487101793289185,
+      10.504591226577759,
+      10.516934871673584,
+      10.556795835494995
+    ]
+  },
+  "family_counts": {
+    "fresh_scratch:act1": {
+      "transitions": 3218660,
+      "valid_episodes": 11551,
+      "victories": 12
+    },
+    "learner:act2": {
+      "transitions": 429973,
+      "valid_episodes": 2518,
+      "victories": 2
+    },
+    "learner:act3": {
+      "transitions": 189169,
+      "valid_episodes": 1266,
+      "victories": 29
+    },
+    "native_teacher:act2": {
+      "transitions": 129298,
+      "valid_episodes": 691,
+      "victories": 1
+    },
+    "native_teacher:act3": {
+      "transitions": 63849,
+      "valid_episodes": 395,
+      "victories": 25
+    }
+  },
+  "generated_live": {
+    "bytes": 118090,
+    "lines": 33,
+    "status": "Status: attention_required"
+  },
+  "journal_serialization": {
+    "v1": {
+      "bytes": 15199388,
+      "median_seconds": 0.08649999997578561
+    },
+    "v2": {
+      "bytes": 3262843,
+      "median_seconds": 0.019547542091459036
+    }
+  },
+  "journal_status": "operator_paused",
+  "model_load_seconds": 0.014773542061448097,
+  "outside_cli_elapsed_seconds": 274.4124054359272,
+  "parent_import_seconds": 0.40624570893123746,
+  "ppo_metrics": {
+    "approx_kl": {
+      "max": 0.007270154096981822,
+      "mean": 0.004899616172636046,
+      "min": 0.0026243134461765294
+    },
+    "clip_fraction": {
+      "max": 0.12472479796315741,
+      "mean": 0.10935961890755698,
+      "min": 0.07002527573529412
+    },
+    "entropy": {
+      "max": 0.51314083696343,
+      "mean": 0.485103178058756,
+      "min": 0.4420061099987764
+    },
+    "policy_loss": {
+      "max": 0.012684032259905925,
+      "mean": -0.0028500769924688922,
+      "min": -0.007671918557025492
+    },
+    "value_loss": {
+      "max": 0.00653205718845129,
+      "mean": 0.004140662084453477,
+      "min": 0.003065678762141033
+    }
+  },
+  "scope": "read-only immutable artifacts; CPU fixture only; no environment/learning/GPU",
+  "storage_by_suffix": {
+    ".continuations.jsonl": [
+      129,
+      26752768
+    ],
+    ".json": [
+      8,
+      7058301
+    ],
+    ".jsonl": [
+      130,
+      23870497
+    ],
+    ".jsonl.manifest.json": [
+      130,
+      6672449
+    ],
+    ".lock": [
+      1,
+      0
+    ],
+    ".md": [
+      1,
+      4286
+    ],
+    ".metrics.json": [
+      141,
+      49239650
+    ],
+    ".metrics.log": [
+      142,
+      35103454
+    ],
+    ".pt": [
+      4,
+      220960748
+    ],
+    ".supervisor.log": [
+      2,
+      3491
+    ]
+  },
+  "timings": {
+    "bootstrap_seconds": 0.0,
+    "fault_wait_seconds": 0.29824695410206914,
+    "policy_seconds": 1285.912824361818,
+    "reset_wait_seconds": 270.542533907108,
+    "step_wait_seconds": 861.3940920024179,
+    "teacher_wait_seconds": 0.0,
+    "update_seconds": 1037.6355770910159
+  },
+  "train_transitions_per_wall_second": 1037.5362846897808,
+  "training_wall_seconds": 3885.1161732673645
+}

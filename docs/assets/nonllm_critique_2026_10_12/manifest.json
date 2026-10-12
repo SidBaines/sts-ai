@@ -1,0 +1,109 @@
+{
+  "review_date": "2026-10-12",
+  "review_branch": "codex/nonllm-critique",
+  "source_commit": "b9020207bffe1af89c33ff63384db519c24b3e78",
+  "scope": "bounded CPU-only TRAIN diagnostics and immutable artifact analysis; no optimizer update or paused campaign/source mutation",
+  "files": {
+    "scripts/investigations/nonllm_critique_2026_10_12/nonllm_encoding_critique_probe.py": {
+      "bytes": 9654,
+      "sha256": "c3ceadba416aa4355b4f0a7d18b08ca80400ec97f89d4ee780e62db6d6a15cf4"
+    },
+    "scripts/investigations/nonllm_critique_2026_10_12/nonllm_action_dedup_native_probe.py": {
+      "bytes": 3983,
+      "sha256": "bdfdc1c46f20673b4a329f7dbfc7422e87049924d75724e14d8db090cad2b9c2"
+    },
+    "scripts/investigations/nonllm_critique_2026_10_12/nonllm_map_alias_probe.py": {
+      "bytes": 3446,
+      "sha256": "23f3c7583843be3c0d44d4299e5485e679670df5ae2c4e2b731725f8679076c4"
+    },
+    "scripts/investigations/nonllm_critique_2026_10_12/sts_critic_menu_probe.py": {
+      "bytes": 2162,
+      "sha256": "c54c8bb2f2b821dbaf562609ede3ff250de4d7569b10696eef258dda0739459c"
+    },
+    "scripts/investigations/nonllm_critique_2026_10_12/sts_learning_probe.py": {
+      "bytes": 6753,
+      "sha256": "6f56b435502ba5125eee033f595c06756fba77f0de154571a91786b4302633d2"
+    },
+    "scripts/investigations/nonllm_critique_2026_10_12/sts_v2_learning_metrics_audit.py": {
+      "bytes": 3010,
+      "sha256": "0b384699a1fe1259208b617631f5429ba772b122a93412e43d12641fa238dbfb"
+    },
+    "scripts/investigations/nonllm_critique_2026_10_12/nonllm_operations_probe.py": {
+      "bytes": 8290,
+      "sha256": "0dd81e6ea9f71da75fdf80de086593d624c372f84d0041c90776df1a399745a9"
+    },
+    "scripts/investigations/nonllm_critique_2026_10_12/sts_reward_objective_probe.py": {
+      "bytes": 2331,
+      "sha256": "20bfba6825fba51becc273e6bc0524f8029156127a69b2f413b448a825d167b1"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/nonllm_encoding_critique_results.json": {
+      "bytes": 20740,
+      "sha256": "4ba0fb55dcd45797bcddd997a4de36b3b9a2362ecf8b7729716a4a1ac1566ffd"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/nonllm_action_dedup_native_results.json": {
+      "bytes": 15082,
+      "sha256": "c16ae0eb2239f41b6d936add427117d3be842c27405e4cdc355a32f7b2803eb3"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/nonllm_map_alias_act3_results.json": {
+      "bytes": 80943,
+      "sha256": "03c1b70d12fae808d3e6c3b2bf347af1518c1e6fcf116670e5abf0cf8adc3291"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/sts_critic_menu_probe.json": {
+      "bytes": 4948,
+      "sha256": "baf32e0c878a4da234995e9b705b12d32a6d272e37ef37361dafbe3904b2740e"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/sts_learning_probe.json": {
+      "bytes": 96082,
+      "sha256": "50c6deff488a9978ea867da8f6f70dd29e5b875069680e2115a15a3eb6d9cbb0"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/sts_learning_probe_current.json": {
+      "bytes": 96030,
+      "sha256": "55e8ce390f01e7d801df3db20163c0c9ae79ece32bf4f2d789fc00d6d1621458"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/sts_learning_probe_greedy.json": {
+      "bytes": 96351,
+      "sha256": "c4fa6658c7894abd1aa79489fbcf4a004d13e2c73ac27bddad04f7ca0ff358d8"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/sts_learning_probe_current_greedy.json": {
+      "bytes": 95902,
+      "sha256": "52635dc215bd05d034966e69f08d015c464f8ddad7be67ecd2fe6aeed6fac744"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/sts_learning_probe_consolidated.json": {
+      "bytes": 22646,
+      "sha256": "4b419591d8c295a38ba529667f6a61c5d172b02b2512b6b541fafa06aab5d509"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/sts_v2_learning_metrics_audit.json": {
+      "bytes": 80551,
+      "sha256": "1549d611979d0796582a4e1fdb5171c569a2b85a390f81d3a107b44bf1035f64"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/nonllm_operations_probe.json": {
+      "bytes": 11584,
+      "sha256": "7bb5f98dffb6b2dacfb4d536f0365f50d67d34e6e3168e5ea840de58065bb07e"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/sts_reward_objective_probe.json": {
+      "bytes": 1128,
+      "sha256": "afb8c67b6241a2d3daa02cf0a7f979f55a0a8e31cc2343f05ec0a2f291f4caf5"
+    },
+    "scripts/investigations/nonllm_critique_2026_10_12/README.md": {
+      "bytes": 6141,
+      "sha256": "63642cec6c5157587322fa388deee0642b5155714eaf19814b4c70f81acee07f"
+    },
+    "docs/nonllm_training_critique_2026-10-12.md": {
+      "bytes": 35489,
+      "sha256": "8eb143d11f634eb64ddb822726c1a72e31c95e85050896eaf676b58befd316d1"
+    },
+    "docs/research_plan.md": {
+      "bytes": 11482,
+      "sha256": "3669283c4d9028c9c5df615c6dc83a92772c5301b2dcd7d6b5d2d2f6dc97fe4a"
+    },
+    "docs/assets/nonllm_critique_2026_10_12/verification.json": {
+      "bytes": 918,
+      "sha256": "01c0a51e6fcd2000466140b31094f6ecafc46ef649c4ce68b9a3635090471346"
+    }
+  },
+  "reviewed_campaign_commits": {
+    "first": "c8c76bc98b42cc73cf5b6410271200f14e78ea42",
+    "v1": "1693f1c4e3bb9854a1547d0e8b80344980ae4a9b",
+    "v2_latest_handoff": "453c768"
+  }
+}

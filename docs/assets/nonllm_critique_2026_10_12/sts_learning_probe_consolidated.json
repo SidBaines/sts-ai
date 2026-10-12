@@ -1,0 +1,607 @@
+{
+  "scope": "No training/optimizer steps or paused-source edits. Four32-world TRAIN collectors; each<8s. No confidence or causality claim from MC errors/single-seed gradients. Act2 floor34 boundary is progression proxy, not independently verified boss clear count.",
+  "probes": {
+    "sts_learning_probe": {
+      "source": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0030.pt",
+      "source_sha256": "57f1e9613a69e31230b591ef0ff2cca27e23ddc81c3a24366cee173bc9909e70",
+      "scope_note": "Exploratory 32 matched TRAIN worlds; within-world observations correlated. Single-return MC targets are noisy, not exact expected values. Different policies visit different states. Backward only; no optimizer steps.",
+      "config": {
+        "gamma": 1,
+        "gae_lambda": 0.95,
+        "clip_ratio": 0.1,
+        "value_weight": 0.5,
+        "entropy_weight": 0.01,
+        "max_grad_norm": 0.5,
+        "epochs": 4,
+        "minibatch_size": 1024,
+        "learning_rate": 0.0001,
+        "target_kl": 0.03,
+        "kl_guard_before_update": true
+      },
+      "transition_phase_counts": {
+        "out_of_combat": 2952,
+        "combat": 7043
+      },
+      "forced_phase_counts": {
+        "out_of_combat": 924,
+        "combat": 933
+      },
+      "MC_calibration": {
+        "act2/combat": {
+          "n": 2976,
+          "value_mean": -0.6300012187378842,
+          "MC_mean": -0.5482022849462364,
+          "bias": -0.08179893379164781,
+          "RMSE": 0.6274430840616961,
+          "explained_variance": 0.16702574921802582
+        },
+        "combat": {
+          "n": 7043,
+          "value_mean": -0.39346767605000577,
+          "MC_mean": -0.31096833735624,
+          "bias": -0.08249933869376573,
+          "RMSE": 0.669063516144915,
+          "explained_variance": 0.19492219372265251
+        },
+        "act2/out_of_combat": {
+          "n": 1035,
+          "value_mean": -0.563692140068121,
+          "MC_mean": -0.4623671497584539,
+          "bias": -0.10132499030966714,
+          "RMSE": 0.6586557805569985,
+          "explained_variance": 0.14594169977460858
+        },
+        "out_of_combat": {
+          "n": 2952,
+          "value_mean": -0.23156281243719484,
+          "MC_mean": -0.14578252032520303,
+          "bias": -0.08578029211199181,
+          "RMSE": 0.6841214932576055,
+          "explained_variance": 0.2011584147926445
+        },
+        "act1/out_of_combat": {
+          "n": 1854,
+          "value_mean": -0.038565456189070514,
+          "MC_mean": -0.009007551240560734,
+          "bias": -0.029557904948509777,
+          "RMSE": 0.6330239012343399,
+          "explained_variance": 0.18236366438356277
+        },
+        "act1/combat": {
+          "n": 3867,
+          "value_mean": -0.19944636736046845,
+          "MC_mean": -0.18619084561675697,
+          "bias": -0.013255521743711491,
+          "RMSE": 0.5953217846383215,
+          "explained_variance": 0.23893703253462162
+        },
+        "act3/combat": {
+          "n": 200,
+          "value_mean": -0.6252505643665791,
+          "MC_mean": 0.8065000000000002,
+          "bias": -1.4317505643665793,
+          "RMSE": 1.7473820719726356,
+          "explained_variance": -0.020675940035426166
+        },
+        "act3/out_of_combat": {
+          "n": 63,
+          "value_mean": -0.4547889138024951,
+          "MC_mean": 1.0301587301587305,
+          "bias": -1.4849476439612257,
+          "RMSE": 1.7350572079130335,
+          "explained_variance": 0.10717301578351435
+        }
+      },
+      "choice_OOC_decisions_to_terminal": {
+        "n": 2028,
+        "mean": 195.8999013806706,
+        "median": 177.0,
+        "min": 0,
+        "max": 564
+      },
+      "choice_OOC_direct_lambda_factor": {
+        "n": 2028,
+        "mean": 0.025964535517064572,
+        "median": 0.00011404549541475845,
+        "min": 2.729690340415278e-13,
+        "max": 1.0
+      },
+      "gradients": {
+        "combat": {
+          "rows": 512,
+          "actor_loss": -0.01739981770515442,
+          "weighted_critic_loss": 0.002360772341489792,
+          "encoder_actor_norm": 0.6322706937789917,
+          "encoder_critic_norm": 0.007850517518818378,
+          "encoder_actor_critic_cosine": 0.07161729782819748,
+          "normalized_advantages": {
+            "n": 512,
+            "mean": 0.0021813262526393373,
+            "median": 0.04170467518270016,
+            "min": -4.71881103515625,
+            "max": 5.42358922958374
+          }
+        },
+        "out_of_combat": {
+          "rows": 512,
+          "actor_loss": -0.003055424429476261,
+          "weighted_critic_loss": 0.001823805971071124,
+          "encoder_actor_norm": 0.15123333036899567,
+          "encoder_critic_norm": 0.006799779832363129,
+          "encoder_actor_critic_cosine": -0.029331699013710022,
+          "normalized_advantages": {
+            "n": 512,
+            "mean": 0.016766832719440572,
+            "median": 0.04198175668716431,
+            "min": -3.1953604221343994,
+            "max": 3.5862603187561035
+          }
+        }
+      },
+      "input_file": "/private/tmp/sts_learning_probe.json",
+      "input_sha256": "50c6deff488a9978ea867da8f6f70dd29e5b875069680e2115a15a3eb6d9cbb0",
+      "collection_seconds": 7.881958290934563,
+      "valid_episodes": 32,
+      "faults": 0,
+      "truncations": 0,
+      "wins": 1,
+      "act1_boundary_floor17_count": 22,
+      "act2_boundary_floor34_count": 2,
+      "mean_floor": 26.40625,
+      "winning_worlds": [
+        200000021
+      ]
+    },
+    "sts_learning_probe_current": {
+      "source": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000128_main_a0_f2183d73dce67f4f.pt",
+      "source_sha256": "afc854b4597a8f0474fa8489b286338089817311478a897cedfa64273014adf0",
+      "scope_note": "Exploratory 32 matched TRAIN worlds; within-world observations correlated. Single-return MC targets are noisy, not exact expected values. Different policies visit different states. Backward only; no optimizer steps.",
+      "config": {
+        "gamma": 1,
+        "gae_lambda": 0.95,
+        "clip_ratio": 0.1,
+        "value_weight": 0.5,
+        "entropy_weight": 0.01,
+        "max_grad_norm": 0.5,
+        "epochs": 4,
+        "minibatch_size": 1024,
+        "learning_rate": 0.0001,
+        "target_kl": 0.03,
+        "kl_guard_before_update": true
+      },
+      "transition_phase_counts": {
+        "out_of_combat": 2653,
+        "combat": 6906
+      },
+      "forced_phase_counts": {
+        "combat": 1148,
+        "out_of_combat": 804
+      },
+      "MC_calibration": {
+        "act2/combat": {
+          "n": 2687,
+          "value_mean": -0.654321089481216,
+          "MC_mean": -0.6571827316710084,
+          "bias": 0.002861642189792291,
+          "RMSE": 0.24500134832620543,
+          "explained_variance": 0.3487883535608586
+        },
+        "combat": {
+          "n": 6906,
+          "value_mean": -0.4355621053779251,
+          "MC_mean": -0.40584998551983753,
+          "bias": -0.029712119858087565,
+          "RMSE": 0.3487968770209309,
+          "explained_variance": 0.4828194910781013
+        },
+        "act2/out_of_combat": {
+          "n": 862,
+          "value_mean": -0.5628681135841422,
+          "MC_mean": -0.575812064965197,
+          "bias": 0.012943951381054678,
+          "RMSE": 0.2688521463014357,
+          "explained_variance": 0.1813564638643539
+        },
+        "out_of_combat": {
+          "n": 2653,
+          "value_mean": -0.3031748115368359,
+          "MC_mean": -0.2753486618921972,
+          "bias": -0.02782614964463867,
+          "RMSE": 0.3734924652274889,
+          "explained_variance": 0.37811473458563016
+        },
+        "act1/out_of_combat": {
+          "n": 1730,
+          "value_mean": -0.15969435862087877,
+          "MC_mean": -0.11017341040462394,
+          "bias": -0.049520948216254815,
+          "RMSE": 0.4210557628032264,
+          "explained_variance": 0.19869423086947413
+        },
+        "act1/combat": {
+          "n": 4009,
+          "value_mean": -0.27013927207779753,
+          "MC_mean": -0.21888251434272857,
+          "bias": -0.05125675773506898,
+          "RMSE": 0.4100105019964339,
+          "explained_variance": 0.3506346465819691
+        },
+        "act3/combat": {
+          "n": 210,
+          "value_mean": -0.7944894787811098,
+          "MC_mean": -0.7592857142857141,
+          "bias": -0.03520376449539568,
+          "RMSE": 0.1534133013514942,
+          "explained_variance": 0.3642068463510604
+        },
+        "act3/out_of_combat": {
+          "n": 61,
+          "value_mean": -0.7026101751405684,
+          "MC_mean": -0.713934426229508,
+          "bias": 0.011324251088939497,
+          "RMSE": 0.13242637470678575,
+          "explained_variance": 0.354713841394531
+        }
+      },
+      "choice_OOC_decisions_to_terminal": {
+        "n": 1849,
+        "mean": 186.9394267171444,
+        "median": 169,
+        "min": 0,
+        "max": 600
+      },
+      "choice_OOC_direct_lambda_factor": {
+        "n": 1849,
+        "mean": 0.030111622128975144,
+        "median": 0.00017190531077428803,
+        "min": 4.3068839852573004e-14,
+        "max": 1.0
+      },
+      "gradients": {
+        "combat": {
+          "rows": 512,
+          "actor_loss": -0.0343400277197361,
+          "weighted_critic_loss": 0.0016959557542577386,
+          "encoder_actor_norm": 0.42505088448524475,
+          "encoder_critic_norm": 0.00734452810138464,
+          "encoder_actor_critic_cosine": -0.05522702634334564,
+          "normalized_advantages": {
+            "n": 512,
+            "mean": -0.017723278779840257,
+            "median": -0.03437080420553684,
+            "min": -4.48431396484375,
+            "max": 3.3276641368865967
+          }
+        },
+        "out_of_combat": {
+          "rows": 512,
+          "actor_loss": -0.03794825077056885,
+          "weighted_critic_loss": 0.001972074853256345,
+          "encoder_actor_norm": 0.4251737892627716,
+          "encoder_critic_norm": 0.00955154374241829,
+          "encoder_actor_critic_cosine": -0.010298315435647964,
+          "normalized_advantages": {
+            "n": 512,
+            "mean": 0.04089850034324627,
+            "median": 0.09482620283961296,
+            "min": -4.4269514083862305,
+            "max": 5.273777961730957
+          }
+        }
+      },
+      "input_file": "/private/tmp/sts_learning_probe_current.json",
+      "input_sha256": "55e8ce390f01e7d801df3db20163c0c9ae79ece32bf4f2d789fc00d6d1621458",
+      "collection_seconds": 6.847103125182912,
+      "valid_episodes": 32,
+      "faults": 0,
+      "truncations": 0,
+      "wins": 0,
+      "act1_boundary_floor17_count": 22,
+      "act2_boundary_floor34_count": 2,
+      "mean_floor": 25.5625,
+      "winning_worlds": []
+    },
+    "sts_learning_probe_greedy": {
+      "source": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0030.pt",
+      "source_sha256": "57f1e9613a69e31230b591ef0ff2cca27e23ddc81c3a24366cee173bc9909e70",
+      "scope_note": "Exploratory 32 matched TRAIN worlds; within-world observations correlated. Single-return MC targets are noisy, not exact expected values. Different policies visit different states. Backward only; no optimizer steps.",
+      "config": {
+        "gamma": 1,
+        "gae_lambda": 0.95,
+        "clip_ratio": 0.1,
+        "value_weight": 0.5,
+        "entropy_weight": 0.01,
+        "max_grad_norm": 0.5,
+        "epochs": 4,
+        "minibatch_size": 1024,
+        "learning_rate": 0.0001,
+        "target_kl": 0.03,
+        "kl_guard_before_update": true
+      },
+      "transition_phase_counts": {
+        "out_of_combat": 3021,
+        "combat": 6909
+      },
+      "forced_phase_counts": {
+        "combat": 854,
+        "out_of_combat": 939
+      },
+      "MC_calibration": {
+        "act2/out_of_combat": {
+          "n": 1134,
+          "value_mean": -0.5596812405217787,
+          "MC_mean": -0.4669312169312167,
+          "bias": -0.09275002359056203,
+          "RMSE": 0.6435584927395975,
+          "explained_variance": 0.1327756732824158
+        },
+        "out_of_combat": {
+          "n": 3021,
+          "value_mean": -0.23806613099936103,
+          "MC_mean": -0.1274412446209862,
+          "bias": -0.11062488637837484,
+          "RMSE": 0.6899504978198753,
+          "explained_variance": 0.20010444812777262
+        },
+        "act2/combat": {
+          "n": 3119,
+          "value_mean": -0.6127930415741103,
+          "MC_mean": -0.5316607887143313,
+          "bias": -0.08113225285977901,
+          "RMSE": 0.6562677842303195,
+          "explained_variance": 0.14775756564716158
+        },
+        "combat": {
+          "n": 6909,
+          "value_mean": -0.3841587102307819,
+          "MC_mean": -0.2680489216963379,
+          "bias": -0.116109788534444,
+          "RMSE": 0.7103965598088905,
+          "explained_variance": 0.1816073623890333
+        },
+        "act1/out_of_combat": {
+          "n": 1800,
+          "value_mean": -0.022677021250128746,
+          "MC_mean": 0.05144444444444466,
+          "bias": -0.07412146569457341,
+          "RMSE": 0.6586490677219837,
+          "explained_variance": 0.12792597991797205
+        },
+        "act1/combat": {
+          "n": 3552,
+          "value_mean": -0.16246821065926254,
+          "MC_mean": -0.09535472972972953,
+          "bias": -0.06711348092953301,
+          "RMSE": 0.6572104552367862,
+          "explained_variance": 0.1664825332272769
+        },
+        "act3/combat": {
+          "n": 238,
+          "value_mean": -0.6964871766937881,
+          "MC_mean": 0.6092436974789919,
+          "bias": -1.30573087417278,
+          "RMSE": 1.5999013409724356,
+          "explained_variance": 0.2387275219821261
+        },
+        "act3/out_of_combat": {
+          "n": 87,
+          "value_mean": -0.502305939622309,
+          "MC_mean": 0.5965517241379313,
+          "bias": -1.0988576637602403,
+          "RMSE": 1.468255203425067,
+          "explained_variance": 0.20153267442190614
+        }
+      },
+      "choice_OOC_decisions_to_terminal": {
+        "n": 2082,
+        "mean": 196.71085494716618,
+        "median": 181.0,
+        "min": 0,
+        "max": 600
+      },
+      "choice_OOC_direct_lambda_factor": {
+        "n": 2082,
+        "mean": 0.027901975429957954,
+        "median": 9.289076879966709e-05,
+        "min": 4.3068839852573004e-14,
+        "max": 1.0
+      },
+      "gradients": {
+        "combat": {
+          "rows": 512,
+          "actor_loss": -0.03642021864652634,
+          "weighted_critic_loss": 0.0030256793834269047,
+          "encoder_actor_norm": 0.38612475991249084,
+          "encoder_critic_norm": 0.01901860348880291,
+          "encoder_actor_critic_cosine": -0.08378007262945175,
+          "critic_action_encoder_grad_norm": 0.0,
+          "normalized_advantages": {
+            "n": 512,
+            "mean": -0.1180891775593409,
+            "median": -0.017038144171237946,
+            "min": -5.254970550537109,
+            "max": 5.130024433135986
+          }
+        },
+        "out_of_combat": {
+          "rows": 512,
+          "actor_loss": -0.0011666828067973256,
+          "weighted_critic_loss": 0.001862328965216875,
+          "encoder_actor_norm": 0.15590448677539825,
+          "encoder_critic_norm": 0.013446689583361149,
+          "encoder_actor_critic_cosine": 0.042356837540864944,
+          "critic_action_encoder_grad_norm": 0.0,
+          "normalized_advantages": {
+            "n": 512,
+            "mean": 0.07493128959004025,
+            "median": 0.11454690620303154,
+            "min": -3.043898105621338,
+            "max": 2.661144971847534
+          }
+        }
+      },
+      "input_file": "/private/tmp/sts_learning_probe_greedy.json",
+      "input_sha256": "c4fa6658c7894abd1aa79489fbcf4a004d13e2c73ac27bddad04f7ca0ff358d8",
+      "collection_seconds": 7.475378582952544,
+      "valid_episodes": 32,
+      "faults": 0,
+      "truncations": 0,
+      "wins": 1,
+      "act1_boundary_floor17_count": 24,
+      "act2_boundary_floor34_count": 2,
+      "mean_floor": 26.78125,
+      "winning_worlds": [
+        200000021
+      ]
+    },
+    "sts_learning_probe_current_greedy": {
+      "source": "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/data/long_rl_v2/campaign/checkpoints/full3_continuous_00000128_main_a0_f2183d73dce67f4f.pt",
+      "source_sha256": "afc854b4597a8f0474fa8489b286338089817311478a897cedfa64273014adf0",
+      "scope_note": "Exploratory 32 matched TRAIN worlds; within-world observations correlated. Single-return MC targets are noisy, not exact expected values. Different policies visit different states. Backward only; no optimizer steps.",
+      "config": {
+        "gamma": 1,
+        "gae_lambda": 0.95,
+        "clip_ratio": 0.1,
+        "value_weight": 0.5,
+        "entropy_weight": 0.01,
+        "max_grad_norm": 0.5,
+        "epochs": 4,
+        "minibatch_size": 1024,
+        "learning_rate": 0.0001,
+        "target_kl": 0.03,
+        "kl_guard_before_update": true
+      },
+      "transition_phase_counts": {
+        "out_of_combat": 2661,
+        "combat": 6647
+      },
+      "forced_phase_counts": {
+        "combat": 1035,
+        "out_of_combat": 782
+      },
+      "MC_calibration": {
+        "act1/combat": {
+          "n": 3852,
+          "value_mean": -0.24632936456605312,
+          "MC_mean": -0.24304257528556564,
+          "bias": -0.003286789280487475,
+          "RMSE": 0.33875373511375473,
+          "explained_variance": 0.42256857669602266
+        },
+        "combat": {
+          "n": 6647,
+          "value_mean": -0.4144116656887535,
+          "MC_mean": -0.4458101399127423,
+          "bias": 0.03139847422398885,
+          "RMSE": 0.28757555735918067,
+          "explained_variance": 0.585277616457913
+        },
+        "act1/out_of_combat": {
+          "n": 1689,
+          "value_mean": -0.14215637129373615,
+          "MC_mean": -0.11228537596210744,
+          "bias": -0.029870995331628708,
+          "RMSE": 0.34650323361329316,
+          "explained_variance": 0.286949015882769
+        },
+        "out_of_combat": {
+          "n": 2661,
+          "value_mean": -0.29942401537439994,
+          "MC_mean": -0.3080045095828633,
+          "bias": 0.008580494208463369,
+          "RMSE": 0.29868941824631234,
+          "explained_variance": 0.529851421245088
+        },
+        "act2/combat": {
+          "n": 2795,
+          "value_mean": -0.6460585436582139,
+          "MC_mean": -0.7252593917710195,
+          "bias": 0.0792008481128056,
+          "RMSE": 0.19627309965869247,
+          "explained_variance": 0.4621466927701873
+        },
+        "act2/out_of_combat": {
+          "n": 972,
+          "value_mean": -0.5727008166627138,
+          "MC_mean": -0.6480967078189298,
+          "bias": 0.07539589115621596,
+          "RMSE": 0.18870680393983405,
+          "explained_variance": 0.35545190553274864
+        }
+      },
+      "choice_OOC_decisions_to_terminal": {
+        "n": 1879,
+        "mean": 176.61894624800425,
+        "median": 166,
+        "min": 0,
+        "max": 490
+      },
+      "choice_OOC_direct_lambda_factor": {
+        "n": 1879,
+        "mean": 0.03054671533540645,
+        "median": 0.00020050189330723204,
+        "min": 1.2149729012364841e-11,
+        "max": 1.0
+      },
+      "gradients": {
+        "combat": {
+          "rows": 512,
+          "actor_loss": -0.04170822724699974,
+          "weighted_critic_loss": 0.0018416870152577758,
+          "encoder_actor_norm": 0.31539782881736755,
+          "encoder_critic_norm": 0.01367085613310337,
+          "encoder_actor_critic_cosine": 0.13056594133377075,
+          "critic_action_encoder_grad_norm": 0.0,
+          "normalized_advantages": {
+            "n": 512,
+            "mean": -0.036344168829089085,
+            "median": -0.0003718540392583236,
+            "min": -3.8038699626922607,
+            "max": 3.890676498413086
+          }
+        },
+        "out_of_combat": {
+          "rows": 512,
+          "actor_loss": 0.019341042265295982,
+          "weighted_critic_loss": 0.0019515759777277708,
+          "encoder_actor_norm": 0.24625234305858612,
+          "encoder_critic_norm": 0.013948353007435799,
+          "encoder_actor_critic_cosine": 0.22707030177116394,
+          "critic_action_encoder_grad_norm": 0.0,
+          "normalized_advantages": {
+            "n": 512,
+            "mean": 0.1270598263872671,
+            "median": 0.23800773173570633,
+            "min": -4.2139811515808105,
+            "max": 3.7745649814605713
+          }
+        }
+      },
+      "input_file": "/private/tmp/sts_learning_probe_current_greedy.json",
+      "input_sha256": "52635dc215bd05d034966e69f08d015c464f8ddad7be67ecd2fe6aeed6fac744",
+      "collection_seconds": 6.5850828748662025,
+      "valid_episodes": 32,
+      "faults": 0,
+      "truncations": 0,
+      "wins": 0,
+      "act1_boundary_floor17_count": 24,
+      "act2_boundary_floor34_count": 0,
+      "mean_floor": 25.46875,
+      "winning_worlds": []
+    }
+  },
+  "sources": {
+    "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/model.py": "322d5e0e154458b285ddfc78b8e48de015d69d70a925503dcdf6664fceb71029",
+    "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/model_agent.py": "4ad3a3c12847c5fd1c774b2c5d4b3f7e6c0d31bf422c2076ac789ac6cf6d1b15",
+    "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/rollout_training.py": "348df6f9ff2e9a5e5f1e8d36a1a11d6d8ff3e45aee190c8fe8fb9de56e0a12b6",
+    "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/losses.py": "7e201f0a35cb3883a88526270c79e55daca8fe873b19e3ae183d610cfe6d8e80",
+    "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/encoding.py": "ba9cf80d896b9fb02aa4598b3c349cf96b5c0f310df8b73546630abc4b2df82e",
+    "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/workers.py": "aa0736adc32c008d7a6607197d8e437fb3a474ad58291ecab57bd20d6d2bdb62",
+    "/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/src/sts_policy/curriculum.py": "90a4eea6cf4473a4c6c2a2b750c679c12fc9bb77a9cb65a68335613e2f700ce6"
+  },
+  "scripts": {
+    "/private/tmp/sts_learning_probe.py": "6f56b435502ba5125eee033f595c06756fba77f0de154571a91786b4302633d2",
+    "/private/tmp/sts_critic_menu_probe.py": "c54c8bb2f2b821dbaf562609ede3ff250de4d7569b10696eef258dda0739459c",
+    "/private/tmp/sts_v2_learning_metrics_audit.py": "0b384699a1fe1259208b617631f5429ba772b122a93412e43d12641fa238dbfb"
+  }
+}

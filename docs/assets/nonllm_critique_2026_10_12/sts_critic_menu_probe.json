@@ -1,0 +1,213 @@
+{
+  "scope": "synthetic public-state architecture counterexample, no simulator rollout, backward or update",
+  "checkpoint": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0030.pt",
+  "sha256": "57f1e9613a69e31230b591ef0ff2cca27e23ddc81c3a24366cee173bc9909e70",
+  "model_config": {
+    "kind": "composite",
+    "combat": {
+      "size": "large",
+      "context": "none",
+      "state_dim": 256,
+      "action_dim": 128
+    },
+    "ooc": {
+      "size": "large",
+      "context": "none",
+      "state_dim": 256,
+      "action_dim": 128
+    }
+  },
+  "state_features_equal": true,
+  "action_features_equal": false,
+  "action_changed_coordinates": [
+    [
+      3,
+      49
+    ]
+  ],
+  "values": [
+    -0.21161368489265442,
+    -0.21161368489265442
+  ],
+  "critic_values_equal": true,
+  "logits": [
+    [
+      -4.018135070800781,
+      -7.058016300201416,
+      -20.965660095214844,
+      -7.07197904586792
+    ],
+    [
+      -4.018135070800781,
+      -7.058016300201416,
+      -20.965660095214844,
+      -8.604408264160156
+    ]
+  ],
+  "first_public_observation": {
+    "phase": "combat",
+    "text": "",
+    "state": {
+      "cur_hp": 50,
+      "max_hp": 80,
+      "gold": 100,
+      "act": 2,
+      "floor": 20,
+      "combat": {
+        "player_cur_hp": 50,
+        "player_max_hp": 80,
+        "turn": 1,
+        "player_energy": 3,
+        "player_energy_per_turn": 3,
+        "player_block": 0,
+        "player": {
+          "powers": {}
+        },
+        "cards": {
+          "hand": [
+            {
+              "name": "Whirlwind",
+              "type": "Attack",
+              "cost_for_turn": -1
+            },
+            {
+              "name": "Defend",
+              "type": "Skill",
+              "cost_for_turn": 1
+            },
+            {
+              "name": "Strike",
+              "type": "Attack",
+              "cost_for_turn": 1
+            }
+          ]
+        },
+        "enemies": [
+          {
+            "index": 0,
+            "name": "SPIKE_SLIME_M",
+            "cur_hp": 30,
+            "max_hp": 35,
+            "block": 0,
+            "intent": "SPIKE_SLIME_M_FLAME_TACKLE",
+            "intent_damage": 8,
+            "intent_hits": 1,
+            "alive": true
+          },
+          {
+            "index": 1,
+            "name": "ACID_SLIME_M",
+            "cur_hp": 30,
+            "max_hp": 35,
+            "block": 0,
+            "intent": "ACID_SLIME_M_TACKLE",
+            "intent_damage": 8,
+            "intent_hits": 1,
+            "alive": true
+          }
+        ]
+      }
+    },
+    "legal_actions": [
+      {
+        "index": 0,
+        "description": "play Whirlwind [Attack] (cost X)"
+      },
+      {
+        "index": 1,
+        "description": "play Defend [Skill] (cost 1)"
+      },
+      {
+        "index": 2,
+        "description": "end turn"
+      },
+      {
+        "index": 3,
+        "description": "play Strike [Attack] -> SPIKE_SLIME_M [enemy 0] (cost 1; deal 6)"
+      }
+    ]
+  },
+  "second_public_observation": {
+    "phase": "combat",
+    "text": "",
+    "state": {
+      "cur_hp": 50,
+      "max_hp": 80,
+      "gold": 100,
+      "act": 2,
+      "floor": 20,
+      "combat": {
+        "player_cur_hp": 50,
+        "player_max_hp": 80,
+        "turn": 1,
+        "player_energy": 3,
+        "player_energy_per_turn": 3,
+        "player_block": 0,
+        "player": {
+          "powers": {}
+        },
+        "cards": {
+          "hand": [
+            {
+              "name": "Whirlwind",
+              "type": "Attack",
+              "cost_for_turn": -1
+            },
+            {
+              "name": "Defend",
+              "type": "Skill",
+              "cost_for_turn": 1
+            },
+            {
+              "name": "Strike",
+              "type": "Attack",
+              "cost_for_turn": 1
+            }
+          ]
+        },
+        "enemies": [
+          {
+            "index": 0,
+            "name": "SPIKE_SLIME_M",
+            "cur_hp": 30,
+            "max_hp": 35,
+            "block": 20,
+            "intent": "SPIKE_SLIME_M_FLAME_TACKLE",
+            "intent_damage": 8,
+            "intent_hits": 1,
+            "alive": true
+          },
+          {
+            "index": 1,
+            "name": "ACID_SLIME_M",
+            "cur_hp": 30,
+            "max_hp": 35,
+            "block": 20,
+            "intent": "ACID_SLIME_M_TACKLE",
+            "intent_damage": 8,
+            "intent_hits": 1,
+            "alive": true
+          }
+        ]
+      }
+    },
+    "legal_actions": [
+      {
+        "index": 0,
+        "description": "play Whirlwind [Attack] (cost X)"
+      },
+      {
+        "index": 1,
+        "description": "play Defend [Skill] (cost 1)"
+      },
+      {
+        "index": 2,
+        "description": "end turn"
+      },
+      {
+        "index": 3,
+        "description": "play Strike [Attack] -> SPIKE_SLIME_M [enemy 0] (cost 1; deal 6)"
+      }
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "inherited_suite": {
+    "tests": 471,
+    "skipped": 1,
+    "elapsed_seconds": 14.391,
+    "status": "OK",
+    "execution": "host; first restricted attempt had process/socket permission errors"
+  },
+  "bounded_core_smoke": {
+    "seed": 3,
+    "agent": "random",
+    "max_act": 1,
+    "battle_simulations": 50,
+    "decisions": 21,
+    "error": null,
+    "outcome": "defeat",
+    "trace_sha256": "65d54e693dd3533b30bbcf73d7f636ac458a2ecc59de04c455c345f4e04c16ac"
+  },
+  "parent_probe_checks": {
+    "synthetic_aliases_reproduced": 5,
+    "synthetic_candidate_aliases_reproduced": 2,
+    "native_action_proof_repeat_identical": true
+  },
+  "reviewed_campaign_commits": {
+    "first": "c8c76bc98b42cc73cf5b6410271200f14e78ea42",
+    "v1": "1693f1c4e3bb9854a1547d0e8b80344980ae4a9b",
+    "v2_latest_handoff": "453c768"
+  },
+  "paused_v2_status": "operator_paused",
+  "remaining_active_seconds": 14252.173799542012
+}
