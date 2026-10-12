@@ -17,9 +17,10 @@ release tags. Model, encoder, reward, and training experiments belong in adapter
 or experiment branches started from a release tag. Known simulator and Act 4
 public-state limitations remain documented in the contract.
 
-A 0.1.1 candidate corrects the combat character-class initialization used by
+Release 0.1.1 corrects the combat character-class initialization used by
 Entropic Brew and rejects reported undefined behavior in automatic combat before
 applying battle outcomes. Its new binary is built separately; 0.1.0 artifacts are
-preserved. [The candidate verification record](release_v0.1.1.md) describes the
-regressions and intentional seeded-trajectory/provenance boundary. A release tag
-is pending the full tests and bounded native smoke gates.
+preserved. [The verification record](release_v0.1.1.md) describes the
+regressions and intentional seeded-trajectory/provenance boundary. The immutable
+release reference is `env-v0.1.1`, validated with 195 base tests, 307 experiment
+integration tests, a bounded native smoke, and repeated affected-world checks.
