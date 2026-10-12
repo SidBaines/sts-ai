@@ -195,3 +195,37 @@ use a new directory rather than resume an old source identity.
 The spawn-based simulator cannot start from a Python stdin entry point. Use the
 guarded official CLI or a saved script with `if __name__ == "__main__"`; do not
 interpret a missing `<stdin>` child entry point as a simulator or policy fault.
+# Repaired strategic candidate
+
+The new protected study uses `public_entities_v3` and native environment 0.2.0;
+legacy campaign checkpoints use `public_candidate_v2`. Loaders are separate.
+See `docs/public_entities_v3.md` for inputs/known limits and
+`docs/nonllm_v3_summary.md` for measured progress. Old banks fail new core
+provenance; historical artifacts remain in their original worktrees.
+
+Entry points (run with this worktree's `.venv`, `PYTHONPATH=src` and its pinned
+`STS_LIGHTSPEED_BUILD`):
+
+- `scripts/run_strategic_v3.py initialize|audit|equivalence|evaluate`
+- `scripts/prepare_strategic_v3.py` collects original-policy TRAIN calibration
+  and rehearsal, then fits only the separate critic. A fitted checkpoint is not
+  automatically accepted: inspect independent TRAIN holdout calibration.
+- `scripts/run_protected_strategic_v3.py` runs one finite micro/macro condition.
+  It requires a fresh output directory and the matching common initialization,
+  rehearsal buffer and permanent DEV baseline. Sampling and optimizer seeds are
+  distinct. Checkpoints, samples, updates and evaluations stay immutable; only
+  `status.json` is the live atomic pointer. Its run ID/PID are published before
+  workers/caffeinate launch. The controller only closes processes it owns.
+
+Non-obvious contracts: typed checkpoints pin model/encoder/bridge code digests,
+so changes need explicit migration; macro aggregation currently requires gamma
+one; native-prefix source decks are a separate distribution; AC presence can
+coexist with battery discharge. Cuts and faults remain separate from defeats.
+Current controller resource reserves are 25% battery when not charging and 8 GiB
+free disk, with a finite UTC deadline. A resource pause of the run does not mark
+the broader implementation goal complete.
+
+MPS flushes subnormal float32 probabilities to zero. Final policy KL/TV/entropy
+diagnostics therefore transfer logits to CPU and compute in float64. Never use
+MPS `p * log(p)` with tiny reference probabilities as a stopping guard: it can
+produce NaN and silently bypass comparisons. Non-finite diagnostics fail closed.

@@ -25,6 +25,7 @@ include = ["sts_env*", "sts_policy*"]
 
 [tool.setuptools.package-data]
 "sts_env._backend" = ["native_manifest.json"]
+"sts_policy" = ["public_vocabulary_v3.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

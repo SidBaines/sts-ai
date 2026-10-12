@@ -13,6 +13,8 @@ from sts_env import SlayTheSpireEnv
 from sts_env._backend.combat_public_v5 import CombatPublicV5Env
 from sts_env._backend.lightspeed import LightspeedHybridEnv
 from sts_env.env import OBSERVATION_VERSION
+from sts_policy.encoding import encode_observation
+from sts_policy.legacy_bridge import project_legacy_menu
 from tests.support import requires_simulator
 
 
@@ -41,6 +43,22 @@ def replay_legacy_frontier() -> CombatPublicV5Env:
 
 @requires_simulator
 class PublicActionInstanceTests(unittest.TestCase):
+    def test_legacy_bridge_retains_the_recorded_public_feature_values(self):
+        import numpy as np
+        root = Path(__file__).resolve().parents[2]
+        source = root / "docs/assets/nonllm_critique_2026_10_12/nonllm_action_dedup_native_results.json"
+        recorded = json.loads(source.read_text())["public_start"]
+        env = replay_legacy_frontier()
+        actions, public = env.legal_actions(), env.public_action_metadata()
+        current = {"phase": env.phase(), "state": env.summary(), "text": env.describe_state(),
+                   "legal_actions": [{"index": a.index, "description": a.description, "public": p}
+                                     for a, p in zip(actions, public)]}
+        current["state"]["observation_version"] = OBSERVATION_VERSION
+        projected = project_legacy_menu(current).observation
+        old, new = encode_observation(recorded), encode_observation(projected)
+        np.testing.assert_array_equal(old.state_features, new.state_features)
+        np.testing.assert_array_equal(old.action_features, new.action_features)
+
     def test_free_and_normal_strikes_survive_and_execute_distinct_resources(self):
         observed = []
         for source in (1, 2):

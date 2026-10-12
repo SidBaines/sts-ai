@@ -1,0 +1,389 @@
+{
+  "baseline": {
+    "act1_clears_fresh": 156,
+    "act2_clears_fresh": 20,
+    "elapsed_seconds": 55.33157666679472,
+    "faults": 0,
+    "finished": 192,
+    "fresh_completed": 192,
+    "fresh_wins": 0,
+    "mean_floor": 28.197916666666668,
+    "primitive_steps": 64866,
+    "primitive_steps_per_second": 1172.3143258798013,
+    "requested": 192,
+    "truncated": 0,
+    "unstarted": 0,
+    "valid_completed": 192,
+    "win_rate": 0.0,
+    "win_wilson_95": [
+      1.734723475976807e-18,
+      0.01961514606675411
+    ],
+    "wins": 0
+  },
+  "common_initial_checkpoint_sha256": "36a09a52335b083342fbdae6e4726cb956263ce8c12aacaad787b5e46321a276",
+  "critic_warm_holdout": {
+    "accepted": false,
+    "after": {
+      "bias": 0.17068705371263365,
+      "explained_variance": 0.4254200437151835,
+      "mse": 0.20309867214956678,
+      "prediction_mean": -0.06887942027580532,
+      "return_mean": -0.23956647398843897,
+      "rows": 1730
+    },
+    "before": {
+      "bias": -0.08690592080763858,
+      "explained_variance": 0.43740346430590127,
+      "mse": 0.17788904092562588,
+      "prediction_mean": -0.3264723947960776,
+      "return_mean": -0.23956647398843897,
+      "rows": 1730
+    }
+  },
+  "encoding_full_train_audit": {
+    "coverage": {
+      "unknown_action_kind": 0,
+      "unknown_damage_targets": 2344,
+      "unknown_entity_identity": 0,
+      "unknown_status": 0,
+      "unresolved_source": 0,
+      "unresolved_target": 0
+    },
+    "elapsed_seconds": 10.234389082994312,
+    "encoded_bytes": 706179900,
+    "encoder_version": "public_entities_v3",
+    "phase_counts": {
+      "combat": 14524,
+      "out_of_combat": 5698
+    },
+    "rows": 20222,
+    "teacher_sha256": "274c398519f4b3c462be24d9ffe3d5905b5d8ae9eb9c10a4df114f33f36b26eb",
+    "unknown_public_names": {},
+    "vocabulary_sha256": "c2159812bd3e052a0801e1d29d7374cb9835bfc312267a6f73fd355aefb6cf82"
+  },
+  "environment": {
+    "encoder_code_sha256": "ba9cf80d896b9fb02aa4598b3c349cf96b5c0f310df8b73546630abc4b2df82e",
+    "model_code_sha256": "322d5e0e154458b285ddfc78b8e48de015d69d70a925503dcdf6664fceb71029",
+    "native_module_sha256": "ee6f05c837995f90e52908e97cab9972c92185f809ce5f057c52a5cd7aa8b8b9",
+    "python_interface_sha256": "6103bc54422eca1ac34860edda1f9e700aa2969c11b7a83722ed166e9f459552",
+    "runtime_python_version": "3.12.13",
+    "sourced_env_manifest": {
+      "backend_api": 2,
+      "cmake_version": "cmake version 4.1.3",
+      "compiler_version": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+      "json_commit": "0b345b20c888f7dc8888485768e4bf9a6be29de0",
+      "module_file": "slaythespire.cpython-312-darwin.so",
+      "module_sha256": "ee6f05c837995f90e52908e97cab9972c92185f809ce5f057c52a5cd7aa8b8b9",
+      "patch_sha256": "079bfb91efb37a664fb8355766430f75dcbe69670221310a6f2806502f6ba70b",
+      "platform": "macosx-11.0-arm64",
+      "pybind11_tag": "v2.13.6",
+      "python_cache_tag": "cpython-312",
+      "python_version": "3.12.13",
+      "upstream_commit": "7476a81954020087da31d41d16fddf475746ec2d"
+    },
+    "sourced_env_manifest_sha256": "7b3ed4ac06367e0629c8c86d4fe31b2c6cb58ef9519831a2ec6606e0047c2774"
+  },
+  "equivalence": {
+    "common": 8,
+    "completed_both": true,
+    "matched_rewards": 8,
+    "matched_traces": 8
+  },
+  "host_native_suite": {
+    "optional_skips": 1,
+    "passed": true,
+    "tests": 507
+  },
+  "macro_pilot": {
+    "chunks": 4,
+    "evaluations": [
+      {
+        "act1": {
+          "candidate": 156,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 156
+        },
+        "act2": {
+          "candidate": 20,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 20
+        },
+        "candidate_valid": 192,
+        "changed_traces": 0,
+        "common_valid": 192,
+        "mean_floor_delta": 0.0,
+        "reference_valid": 192,
+        "victory": {
+          "candidate": 0,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 0
+        }
+      },
+      {
+        "act1": {
+          "candidate": 156,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 156
+        },
+        "act2": {
+          "candidate": 20,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 20
+        },
+        "candidate_valid": 192,
+        "changed_traces": 0,
+        "common_valid": 192,
+        "mean_floor_delta": 0.0,
+        "reference_valid": 192,
+        "victory": {
+          "candidate": 0,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 0
+        }
+      }
+    ],
+    "status": "pilot_complete",
+    "useful_learning": false
+  },
+  "mandatory_smoke": {
+    "error": null,
+    "steps": 21,
+    "termination": "ordinary defeat"
+  },
+  "matched_buffer_lr_corrected": {
+    "conditions": [
+      {
+        "buffer_drift": {
+          "behavior_kl_post_update": {
+            "max": 1.6682714737715343e-07,
+            "mean": 4.960554103120734e-09,
+            "p95": 3.141583327166729e-08
+          },
+          "changed_greedy_fraction": 0.0,
+          "choices": 2249,
+          "normalized_entropy": {
+            "max": 1.0,
+            "mean": 0.1554174826247493,
+            "p95": 0.6780761706564168
+          },
+          "original_kl": {
+            "max": 1.6658634092280197e-07,
+            "mean": 4.960179064359362e-09,
+            "p95": 3.1414954850097545e-08
+          },
+          "original_tv": {
+            "max": 0.0002758744095527633,
+            "mean": 1.4917742277857677e-05,
+            "p95": 0.00010488456328251156
+          }
+        },
+        "checkpoint": "data/nonllm_v3/calibration/residual_lr_matched_v1/lr_0.0003.pt",
+        "rehearsal_drift": {
+          "behavior_kl_post_update": {
+            "max": null,
+            "mean": null,
+            "p95": null
+          },
+          "changed_greedy_fraction": 0.0,
+          "choices": 1268,
+          "normalized_entropy": {
+            "max": 1.0,
+            "mean": 0.19022345196163018,
+            "p95": 0.8078300432760769
+          },
+          "original_kl": {
+            "max": 1.3577949044665187e-07,
+            "mean": 6.0385761443261705e-09,
+            "p95": 4.463847034046648e-08
+          },
+          "original_tv": {
+            "max": 0.0002558917990734719,
+            "mean": 1.646597820368559e-05,
+            "p95": 0.0001244416798506709
+          }
+        }
+      },
+      {
+        "buffer_drift": {
+          "behavior_kl_post_update": {
+            "max": 5.172335880146976e-06,
+            "mean": 1.450023013465962e-07,
+            "p95": 8.830494083962146e-07
+          },
+          "changed_greedy_fraction": 0.0,
+          "choices": 2249,
+          "normalized_entropy": {
+            "max": 1.0,
+            "mean": 0.1554118295856275,
+            "p95": 0.6779600041734738
+          },
+          "original_kl": {
+            "max": 5.172371893369811e-06,
+            "mean": 1.4500239015917242e-07,
+            "p95": 8.830265793951444e-07
+          },
+          "original_tv": {
+            "max": 0.0015693603712744054,
+            "mean": 7.898949000879764e-05,
+            "p95": 0.0005621288313630391
+          }
+        },
+        "checkpoint": "data/nonllm_v3/calibration/residual_lr_matched_v1/lr_0.001.pt",
+        "rehearsal_drift": {
+          "behavior_kl_post_update": {
+            "max": null,
+            "mean": null,
+            "p95": null
+          },
+          "changed_greedy_fraction": 0.0,
+          "choices": 1268,
+          "normalized_entropy": {
+            "max": 1.0,
+            "mean": 0.19023336227102536,
+            "p95": 0.8078499237279113
+          },
+          "original_kl": {
+            "max": 4.3571106678241605e-06,
+            "mean": 1.8657936250351168e-07,
+            "p95": 1.3296543455210742e-06
+          },
+          "original_tv": {
+            "max": 0.0014517095961462823,
+            "mean": 9.045536011231216e-05,
+            "p95": 0.0006777532212399589
+          }
+        }
+      },
+      {
+        "buffer_drift": {
+          "behavior_kl_post_update": {
+            "max": 0.00013996920355929034,
+            "mean": 3.7165043370418327e-06,
+            "p95": 2.262354729294143e-05
+          },
+          "changed_greedy_fraction": 0.0,
+          "choices": 2249,
+          "normalized_entropy": {
+            "max": 1.0,
+            "mean": 0.15540329734369782,
+            "p95": 0.6774131613390696
+          },
+          "original_kl": {
+            "max": 0.000139969385903609,
+            "mean": 3.7165046095510835e-06,
+            "p95": 2.2623035786146392e-05
+          },
+          "original_tv": {
+            "max": 0.008201477931622484,
+            "mean": 0.00038992599265211383,
+            "p95": 0.002613348562177363
+          }
+        },
+        "checkpoint": "data/nonllm_v3/calibration/residual_lr_matched_v1/lr_0.003.pt",
+        "rehearsal_drift": {
+          "behavior_kl_post_update": {
+            "max": null,
+            "mean": null,
+            "p95": null
+          },
+          "changed_greedy_fraction": 0.0,
+          "choices": 1268,
+          "normalized_entropy": {
+            "max": 1.0,
+            "mean": 0.19028977408756564,
+            "p95": 0.8078461267089986
+          },
+          "original_kl": {
+            "max": 0.00012285656992992331,
+            "mean": 4.702965020672461e-06,
+            "p95": 3.8408277135910075e-05
+          },
+          "original_tv": {
+            "max": 0.0072152299126641275,
+            "mean": 0.0004450563055404432,
+            "p95": 0.0034575030848547684
+          }
+        }
+      },
+      {
+        "buffer_drift": {
+          "behavior_kl_post_update": {
+            "max": 6.385614279525281e-10,
+            "mean": 1.9711032497431963e-11,
+            "p95": 1.2542273541101392e-10
+          },
+          "changed_greedy_fraction": 0.0,
+          "choices": 2249,
+          "normalized_entropy": {
+            "max": 1.0,
+            "mean": 0.15541889424843947,
+            "p95": 0.6780674062753982
+          },
+          "original_kl": {
+            "max": 6.384076186551807e-10,
+            "mean": 1.9629382408879302e-11,
+            "p95": 1.2481064621817923e-10
+          },
+          "original_tv": {
+            "max": 1.7093361647291792e-05,
+            "mean": 9.477463050945557e-07,
+            "p95": 6.438419284930867e-06
+          }
+        },
+        "checkpoint": "data/nonllm_v3/calibration/residual_lr_matched_v1/lr_3e-05.pt",
+        "rehearsal_drift": {
+          "behavior_kl_post_update": {
+            "max": null,
+            "mean": null,
+            "p95": null
+          },
+          "changed_greedy_fraction": 0.0,
+          "choices": 1268,
+          "normalized_entropy": {
+            "max": 1.0,
+            "mean": 0.19022169909137143,
+            "p95": 0.807821576511522
+          },
+          "original_kl": {
+            "max": 5.883954353368004e-10,
+            "mean": 2.0730372458145373e-11,
+            "p95": 1.5641307128002525e-10
+          },
+          "original_tv": {
+            "max": 1.5139006240236143e-05,
+            "mean": 9.716377879202436e-07,
+            "p95": 7.084180280940712e-06
+          }
+        }
+      }
+    ],
+    "supersedes_only_diagnostics": "v1 MPS diagnostic contains NaN; weights/rollouts/updates are preserved and unchanged"
+  },
+  "native_bank_labels": 20222,
+  "native_bank_manifest_sha256": "e989079bf987991c85ca4edb8c897a20d04b36c1c72a3ef520325a4b621a43a4",
+  "native_bank_worlds": 64,
+  "note": "No game-learning improvement claimed. Large raw banks/models/evaluations remain preserved under data/nonllm_v3.",
+  "power": {
+    "battery_percent": 69,
+    "charging": true,
+    "checked_utc": "2026-10-12T23:17:00+00:00"
+  },
+  "vocabulary_sha256": {
+    "legacy_bridge_sha256": "4b3ea67b08cfdd221535ff63e8028e09b8843ef4003535c1ca517829b1058c45",
+    "typed_encoder_sha256": "3f0bbcd79db4d2c4f61ec0c3abfa257058a16c17f8f36b00df6db7b2ac4c97d5",
+    "typed_model_sha256": "1e31998b35016125119cb496a79e4b1fb9f9dd71239e332d4ac4aeefe71f2a50"
+  }
+}
