@@ -1,5 +1,11 @@
 # Long curriculum — latest first
 
+## 2026-10-12 16:49 UTC — v1 paused and remaining allocation transferred to v2
+
+The user paused v1 at15:31 UTC. Its controller andownedlearner/nativegroups haveexited; the monitoringobserver wasstopped andresults preserved. V1used17,575.872seconds oftheoriginal36,000;the remaining18,424.128seconds were explicitly transferred to a new run fromthismorning's originalcheckpoint. **Do not resume v1 or spend its historical remainder without a new budget decision.**
+
+The revised continuous full-game study lives in `/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI`, with separate [summary](/Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI/docs/long_curriculum_v2_summary.md) and runtimeoutputs. Mainv2started16:44:51 UTC aftera verified budget-counted pilot. V1's finalpanel remains embargoed; no frozen source, checkpoint or release tag waschanged. The old scientificresults andcriticalauditbelowremainhistorical v1evidence.
+
 ## 2026-10-12 15:25 UTC — critical audit: weak broad learning and frequent discarded updates
 
 The user's skepticism is supported by the broader curves. In50-batch windows within the fresh-start phase, fresh Act2 success is6.4%→6.1%, full3 wins0/1300→2/1300, and Act1 rehearsal74.0%→71.8%. Candidate full3 DEV wins are0,1,0,1,2,1,1; only two worlds ever win, with one repeatedly solved. This is limited positive evidence, not sustained broad competence.
