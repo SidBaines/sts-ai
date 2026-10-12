@@ -51,11 +51,31 @@ def _hash(token: str, size: int) -> tuple[int, float]:
     return int.from_bytes(digest[:7], "little") % size, 1.0 if digest[7] & 1 else -1.0
 
 
+# Public text keys retain no observations, arrays, weights or private metadata.
+# The text length bound also limits each cached ordered term sequence.
+_BAG_CACHE_SIZE = 2048
+_BAG_CACHE_TEXT_LIMIT = 256
+_BAG_CACHE_PREFIX_LIMIT = 64
+
+
+def _uncached_bag_terms(prefix: str, text: str, size: int) -> tuple[tuple[int, float], ...]:
+    words = _WORDS.findall(text)
+    return tuple(_hash(prefix + ":" + word, size)
+                 for word in [*words, *(a + ":" + b for a, b in zip(words, words[1:]))])
+
+
+@lru_cache(maxsize=_BAG_CACHE_SIZE)
+def _bag_terms(prefix: str, text: str, size: int) -> tuple[tuple[int, float], ...]:
+    """Cache ordered immutable hashes of a short, normalized public string."""
+    return _uncached_bag_terms(prefix, text, size)
+
+
 def _bag(target: np.ndarray, prefix: str, text: Any, weight: float = 1.0) -> None:
-    """Token and adjacent-word hashes retain unknown symbols without vocabulary fits."""
-    words = _WORDS.findall(str(text).lower())
-    for word in [*words, *(a + ":" + b for a, b in zip(words, words[1:]))]:
-        index, sign = _hash(prefix + ":" + word, len(target))
+    """Preserve sequential float32 collision arithmetic and dynamic weights."""
+    normalized = str(text).lower()
+    terms = (_bag_terms(prefix, normalized, len(target)) if len(normalized) <= _BAG_CACHE_TEXT_LIMIT and len(prefix) <= _BAG_CACHE_PREFIX_LIMIT
+             else _uncached_bag_terms(prefix, normalized, len(target)))
+    for index, sign in terms:
         target[index] += sign * weight
 
 
