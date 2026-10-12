@@ -134,6 +134,7 @@ def main() -> None:
     parser.add_argument("--teacher-simulations", type=int, help="collect DAgger labels during PPO")
     parser.add_argument("--gamma", type=float, default=1.)
     parser.add_argument("--ppo-epochs", type=int, default=4)
+    parser.add_argument("--kl-guard-before-update", action="store_true")
     parser.add_argument("--entropy-coef", type=float, default=.01)
     parser.add_argument("--clip-ratio", type=float, default=.2)
     parser.add_argument("--timeout", type=float, default=10.)
@@ -199,6 +200,9 @@ def main() -> None:
                      "progress_floor_weight": args.progress_floor_weight,
                      "terminal_hp_weight": args.terminal_hp_weight}
     metrics["reward_config"] = reward_config
+    algorithm = {"version": "masked_ppo_v2_before_update_kl" if args.kl_guard_before_update else "masked_ppo_v1_after_update_kl",
+                 "kl_guard_before_update": args.kl_guard_before_update}
+    metrics["ppo_algorithm"] = algorithm
     optimizer_carry = {"restored": False, "reason": "fresh_optimizer"}
     if args.warm_optimizer:
         optimizer_carry = warm_optimizer(optimizer, payload, method=args.command, task_kind=args.task_kind,
@@ -237,7 +241,8 @@ def main() -> None:
         tasks = tasks_for(args)
         ppo = PPOConfig(gamma=args.gamma, learning_rate=args.learning_rate,
                         minibatch_size=args.batch_size, epochs=args.ppo_epochs,
-                        entropy_weight=args.entropy_coef, clip_ratio=args.clip_ratio)
+                        entropy_weight=args.entropy_coef, clip_ratio=args.clip_ratio,
+                        kl_guard_before_update=args.kl_guard_before_update)
         workers = [CurriculumWorker(config={"gamma": args.gamma, "reward_mode": args.reward_mode,
                                             "terminal_hp_weight": args.terminal_hp_weight,
                                             "progress_floor_weight": args.progress_floor_weight,
@@ -278,6 +283,7 @@ def main() -> None:
                     save_checkpoint(args.output, model, model_config=model.metadata(), optimizer=optimizer, step=step,
                                     metadata={**lineage, "encoder_version": ENCODER_VERSION, "data_identity": identity,
                                               "reward_config": reward_config, "stage": args.command,
+                                              "ppo_algorithm": algorithm,
                                               "optimizer_carry": optimizer_carry,
                                               "config": metrics["config"]})
                 metrics["rounds"].append(result)

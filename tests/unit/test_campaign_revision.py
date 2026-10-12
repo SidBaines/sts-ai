@@ -88,7 +88,7 @@ class CampaignRevisionTests(unittest.TestCase):
                  patch.object(runner,'evaluate_combat') as combat_eval, \
                  patch.object(runner,'ooc_screen',return_value=(models['ooc'],settings)) as ooc_screen, \
                  patch.object(runner,'joint_screen',return_value=(models['shared'],settings)), \
-                 patch('sts_policy.composition.compose_checkpoint',return_value={}), \
+                 patch.object(runner,'joint_composition',return_value=(models['shared'],{})), \
                  patch.object(runner,'curriculum',side_effect=curriculum) as stages, \
                  patch.object(runner,'evaluate',return_value={'selection_score':1.}), \
                  patch.object(runner,'evaluate_composite',return_value={'selection_score':1.}), \

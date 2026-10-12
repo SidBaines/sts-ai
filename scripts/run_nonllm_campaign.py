@@ -366,8 +366,17 @@ class Campaign:
         self.state['phase'] = name
         current, best = Path(source), Path(source)
         saved_phase=self.state.setdefault('phase_progress',{}).get(name)
+        def evaluate_stage(tag, checkpoint):
+            if kind == 'battle':
+                return self.evaluate_combat(tag, checkpoint, end=end)
+            if kind == 'run':
+                max_act = settings.get('max_act', 1)
+                return self.evaluate(tag, checkpoint, kind, end=end,
+                                     max_act=max_act, horizon=settings.get('horizon', 2048),
+                                     seconds=240 if max_act == 3 else 90)
+            return self.evaluate(tag, checkpoint, kind, end=end)
         if saved_phase is None:
-            reference=self.evaluate_combat(name+'_initial_dev',best,end=end) if kind=='battle' else self.evaluate(name+'_initial_dev',best,kind,end=end)
+            reference = evaluate_stage(name + '_initial_dev', best)
             saved_phase={'next_round':0,'started':time.time(),'current':str(source),'best':str(best),'best_score':self.score(reference)}
             self.state['phase_progress'][name]=saved_phase
         round_index = saved_phase['next_round']
@@ -409,7 +418,7 @@ class Campaign:
                                               teacher=aggregate, phase='combat', learning_rate=1e-4)
                     if corrected:
                         current = corrected
-            evaluation = self.evaluate_combat(tag+'_dev',current,end=end) if kind=='battle' else self.evaluate(tag + '_dev', current, kind, end=end)
+            evaluation = evaluate_stage(tag + '_dev', current)
             score = self.score(evaluation)
             if score > best_score:
                 best, best_score = current, score
@@ -425,10 +434,41 @@ class Campaign:
         self.save()
         return best
 
+    def joint_composition(self, combat, ooc):
+        """Never reuse a composed policy after its source or implementation changes."""
+        from sts_policy.composition import compose_checkpoint
+        sources = {'combat': Path(combat).resolve(), 'ooc': Path(ooc).resolve()}
+        source_hashes = {key: hashlib.sha256(path.read_bytes()).hexdigest() for key,path in sources.items()}
+        names = {'composition_code_sha256': 'composition.py', 'encoder_code_sha256': 'encoding.py',
+                 'model_code_sha256': 'model.py', 'wrapper_code_sha256': 'model_agent.py'}
+        code_hashes = {key: hashlib.sha256((ROOT/'src/sts_policy'/name).read_bytes()).hexdigest()
+                       for key,name in names.items()}
+        identity = hashlib.sha256(json.dumps({'sources': source_hashes,'code':code_hashes},sort_keys=True).encode()).hexdigest()
+        checkpoint = self.destination/('joint_initial_composite_' + identity[:16] + '.pt')
+        manifest = checkpoint.with_suffix('.composition.json')
+        if checkpoint.is_file() and manifest.is_file():
+            report = json.loads(manifest.read_text())
+            provenance = report['composition_provenance']
+            valid = report['sha256'] == hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+            valid = valid and str(checkpoint.resolve()) == str(Path(report['output']).resolve())
+            for role,path in sources.items():
+                row = provenance['sources'][role]
+                valid = valid and row['sha256'] == source_hashes[role] and str(Path(row['path']).resolve()) == str(path)
+            valid = valid and all(provenance[key] == value for key,value in code_hashes.items())
+            if not valid:
+                raise RuntimeError('Composed checkpoint identity changed; preserve and investigate ' + str(checkpoint))
+            return checkpoint, report
+        if checkpoint.exists() or manifest.exists():
+            raise RuntimeError('Partial composed artifact requires recovery: ' + str(checkpoint))
+        report = compose_checkpoint(combat, ooc, checkpoint)
+        atomic(manifest, report)
+        return checkpoint, report
+
     def joint_screen(self, single, composite, references, end):
         """Equal-budget full-control pilots for shared versus phase specialists."""
         basic = {'gamma': 1., 'clip_ratio': .1, 'entropy_coef': .01, 'learning_rate': 1e-4,
-                 'reward_mode': 'progress', 'progress_floor_weight': .05, 'terminal_hp_weight': 0.}
+                 'reward_mode': 'progress', 'progress_floor_weight': .05, 'terminal_hp_weight': 0.,
+                 'kl_guard_before_update': self.state.get('kl_guard_before_update', False)}
         saved = self.state.get('phase_progress', {}).get('joint_act1')
         if saved is not None:
             return Path(saved['best']), self.state.get('joint_effective_settings', basic)
@@ -723,14 +763,7 @@ class Campaign:
         self.state['composite_initial_dev_score']=self.score(composite_dev)
         initial_panel.sort(key=lambda row: row[0], reverse=True)
         self.state['joint_start_panel'] = [{'score': score, 'checkpoint': str(path)} for score, path in initial_panel]
-        from sts_policy.composition import compose_checkpoint
-        composite = self.destination/'joint_initial_composite.pt'
-        composition_path = composite.with_suffix('.composition.json')
-        if not composite.is_file() or not composition_path.is_file():
-            report = compose_checkpoint(combat, ooc, composite)
-            atomic(composition_path, report)
-        else:
-            report = json.loads(composition_path.read_text())
+        composite, report = self.joint_composition(combat, ooc)
         self.state['joint_composition'] = report
         references = [('single_' + str(index), score, path) for index, (score,path) in enumerate(initial_panel)]
         references.append(('composite', self.score(composite_dev), composite))

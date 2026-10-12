@@ -10,21 +10,21 @@ action representation, alternatives, budgets and evaluation gates. The maintaine
 and compact evidence; the [automatic progress log](nonllm_progress.md) records
 exact commands and measurements, including failures.
 
-As of 2026-10-12 00:41 UTC, architecture and combat hyperparameter selection are
-complete, and combat training has finished. The selected combat checkpoint wins
-44/48 Act 1 and 30/32 later-act development fights, matching native reference
-win counts on these panels. Expanded banks include Act 3 development/final
-fights from 15/12 worlds. Matched HP controls did not pass the integrated Act 1
-selection gate. These are repeated selection results, not final-test estimates.
+As of 2026-10-12 02:32 UTC, combat and corrected-native OOC training are
+complete. The retained combat specialist wins44/48 Act1 and30/32 later-act
+development fights. The selected OOC policy clears31/32 development worlds
+with no faults after a matched opt-in PPO stopping correction; native and
+public-heuristic references clear15/32 and22/32. These are reused selection
+results, not final-test estimates.
 
-A native automatic-combat character-class bug was diagnosed. Old OOC and
-lookahead results are quarantined; the original native binary and artifacts
-remain intact. A separately built corrected backend and fresh data will restart
-OOC from supervised full-control weights. The retained combat evidence is clean
-for this specific class-initialization defect, with remaining UB limits noted.
-Joint full-run training is still pending.
+Signedenv-v0.1.1 repairs native automatic-combat character initialization and
+reports flagged UB. Old automatic OOC/lookahead results are quarantined; old
+binary/tag remainintact. Fresh banks use module40ab and interface1fa.
+Composed full-control policy training is running: 37/48 development Act1
+clears, with zero faults/truncations, versus its 29/48 initial reference.
+Act3 training and independent final evaluation remain pending. The original deadline remains06:30 UTC.
 Final data is embargoed until
-selection freezes. The last full regression gate passed **289 tests**, with native
+selection freezes. The last full regression gate passed **308 tests**, with native
 gates enabled, plus a bounded core smoke and reproducible full-control model CLI
 rollouts. [Throughput evidence](nonllm_throughput.md) explains CPU rollout/MPS
 update routing, replay optimizations and limitations. Preserve the immutable

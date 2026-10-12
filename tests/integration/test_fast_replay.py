@@ -76,14 +76,18 @@ class FastReplayTests(unittest.TestCase):
 
     def test_recorded_random_first_bank_and_twenty_later_act_starts(self):
         root = Path(__file__).resolve().parents[2] / "data/nonllm_curriculum"
-        first = root / "teacher_act1_200_seed10000/battles.jsonl"
-        later = root / "teacher_act3_200_seed11000/stage_subsets"
+        # Persisted fixtures must match the active release; never remove their
+        # provenance to replay an older native bank under a corrected backend.
+        revised = root / "teacher_act1_200_native011_seed10000/battles.jsonl"
+        first = revised if revised.exists() else root / "teacher_act1_200_seed10000/battles.jsonl"
+        later = root / "panels_native011" if revised.exists() else root / "teacher_act3_200_seed11000/stage_subsets"
         if not first.exists() or not later.exists():
             self.skipTest("Generated curriculum banks absent; synthetic native paired cases still run")
         first_rows = [json.loads(line) for line in first.read_text().splitlines()]
         for row in random.Random(18001).sample(first_rows, 10):
             self.paired(TaskSpec.from_dict(row))
         for act in (2, 3):
-            rows = [json.loads(line) for line in (later / f"battles_act{act}.jsonl").read_text().splitlines()]
+            filename = f"train_act{act}.jsonl" if revised.exists() else f"battles_act{act}.jsonl"
+            rows = [json.loads(line) for line in (later / filename).read_text().splitlines()]
             for index in list(range(0, len(rows), max(1, len(rows)//10)))[:10]:
                 self.paired(TaskSpec.from_dict(rows[index]))

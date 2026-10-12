@@ -283,6 +283,8 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
     rng, order = random.Random(seed), list(range(len(transitions)))
     metrics, steps = [], 0
     stopped = False
+    rejected_minibatches = 0
+    rejected_kl = None
     for _ in range(config.epochs):
         rng.shuffle(order)
         for offset in range(0, len(order), config.minibatch_size):
@@ -303,11 +305,19 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
             returns = torch.tensor([t.returns for t in chosen], device=device)
             loss, stats = ppo_objective(logits, mask, values, actions, old_log_probs,
                                         advantages[indices], returns, config)
+            if config.kl_guard_before_update:
+                current = {key: float(value.cpu()) for key, value in stats.items()}
+                if current["approx_kl"] > config.target_kl:
+                    stopped = True
+                    rejected_minibatches += 1
+                    rejected_kl = current["approx_kl"]
+                    break
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), config.max_grad_norm)
             optimizer.step()
-            current = {key: float(value.cpu()) for key, value in stats.items()}
+            if not config.kl_guard_before_update:
+                current = {key: float(value.cpu()) for key, value in stats.items()}
             metrics.append(current)
             steps += 1
             if current["approx_kl"] > config.target_kl:
@@ -320,5 +330,7 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
     return {"steps": steps, "samples": len(transitions), "elapsed_seconds": time.monotonic() - started,
             "preparation_seconds": preparation_seconds,
             "config": asdict(config), "early_stop": stopped,
+            "algorithm_version": "masked_ppo_v2_before_update_kl" if config.kl_guard_before_update else "masked_ppo_v1_after_update_kl",
+            "rejected_minibatches": rejected_minibatches, "rejected_kl": rejected_kl,
             **averages,
             "optimizer": optimizer}

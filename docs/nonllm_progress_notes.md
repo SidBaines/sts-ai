@@ -312,3 +312,47 @@ active. OOC andjointfull-run stages remainrequired; nofinallearnerpanel yet.
   retained_combat bypasses earlier combat stages, so completed clean combat
   work need not be repeated. Deadline remains06:30; phaseends remain02:08:46,
   04:08:46,05:08:46 for OOC, jointAct1, jointAct3.
+
+## 2026-10-12 02:12 UTC — selected follow-ups and full-control handoff
+
+- Corrected release env-v0.1.1 is signed at environment-base b31a898; first
+  env-v0.1.0 tag/969fc484 and binary8dba are unchanged. Research native40ab,
+  patch77fddbd, interface1fa75a1d. Full research gate passed307 tests.
+- Fresh campaign data/nonllm_native_revision/campaign started01:12; fresh
+  bank counts exactlymatchold full-modebank counts. Old automatic evidence
+  remainsarchived/quarantined; active automaticlog tracksnewcampaign.
+- Before-KL guard and two20-update teacher corrections usedthe SAME frozen
+  ooc0004 source. Pairedold/before sixty-second PPO produced29+1fault /
+  31+0fault clears onthe32worldDEVpanel. Scripted/lookahead correction
+  produced19+1fault /16+0fault. Retainbefore-guard and rejectBCcorrections.
+  Correctedlookahead256/256TRAINfrontiers valid,92changedlabels,0faults;
+  fourcandidates/horizon30/native200, andANYfailedbranch rejectswholefrontier.
+- Source/candidatefiles and follow-upmetrics retainedundernewcampaign; no
+  final learnerdata read. Eight GPUfollow-up/train/eval commandrecords merged
+  intoatomicjournal beforeparentrestart, aftercurrent0010 finishednormally.
+- Newparent80850, existingwriter67532. SelectedOO C
+  kl_guard_paired/before_update.pt (31/32). OOCphasecompleted; jointsettings
+  adopt before-KL flag. Newidentity-named compositions verifybothsourceSHA
+  andimplementationSHA insteadofsilentlyreusinganearlierpair.
+- Fullgateafterguard passed308tests in18.18s; boundedpublicCLI smoke passed.
+  SuppliedoriginalAGENTS stale-patchnote describesastra-6sep, whileclean
+  basebuildscript alreadyuses currentpatchapply/reverse checks+check-source.
+  Do not removeprovenancechecks oraddunnecessaryinstallerworkarounds.
+
+## 2026-10-12 02:32 UTC — actual full-control progress and Act3 scope repair
+
+- Sharedwarmstart7/32 vscomposed21/32 clearsonsamefull-control32worlds.
+  Two90-secondjointpilotsdidnotbeatreference, sofulltrainingstartedfrom
+  composedwarmstart. Larger48worldbaseline29clears; jointAct10002
+  improvedto37/48 with0fault/0trunc,364updates207730acceptedtransitions.
+- These aredifferent32/48cohorts, withseparateinitialreferenceevaluations.
+  Do notconnecttheminasingleimprovementcurve. Finalstilluntouched.
+- Recheckedoldfull-modeHPheadswithnewOOC31/32policy:combat17composite21/32,
+  HP0.25=11clears1fault,HP1=13clears1fault. FulltaskIDs matchandcommonvalid
+  rankingagrees;retaincombat17. Traininghistoriesdiffer, notcausalHPstudy.
+- FoundAct3evaluationbug:trainingmaxact3/h4096 butDEVdefaultedAct1. Fixed
+  initial/everyevaltoforwardstageact/horizon; Act3uses48worlds240s, Act1
+  remains48/h2048/90s, OO C32/h1024.14focusedtests passed. Currentparent
+  80850loadedearliercode; activatefixatnextsafejointboundarybefore04:08.
+- Shortsummarycondensedtolateststate/majorchoices/evidencetables; detailed
+  chronologyremainsinhuman/automaticlogs.

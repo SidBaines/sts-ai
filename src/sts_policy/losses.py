@@ -37,6 +37,7 @@ class PPOConfig:
     minibatch_size: int = 128
     learning_rate: float = 3e-4
     target_kl: float = 0.03
+    kl_guard_before_update: bool = False
 
 
 def generalized_advantages(rewards: Sequence[float], values: Sequence[float],
