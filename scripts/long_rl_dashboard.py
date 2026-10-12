@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import gzip
 from collections import Counter, OrderedDict
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -13,7 +15,7 @@ import re
 import statistics
 import threading
 import time
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "web" / "long_rl_dashboard"
@@ -24,6 +26,19 @@ METRIC_FIELDS = ("policy_loss", "value_loss", "approx_kl", "entropy", "clip_frac
 def number(value):
     """JSON-safe finite numeric telemetry; unavailable never becomes zero."""
     return value if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) else None
+
+
+def accepts_gzip(value):
+    for item in (value or '').lower().split(','):
+        parts = [part.strip() for part in item.split(';')]
+        if parts[0] != 'gzip': continue
+        quality = 1.
+        for part in parts[1:]:
+            if part.startswith('q='):
+                try: quality = float(part[2:])
+                except ValueError: quality = 0.
+        if math.isfinite(quality) and quality > 0: return True
+    return False
 
 
 def mean(values):
@@ -241,6 +256,137 @@ def normalize_full_run(telemetry, checkpoints, reference_task_ids=()):
     return result
 
 
+# Episode exploration is lazy and separate from the compact /api/telemetry route.
+MAX_EPISODE_ROWS_PER_FILE = 10000
+MAX_EPISODE_CACHE_ROWS = 100000
+EPISODE_NUMERIC_FIELDS = ('reward', 'floor', 'hp_cost', 'steps', 'native_steps')
+EPISODE_METADATA_FIELDS = ('component', 'start_source', 'start_act', 'start_floor', 'goal_act', 'horizon')
+
+
+def command_option(command, option):
+    values = [command[i + 1] for i, value in enumerate(command[:-1]) if value == option]
+    return values[-1] if values else None
+
+
+def input_identity(job, option):
+    signature = job.get('signature', {})
+    condition = signature.get('condition', signature)
+    return condition.get('inputs', {}).get(option, {})
+
+
+def content_sha(path):
+    checksum = hashlib.sha256()
+    with path.open('rb') as stream:
+        for part in iter(lambda: stream.read(1 << 20), b''):
+            checksum.update(part)
+    return checksum.hexdigest()
+
+
+def bounded_owned_path(parent, value, pattern):
+    if not isinstance(value, str): return None
+    path = Path(value)
+    if not path.is_absolute(): path = parent / path
+    resolved = path.resolve()
+    if resolved.parent != parent.resolve() or not re.fullmatch(pattern, resolved.name): return None
+    if 'final' in resolved.name.lower(): return None
+    return resolved
+
+
+def compact_episodes(metrics, job, index, metadata, *, round_index=None, kind=None, roles=()):
+    """Join by exact TaskID. Fault and missing-request rows keep numeric nulls."""
+    rounds = metrics.get('rounds', [])
+    if sum(len(r.get('episodes', [])) + len(r.get('faults', [])) + len(r.get('task_ids', [])) for r in rounds) > MAX_EPISODE_ROWS_PER_FILE:
+        raise ValueError('episode document exceeds row bound')
+    condition = job.get('signature', {}).get('condition', job.get('signature', {}))
+    cfg = metrics.get('config', {})
+    base = {'job': index, 'job_id': Path(job.get('metrics', '')).name,
+            'round': round_index, 'round_kind': 'observer_capture' if kind == 'full3' else 'training_or_dev',
+            'kind': kind or job.get('kind'), 'session': job.get('session_kind'),
+            'stage': job.get('optimizer_goal', {}).get('target', {}).get('stage') or job.get('stage'),
+            'job_status': job.get('status'), 'condition_id': condition.get('digest'),
+            'started': number(job.get('started')), 'finished': number(job.get('finished')),
+            'roles': list(roles), 'checkpoint_sha256': job.get('checkpoint_sha256') or job.get('artifacts', {}).get(job.get('checkpoint')),
+            'panel_valid': job.get('panel_valid', True),
+            'reward_mode': cfg.get('reward_mode'), 'progress_floor_weight': number(cfg.get('progress_floor_weight')),
+            'terminal_hp_weight': number(cfg.get('terminal_hp_weight')), 'gamma': number(cfg.get('gamma')),
+            'learning_rate': number(cfg.get('learning_rate')), 'clip_ratio': number(cfg.get('clip_ratio')),
+            'gae_lambda': number(cfg.get('gae_lambda')), 'reward_version': metrics.get('reward_config', {}).get('version')}
+    result = []
+    for rollout_index, rollout in enumerate(rounds):
+        seen = Counter()
+        requested = Counter(rollout.get('task_ids', []))
+        rollout_start = len(result)
+        for is_fault, observations in ((False, rollout.get('episodes', [])), (True, rollout.get('faults', []))):
+            for entry in observations:
+                task_id = entry.get('task_id'); seen[task_id] += 1
+                meta = metadata.get(task_id, {})
+                fault = is_fault or entry.get('fault') is True
+                truncated = entry.get('truncated') is True
+                censored = truncated or entry.get('termination_reason') == 'collector_budget'
+                row = dict(base, rollout=rollout_index, task_id=task_id,
+                           world_seed=number(meta.get('world_seed', entry.get('world_seed'))),
+                           metadata_joined=bool(meta), requested_occurrence=seen[task_id] <= requested[task_id], **{k: meta.get(k) for k in EPISODE_METADATA_FIELDS},
+                           outcome='fault' if fault else entry.get('outcome'), fault=fault,
+                           truncated=truncated, censored=censored, unstarted=False,
+                           terminated=entry.get('terminated') if isinstance(entry.get('terminated'), bool) else None,
+                           termination_reason=entry.get('termination_reason'),
+                           end_act=number(entry.get('act')), numeric_eligible=not (fault or censored) and entry.get('terminated') is True,
+                           fault_stage=entry.get('fault_stage') if fault else None,
+                           fault_error=str(entry.get('error', ''))[:160] if fault else None,
+                           **{k: number(entry.get(k)) for k in EPISODE_NUMERIC_FIELDS})
+                floor, start = row['floor'], number(meta.get('start_floor'))
+                row['floor_progress'] = floor - start if floor is not None and start is not None else None
+                result.append(row)
+        # Every missing request is visible in denominators. Only mark unstarted
+        # when the collector's explicit count supports that classification.
+        missing = Counter(rollout.get('task_ids', [])) - seen
+        explicit_unstarted = rollout.get('unstarted_tasks', 0)
+        wholly_unstarted = sum(missing.values()) == explicit_unstarted
+        for task_id in missing.elements():
+            meta = metadata.get(task_id, {})
+            result.append(dict(base, rollout=rollout_index, task_id=task_id,
+                world_seed=number(meta.get('world_seed')), metadata_joined=bool(meta), requested_occurrence=True,
+                **{k: meta.get(k) for k in EPISODE_METADATA_FIELDS},
+                outcome='unstarted' if wholly_unstarted else 'missing', unstarted=wholly_unstarted,
+                fault=False, truncated=False, censored=True, terminated=False,
+                termination_reason='unstarted' if wholly_unstarted else 'missing_record',
+                numeric_eligible=False, end_act=None, floor_progress=None, fault_stage=None, fault_error=None,
+                **{k: None for k in EPISODE_NUMERIC_FIELDS}))
+        coverage_valid = seen == requested
+        for row in result[rollout_start:]:
+            row['coverage_valid'] = coverage_valid
+            row['numeric_eligible'] = row['numeric_eligible'] and coverage_valid and row['requested_occurrence']
+    return result
+
+
+def episode_filters(query):
+    accepted = {'kind', 'round_min', 'round_max', 'source', 'start_act', 'goal_act', 'component',
+                'session', 'outcome', 'stage', 'limit', 'offset', 'max_jobs', 'role', 'horizon', 'start_floor_min', 'start_floor_max'}
+    unknown = set(query) - accepted
+    if unknown: raise ValueError('Unknown episode filter: ' + ','.join(sorted(unknown)))
+    def integer(key, default, lower, upper):
+        raw = query.get(key, [str(default)])
+        if len(raw) != 1: raise ValueError('Duplicate ' + key)
+        value = int(raw[0])
+        if not lower <= value <= upper: raise ValueError('Out-of-range ' + key)
+        return value
+    kind = query.get('kind', ['train'])
+    if len(kind) != 1 or kind[0] not in ('train', 'dev', 'full3', 'all'): raise ValueError('Invalid episode kind')
+    filters = {'kind': kind[0], 'limit': integer('limit', 2000, 1, 20000), 'offset': integer('offset', 0, 0, 10000000),
+               'max_jobs': integer('max_jobs', 400, 1, 1000),
+               'round_min': integer('round_min', 0, 0, 10000000), 'round_max': integer('round_max', 10000000, 0, 10000000)}
+    if filters['round_min'] > filters['round_max']: raise ValueError('Reversed round range')
+    for key in ('source', 'start_act', 'goal_act', 'component', 'session', 'outcome', 'stage', 'horizon', 'role'):
+        values = query.get(key, [])
+        if len(values) > 16 or any(len(v) > 120 for v in values): raise ValueError('Filter exceeds bound')
+        filters[key] = set(part for value in values for part in value.split(',') if part)
+    filters['start_floor_min'] = integer('start_floor_min', -1000, -1000, 1000000) if 'start_floor_min' in query else None
+    filters['start_floor_max'] = integer('start_floor_max', 1000000, -1000, 1000000) if 'start_floor_max' in query else None
+    if filters['start_floor_min'] is not None and filters['start_floor_max'] is not None and filters['start_floor_min'] > filters['start_floor_max']:
+        raise ValueError('Reversed starting-floor range')
+    return filters
+
+
 class TelemetryStore:
     """Journal refresh is rate-limited; each changed metric is reduced once."""
     def __init__(self, campaign: Path, refresh_seconds: float = 8):
@@ -248,6 +394,11 @@ class TelemetryStore:
         self.refresh_seconds = refresh_seconds
         self.cache = CachedJSON(limit=16)
         self.metrics_cache = OrderedDict()
+        self.episode_cache = OrderedDict()
+        self.metadata_cache = OrderedDict()
+        self.episode_cache_rows = 0
+        self.jobs_snapshot = []
+        self.journal_snapshot = {}
         self.last_refresh = -math.inf
         self.snapshot = None
         self.lock = threading.Lock()
@@ -295,6 +446,7 @@ class TelemetryStore:
                 raise ValueError("metric exceeds bound")
             metrics = json.loads(path.read_text())
             row = normalize_training(metrics, job, index)
+            row["round"] = self.training_round(job)
             self.metrics_cache[path] = (stamp, row)
             while len(self.metrics_cache) > 5000:
                 self.metrics_cache.popitem(last=False)
@@ -305,6 +457,226 @@ class TelemetryStore:
             self.errors.append(f"{path.name}: {type(exc).__name__}")
             return None
 
+    def task_metadata(self, job):
+        """Verify signed task bytes and use compact metadata, never serve prefixes."""
+        value = command_option(job.get('command', []), '--tasks')
+        identity = input_identity(job, '--tasks')
+        if not value: return {}, None
+        train = bounded_owned_path(self.campaign / 'tasks', value, r'[A-Za-z0-9_.-]+\.jsonl')
+        dev = bounded_owned_path(self.campaign.parent, value, r'dev_act[123]\.jsonl')
+        path = train or dev
+        if path is None or not identity.get('sha256') or Path(identity.get('path', '')).resolve() != path:
+            return {}, None
+        manifest_path = Path(str(path) + '.manifest.json') if train else None
+        try:
+            stat = path.stat()
+            if manifest_path and manifest_path.resolve().parent != self.campaign / 'tasks':
+                raise ValueError('task manifest escaped owned directory')
+            manifest_stat = manifest_path.stat() if manifest_path else None
+            stamp = (stat.st_mtime_ns, stat.st_size, identity['sha256'],
+                     (manifest_stat.st_mtime_ns, manifest_stat.st_size) if manifest_stat else None)
+            old = self.metadata_cache.get(path)
+            if old and old[0] == stamp:
+                self.metadata_cache.move_to_end(path); return old[1], old[2]
+            if stat.st_size > 16 * 1024**2 or (manifest_stat and manifest_stat.st_size > 4 * 1024**2):
+                raise ValueError('task metadata exceeds bound')
+            if content_sha(path) != identity['sha256']: raise ValueError('signed task bytes changed')
+            manifest = json.loads(manifest_path.read_text()) if manifest_path else None
+            if manifest and manifest.get('task_file_sha256') != identity['sha256']:
+                raise ValueError('task manifest is not bound to signed bytes')
+            by_id = {row['task_id']: row for row in manifest.get('tasks', [])} if manifest else {}
+            if len(by_id) > 10000: raise ValueError('too many task metadata rows')
+            metadata = {}
+            with path.open() as stream:
+                for index, line in enumerate(stream):
+                    if index >= 10000: raise ValueError('too many task rows')
+                    row = json.loads(line)
+                    canonical = {k: v for k, v in row.items() if k != 'long_metadata'}
+                    task_id = hashlib.sha256(json.dumps(canonical, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+                    if train:
+                        entry = by_id.get(task_id)
+                        embedded = row.get('long_metadata', {})
+                        if not entry or any(entry.get(k) != embedded.get(k) for k in EPISODE_METADATA_FIELDS):
+                            raise ValueError('TaskID/family metadata do not match immutable task')
+                        meta = {k: entry.get(k) for k in EPISODE_METADATA_FIELDS}
+                        meta['world_seed'] = entry.get('world_seed')
+                        if meta['world_seed'] != row.get('seed') or meta['goal_act'] != row.get('max_act') or meta['horizon'] != row.get('horizon'):
+                            raise ValueError('task goal/world metadata mismatch')
+                    else:
+                        if row.get('split') != 'dev': raise ValueError('not a development task')
+                        fresh = row.get('prefix') == []
+                        meta = {'world_seed': row.get('seed'), 'start_source': 'fresh_scratch' if fresh else None,
+                                'start_act': 1 if fresh else None, 'start_floor': 0 if fresh else None,
+                                'goal_act': row.get('max_act'), 'horizon': row.get('horizon'), 'component': 'fixed_dev'}
+                    metadata[task_id] = meta
+            round_index = manifest.get('round_index') if manifest else None
+            self.metadata_cache[path] = (stamp, metadata, round_index)
+            self.metadata_cache.move_to_end(path)
+            while len(self.metadata_cache) > 1000: self.metadata_cache.popitem(last=False)
+            return metadata, round_index
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            self.errors.append(f'{path.name}: task metadata {type(exc).__name__}')
+            return {}, None
+
+    def training_round(self, job):
+        # A signed producer task basename gives an inexpensive global round for
+        # compact telemetry. Episode queries independently verify its manifest.
+        tasks = command_option(job.get('command', []), '--tasks')
+        identity = input_identity(job, '--tasks')
+        if not tasks or identity.get('path') != tasks or not identity.get('sha256'): return None
+        match = re.fullmatch(r'[A-Za-z0-9_]+_(\d{8})\.jsonl', Path(tasks).name)
+        return int(match.group(1)) if match else None
+
+    def episode_rows(self, job, index, *, kind, round_index=None, roles=()):
+        path = curated_metric_path(self.campaign, job.get('metrics')) if kind != 'full3' else (bounded_owned_path(
+            self.campaign.parent / 'full_run_eval' / 'jobs', job.get('metrics'), r'[a-f0-9]{64}_a\d+\.metrics\.json') or
+            (bounded_owned_path(self.campaign.parent, job.get('metrics'), r'anchor_dev_act3\.metrics\.json') if 'initial_anchor' in roles else None))
+        if path is None: return None
+        try:
+            stat = path.stat()
+            metadata, manifest_round = self.task_metadata(job)
+            stamp = (stat.st_mtime_ns, stat.st_size, json.dumps(job, sort_keys=True), round_index, tuple(roles), id(metadata))
+            old = self.episode_cache.get(path)
+            if old and old[0] == stamp:
+                self.episode_cache.move_to_end(path); return old[1]
+            if stat.st_size > MAX_JSON_BYTES: raise ValueError('metric exceeds bound')
+            expected = job.get('artifacts', {}).get(str(path)) or job.get('metrics_sha256')
+            if expected and content_sha(path) != expected: raise ValueError('completed metrics SHA changed')
+            metrics = json.loads(path.read_text())
+            if kind == 'full3':
+                cfg, env = metrics.get('config', {}), metrics.get('training_environment', {})
+                expected_ids = job.get('expected_task_ids', [])
+                actual_ids = [value for r in metrics.get('rounds', []) for value in r.get('task_ids', [])]
+                backend = self.journal_snapshot.get('identity', {}).get('backend', {}).get('provenance', {})
+                if (Counter(actual_ids) != Counter(expected_ids) or not expected_ids or
+                        cfg.get('checkpoint') != input_identity(job, '--checkpoint').get('path') or
+                        cfg.get('tasks') != input_identity(job, '--tasks').get('path') or
+                        cfg.get('seed') != 777 or cfg.get('max_act') != 3 or cfg.get('horizon') != 4096 or
+                        cfg.get('split') != 'dev' or cfg.get('simulations') != 200 or
+                        env.get('native_module_sha256') != backend.get('module_sha256')):
+                    raise ValueError('full3 raw metrics provenance/cohort mismatch')
+            if kind == 'train': round_index = manifest_round
+            rows = compact_episodes(metrics, job, index, metadata, round_index=round_index, kind=kind, roles=roles)
+            if old: self.episode_cache_rows -= len(old[1])
+            self.episode_cache[path] = (stamp, rows)
+            self.episode_cache.move_to_end(path); self.episode_cache_rows += len(rows)
+            while self.episode_cache and (self.episode_cache_rows > MAX_EPISODE_CACHE_ROWS or len(self.episode_cache) > 1000):
+                _, (_, removed) = self.episode_cache.popitem(last=False); self.episode_cache_rows -= len(removed)
+            return rows
+        except FileNotFoundError: return None
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            self.errors.append(f'{path.name}: episode {type(exc).__name__}')
+            return None
+
+    def episodes(self, query):
+        filters = episode_filters(query)
+        with self.lock:
+            if self.snapshot is None or time.monotonic() - self.last_refresh >= self.refresh_seconds:
+                self.refresh()
+            contexts = {}
+            for event in self.journal_snapshot.get('events', []):
+                for field in ('quality', 'retention'):
+                    quality = event.get(field) or {}
+                    if quality.get('metrics'): contexts[quality['metrics']] = (event.get('round'), event.get('stage'))
+            entries = []
+            for index, job in enumerate(self.jobs_snapshot):
+                kind = 'train' if job.get('kind') == 'train' else 'dev' if job.get('kind') == 'eval' else None
+                if not kind or filters['kind'] not in ('all', kind): continue
+                round_index = self.training_round(job) if kind == 'train' else contexts.get(job.get('metrics'), (None, None))[0]
+                if round_index is None:
+                    # Phase anchors deliberately have no candidate round.
+                    if filters['round_min'] > 0 or filters['round_max'] < 10000000: continue
+                elif not filters['round_min'] <= round_index <= filters['round_max']: continue
+                copied = dict(job)
+                if kind == 'dev': copied['stage'] = contexts.get(job.get('metrics'), (None, None))[1]
+                entries.append((number(job.get('finished')) or number(job.get('started')) or 0, copied, index, kind, round_index, ()))
+            skipped_panels = 0
+            if filters['kind'] in ('all', 'full3'):
+                observer = self.observer_telemetry() or {}
+                reference = (self.journal_snapshot.get('goal_leaders', {}).get('dev_act3', {}).get('quality') or {}).get('cohort', [])
+                producer_valid = observer.get('monitoring_only') is True and observer.get('version') == 1 and observer.get('panel') == 'dev_act3'
+                histories = list(observer.get('histories', [])) if producer_valid else []
+                if not producer_valid: self.errors.append('No valid monitoring-only full3 producer')
+                baseline = observer.get('baseline')
+                if producer_valid and isinstance(baseline, dict):
+                    histories.insert(0, dict(baseline, roles=['initial_anchor'], captured_global_round=0, evaluated_at=baseline.get('captured_at')))
+                for index, row in enumerate(histories):
+                    condition = row.get('condition_signature', {})
+                    inputs = condition.get('inputs', {})
+                    roles = row.get('roles', [])
+                    anchor = 'initial_anchor' in roles
+                    valid = (Counter(row.get('task_ids', [])) == Counter(reference) and len(reference) == 48 and len(set(reference)) == 48 and
+                             row.get('checkpoint_sha256') == inputs.get('--checkpoint', {}).get('sha256') and
+                             bool(row.get('metrics_sha256')) and
+                             bounded_owned_path(self.campaign.parent, inputs.get('--tasks', {}).get('path'), r'dev_act3\.jsonl') is not None)
+                    if anchor: valid = valid and row.get('checkpoint_sha256') == self.journal_snapshot.get('identity', {}).get('initial_checkpoint_sha256')
+                    if not valid: skipped_panels += 1; continue
+                    round_index = number(row.get('captured_global_round'))
+                    if round_index is not None and not filters['round_min'] <= round_index <= filters['round_max']: continue
+                    fake = {'metrics': row.get('metrics_path'), 'metrics_sha256': row.get('metrics_sha256'),
+                            'signature': condition, 'command': condition.get('arguments', []),
+                            'started': row.get('captured_at'), 'finished': row.get('evaluated_at'),
+                            'status': 'complete' if row.get('complete') else 'incomplete', 'panel_valid': True,
+                            'checkpoint_sha256': row.get('checkpoint_sha256'), 'session_kind': 'observer', 'stage': 'full3_monitor',
+                            'expected_task_ids': reference}
+                    entries.append((number(row.get('evaluated_at')) or 0, fake, index, 'full3', round_index, roles))
+            entries.sort(key=lambda entry: (entry[0], entry[2]))
+            eligible = len(entries); entries = entries[-filters['max_jobs']:]
+            dataset_entries = []
+            def file_stamp(path):
+                if path is None: return None
+                try:
+                    stat = path.stat(); return (str(path), stat.st_mtime_ns, stat.st_size)
+                except OSError: return (str(path), None, None)
+            for _, job, index, kind, round_index, roles in entries:
+                metric_path = curated_metric_path(self.campaign, job.get('metrics')) if kind != 'full3' else (
+                    bounded_owned_path(self.campaign.parent / 'full_run_eval' / 'jobs', job.get('metrics'), r'[a-f0-9]{64}_a\d+\.metrics\.json') or
+                    (bounded_owned_path(self.campaign.parent, job.get('metrics'), r'anchor_dev_act3\.metrics\.json') if 'initial_anchor' in roles else None))
+                task_value = command_option(job.get('command', []), '--tasks')
+                task_path = bounded_owned_path(self.campaign / 'tasks', task_value, r'[A-Za-z0-9_.-]+\.jsonl') or bounded_owned_path(self.campaign.parent, task_value, r'dev_act[123]\.jsonl')
+                manifest_path = Path(str(task_path) + '.manifest.json') if task_path and task_path.parent == self.campaign / 'tasks' else None
+                if manifest_path and manifest_path.resolve().parent != self.campaign / 'tasks': manifest_path = None
+                dataset_entries.append((index, kind, round_index, list(roles), job.get('status'), job.get('finished'),
+                                        file_stamp(metric_path), file_stamp(task_path), file_stamp(manifest_path), job.get('metrics_sha256')))
+            semantic_filters = {k: sorted(v) if isinstance(v, set) else v for k, v in filters.items() if k not in ('offset', 'limit')}
+            dataset_id = hashlib.sha256(json.dumps({'jobs': dataset_entries, 'filters': semantic_filters}, sort_keys=True).encode()).hexdigest()
+            rows = []; missing = 0; joined = unjoined = unstarted = metadata_missing = 0
+            options = {field: set() for field in ('start_source','start_act','goal_act','component','session','outcome','stage')}
+            for _, job, index, kind, round_index, roles in entries:
+                compact = self.episode_rows(job, index, kind=kind, round_index=round_index, roles=roles)
+                if compact is None: missing += 1; continue
+                metadata_missing += any(not row['metadata_joined'] for row in compact)
+                for row in compact:
+                    joined += row['metadata_joined']; unjoined += not row['metadata_joined']; unstarted += row['unstarted']
+                    for field in options:
+                        if row.get(field) is not None: options[field].add(str(row[field]))
+                    matches = all(not filters[key] or str(row.get(field)) in filters[key] for key, field in
+                                  (('source','start_source'), ('start_act','start_act'), ('goal_act','goal_act'),
+                                   ('component','component'), ('session','session'), ('outcome','outcome'), ('stage','stage'), ('horizon','horizon')))
+                    matches = matches and (not filters['role'] or bool(filters['role'].intersection(row['roles'])))
+                    for key, compare in (('start_floor_min', lambda value, bound: value >= bound), ('start_floor_max', lambda value, bound: value <= bound)):
+                        if filters[key] is not None: matches = matches and row.get('start_floor') is not None and compare(row['start_floor'], filters[key])
+                    if matches: rows.append(row)
+            offset, limit = filters['offset'], filters['limit']; page = rows[offset:offset + limit]
+            availability = {'logged_numeric': list(EPISODE_NUMERIC_FIELDS) + ['floor_progress'],
+                            'unavailable': ['start_hp', 'end_hp', 'max_hp', 'hp_percent', 'action_trajectories', 'phase_gradient_norm', 'explained_variance'],
+                            'hp_cost_semantics': 'reset/start HP minus end/current HP; net difference, healing may be negative',
+                            'numeric_default': 'exclude fault, truncated, censored and unstarted',
+                            'filter_options': {field: sorted(values) for field, values in options.items()},
+                            'numeric_eligible_rows': sum(row['numeric_eligible'] for row in rows),
+                            'numeric_present_rows': {field: sum(row['numeric_eligible'] and row.get(field) is not None for row in rows) for field in EPISODE_NUMERIC_FIELDS},
+                            'scope': 'bounded latest matching-job window; not all study episodes if omitted_jobs>0',
+                            'rows_returned': len(page), 'rows_matched': len(rows), 'scoped_requested_rows': sum(row['requested_occurrence'] for row in rows),
+                            'unexpected_observed_rows': sum(not row['requested_occurrence'] for row in rows),
+                            'invalid_coverage_rows': sum(not row['coverage_valid'] for row in rows)}
+            return {'schema': 1, 'dataset_id': dataset_id, 'episodes': page, 'total': len(rows), 'offset': offset, 'limit': limit,
+                    'has_more': offset + len(page) < len(rows), 'next_offset': offset + len(page) if offset + len(page) < len(rows) else None,
+                    'total_pages': math.ceil(len(rows) / limit), 'availability': availability,
+                    'coverage': {'eligible_jobs': eligible, 'scanned_jobs': len(entries), 'omitted_jobs': eligible-len(entries),
+                                 'missing_metrics': missing, 'metadata_joined_rows': joined, 'unjoined_rows': unjoined,
+                                 'missing_task_metadata': metadata_missing,
+                                 'unstarted_rows': unstarted, 'skipped_invalid_panels': skipped_panels}, 'errors': self.errors[-20:]}
+
     def refresh(self):
         self.errors = []
         j = self.document("journal.json", {})
@@ -313,6 +685,8 @@ class TelemetryStore:
         config = config_record.get("config", {})
         rows, families = [], {}
         jobs = j.get("jobs", [])
+        self.jobs_snapshot = jobs
+        self.journal_snapshot = j
         for index, job in enumerate(jobs):
             if job.get("kind") != "train":
                 continue
@@ -422,8 +796,18 @@ class TelemetryStore:
 def handler_for(store):
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
-            path = urlsplit(self.path).path
-            if path == "/api/telemetry":
+            parsed = urlsplit(self.path)
+            path = parsed.path
+            if path == "/api/episodes":
+                try:
+                    if len(parsed.query) > 4096: raise ValueError("Query exceeds size bound")
+                    response = store.episodes(parse_qs(parsed.query, keep_blank_values=True, max_num_fields=60))
+                except (ValueError, TypeError):
+                    self.send_error(400, "Invalid bounded episode query")
+                    return
+                body = json.dumps(response, allow_nan=False, separators=(",", ":")).encode()
+                content_type = "application/json"
+            elif path == "/api/telemetry":
                 body = json.dumps(store.get(), allow_nan=False, separators=(",", ":")).encode()
                 content_type = "application/json"
             elif path in ("/", "/index.html", "/app.js", "/style.css"):
@@ -433,7 +817,12 @@ def handler_for(store):
             else:
                 self.send_error(404)
                 return
+            compressed = content_type == "application/json" and accepts_gzip(self.headers.get("Accept-Encoding"))
+            if compressed:
+                body = gzip.compress(body, compresslevel=1, mtime=0)
             self.send_response(200)
+            if content_type == "application/json": self.send_header("Vary", "Accept-Encoding")
+            if compressed: self.send_header("Content-Encoding", "gzip")
             self.send_header("Content-Type", content_type + "; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")

@@ -205,7 +205,7 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual(result["schema"], 1)
             self.assertIn("Content-Security-Policy", response.headers)
         with urlopen(base + "/") as response:
-            self.assertIn(b"Live RL study", response.read())
+            self.assertIn(b"<!doctype html>", response.read())
         with self.assertRaises(HTTPError) as error:
             urlopen(base + "/api/file?path=journal.json")
         self.assertEqual(error.exception.code, 404)

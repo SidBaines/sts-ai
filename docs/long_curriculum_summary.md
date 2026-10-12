@@ -1,5 +1,20 @@
 # Long curriculum — latest first
 
+## 2026-10-12 13:21 UTC — interactive dashboard deployed and verified
+
+[The live explorer](http://127.0.0.1:8786/) now offers training-range zoom/pan/brush, trailing rolling averages, independent left/right axes, source/start/goal/floor/horizon filters, signed HP-cost/return/floor/step histograms, configurable scatter plots, sample tables and loaded-cohort CSV export. INITIAL, SELECTED BEST and LATEST CANDIDATE full-run results remain prominent; detailed status and interpretation text are collapsed. [Controls and metric guide](long_rl_dashboard.md).
+
+| Verification | Evidence |
+| --- | --- |
+| Python/native checks | 437 tests passed; one optional artifact skip; bounded smoke passed |
+| JavaScript checks | Persisted numeric, denominator, missing-value and saved-filter regressions passed |
+| Live browser | Dual axes, smoothing, zoom, filters, distributions, scatter and baseline selection verified |
+| Episode API cost, 19,328 records | 24.04 MB JSON → 1.71 MB compressed; measured 0.394 seconds |
+
+Data loads lazily with bounded, explicit coverage and consistent pagination identities. No new dependency or learner telemetry source change was needed. HP cost means net reset-to-end change; terminal HP and full health trajectories remain unavailable. Training remains live on unchanged source/rewards, approximately 2.7 active hours used and 7.3 remaining.
+
+The 13:14 latest-candidate full-run panel returned 0/48 wins, zero faults/cuts and mean floor27.54; selected-best remains0/48 and meanfloor30.90. The earlier1/48 candidate victory remains in history, but has not become reliable completion. Final data stays embargoed.
+
 ## 2026-10-12 12:47 UTC — first monitored full victory; exploratory dashboard upgrade underway
 
 The 12:43 periodic check observed **1/48 full three-act victories** for the candidate captured at round 242, versus the initial 0/48. It also had 47 defeats, zero faults/cutoffs/unstarted tasks and mean floor 28.46. Selected-best CP236 still scored 0/48, mean floor 30.90; its primary Act 2 DEV had improved to 11/48 with paired Act 1 retention 42/48. The candidate's isolated victory is encouraging descriptive evidence, while neither role has established reliable full-run completion.
