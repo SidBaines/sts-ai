@@ -1,0 +1,21 @@
+# Full-game RL v2 — detailed chronological progress
+
+## 2026-10-12 15:40 UTC — user-approved revision and safe v1 handoff
+
+User explicitly requested pausing current training, improving both setup and monitoring, implementing the changes, then restarting from the morning original checkpoint. They chose the remaining roughly5hours, not a fresh10hour allocation. Root paused controller79441 at15:31 UTC and verified its entire recorded native/learner process group exited. The shutdown path recorded PermissionError during cleanup; root preserved the original journal snapshot and raw failure event, then recorded verified operator_paused with an explicit reason. V1 is never resumed automatically.
+
+Managed worktree /Users/sidbaines/.codex/worktrees/long-curriculum-v2/SlayTheSpireAI, branchcodex/long-curriculum-v2, starts from2330c7a and reuses the existing optional runtime and frozen native0.1.1 build read-only. The earlier clean environment tags, first completed experiment, originaldirtyrepo and v1sources/outputs remain untouched. Initial checkpoint joint_act3_0030.pt SHA57f1e9613a69e31230b591ef0ff2cca27e23ddc81c3a24366cee173bc9909e70 was verified. No v1 candidate is substituted for the requested start.
+
+Budget transfer proof: data/long_rl_v2/preflight/budget_transfer.json. V1used17,575.872087707976seconds plus v2remaining18,424.127912292024seconds equals36,000. Pilot time counts toward v2; manual/resource/offline pauses remain excluded. No extension is authorized.
+
+Delegation: trainingagent owns new v2controller/CLI and operational/selection regressions; encoderagent owns full-goal sampler/cohort/protocol plus independent review; dashboardagent owns optional per-episode public endpoint-health logging and v2dashboard/backend. Root owns safehandoff, baselines, release checks, pilot acceptance, background launch, monitor updates and chronological documentation. No persistent agent launch or commit occurs before root verification.
+
+## 2026-10-12 16:21 UTC — preflight accepted and source freeze
+
+New original-only baselines completed sequentially with CPU8workers/1thread, policy777 and the prespecified fresh DEV banks. Full348screen:1victory/47defeats/0faults; full3192confirmation:2victories/188defeats/2faults; Act1192retention:151clears/39defeats/2faults. No cutoffs or unstarted tasks; requested TaskID multisets, native40ab/interface1fa and original57f1 hashes passed. Endpoint HP was available for every valid episode. Both faults reproduce at Act1bossfloor16 when the policy plays Discovery; the underlying flag is an unconditional upstream unsupported-mechanics marker. Frozen fault limits (3/192 and187common-valid minimum) were recorded before observing these anchors.
+
+The final host/native suite passed467tests in13.210seconds, one optional artifact skip; bounded randomseed3/maxAct1/50simulations smoke passed21decisions, ordinary defeat/noerror. JS numeric/restore regressions passed. Independent sampler/controller/dashboard review passed26focused CPU tests. Root additionally exercised the actual controller's CPU child evaluation, exact metadata/native/cohort binding and cache path; all48 action-trace hashes matched the standalone screening baseline. This preflight consumed zero active learner budget. Relevant proofs: preflight/v2_preflight_acceptance.json, baseline_acceptance.json andcontroller_eval_acceptance.json.
+
+Native patch agent used a separate environment-boss-ub worktree and new binary for Discovery mechanics certification and opened draftPR#1 to environment-base after201tests/deterministic fixture replays. An initial build invocation accidentally installed CMake4.1.3 into the borrowed optional runtime; root restored its prior absence and verified unchanged Torch2.14, NumPy2.5.4, original57f1 checkpoint and native40ab hashes. The agent switched to its own venv. Restoration proof: preflight/shared_runtime_restoration.json. No new native binary is adopted by v2.
+
+The existing hourly monitor now follows v2, keeps paused v1 untouched, recognizes preparation as distinct from failure, tracks useful full3 learning and retained lineage, and respects attention/manual pauses without automatic extension. Root next launches a15-minute pilot within the transferred18,424.128seconds, then verifies real warm continued updates and process cleanup before main resume.

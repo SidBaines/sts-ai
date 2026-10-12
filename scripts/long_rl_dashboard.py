@@ -120,9 +120,10 @@ def normalize_training(metrics, job, index):
     rollout_seconds = sum(r.get("elapsed_seconds", 0) for r in rounds)
     update_seconds = sum(u.get("elapsed_seconds", 0) for u in updates)
     elapsed = number(metrics.get("elapsed_seconds"))
-    row = {"job": index, "stage": job.get("optimizer_goal", {}).get("target", {}).get("stage"),
+    row = {"job": index, "stage": job.get("optimizer_goal", {}).get("target", {}).get("stage") or job.get("stage"),
            "session": job.get("session_kind"), "started": job.get("started"), "finished": job.get("finished"),
            "status": job.get("status"), "transitions": transitions,
+           "optimizer_restored": metrics.get("optimizer_carry", {}).get("restored"),
            "steps": sum(u.get("steps", 0) for u in updates), "episodes": len(episodes),
            "faults": sum(len(r.get("faults", [])) for r in rounds),
            "truncated": sum(bool(e.get("truncated")) for e in episodes),
@@ -256,10 +257,103 @@ def normalize_full_run(telemetry, checkpoints, reference_task_ids=()):
     return result
 
 
+V2_PANELS = {"screen_full3": 48, "confirm_full3": 192, "retention_act1": 192}
+
+
+def checkpoint_lineage(journal, head_sha):
+    """Trace only journal-published complete training artifact identities."""
+    if not isinstance(head_sha, str):
+        return {"complete": False, "updates": None, "transitions": None, "chunks": None}
+    initial = journal.get("identity", {}).get("initial_checkpoint_sha256")
+    nodes = {}
+    for job in journal.get("jobs", []):
+        if job.get("kind") != "train" or job.get("status") != "complete":
+            continue
+        sha = job.get("artifacts", {}).get(job.get("checkpoint")) or job.get("checkpoint_sha256")
+        if isinstance(sha, str):
+            nodes[sha] = job
+    updates = transitions = chunks = 0
+    cursor, seen = head_sha, set()
+    while cursor != initial:
+        if cursor in seen or cursor not in nodes:
+            return {"complete": False, "updates": None, "transitions": None, "chunks": None}
+        seen.add(cursor)
+        node = nodes[cursor]
+        evidence = node.get("actor_evidence", {})
+        steps, count = number(evidence.get("updates")), number(evidence.get("transitions"))
+        if steps is None or count is None:
+            return {"complete": False, "updates": None, "transitions": None, "chunks": None}
+        updates += steps; transitions += count; chunks += 1
+        cursor = node.get("parent_sha256")
+    return {"complete": True, "updates": updates, "transitions": transitions, "chunks": chunks}
+
+
+def v2_panel_record(event, expected_ids, expected_count):
+    quality = event.get("quality") or {}
+    ids = quality.get("cohort", quality.get("task_ids", []))
+    row = {"panel_id": event.get("panel_id"), "role": event.get("role"),
+           "checkpoint_sha256": event.get("checkpoint_sha256", event.get("sha256")),
+           "checkpoint": Path(event.get("checkpoint", "")).name,
+           "round": number(event.get("round")), "active_seconds": number(event.get("active_seconds")),
+           "evaluated_at": number(event.get("evaluated_at", event.get("finished", event.get("at")))),
+           "decision": event.get("decision"), "quality": quality_summary(quality)}
+    row["matched_panel"] = isinstance(ids, list) and len(ids) == expected_count and len(set(ids)) == expected_count and Counter(ids) == Counter(expected_ids)
+    row["complete"] = quality.get("complete") is True and quality.get("requested") == expected_count and row["matched_panel"] and isinstance(row["checkpoint_sha256"], str) and re.fullmatch(r"[0-9a-f]{64}", row["checkpoint_sha256"]) is not None
+    return row
+
+
+def normalize_v2(journal, checkpoints):
+    """Keep panels and continuing learner/champion identities independent."""
+    initial = journal.get("initial_panels", {})
+    panels = {panel_id: {"requested": count, "initial": quality_summary(initial.get(panel_id)), "history": []}
+              for panel_id, count in V2_PANELS.items()}
+    for event in journal.get("evaluations", []):
+        panel_id = event.get("panel_id")
+        if panel_id not in panels: continue
+        expected = (initial.get(panel_id) or {}).get("cohort", [])
+        record = v2_panel_record(event, expected, panels[panel_id]["requested"])
+        matching = [entry for entry in journal.get("events", []) if entry.get("checkpoint_sha256") == record["checkpoint_sha256"] and entry.get("type") == "champion_confirmation"]
+        if matching: record["decision"] = matching[-1].get("decision")
+        record["matches_live_role"] = record["checkpoint_sha256"] == checkpoints.get("best_checkpoint" if record["role"] == "champion" else "current_checkpoint", {}).get("sha256")
+        panels[panel_id]["history"].append(record)
+    learner, champion = journal.get("learner", {}), journal.get("champion", {})
+    learner_lineage = checkpoint_lineage(journal, learner.get("sha256"))
+    champion_lineage = checkpoint_lineage(journal, champion.get("sha256"))
+    committed = [job for job in journal.get("jobs", []) if job.get("kind") == "train" and job.get("status") == "complete"]
+    completed_updates = sum(job.get("actor_evidence", {}).get("updates", 0) for job in committed)
+    durations = [(job.get("kind"), job["finished"]-job["started"]) for job in journal.get("jobs", [])[-30:]
+                 if job.get("status") == "complete" and number(job.get("finished")) is not None and number(job.get("started")) is not None and job["finished"] >= job["started"]]
+    total_seconds = sum(value for _, value in durations)
+    evaluation_seconds = sum(value for kind, value in durations if kind == "eval")
+    used = number(journal.get("allocation", {}).get("used_seconds"))
+    promoted_at = number(champion.get("active_at"))
+    plateau = max(0, used-promoted_at) if used is not None and promoted_at is not None else None
+    learning = {"learner_lineage": learner_lineage, "champion_lineage": champion_lineage,
+                "completed_updates": completed_updates,
+                "discarded_updates": completed_updates-learner_lineage["updates"] if learner_lineage["complete"] else None,
+                "cold_optimizer_count": number(learner.get("cold_optimizer_count")),
+                "optimizer_restore_count": number(learner.get("optimizer_restore_count")),
+                "rollback_count": number(learner.get("rollback_count")), "plateau_active_seconds": plateau,
+                "evaluation_overhead_fraction": evaluation_seconds/total_seconds if total_seconds else None,
+                "overhead_sample_jobs": len(durations), "controller_health": journal.get("learning_health")}
+    alerts = []
+    if learning["cold_optimizer_count"] is not None and learning["cold_optimizer_count"] > 1:
+        alerts.append("Repeated cold optimizer starts in the continuous learner; inspect recovery/reset evidence.")
+    if learning["rollback_count"] is not None and learning["rollback_count"] > 0:
+        alerts.append("A learner rollback is recorded in this continuous condition; inspect the recovery reason.")
+    if plateau is not None and plateau >= 1800:
+        alerts.append(f"No champion promotion for {plateau/60:.0f} active minutes; inspect full-run confirmation and source strata.")
+    if len(durations) >= 10 and learning["evaluation_overhead_fraction"] is not None and learning["evaluation_overhead_fraction"] > .4:
+        alerts.append("Evaluation exceeds 40% of measured recent child runtime; inspect throughput and cohort timing.")
+    return {"panels": panels, "learner": learner, "champion": champion, "learning": learning, "alerts": alerts,
+            "initial_checkpoint_sha256": journal.get("identity", {}).get("initial_checkpoint_sha256")}
+
+
 # Episode exploration is lazy and separate from the compact /api/telemetry route.
 MAX_EPISODE_ROWS_PER_FILE = 10000
 MAX_EPISODE_CACHE_ROWS = 100000
-EPISODE_NUMERIC_FIELDS = ('reward', 'floor', 'hp_cost', 'steps', 'native_steps')
+EPISODE_NUMERIC_FIELDS = ('reward', 'floor', 'hp_cost', 'steps', 'native_steps',
+                          'start_hp', 'start_max_hp', 'end_hp', 'end_max_hp', 'max_hp', 'max_act_reached')
 EPISODE_METADATA_FIELDS = ('component', 'start_source', 'start_act', 'start_floor', 'goal_act', 'horizon')
 
 
@@ -302,6 +396,7 @@ def compact_episodes(metrics, job, index, metadata, *, round_index=None, kind=No
     base = {'job': index, 'job_id': Path(job.get('metrics', '')).name,
             'round': round_index, 'round_kind': 'observer_capture' if kind == 'full3' else 'training_or_dev',
             'kind': kind or job.get('kind'), 'session': job.get('session_kind'),
+            'panel_id': job.get('panel_id'),
             'stage': job.get('optimizer_goal', {}).get('target', {}).get('stage') or job.get('stage'),
             'job_status': job.get('status'), 'condition_id': condition.get('digest'),
             'started': number(job.get('started')), 'finished': number(job.get('finished')),
@@ -336,6 +431,11 @@ def compact_episodes(metrics, job, index, metadata, *, round_index=None, kind=No
                            **{k: number(entry.get(k)) for k in EPISODE_NUMERIC_FIELDS})
                 floor, start = row['floor'], number(meta.get('start_floor'))
                 row['floor_progress'] = floor - start if floor is not None and start is not None else None
+                row['end_hp_fraction'] = row['end_hp'] / row['end_max_hp'] if row['end_hp'] is not None and row['end_max_hp'] is not None and row['end_max_hp'] > 0 else None
+                terminal = entry.get('termination_state')
+                row['termination_phase'] = terminal.get('phase') if isinstance(terminal, dict) else None
+                row['termination_room'] = terminal.get('room') if isinstance(terminal, dict) else None
+                row['termination_done'] = terminal.get('done') if isinstance(terminal, dict) else None
                 result.append(row)
         # Every missing request is visible in denominators. Only mark unstarted
         # when the collector's explicit count supports that classification.
@@ -350,7 +450,7 @@ def compact_episodes(metrics, job, index, metadata, *, round_index=None, kind=No
                 outcome='unstarted' if wholly_unstarted else 'missing', unstarted=wholly_unstarted,
                 fault=False, truncated=False, censored=True, terminated=False,
                 termination_reason='unstarted' if wholly_unstarted else 'missing_record',
-                numeric_eligible=False, end_act=None, floor_progress=None, fault_stage=None, fault_error=None,
+                numeric_eligible=False, end_act=None, floor_progress=None, end_hp_fraction=None, termination_phase=None, termination_room=None, termination_done=None, fault_stage=None, fault_error=None,
                 **{k: None for k in EPISODE_NUMERIC_FIELDS}))
         coverage_valid = seen == requested
         for row in result[rollout_start:]:
@@ -361,7 +461,7 @@ def compact_episodes(metrics, job, index, metadata, *, round_index=None, kind=No
 
 def episode_filters(query):
     accepted = {'kind', 'round_min', 'round_max', 'source', 'start_act', 'goal_act', 'component',
-                'session', 'outcome', 'stage', 'limit', 'offset', 'max_jobs', 'role', 'horizon', 'start_floor_min', 'start_floor_max'}
+                'session', 'outcome', 'stage', 'limit', 'offset', 'max_jobs', 'role', 'horizon', 'start_floor_min', 'start_floor_max', 'panel_id'}
     unknown = set(query) - accepted
     if unknown: raise ValueError('Unknown episode filter: ' + ','.join(sorted(unknown)))
     def integer(key, default, lower, upper):
@@ -376,7 +476,7 @@ def episode_filters(query):
                'max_jobs': integer('max_jobs', 400, 1, 1000),
                'round_min': integer('round_min', 0, 0, 10000000), 'round_max': integer('round_max', 10000000, 0, 10000000)}
     if filters['round_min'] > filters['round_max']: raise ValueError('Reversed round range')
-    for key in ('source', 'start_act', 'goal_act', 'component', 'session', 'outcome', 'stage', 'horizon', 'role'):
+    for key in ('source', 'start_act', 'goal_act', 'component', 'session', 'outcome', 'stage', 'horizon', 'role', 'panel_id'):
         values = query.get(key, [])
         if len(values) > 16 or any(len(v) > 120 for v in values): raise ValueError('Filter exceeds bound')
         filters[key] = set(part for value in values for part in value.split(',') if part)
@@ -389,8 +489,9 @@ def episode_filters(query):
 
 class TelemetryStore:
     """Journal refresh is rate-limited; each changed metric is reduced once."""
-    def __init__(self, campaign: Path, refresh_seconds: float = 8):
+    def __init__(self, campaign: Path, refresh_seconds: float = 8, condition_id: str | None = None):
         self.campaign = campaign.resolve()
+        self.condition_id = condition_id
         self.refresh_seconds = refresh_seconds
         self.cache = CachedJSON(limit=16)
         self.metrics_cache = OrderedDict()
@@ -463,7 +564,7 @@ class TelemetryStore:
         identity = input_identity(job, '--tasks')
         if not value: return {}, None
         train = bounded_owned_path(self.campaign / 'tasks', value, r'[A-Za-z0-9_.-]+\.jsonl')
-        dev = bounded_owned_path(self.campaign.parent, value, r'dev_act[123]\.jsonl')
+        dev = bounded_owned_path(self.campaign.parent, value, r'(?:dev_act[123]|screen_full3|confirm_full3|retention_act1)\.jsonl')
         path = train or dev
         if path is None or not identity.get('sha256') or Path(identity.get('path', '')).resolve() != path:
             return {}, None
@@ -528,9 +629,12 @@ class TelemetryStore:
         return int(match.group(1)) if match else None
 
     def episode_rows(self, job, index, *, kind, round_index=None, roles=()):
-        path = curated_metric_path(self.campaign, job.get('metrics')) if kind != 'full3' else (bounded_owned_path(
+        v2 = self.snapshot is not None and self.snapshot.get('condition', {}).get('id') == 'v2'
+        path = curated_metric_path(self.campaign, job.get('metrics')) if kind != 'full3' or v2 else (bounded_owned_path(
             self.campaign.parent / 'full_run_eval' / 'jobs', job.get('metrics'), r'[a-f0-9]{64}_a\d+\.metrics\.json') or
             (bounded_owned_path(self.campaign.parent, job.get('metrics'), r'anchor_dev_act3\.metrics\.json') if 'initial_anchor' in roles else None))
+        if path is None and v2 and 'initial_anchor' in roles:
+            path = bounded_owned_path(self.campaign.parent, job.get('metrics'), r'anchor_(?:screen_full3|confirm_full3|retention_act1)\.metrics\.json')
         if path is None: return None
         try:
             stat = path.stat()
@@ -545,7 +649,7 @@ class TelemetryStore:
             metrics = json.loads(path.read_text())
             if kind == 'full3':
                 cfg, env = metrics.get('config', {}), metrics.get('training_environment', {})
-                expected_ids = job.get('expected_task_ids', [])
+                expected_ids = job.get('expected_task_ids', []) or ((self.journal_snapshot.get('initial_panels', {}).get(job.get('panel_id')) or {}).get('cohort', []) if v2 else [])
                 actual_ids = [value for r in metrics.get('rounds', []) for value in r.get('task_ids', [])]
                 backend = self.journal_snapshot.get('identity', {}).get('backend', {}).get('provenance', {})
                 if (Counter(actual_ids) != Counter(expected_ids) or not expected_ids or
@@ -555,7 +659,7 @@ class TelemetryStore:
                         cfg.get('split') != 'dev' or cfg.get('simulations') != 200 or
                         env.get('native_module_sha256') != backend.get('module_sha256')):
                     raise ValueError('full3 raw metrics provenance/cohort mismatch')
-            if kind == 'train': round_index = manifest_round
+            if kind == 'train': round_index = manifest_round if manifest_round is not None else self.training_round(job)
             rows = compact_episodes(metrics, job, index, metadata, round_index=round_index, kind=kind, roles=roles)
             if old: self.episode_cache_rows -= len(old[1])
             self.episode_cache[path] = (stamp, rows)
@@ -580,18 +684,40 @@ class TelemetryStore:
                     if quality.get('metrics'): contexts[quality['metrics']] = (event.get('round'), event.get('stage'))
             entries = []
             for index, job in enumerate(self.jobs_snapshot):
-                kind = 'train' if job.get('kind') == 'train' else 'dev' if job.get('kind') == 'eval' else None
+                kind = 'train' if job.get('kind') == 'train' else ('full3' if self.snapshot.get('condition', {}).get('id') == 'v2' and job.get('panel_id') in ('screen_full3', 'confirm_full3') else 'dev') if job.get('kind') == 'eval' else None
                 if not kind or filters['kind'] not in ('all', kind): continue
-                round_index = self.training_round(job) if kind == 'train' else contexts.get(job.get('metrics'), (None, None))[0]
+                round_index = self.training_round(job) if kind == 'train' else number(job.get('round')) if self.snapshot.get('condition', {}).get('id') == 'v2' else contexts.get(job.get('metrics'), (None, None))[0]
                 if round_index is None:
                     # Phase anchors deliberately have no candidate round.
                     if filters['round_min'] > 0 or filters['round_max'] < 10000000: continue
                 elif not filters['round_min'] <= round_index <= filters['round_max']: continue
                 copied = dict(job)
-                if kind == 'dev': copied['stage'] = contexts.get(job.get('metrics'), (None, None))[1]
-                entries.append((number(job.get('finished')) or number(job.get('started')) or 0, copied, index, kind, round_index, ()))
+                if self.snapshot.get('condition', {}).get('id') == 'v2' and job.get('kind') == 'eval':
+                    copied['expected_task_ids'] = (self.journal_snapshot.get('initial_panels', {}).get(job.get('panel_id')) or {}).get('cohort', [])
+                    matched_eval = next((event for event in reversed(self.journal_snapshot.get('evaluations', [])) if (event.get('quality') or {}).get('metrics') == job.get('metrics')), None)
+                    if matched_eval: copied['role'] = matched_eval.get('role')
+                if kind == 'dev' and self.snapshot.get('condition', {}).get('id') != 'v2': copied['stage'] = contexts.get(job.get('metrics'), (None, None))[1]
+                entries.append((number(job.get('finished')) or number(job.get('started')) or 0, copied, index, kind, round_index, (copied.get('role'),) if copied.get('role') else ()))
+            if self.snapshot.get('condition', {}).get('id') == 'v2' and filters['kind'] in ('dev', 'full3', 'all') and filters['round_min'] == 0:
+                for panel_id, quality in self.journal_snapshot.get('initial_panels', {}).items():
+                    kind = 'dev' if panel_id == 'retention_act1' else 'full3'
+                    if filters['kind'] not in ('all', kind): continue
+                    metric = bounded_owned_path(self.campaign.parent, quality.get('metrics'), r'anchor_(?:screen_full3|confirm_full3|retention_act1)\.metrics\.json')
+                    tasks = self.campaign.parent / (panel_id + '.jsonl')
+                    if metric is None or not quality.get('metrics_sha256') or tasks.resolve().parent != self.campaign.parent or not tasks.exists(): continue
+                    try:
+                        raw = self.cache.read(metric)
+                        cfg = raw.get('config', {})
+                        if cfg.get('checkpoint') != self.journal_snapshot.get('initial_checkpoint') or cfg.get('tasks') != str(tasks): continue
+                        signature = {'inputs': {'--tasks': {'path': str(tasks), 'sha256': content_sha(tasks)},
+                                                '--checkpoint': {'path': cfg.get('checkpoint'), 'sha256': self.journal_snapshot.get('identity', {}).get('initial_checkpoint_sha256')}}}
+                        fake = {'kind': 'eval', 'panel_id': panel_id, 'metrics': str(metric), 'metrics_sha256': quality['metrics_sha256'], 'signature': signature,
+                                'command': ['--tasks', str(tasks)], 'status': 'complete', 'session_kind': 'initial_anchor',
+                                'checkpoint_sha256': self.journal_snapshot.get('identity', {}).get('initial_checkpoint_sha256'), 'expected_task_ids': quality.get('cohort', [])}
+                        entries.append((0, fake, -1, kind, 0, ('initial_anchor',)))
+                    except (OSError, ValueError): self.errors.append('Initial panel episode context unavailable')
             skipped_panels = 0
-            if filters['kind'] in ('all', 'full3'):
+            if filters['kind'] in ('all', 'full3') and self.snapshot.get('condition', {}).get('id') != 'v2':
                 observer = self.observer_telemetry() or {}
                 reference = (self.journal_snapshot.get('goal_leaders', {}).get('dev_act3', {}).get('quality') or {}).get('cohort', [])
                 producer_valid = observer.get('monitoring_only') is True and observer.get('version') == 1 and observer.get('panel') == 'dev_act3'
@@ -629,11 +755,13 @@ class TelemetryStore:
                     stat = path.stat(); return (str(path), stat.st_mtime_ns, stat.st_size)
                 except OSError: return (str(path), None, None)
             for _, job, index, kind, round_index, roles in entries:
-                metric_path = curated_metric_path(self.campaign, job.get('metrics')) if kind != 'full3' else (
+                metric_path = curated_metric_path(self.campaign, job.get('metrics')) if kind != 'full3' or self.snapshot.get('condition', {}).get('id') == 'v2' else (
                     bounded_owned_path(self.campaign.parent / 'full_run_eval' / 'jobs', job.get('metrics'), r'[a-f0-9]{64}_a\d+\.metrics\.json') or
                     (bounded_owned_path(self.campaign.parent, job.get('metrics'), r'anchor_dev_act3\.metrics\.json') if 'initial_anchor' in roles else None))
+                if metric_path is None and self.snapshot.get('condition', {}).get('id') == 'v2' and 'initial_anchor' in roles:
+                    metric_path = bounded_owned_path(self.campaign.parent, job.get('metrics'), r'anchor_(?:screen_full3|confirm_full3|retention_act1)\.metrics\.json')
                 task_value = command_option(job.get('command', []), '--tasks')
-                task_path = bounded_owned_path(self.campaign / 'tasks', task_value, r'[A-Za-z0-9_.-]+\.jsonl') or bounded_owned_path(self.campaign.parent, task_value, r'dev_act[123]\.jsonl')
+                task_path = bounded_owned_path(self.campaign / 'tasks', task_value, r'[A-Za-z0-9_.-]+\.jsonl') or bounded_owned_path(self.campaign.parent, task_value, r'(?:dev_act[123]|screen_full3|confirm_full3|retention_act1)\.jsonl')
                 manifest_path = Path(str(task_path) + '.manifest.json') if task_path and task_path.parent == self.campaign / 'tasks' else None
                 if manifest_path and manifest_path.resolve().parent != self.campaign / 'tasks': manifest_path = None
                 dataset_entries.append((index, kind, round_index, list(roles), job.get('status'), job.get('finished'),
@@ -641,7 +769,7 @@ class TelemetryStore:
             semantic_filters = {k: sorted(v) if isinstance(v, set) else v for k, v in filters.items() if k not in ('offset', 'limit')}
             dataset_id = hashlib.sha256(json.dumps({'jobs': dataset_entries, 'filters': semantic_filters}, sort_keys=True).encode()).hexdigest()
             rows = []; missing = 0; joined = unjoined = unstarted = metadata_missing = 0
-            options = {field: set() for field in ('start_source','start_act','goal_act','component','session','outcome','stage')}
+            options = {field: set() for field in ('start_source','start_act','goal_act','component','session','outcome','stage','horizon','panel_id')}
             for _, job, index, kind, round_index, roles in entries:
                 compact = self.episode_rows(job, index, kind=kind, round_index=round_index, roles=roles)
                 if compact is None: missing += 1; continue
@@ -652,19 +780,20 @@ class TelemetryStore:
                         if row.get(field) is not None: options[field].add(str(row[field]))
                     matches = all(not filters[key] or str(row.get(field)) in filters[key] for key, field in
                                   (('source','start_source'), ('start_act','start_act'), ('goal_act','goal_act'),
-                                   ('component','component'), ('session','session'), ('outcome','outcome'), ('stage','stage'), ('horizon','horizon')))
+                                   ('component','component'), ('session','session'), ('outcome','outcome'), ('stage','stage'), ('horizon','horizon'), ('panel_id','panel_id')))
                     matches = matches and (not filters['role'] or bool(filters['role'].intersection(row['roles'])))
                     for key, compare in (('start_floor_min', lambda value, bound: value >= bound), ('start_floor_max', lambda value, bound: value <= bound)):
                         if filters[key] is not None: matches = matches and row.get('start_floor') is not None and compare(row['start_floor'], filters[key])
                     if matches: rows.append(row)
             offset, limit = filters['offset'], filters['limit']; page = rows[offset:offset + limit]
-            availability = {'logged_numeric': list(EPISODE_NUMERIC_FIELDS) + ['floor_progress'],
-                            'unavailable': ['start_hp', 'end_hp', 'max_hp', 'hp_percent', 'action_trajectories', 'phase_gradient_norm', 'explained_variance'],
+            availability = {'logged_numeric': list(EPISODE_NUMERIC_FIELDS) + ['floor_progress', 'end_hp_fraction'],
+                            'unavailable': [field for field in ('start_hp', 'end_hp', 'end_max_hp', 'max_act_reached') if not any(row.get(field) is not None for row in rows)] + ['action_trajectories', 'phase_gradient_norm', 'explained_variance'],
                             'hp_cost_semantics': 'reset/start HP minus end/current HP; net difference, healing may be negative',
                             'numeric_default': 'exclude fault, truncated, censored and unstarted',
                             'filter_options': {field: sorted(values) for field, values in options.items()},
                             'numeric_eligible_rows': sum(row['numeric_eligible'] for row in rows),
                             'numeric_present_rows': {field: sum(row['numeric_eligible'] and row.get(field) is not None for row in rows) for field in EPISODE_NUMERIC_FIELDS},
+                            'endpoint_health_semantics': 'actual public observation at task reset after prefix and final/censored endpoint; faults have no terminal endpoint',
                             'scope': 'bounded latest matching-job window; not all study episodes if omitted_jobs>0',
                             'rows_returned': len(page), 'rows_matched': len(rows), 'scoped_requested_rows': sum(row['requested_occurrence'] for row in rows),
                             'unexpected_observed_rows': sum(not row['requested_occurrence'] for row in rows),
@@ -682,7 +811,8 @@ class TelemetryStore:
         j = self.document("journal.json", {})
         progress = self.document("progress.json", {})
         config_record = self.document("config.json", {})
-        config = config_record.get("config", {})
+        config = config_record.get("config", j.get("identity", {}).get("config", {}))
+        config_record.setdefault("initial_checkpoint_sha256", j.get("identity", {}).get("initial_checkpoint_sha256"))
         rows, families = [], {}
         jobs = j.get("jobs", [])
         self.jobs_snapshot = jobs
@@ -754,7 +884,7 @@ class TelemetryStore:
         learner_command = learner_job.get("command", [])
         self.snapshot["config"]["inference_device"] = learner_command[learner_command.index("--inference-device") + 1] if "--inference-device" in learner_command else None
         reference_ids = (j.get("goal_leaders", {}).get("dev_act3", {}).get("quality") or {}).get("cohort", [])
-        observer = self.observer_telemetry()
+        observer = None if self.condition_id == "v2" or "v2" in str(j.get("version", "")) or "learner" in j else self.observer_telemetry()
         full_run = normalize_full_run(observer, cps, reference_ids)
         full_run["initial"] = {"checkpoint_sha256": config_record.get("initial_checkpoint_sha256"),
                                "checkpoint_name": cps["initial_checkpoint"]["name"],
@@ -765,6 +895,26 @@ class TelemetryStore:
         if baseline.get("checkpoint_sha256") == config_record.get("initial_checkpoint_sha256"):
             full_run["initial"]["saved_metrics_at"] = number(baseline.get("captured_at"))
             full_run["initial"]["timestamp_kind"] = baseline.get("timestamp_kind")
+        version = str(j.get("version", ""))
+        is_v2 = self.condition_id == "v2" or "v2" in version or isinstance(j.get("learner"), dict) and isinstance(j.get("champion"), dict)
+        self.snapshot["condition"] = {"id": "v2" if is_v2 else "v1", "name": "Continuous full-game learner" if is_v2 else "Preserved rollback curriculum"}
+        if is_v2:
+            for key, role in (("current_checkpoint", "learner"), ("last_checkpoint", "learner"), ("best_checkpoint", "champion")):
+                if j.get(role, {}).get("sha256"): cps[key]["sha256"] = j[role]["sha256"]
+            self.snapshot["v2"] = normalize_v2(j, cps)
+            transfer_path = self.campaign.parent / "preflight" / "budget_transfer.json"
+            try:
+                if transfer_path.resolve().parent != self.campaign.parent / "preflight":
+                    raise ValueError("budget transfer escaped owned preflight directory")
+                transfer = self.cache.read(transfer_path)
+                self.snapshot["v2"]["allocation_transfer"] = {key: number(transfer.get(key)) for key in ("original_allocation_seconds", "v1_used_seconds", "transferred_seconds")}
+            except FileNotFoundError:
+                self.snapshot["v2"]["allocation_transfer"] = None
+            except (OSError, ValueError):
+                self.errors.append("Budget transfer record unavailable or invalid")
+            full_run = {"monitoring_only": False, "status": "controller_direct_evaluation", "history": [],
+                        "latest": {}, "errors": [], "initial": None}
+            self.snapshot["baseline"] = {key: panel["initial"] for key, panel in self.snapshot["v2"]["panels"].items()}
         self.snapshot["full_run"] = full_run
         self.snapshot["errors"] = self.errors.copy()
         self.last_refresh = time.monotonic()
@@ -793,22 +943,38 @@ class TelemetryStore:
             return result
 
 
-def handler_for(store):
+def handler_for(store, campaigns=None):
+    registered = campaigns or {"default": store}
+    default_id = next(iter(registered))
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
             parsed = urlsplit(self.path)
             path = parsed.path
+            try:
+                if len(parsed.query) > 4096: raise ValueError("Query exceeds size bound")
+                query = parse_qs(parsed.query, keep_blank_values=True, max_num_fields=60)
+            except ValueError:
+                self.send_error(400, "Invalid bounded query")
+                return
+            selected = query.pop("campaign", [default_id])
+            if len(selected) != 1 or selected[0] not in registered:
+                self.send_error(400, "Unknown registered campaign")
+                return
+            selected_store = registered[selected[0]]
             if path == "/api/episodes":
                 try:
                     if len(parsed.query) > 4096: raise ValueError("Query exceeds size bound")
-                    response = store.episodes(parse_qs(parsed.query, keep_blank_values=True, max_num_fields=60))
+                    response = selected_store.episodes(query)
                 except (ValueError, TypeError):
                     self.send_error(400, "Invalid bounded episode query")
                     return
                 body = json.dumps(response, allow_nan=False, separators=(",", ":")).encode()
                 content_type = "application/json"
             elif path == "/api/telemetry":
-                body = json.dumps(store.get(), allow_nan=False, separators=(",", ":")).encode()
+                response = selected_store.get()
+                response["available_campaigns"] = [{"id": key, "label": "v2 · continuous full-game" if key == "v2" else "v1 · preserved curriculum" if key == "v1" else key} for key in registered]
+                response["selected_campaign"] = selected[0]
+                body = json.dumps(response, allow_nan=False, separators=(",", ":")).encode()
                 content_type = "application/json"
             elif path in ("/", "/index.html", "/app.js", "/style.css"):
                 asset = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/style.css": "style.css"}[path]
@@ -839,12 +1005,14 @@ def handler_for(store):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--campaign", type=Path, default=ROOT / "data/long_rl_v1/campaign")
+    parser.add_argument("--campaign", type=Path, default=ROOT / "data/long_rl_v2/campaign")
+    parser.add_argument("--v1-campaign", type=Path, default=ROOT.parents[1] / "long-curriculum/SlayTheSpireAI/data/long_rl_v1/campaign")
     parser.add_argument("--port", type=int, default=8786)
     parser.add_argument("--refresh-seconds", type=float, default=8)
     args = parser.parse_args()
-    store = TelemetryStore(args.campaign, max(5, args.refresh_seconds))
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(store))
+    store = TelemetryStore(args.campaign, max(5, args.refresh_seconds), condition_id="v2")
+    campaigns = {"v2": store, "v1": TelemetryStore(args.v1_campaign, max(5, args.refresh_seconds), condition_id="v1")}
+    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(store, campaigns))
     print(f"Long RL dashboard: http://127.0.0.1:{server.server_port} (read-only)", flush=True)
     try:
         server.serve_forever()

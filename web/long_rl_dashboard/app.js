@@ -61,6 +61,9 @@ function perRoundEpisodes(episodes, includeCuts) {
       episode_floor: avg(numeric.map(row => row.floor)),
       episode_floor_progress: avg(numeric.map(row => row.floor_progress)),
       episode_hp_cost: avg(numeric.map(row => row.hp_cost)),
+      episode_end_hp: avg(numeric.map(row => row.end_hp)),
+      episode_end_hp_fraction: avg(numeric.map(row => row.end_hp_fraction)),
+      episode_max_act: avg(numeric.map(row => row.max_act_reached)),
       episode_steps: avg(numeric.map(row => row.steps)),
       episode_success: success / requested.length,
       episode_fault_rate: requested.filter(row => outcomeClass(row) === "fault").length / requested.length,
@@ -93,6 +96,9 @@ const metricDefs = {
   episode_return: {label: "Mean return · filtered episodes", episode: true},
   episode_floor: {label: "Mean absolute ending floor · filtered", episode: true},
   episode_floor_progress: {label: "Mean floors advanced · filtered", episode: true},
+  episode_end_hp: {label: "Mean endpoint HP · filtered", episode: true},
+  episode_end_hp_fraction: {label: "Mean endpoint HP fraction · filtered", episode: true, percent: true},
+  episode_max_act: {label: "Mean max observed act · filtered", episode: true},
   episode_hp_cost: {label: "Mean net HP cost · filtered", episode: true},
   episode_steps: {label: "Mean episode steps · filtered", episode: true},
   episode_success: {label: "Target success / requested · filtered", episode: true, percent: true},
@@ -109,10 +115,14 @@ const metricDefs = {
   rollout_seconds: {label: "Rollout seconds / job"}, update_seconds: {label: "Update seconds / job"},
   rejected_minibatches: {label: "Rejected minibatches / job"}, early_stop_rounds: {label: "Early-stop update rounds / job"}
 };
-const scatterDefs = {reward: "Undiscounted return", floor: "Absolute ending floor", floor_progress: "Floors advanced (end − start)", start_floor: "Starting floor", horizon: "Task horizon", hp_cost: "Net HP cost", steps: "Episode decisions / steps", end_act: "Ending act", start_act: "Starting act", goal_act: "Goal act"};
-const savedIDs = ["leftMetric", "rightMetric", "rolling", "rangePreset", "follow", "rawLines", "episodeKind", "source", "startAct", "goalAct", "component", "session", "outcome", "startFloorMin", "startFloorMax", "horizon", "snapshotRole", "includeCuts", "bins", "floorHistMetric", "scatterX", "scatterY", "scatterGroup", "auto"];
+const scatterDefs = {reward: "Undiscounted return", floor: "Absolute ending floor", floor_progress: "Floors advanced (end − start)", start_floor: "Starting floor", horizon: "Task horizon", start_hp: "Task reset HP", end_hp: "Endpoint HP", end_hp_fraction: "Endpoint HP fraction", max_act_reached: "Maximum observed act", hp_cost: "Net HP cost", steps: "Episode decisions / steps", end_act: "Ending act", start_act: "Starting act", goal_act: "Goal act"};
+const savedIDs = ["performancePanel", "episodePanel", "healthMetric", "leftMetric", "rightMetric", "rolling", "rangePreset", "follow", "rawLines", "episodeKind", "source", "startAct", "goalAct", "component", "session", "outcome", "startFloorMin", "startFloorMax", "horizon", "snapshotRole", "includeCuts", "bins", "floorHistMetric", "scatterX", "scatterY", "scatterGroup", "auto"];
+let selectedCampaign = "v2";
+try {const savedCampaign=localStorage.getItem("sts-rl-condition");if(["v1","v2"].includes(savedCampaign))selectedCampaign=savedCampaign;}catch(_){}
+$("campaign").value=selectedCampaign;
+const storageKey=()=>`sts-rl-lab-v2:${selectedCampaign}`;
 let restored = null;
-try { restored = JSON.parse(localStorage.getItem("sts-rl-lab-v2") || "null"); } catch (_) { /* Storage may be unavailable. */ }
+try { restored = JSON.parse(localStorage.getItem(storageKey()) || "null"); } catch (_) { /* Storage may be unavailable. */ }
 function el(tag, text, cls) {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -155,7 +165,7 @@ function table(id, headings, rows) {
 function saveChoices() {
   const choices = Object.fromEntries(savedIDs.map(id => [id, $(id).type === "checkbox" ? $(id).checked : $(id).value]));
   choices.range = state.range;
-  try { localStorage.setItem("sts-rl-lab-v2", JSON.stringify(choices)); } catch (_) { /* Private/storage-disabled browser. */ }
+  try { localStorage.setItem(storageKey(), JSON.stringify(choices)); } catch (_) { /* Private/storage-disabled browser. */ }
 }
 function fillSelect(id, defs, chosen, allowNone = false) {
   const target = $(id);
@@ -343,14 +353,15 @@ function filters() {
     goal_act:$("goalAct").value,component:$("component").value,session:$("session").value,outcome:$("outcome").value,
     start_floor_min:$("startFloorMin").value,start_floor_max:$("startFloorMax").value,horizon:$("horizon").value,role:$("episodeKind").value==="full3"?$("snapshotRole").value:""};
 }
-function episodeQuery() { return {...filters(),round_min:state.range[0],round_max:state.range[1],max_jobs:1000}; }
+function episodeQuery() { return {...filters(),campaign:selectedCampaign,...(state.data?.condition?.id==="v2"&&$("episodeKind").value!=="train"?{panel_id:$("episodePanel").value}:{}),round_min:state.range[0],round_max:state.range[1],max_jobs:1000}; }
 function describeCohort() {
-  const f=filters();return `${$("episodeKind").selectedOptions[0].text} · rounds ${state.range.join("–")} · ${f.source||"all sources"} · start act ${f.start_act||"all"} → goal ${f.goal_act||"all"}${f.component?` · ${f.component}`:""}${f.session?` · ${f.session}`:""}${f.outcome?` · ${f.outcome}`:""}${f.start_floor_min||f.start_floor_max?` · start floor ${f.start_floor_min||"any"}–${f.start_floor_max||"any"}`:""}${f.horizon?` · horizon ${f.horizon}`:""}${f.role?` · ${f.role}`:""}`;
+  const f=filters();return `${$("episodeKind").selectedOptions[0].text} · rounds ${state.range.join("–")} · ${f.source||"all sources"} · start act ${f.start_act||"all"} → goal ${f.goal_act||"all"}${f.component?` · ${f.component}`:""}${f.session?` · ${f.session}`:""}${f.outcome?` · ${f.outcome}`:""}${f.start_floor_min||f.start_floor_max?` · start floor ${f.start_floor_min||"any"}–${f.start_floor_max||"any"}`:""}${f.horizon?` · horizon ${f.horizon}`:""}${f.role?` · ${f.role}`:""}${state.data?.condition?.id==="v2"&&f.kind!=="train"?` · ${$("episodePanel").selectedOptions[0].text}`:""}`;
 }
 function scheduleEpisodes() {
   clearTimeout(state.interactionTimer);state.interactionTimer=setTimeout(loadEpisodes,240);
 }
 function episodeVersion(kind) {
+  if(state.data?.condition?.id==="v2"&&kind!=="train")return JSON.stringify(state.data.v2.panels[$("episodePanel").value]?.history||[]);
   if(kind==="full3")return JSON.stringify(state.data.full_run?.history.map(row=>[row.checkpoint_sha256,row.evaluated_at,row.roles])||[]);
   if(kind==="dev")return JSON.stringify(state.data.dev_history.filter(row=>row.round>=state.range[0]&&row.round<=state.range[1]).map(row=>[row.round,row.at]));
   return JSON.stringify(rangeRows(state.data.training).filter(row=>row.status==="complete").map(row=>[row.job,row.round,row.finished]));
@@ -465,7 +476,7 @@ function renderEpisodes() {
   const numeric=rows.filter(row=>numericEligible(row,$("includeCuts").checked));
   const counts=Object.fromEntries(Object.keys(outcomeColors).map(key=>[key,requested.filter(row=>outcomeClass(row)===key).length]));
   cards("sampleCards",[["Loaded requested records",fmt(requested.length,0),`${unexpected} unexpected diagnostic records excluded · ${fmt(numeric.length,0)} numeric eligible · ${$("includeCuts").checked?"cutoff values included":"fault/cutoff values excluded"}`],["Target successes",`${counts.success}/${requested.length}`,`${pct(requested.length?counts.success/requested.length:null)} · conditional continuation/fresh goal mixture`],["Faults / cutoffs",`${counts.fault} / ${counts.cutoff}`,`${counts.unstarted} unstarted · ${counts.other} other/missing`],["Net HP cost · measured mean",fmt(avg(numeric.map(row=>row.hp_cost))),"Reset HP minus ending HP; negative = net healing"]]);
-  renderHistogram("returnHist",numeric,"reward",palette[0]);renderHistogram("floorHist",numeric,$("floorHistMetric").value,palette[2]);renderHistogram("hpHist",numeric,"hp_cost",palette[1]);renderHistogram("stepsHist",numeric,"steps",palette[3]);
+  renderHistogram("returnHist",numeric,"reward",palette[0]);renderHistogram("floorHist",numeric,$("floorHistMetric").value,palette[2]);renderHistogram("hpHist",numeric,"hp_cost",palette[1]);renderHistogram("stepsHist",numeric,"steps",palette[3]);renderHistogram("healthHist",numeric,$("healthMetric").value,palette[2]);renderHistogram("actHist",numeric,"max_act_reached",palette[4]);
   renderFamilyChart();renderCoverageChart(numeric);renderScatter();
   $("episodeTableNote").textContent=`Latest 150 of ${fmt(rows.length,0)} loaded records. CSV contains every loaded row, including fault/cutoff/unstarted records; ${meta?.has_more?"sample capped or paging incomplete":"all filtered rows in the bounded scanned window loaded"}.`;
   const recent=rows.slice().sort((a,b)=>(b.round??-1)-(a.round??-1)).slice(0,150);
@@ -518,6 +529,8 @@ function fullRunSeries(field) {
   return series;
 }
 function renderFullRuns() {
+  if(state.data.v2){renderV2Performance();return;}
+  $("learningCards").replaceChildren();$("performancePanelLabel").hidden=true;$("performanceScope").textContent="v1 · fixed 48-world observer · monitoring only";
   const full=state.data.full_run;if(!full)return;const initial=full.initial;
   const values=[["INITIAL · pre-update",`${initial.clears}/${initial.requested} wins`,`${initial.reference_date} · floor ${fmt(initial.floor_mean)} · CP ${shortSHA(initial.checkpoint_sha256)}`]];
   for(const role of ["selected_best","latest_candidate"]){
@@ -543,9 +556,9 @@ function devSeries(field) {
 }
 function renderAudits() {
   const data=state.data,total=data.totals,allocation=data.allocation;
-  $("subtitle").textContent=`${data.status.toUpperCase()} · ${data.stage||"stage unavailable"} · controller round ${data.global_round??"—"}`;
+  $("subtitle").textContent=`${data.condition?.id?.toUpperCase()||""} · ${data.status.toUpperCase()} · ${data.stage||"stage unavailable"} · controller round ${data.global_round??"—"}`;
   $("refreshed").textContent=`${time(data.served_at)} · live every 8s`;
-  const warnings=[...data.errors];if(data.heartbeat_age_seconds>45)warnings.push(`Controller heartbeat ${age(data.heartbeat_age_seconds)} old.`);if(data.pause_reason)warnings.push(data.pause_reason);$("banner").textContent=warnings.join(" ");
+  const warnings=[...data.errors,...(data.v2?.alerts||[])];if(data.heartbeat_age_seconds>45)warnings.push(`Controller heartbeat ${age(data.heartbeat_age_seconds)} old.`);if(data.pause_reason)warnings.push(data.pause_reason);$("banner").textContent=warnings.join(" ");
   cards("cards",[["Active remaining",hours(data.active_remaining_seconds),`${hours(data.active_used_seconds)} used / ${hours(allocation.authorized_seconds)} authorized`],["Valid transitions",fmt(data.committed_totals.transitions,0),`${fmt(data.committed_totals.steps,0)} committed accepted optimizer steps`],["Campaign episodes",fmt(total.episodes,0),`${total.faults} faults · ${total.truncated} truncated`],["Checkpoint age",age(data.checkpoint_age_seconds),`Heartbeat ${age(data.heartbeat_age_seconds)} old`]]);
   $("budget").value=allocation.authorized_seconds?data.active_used_seconds/allocation.authorized_seconds:0;
   details("allocation",[["Active ledger",hours(data.active_used_seconds)],["Wall elapsed",hours(data.wall_elapsed_seconds)],["Authorized",hours(allocation.authorized_seconds)],["Active job",`${data.active_job??"—"} · ${data.active_job_kind||"—"} · ${data.active_job_status||"—"}`]]);
@@ -556,14 +569,16 @@ function renderAudits() {
   table("jobs",["Round / job","Session","Transitions","Accepted steps","Return mean","Rollout / update s","Faults / cuts"],data.training.slice(-30).reverse().map(row=>[`${row.round??"—"} / ${row.job}`,row.session,fmt(row.transitions,0),fmt(row.steps,0),fmt(row.return_mean,3),`${fmt(row.rollout_seconds)} / ${fmt(row.update_seconds)}`,`${row.faults} / ${row.truncated}`]));
   table("families",["Start source","Start → goal","Requested / valid episodes","Clears / requested","Defeats","Faults / cuts / unstarted"],data.families.map(row=>[row.metadata.start_source,`${row.metadata.start_act} → ${row.metadata.goal_act}`,`${row.requested} / ${row.episodes}`,`${row.clears} / ${row.requested} (${pct(row.clear_rate)})`,row.defeats,`${row.faults} / ${row.truncated} / ${row.unstarted}`]));
   table("decisions",["Round / time","Stage","Decision","Primary clears / floor","Act 1 retention","Primary faults / cuts"],data.decisions.slice(-30).reverse().map(event=>[`${event.round??"—"} · ${time(event.at)}`,event.stage,`${event.decision?.action||"event"} · ${event.decision?.reason||"—"}`,event.quality?`${event.quality.clears}/${event.quality.requested} · ${fmt(event.quality.floor_mean)} · ${event.quality.complete?"complete":"INCOMPLETE"}`:"—",event.retention?`${event.retention.clears}/${event.retention.requested}`:"—",event.quality?`${event.quality.faults} / ${event.quality.truncated}`:"—"]));
+  $("development").hidden=!!data.v2;
+  if(data.v2)return;
   const devCards=[1,2,3].map(act=>{const quality=data.leaders[`dev_act${act}`]?.quality,baseline=data.baseline[`dev_act${act}`];return [`Act ${act}${act===1?" retention anchor":act===3?" INITIAL reference":" curriculum-selected"}`,quality?`${quality.clears}/${quality.requested}`:"Unavailable",`Initial ${baseline.clears}/48 · initial floor ${fmt(baseline.floor_mean)}${quality?" · leader floor "+fmt(quality.floor_mean):""}`];});
   if(data.selected_dev?.retention)devCards.push(["Selected primary CP · paired Act 1",`${data.selected_dev.retention.clears}/${data.selected_dev.retention.requested}`,`Round ${data.selected_dev.round} · ${data.selected_dev.retention.faults} faults / ${data.selected_dev.retention.truncated} cuts`]);
   cards("devcards",devCards);plot("devchart",devSeries("clear_rate"),{percent:true,yDomain:[0,1]});plot("floorchart",devSeries("floor_mean"));
 }
 function render(data) {
-  state.data=data;$("snapshotRole").disabled=$("episodeKind").value!=="full3";
+  state.data=data;configureCondition(data);$("snapshotRole").disabled=$("episodeKind").value!=="full3";
   const rounds=data.training.map(row=>row.round).filter(valid);
-  if(!rounds.length){$("banner").textContent="Exact training-round telemetry is not available yet; reload after the backend update.";renderAudits();renderFullRuns();return;}
+  if(!rounds.length){state.rangeBounds=[0,Math.max(1,data.global_round||0)];state.range=state.range||[...state.rangeBounds];$("rangeMin").value=state.range[0];$("rangeMax").value=state.range[1];renderAudits();renderFullRuns();renderTraining();scheduleEpisodes();return;}
   const oldBounds=state.rangeBounds;state.rangeBounds=[Math.min(...rounds),Math.max(...rounds)];
   $("rangeMin").min=$("rangeMax").min=state.rangeBounds[0];$("rangeMin").max=$("rangeMax").max=state.rangeBounds[1];
   if(!state.range) {
@@ -575,18 +590,65 @@ function render(data) {
   renderAudits();renderFullRuns();renderTraining();scheduleEpisodes();saveChoices();
 }
 async function refresh() {
-  if(state.loading)return;state.loading=true;$("refresh").disabled=true;
-  try{const response=await fetch("/api/telemetry",{cache:"no-store"});if(!response.ok)throw new Error(`HTTP ${response.status}`);render(await response.json());}
-  catch(error){$("banner").textContent=`Telemetry polling failed: ${error.message}. Last successful data remains displayed.`;}
-  finally{state.loading=false;$("refresh").disabled=false;}
+  if(state.loading)return;const requestedCampaign=selectedCampaign,token=(state.telemetryToken||0)+1;state.telemetryToken=token;state.loading=true;$("refresh").disabled=true;
+  try{const response=await fetch(`/api/telemetry?campaign=${selectedCampaign}`,{cache:"no-store"});if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();if(token===state.telemetryToken&&requestedCampaign===selectedCampaign)render(data);}
+  catch(error){if(token===state.telemetryToken)$("banner").textContent=`Telemetry polling failed: ${error.message}. Last successful data remains displayed.`;}
+  finally{if(token===state.telemetryToken){state.loading=false;$("refresh").disabled=false;}}
 }
 function downloadCSV() {
-  const fields=["kind","round","job","session","stage","world_seed","task_id","condition_id","metadata_joined","start_source","start_act","start_floor","goal_act","horizon","component","outcome","fault","truncated","censored","terminated","reward","floor","end_act","hp_cost","steps","floor_progress","roles","checkpoint_sha256","requested_occurrence","coverage_valid","numeric_eligible"];
+  const fields=["kind","round","job","session","stage","world_seed","task_id","condition_id","metadata_joined","start_source","start_act","start_floor","goal_act","horizon","component","outcome","fault","truncated","censored","terminated","reward","floor","end_act","hp_cost","steps","floor_progress","start_hp","start_max_hp","end_hp","end_max_hp","end_hp_fraction","max_act_reached","termination_phase","termination_room","panel_id","roles","checkpoint_sha256","requested_occurrence","coverage_valid","numeric_eligible"];
   const cell=value=>{if(value===null||value===undefined)return "";let text=Array.isArray(value)?value.join("|"):String(value);if(typeof value==="string"&&/^[=+@-]/.test(text))text="'"+text;return /[,"\r\n]/.test(text)?'"'+text.replaceAll('"','""')+'"':text;};
   const content=fields.join(",")+"\n"+state.episodes.map(row=>fields.map(field=>cell(row[field])).join(",")).join("\n");
   const url=URL.createObjectURL(new Blob([content],{type:"text/csv;charset=utf-8"})),link=el("a");link.href=url;link.download=`rl-${$("episodeKind").value}-rounds-${state.range.join("-")}-loaded-${state.episodes.length}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-$("resetChoices").addEventListener("click",()=>{try{localStorage.removeItem("sts-rl-lab-v2");}catch(_){}location.reload();});
+
+function configureCondition(data){
+  const v2=!!data.v2;
+  $("performancePanelLabel").hidden=!v2;$("episodePanelLabel").hidden=!v2;
+  const current=$("snapshotRole").value,roles=v2?{initial_anchor:"INITIAL anchor",learner:"Continuous learner",champion:"Evaluation champion"}:{initial_anchor:"INITIAL anchor",selected_best:"Selected best",latest_candidate:"Latest candidate"};
+  $("snapshotRole").replaceChildren(new Option("All snapshot roles",""),...Object.entries(roles).map(([key,label])=>new Option(label,key)));
+  $("snapshotRole").value=Object.hasOwn(roles,current)?current:"";
+  $("episodeKind").options[2].text=v2?"Full-game DEV panels":"Full-run observer DEV";
+  $("episodeKind").options[1].text=v2?"Act 1 retention DEV":"Curriculum DEV";
+}
+function renderV2Performance(){
+  const v2=state.data.v2,panelID=$("performancePanel").value,panel=v2.panels[panelID],count=panel.requested;
+  $("performancePanelLabel").hidden=false;$("performanceScope").textContent=`${panelID} · ${count} separate requested worlds · champion selected on confirmation`;
+  const initial=panel.initial,latest=panel.history.filter(row=>row.role==="learner").at(-1),championSHA=v2.champion.sha256;
+  const championRecord=panel.history.filter(row=>row.checkpoint_sha256===championSHA).at(-1);
+  const championQuality=championRecord?.quality||(panelID==="confirm_full3"?v2.champion.quality:panelID==="screen_full3"?v2.champion.screen_quality:v2.champion.retention);
+  const card=(label,quality,sha,note)=>[label,quality?`${quality.clears}/${quality.requested} ${panelID==="retention_act1"?"clears":"wins"} · floor ${fmt(quality.floor_mean)}`:"NOT YET EVALUATED",`CP ${shortSHA(sha)} · ${note}${quality?` · ${quality.faults} faults / ${quality.truncated} cuts`:""}`];
+  cards("fullcards",[card("INITIAL · original 57f1",initial,v2.initial_checkpoint_sha256,`${count}-world ${panelID} baseline`),card("LEARNER · last evaluated",latest?.quality,latest?.checkpoint_sha256,latest?`${utc(latest.evaluated_at)} · ${latest.matches_live_role?"matches live learner":"newer learner SHA unevaluated"}`:"No learner observation"),card("CHAMPION · retained evaluation best",championQuality,championSHA,championRecord?utc(championRecord.evaluated_at):"Initial anchor or no observation")]);
+  const learning=v2.learning,transfer=v2.allocation_transfer;
+  cards("learningCards",[["Updates retained · learner",fmt(learning.learner_lineage.updates,0),`${fmt(learning.learner_lineage.chunks,0)} verified lineage chunks · ${fmt(learning.discarded_updates,0)} updates discarded`],["Updates retained · champion",fmt(learning.champion_lineage.updates,0),"Evaluation champion is separate from the continuing learner"],["Cold Adam / warm restores",`${fmt(learning.cold_optimizer_count,0)} / ${fmt(learning.optimizer_restore_count,0)}`,`${fmt(learning.rollback_count,0)} learner rollbacks`],["Active time since champion gain",hours(learning.plateau_active_seconds),`${pct(learning.evaluation_overhead_fraction)} recent child runtime in evaluation`]]);
+  $("fullstatus").textContent=`Continuous learner proceeds through ordinary DEV regressions; champion selection uses its separate gates.${transfer?` Original allocation ${hours(transfer.original_allocation_seconds)} · v1 used ${hours(transfer.v1_used_seconds)} · transferred ${hours(transfer.transferred_seconds)} including pilot.`:""}`;
+  const max=Math.max(1,state.data.global_round||1),history=panel.history.filter(row=>row.complete&&valid(row.round));
+  function series(field){
+    const value=initial?(field==="clear_rate"?initial.clear_rate:initial.floor_mean):null;
+    const output=[{label:`INITIAL · ${count}-world ${panelID}`,points:[{x:0,y:value},{x:max,y:value}],dashed:true,color:"#7c8a9f"}];
+    for(const [role,color]of [["learner",palette[0]],["champion",palette[1]]])output.push({label:role==="learner"?"Continuous learner · evaluated":"Retained champion · evaluated",color,percent:field==="clear_rate",points:history.filter(row=>row.role===role||(role==="champion"&&(row.decision==="promote"||row.decision?.action==="promote"))).map(row=>({x:row.round,y:row.quality?.[field],note:`${count}-world ${row.panel_id} · ${row.quality.clears}/${row.quality.requested}; ${row.quality.faults} faults / ${row.quality.truncated} cuts
+${utc(row.evaluated_at)}
+SHA ${row.checkpoint_sha256}`}))});return output;
+  }
+  plot("fullwinchart",series("clear_rate"),{percent:true,yDomain:[0,Math.max(.05,...history.map(row=>row.quality.clear_rate*1.2))]});plot("fullfloorchart",series("floor_mean"));
+  const rows=[];if(initial)rows.push(["INITIAL anchor",panelID,`${initial.clears}/${initial.requested}`,fmt(initial.floor_mean),`${initial.faults}/${initial.truncated}`,"Imported validated baseline",v2.initial_checkpoint_sha256]);
+  for(const row of panel.history.slice(-40).reverse())rows.push([row.role,row.panel_id,`${row.quality?.clears??"?"}/${row.quality?.requested??"?"}`,fmt(row.quality?.floor_mean),`${row.quality?.faults??"?"}/${row.quality?.truncated??"?"}`,`${row.complete?"exact complete":"INCOMPLETE / mismatched"} · round ${row.round} · ${utc(row.evaluated_at)}`,row.checkpoint_sha256]);
+  table("fullhistory",["Role","Independent panel","Wins / requested","Mean floor","Faults / cuts","Coverage / evaluation UTC","Exact SHA256"],rows);
+}
+$("performancePanel").addEventListener("change",()=>{saveChoices();renderFullRuns();});
+$("campaign").addEventListener("change",()=>{
+  saveChoices();selectedCampaign=$("campaign").value;state.telemetryToken=(state.telemetryToken||0)+1;state.loading=false;$("subtitle").textContent=`Loading ${selectedCampaign} condition…`;$("banner").textContent="Loading selected condition; previous observations are being replaced.";try{localStorage.setItem("sts-rl-condition",selectedCampaign);}catch(_){}
+  state.episodeAbort?.abort();state.episodeToken++;state.episodeKey=null;state.episodeLoading=false;state.data=null;state.range=null;state.rangeBounds=null;state.episodes=[];state.episodeResponse=null;state.scatterDomain=null;
+  for(const id of ["source","startAct","goalAct","component","session","outcome","startFloorMin","startFloorMax","horizon","snapshotRole"])$(id).value="";
+  $("episodeKind").value="train";$("follow").checked=true;
+  try{const saved=JSON.parse(localStorage.getItem(storageKey())||"null");applySavedOnce(saved,view=>{
+    for(const id of savedIDs)if(view[id]!==undefined){const target=$(id);if(target.type==="checkbox")target.checked=!!view[id];else if(target.type==="number")target.value=view[id];else{if(![...target.options].some(option=>option.value===view[id]))target.add(new Option(String(view[id]),String(view[id])));target.value=view[id];}}
+    if(Array.isArray(view.range)&&view.range.length===2&&view.range.every(valid))state.range=view.range;
+  });}catch(_){}
+  refresh();
+});
+
+$("resetChoices").addEventListener("click",()=>{try{localStorage.removeItem(storageKey());}catch(_){}location.reload();});
 $("refresh").addEventListener("click",()=>{state.episodeKey=null;refresh();});
 $("auto").addEventListener("change",()=>{saveChoices();if($("auto").checked)refresh();});
 for(const id of ["leftMetric","rightMetric","rolling","rawLines"])$(id).addEventListener("change",()=>{saveChoices();renderTraining();});
@@ -596,9 +658,10 @@ $("rangeMax").addEventListener("change",()=>{$("follow").checked=false;setRange(
 $("zoomIn").addEventListener("click",()=>zoomRange(.6));$("zoomOut").addEventListener("click",()=>zoomRange(1.7));
 $("resetRange").addEventListener("click",()=>{$("follow").checked=true;presetRange();});
 $("follow").addEventListener("change",()=>{saveChoices();if($("follow").checked)presetRange();});
-for(const id of ["episodeKind","source","startAct","goalAct","component","session","outcome","startFloorMin","startFloorMax","horizon","snapshotRole"])$(id).addEventListener("change",()=>{saveChoices();state.scatterDomain=null;$("snapshotRole").disabled=$("episodeKind").value!=="full3";if(id==="episodeKind"&&$(id).value==="full3"){$("follow").checked=false;setRange([0,state.rangeBounds[1]]);}else scheduleEpisodes();});
+for(const id of ["episodeKind","source","startAct","goalAct","component","session","outcome","startFloorMin","startFloorMax","horizon","snapshotRole","episodePanel"])$(id).addEventListener("change",()=>{if(state.data?.v2){if(id==="episodeKind"&&$("episodeKind").value==="dev")$("episodePanel").value="retention_act1";if(id==="episodeKind"&&$("episodeKind").value==="full3"&&$("episodePanel").value==="retention_act1")$("episodePanel").value="confirm_full3";if(id==="episodePanel"&&$("episodeKind").value!=="train")$("episodeKind").value=$("episodePanel").value==="retention_act1"?"dev":"full3";}
+  saveChoices();state.scatterDomain=null;$("snapshotRole").disabled=$("episodeKind").value!=="full3";if(id==="episodeKind"&&$(id).value==="full3"){$("follow").checked=false;setRange([0,state.rangeBounds[1]]);}else scheduleEpisodes();});
 $("clearFilters").addEventListener("click",()=>{for(const id of ["source","startAct","goalAct","component","session","outcome","startFloorMin","startFloorMax","horizon","snapshotRole"])$(id).value="";saveChoices();state.scatterDomain=null;scheduleEpisodes();});
-for(const id of ["bins","includeCuts","floorHistMetric"])$(id).addEventListener("change",()=>{saveChoices();state.scatterDomain=null;renderEpisodes();renderTraining();});
+for(const id of ["bins","includeCuts","floorHistMetric","healthMetric"])$(id).addEventListener("change",()=>{saveChoices();state.scatterDomain=null;renderEpisodes();renderTraining();});
 for(const id of ["scatterX","scatterY","scatterGroup"])$(id).addEventListener("change",()=>{saveChoices();state.scatterDomain=null;renderScatter();});
 $("scatterReset").addEventListener("click",()=>{state.scatterDomain=null;renderScatter();});$("downloadCSV").addEventListener("click",downloadCSV);
 let pointerFrame=null;

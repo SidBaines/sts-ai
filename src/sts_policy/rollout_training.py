@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 import random
+import math
 import time
 import hashlib
 import json
@@ -36,6 +37,50 @@ class Transition:
     # In-memory public features only: not part of observation/on-disk schemas.
     encoded_observation: Any = field(default=None, repr=False, compare=False)
     encoding_observation_id: int | None = field(default=None, repr=False, compare=False)
+
+
+def _public_number(value: Any) -> int | float | None:
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) else None
+
+
+def public_endpoint_state(observation: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Small public endpoint summary; never read hidden simulator state.
+
+    Live combat HP supersedes the game context's potentially stale HP. Missing
+    fields stay unavailable instead of using reward/encoder fallback defaults.
+    """
+    if not isinstance(observation, dict) or not isinstance(observation.get("state"), dict):
+        return None
+    state = observation["state"]
+    combat = state.get("combat")
+    if isinstance(combat, dict) and combat:
+        hp = _public_number(combat.get("player_cur_hp"))
+        max_hp = _public_number(combat.get("player_max_hp"))
+    else:
+        hp = _public_number(state.get("cur_hp"))
+        max_hp = _public_number(state.get("max_hp"))
+    result = {"hp": hp, "max_hp": max_hp,
+              "act": _public_number(state.get("act", state.get("act_num"))),
+              "floor": _public_number(state.get("floor", state.get("floor_num"))),
+              "phase": observation.get("phase", state.get("phase"))}
+    for key in ("room", "screen_state", "outcome"):
+        value = state.get(key)
+        result[key] = value[:160] if isinstance(value, str) else None
+    result["done"] = state.get("done") if isinstance(state.get("done"), bool) else None
+    return result
+
+
+def _episode_public_metrics(entry: dict[str, Any], *, faulted: bool = False) -> dict[str, Any]:
+    start = entry.get("start_public_state") or {}
+    endpoint = public_endpoint_state(entry.get("obs"))
+    end = {} if faulted else endpoint or {}
+    return {"public_state_metrics_version": "endpoint_public_v1",
+            "start_hp": start.get("hp"), "start_max_hp": start.get("max_hp"),
+            "end_hp": end.get("hp"), "end_max_hp": end.get("max_hp"),
+            "max_hp": end.get("max_hp"), "max_act_reached": entry.get("max_act_reached"),
+            "start_state": entry.get("start_public_state"),
+            "termination_state": None if faulted else endpoint,
+            "last_observed_state": endpoint if faulted else None}
 
 
 def _set_advantages(episode: list[Transition], config: PPOConfig) -> None:
@@ -96,7 +141,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
             return
         active[slot] = {"task": task, "future": workers[slot].submit("reset", task),
                         "trajectory": [], "labels": [], "continuations": [], "obs": None, "last_info": {},
-                        "reward": 0., "steps": 0, "action_trace": hashlib.sha256()}
+                        "reward": 0., "steps": 0, "action_trace": hashlib.sha256(),
+                        "start_public_state": None, "max_act_reached": None}
         resets += 1
 
     def fault(slot: int, error: Exception, *, stage: str, wait_seconds: float) -> None:
@@ -110,7 +156,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                        "attempted_action_index": entry.get("sample", (None, None))[1],
                        "task_id": task_identity(entry["task"]),
                        "message": str(error), "excluded_transitions": len(entry["trajectory"]),
-                       "task_kind": entry["task"].kind})
+                       "task_kind": entry["task"].kind, **_episode_public_metrics(entry, faulted=True)})
 
     def finish(slot: int, info: dict[str, Any], budget_truncation: bool = False) -> None:
         entry = active.pop(slot)
@@ -141,7 +187,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                          "reward_version": info.get("reward_version"),
                          "reward_settings": info.get("reward_settings"),
                          "terminated": bool(trajectory and trajectory[-1].terminated),
-                         "truncated": budget_truncation or bool(trajectory and trajectory[-1].truncated)})
+                         "truncated": budget_truncation or bool(trajectory and trajectory[-1].truncated),
+                         **_episode_public_metrics(entry)})
 
     for slot in range(len(workers)):
         start(slot)
@@ -156,6 +203,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 timings["reset_wait_seconds"] += time.monotonic() - wait_started
                 entry["obs"], entry["future"] = observation, None
                 entry["last_info"] = info
+                entry["start_public_state"] = public_endpoint_state(observation)
+                entry["max_act_reached"] = (entry["start_public_state"] or {}).get("act")
                 if not observation.get("legal_actions"):
                     finish(slot, info)
             except Exception as error:
@@ -261,6 +310,10 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 entry["reward"] += float(reward)
                 entry["steps"] += 1
                 entry["obs"] = observation
+                observed_state = observation.get("state", {})
+                observed_act = _public_number(observed_state.get("act", observed_state.get("act_num")))
+                if observed_act is not None:
+                    entry["max_act_reached"] = max(entry["max_act_reached"], observed_act) if entry["max_act_reached"] is not None else observed_act
                 entry["last_info"] = info
                 if terminated or truncated:
                     finish(slot, info)
