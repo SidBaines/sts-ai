@@ -69,4 +69,17 @@ saved = math.applySavedOnce(saved, value => { controls.source = value.source; })
 assert.equal(controls.source, "");
 assert.equal(saved, null);
 
-console.log("Dashboard JS regressions passed: missing values, signed histograms, rolling means, requested denominators, numeric eligibility and restore lifecycle.");
+// Following a preset grows from a short startup history instead of retaining
+// its initial width; once full, the window contains exactly the selected count.
+const range = (...args) => Array.from(math.explorationRange(...args));
+assert.deepEqual(range([0, 7], "150", true, null), [0, 7]);
+assert.deepEqual(range([0, 12], "150", true, [0, 7]), [0, 12]);
+assert.deepEqual(range([0, 179], "150", true, [0, 12]), [30, 179]);
+assert.deepEqual(range([0, 200], "150", true, [30, 179]), [51, 200]);
+assert.deepEqual(range([0, 200], "all", true, [0, 7]), [0, 200]);
+assert.deepEqual(range([3, 200], "all", true, [0, 7]), [3, 200]);
+assert.deepEqual(range([0, 12], "150", false, [3, 6]), [3, 6]);
+assert.deepEqual(range([0, 200], "all", false, [3, 6]), [3, 6]);
+assert.deepEqual(range([0, 12], "150", false, [0, 7]), [0, 7]);
+
+console.log("Dashboard JS regressions passed: following/preserved ranges,  missing values, signed histograms, rolling means, requested denominators, numeric eligibility and restore lifecycle.");

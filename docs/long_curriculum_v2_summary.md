@@ -1,5 +1,17 @@
 # Full-game RL v2 — latest first
 
+## 2026-10-12 16:49 UTC — pilot accepted; longer continuous run is live
+
+The pilot started at16:23:40 UTC and completed26chunks,862,697valid transitions and3,086optimizer updates in887.108active seconds. Every completed update remains in the learner's exact checkpoint ancestry; the saved optimizer step is also3,086. One initial cold optimizer start was followed by25warm restores, withzero learner rollbacks. All owned pilot processes exited and source/protocol hashes remained fixed.
+
+Main resumed at **16:44:51 UTC (17:44 BST)**, PID90942, with the same optimizer and remaining17,537.020seconds. Six completed main chunks were verified by16:48 UTC; total retained updates reached3,729 and valid transitions1,058,916. About4.81active hours remained at that snapshot. This uses the transferred remainder, not a fresh allocation.
+
+The first learner48-world screen scored1/48, no faults/cuts, meanfloor31.50 versusinitial1/48,floor32.48. The192-world champion remains the original2/192reference until a valid confirmation promotes a challenger. Retaining updates is an operational improvement; useful game-performance improvement is not yet established.
+
+[Live dashboard](http://127.0.0.1:8786/) defaults to v2 and retains a selectable pausedv1 view. It separates192confirmation/48screen/192retention, original/learner/champion, retained/discarded updates, warm/cold resets, plateau age, faults and public endpoint health. Live browser verification passed. A frontend-only follow-window fix now expands toward the selected history length; model sources were unaffected.
+
+The independently reviewed [Discovery fix PR#1](https://github.com/SidBaines/sts-ai/pull/1) targetsenvironment-base with201tests, exact-prefix replays, deterministic fresh-process checks andfresh/reverse patch application. It is a separate0.1.2candidate; v2continues on the frozen0.1.1backend. Human summary and detailed evidence remain current; the scheduled monitor follows v2 and respects its original allocation and pauses. [Protocol](long_curriculum_v2_protocol.md), [generated detail](long_curriculum_v2_live.md).
+
 ## 2026-10-12 16:21 UTC — preflight accepted; pilot launch next
 
 The revised setup passed **467 host/native tests** (one optional artifact skip), JavaScript regressions, independent review and the bounded core smoke. A real controller CPU evaluation reproduced every screening action-trace hash from the initial baseline. Sources and protocol are now frozen for the budget-counted pilot.

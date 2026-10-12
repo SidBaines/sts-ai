@@ -70,11 +70,22 @@ function perRoundEpisodes(episodes, includeCuts) {
       episode_cut_rate: requested.filter(row => outcomeClass(row) === "cutoff").length / requested.length};
   });
 }
+function explorationRange(bounds, preset, follow, current) {
+  const [low, high] = bounds;
+  if (follow || !current) {
+    if (preset === "all") return [low, high];
+    const count = Math.max(1, Number(preset));
+    return [Math.max(low, high - count + 1), high];
+  }
+  // Manual zoom/brush ranges remain fixed while more rounds arrive.
+  const clamp = value => Math.max(low, Math.min(high, value));
+  return [clamp(current[0]), clamp(current[1])];
+}
 function applySavedOnce(saved, apply) {
   if (saved && typeof saved === "object") apply(saved);
   return null;
 }
-const dashboardMath = {applySavedOnce, valid, avg, percentile, rolling, histogram, numericEligible, outcomeClass, perRoundEpisodes};
+const dashboardMath = {explorationRange, applySavedOnce, valid, avg, percentile, rolling, histogram, numericEligible, outcomeClass, perRoundEpisodes};
 if (typeof document === "undefined") globalThis.dashboardMath = dashboardMath;
 
 if (typeof document !== "undefined") {
@@ -578,14 +589,10 @@ function renderAudits() {
 function render(data) {
   state.data=data;configureCondition(data);$("snapshotRole").disabled=$("episodeKind").value!=="full3";
   const rounds=data.training.map(row=>row.round).filter(valid);
-  if(!rounds.length){state.rangeBounds=[0,Math.max(1,data.global_round||0)];state.range=state.range||[...state.rangeBounds];$("rangeMin").value=state.range[0];$("rangeMax").value=state.range[1];renderAudits();renderFullRuns();renderTraining();scheduleEpisodes();return;}
+  if(!rounds.length){state.rangeBounds=[0,Math.max(1,data.global_round||0)];state.range=explorationRange(state.rangeBounds,$("rangePreset").value,$("follow").checked,state.range);$("rangeMin").value=state.range[0];$("rangeMax").value=state.range[1];renderAudits();renderFullRuns();renderTraining();scheduleEpisodes();return;}
   const oldBounds=state.rangeBounds;state.rangeBounds=[Math.min(...rounds),Math.max(...rounds)];
   $("rangeMin").min=$("rangeMax").min=state.rangeBounds[0];$("rangeMin").max=$("rangeMax").max=state.rangeBounds[1];
-  if(!state.range) {
-    const preset=$("rangePreset").value;state.range=preset==="all"?[...state.rangeBounds]:[Math.max(state.rangeBounds[0],state.rangeBounds[1]-Number(preset)+1),state.rangeBounds[1]];
-  }else if($("follow").checked){
-    const span=state.range[1]-state.range[0];state.range=[Math.max(state.rangeBounds[0],state.rangeBounds[1]-span),state.rangeBounds[1]];
-  }else state.range=[Math.max(state.rangeBounds[0],state.range[0]),Math.min(state.rangeBounds[1],state.range[1])];
+  state.range=explorationRange(state.rangeBounds,$("rangePreset").value,$("follow").checked,state.range);
   $("rangeMin").value=state.range[0];$("rangeMax").value=state.range[1];
   renderAudits();renderFullRuns();renderTraining();scheduleEpisodes();saveChoices();
 }
