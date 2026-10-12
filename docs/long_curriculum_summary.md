@@ -1,5 +1,13 @@
 # Long curriculum — latest first
 
+## 2026-10-12 15:25 UTC — critical audit: weak broad learning and frequent discarded updates
+
+The user's skepticism is supported by the broader curves. In50-batch windows within the fresh-start phase, fresh Act2 success is6.4%→6.1%, full3 wins0/1300→2/1300, and Act1 rehearsal74.0%→71.8%. Candidate full3 DEV wins are0,1,0,1,2,1,1; only two worlds ever win, with one repeatedly solved. This is limited positive evidence, not sustained broad competence.
+
+The two-win CP405 was rejected specifically because its Act2 DEV had8/48 clears versus selected11/48; Act1 retention41/48 passed, with no faults/cuts. Whole-game observer results do not affect selection. The selected CP236's ancestry has only6new chunks/511updates versus526committed chunks/36,217updates overall: most short branches are restored after three chunks. All60audited fresh-start-stage decisions were rollback or hold. This is a plausible design bottleneck, not an established simulator or optimizer failure.
+
+Recommended next condition: full3-primary selection with larger fresh DEV confirmation, and separate continuing learner/evaluation champion to avoid resetting every noisy check. Rewards and architecture would initially stay fixed; any change needs a distinct recorded condition and the user's decision. The active v1 study continues unchanged, with roughly5.3active hours remaining; final data stays embargoed. [Detailed critical audit and concrete proposal](long_curriculum_learning_audit.md).
+
 ## 2026-10-12 14:21 UTC — more fresh starts; latest candidate achieves two full victories
 
 Training crossed the planned three-active-hour boundary into **act2_full**, which places more weight on fresh Act 1 starts. A verified128-task batch now has32 Act2 continuations,57 fresh Act2-goal runs,26 fresh three-act runs and13 Act1 rehearsals:96 fresh worlds per chunk. No scientific settings or source pins changed.
