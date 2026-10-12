@@ -82,7 +82,7 @@ OOC TaskSpecs use environment mode `ooc`, `combat_control=search`: the policy
 never receives combat action menus. CLI simulations 200 means ordinary native
 search 200, with the released default boss multiplier 2 (400); a per-action
 teacher query of 200 is a different operation. Keep this distinction in reference
-comparisons. The immutable backend has not changed.
+comparisons. This section originally described the first-release backend. Active native-assisted experiments now use signed `env-v0.1.1`, which initializes the combat character and rejects reported undefined behavior. Old native-auto OOC/lookahead evidence is quarantined; retained full-control combat evidence was checked separately. See [the revision audit](nonllm_native_revision.md).
 
 `hp_cost` is **net starting minus ending HP**, not cumulative incoming damage.
 For OOC/full runs, act-boundary healing can erase prior HP losses; successful

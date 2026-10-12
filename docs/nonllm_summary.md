@@ -3,6 +3,21 @@
 Latest updates first. [Automatic log](nonllm_progress.md) · [Detailed decisions](nonllm_progress_notes.md) · [Plan](nonllm_curriculum_plan.md).
 Deadline: **12 October, 06:30 UTC**. Results below are **development selection results**. The designated final benchmark remains embargoed; an earlier learned-agent smoke used a separate hash-final seed ([protocol exception](nonllm_protocol_audit.md)). Old native-auto evidence is quarantined.
 
+## 2026-10-12 04:19 UTC — three-act training exposes the next bottleneck
+
+Act 1 selection finished at **45/48 clears**, with zero faults/truncations. Three-act training is now running. On the initial matched 48-world three-act development panel:
+
+| Outcome at stage entry | Worlds |
+| --- | ---: |
+| Defeat in Act 1 | 3 |
+| Defeat in Act 2 | 43 |
+| Defeat in Act 3 | 2 |
+| Three-act victory / simulator fault / truncation | **0 / 0 / 0** |
+
+The policy retains its Act 1 competence but has not demonstrated full-game competence. **Decision:** continue three-act PPO and compare the earlier specialists and native reference on these development worlds to diagnose later-act failures. These checks do not use final worlds.
+
+All **346 tests** passed after explicitly pinning child processes to the recorded backend. Final evaluation remains planned for about 05:08 UTC. Its horizon is 2,048 decisions, versus 4,096 for three-act development; final tables must report censoring separately.
+
 ## 2026-10-12 03:39 UTC — 42/48 clears and faster training
 
 The selected full-control policy clears **42/48** matched Act 1 development worlds, versus **29/48** before joint training. All 48 completed with zero faults/truncations and zero native-controlled decisions. Three-act training and final evaluation remain pending.

@@ -1,8 +1,10 @@
 # First-campaign throughput and validity evidence
 
 The local allocation runs from 2026-10-11 20:08:46 UTC until 2026-10-12
-06:08:46 UTC. The supervisor stops jobs at that deadline. Environment release
+**06:30:00 UTC**, following Sid's extension. The supervisor stops jobs at that deadline. Environment release
 `env-v0.1.0` and the original research checkout remain intact.
+
+The early measurements below were taken on the first-release backend. Active native-assisted experiments now use corrected `env-v0.1.1`; old automatic-combat evidence is quarantined ([revision audit](nonllm_native_revision.md)). On that corrected backend, [public feature reuse](nonllm_encoding_reuse.md) increased observed full-control training throughput to 1,460 accepted transitions/s and removed repeated PPO encoding, with exact CPU update parity. Retain backend identities when comparing measurements.
 
 ## Measured execution choices
 

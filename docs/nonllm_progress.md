@@ -1,6 +1,6 @@
 # Non-LLM curriculum experiment progress log
 
-Updated 2026-10-12 03:43:52 UTC. Campaign status: **running**; phase: **joint_act1**.
+Updated 2026-10-12 04:32:54 UTC. Campaign status: **running**; phase: **joint_act3**.
 
 Allocation: 2026-10-11 20:08:46 UTC → 2026-10-12 06:30:00 UTC. Branch `codex/nonllm-curriculum`, immutable starting release `env-v0.1.0`.
 
@@ -11,7 +11,8 @@ This page is generated from the atomic campaign journal and raw metrics. It incl
 ```json
 {
   "combat": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_v1/campaign/combat_0017.pt",
-  "joint_act1": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0022.pt",
+  "joint_act1": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026.pt",
+  "joint_act3": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002.pt",
   "joint_pilot": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_initial_composite_5a0cc4ad74cb6b2c.pt",
   "ooc": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/kl_guard_paired/before_update.pt",
   "ooc_pilot": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/ooc_lr0.0003_progress0.05.pt",
@@ -2095,7 +2096,7 @@ Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI
 
 ### 2026-10-12 03:43:45 UTC — joint_act1_0023_dev
 
-Status: **running**. PID 1604; last supervisor heartbeat 2026-10-12 03:43:51 UTC.
+Status: **complete**. Finished 2026-10-12 03:43:56 UTC; exit code 0.
 
 Exact command:
 
@@ -2103,7 +2104,647 @@ Exact command:
 /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0023_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0023_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0023.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 90 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 1 --horizon 2048 --fast-replay
 ```
 
-No completed metrics yet; inspect the condition log for a running job or failure.
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'act_clear': 39, 'defeat': 9}; 8,418 valid transitions.
+
+Mean terminal/cutoff floor 16.67; mean fight HP cost 14.42.
+
+Total job wall time 8.15s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0023_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0023_dev.log`.
+
+### 2026-10-12 03:43:56 UTC — joint_act1_0024
+
+Status: **complete**. Finished 2026-10-12 03:47:01 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0024.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0024.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0023.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 35 --world-start 33072 --horizon 2048 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 11 rounds, 1380 non-fault episodes, 17 surfaced faults, 8 truncations; outcomes {'defeat': 306, 'act_clear': 1066, 'GameOutcome.UNDECIDED': 8}; 252,483 valid transitions.
+
+Mean terminal/cutoff floor 16.61; mean fight HP cost 17.79.
+
+PPO: 467 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.1758378748781979, "preparation_seconds": 0.06733179208822548, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 20891, "samples": 20891, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "3523e81fec25944900a64158620182f246678aeff550e0336e2a221ff9667892", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 48, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "27cfcd0f582ce5de926141febff779d9ded70f404a85cbbe65165b9447eedf8f", "task_kind": "run", "wait_seconds": 0.002823874820023775, "world_seed": 33190}, {"action_trace_sha256": "679d0456018678a35780c8e5cb75de26e5e2a661324518c6d4db0038923aa0b4", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 89, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "2ebad4ba6320d7abf1b97cd9f47d7b030ef1d50be2a9d1a7d56d10aa987afe1f", "task_kind": "run", "wait_seconds": 0.0026077080983668566, "world_seed": 33228}, {"action_trace_sha256": "2702cee03071cdf8d75c09894cf9eb7caf754fd491aa8774f30be8ca9102c466", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 69, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "2ebad4ba6320d7abf1b97cd9f47d7b030ef1d50be2a9d1a7d56d10aa987afe1f", "task_kind": "run", "wait_seconds": 0.0025849579833447933, "world_seed": 33228}, {"action_trace_sha256": "52791e05c2ecb1a84c2f83ed27c26db103e3c33b265699233bea382fe8de462d", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 47, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "31fff07e611fd3783eae19d1b24d840a26581fc8b4017f1fbbdfd62bfc0f13c4", "task_kind": "run", "wait_seconds": 0.0026259589940309525, "world_seed": 33078}, {"action_trace_sha256": "b146d19899973faa10719060f713e4ff7bd6bd1f3cbf192315da44e89b76183e", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 71, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "2ebad4ba6320d7abf1b97cd9f47d7b030ef1d50be2a9d1a7d56d10aa987afe1f", "task_kind": "run", "wait_seconds": 0.003226917004212737, "world_seed": 33228}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.47s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0024.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0024.log`.
+
+### 2026-10-12 03:47:01 UTC — joint_act1_0024_dev
+
+Status: **complete**. Finished 2026-10-12 03:47:11 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0024_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0024_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0024.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 90 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 1 --horizon 2048 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'act_clear': 41, 'defeat': 7}; 8,651 valid transitions.
+
+Mean terminal/cutoff floor 16.75; mean fight HP cost 11.23.
+
+Total job wall time 8.37s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0024_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0024_dev.log`.
+
+### 2026-10-12 03:47:11 UTC — joint_act1_0025
+
+Status: **complete**. Finished 2026-10-12 03:50:17 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0025.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0025.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0024.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 36 --world-start 33200 --horizon 2048 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 12 rounds, 1447 non-fault episodes, 20 surfaced faults, 8 truncations; outcomes {'defeat': 298, 'act_clear': 1141, 'GameOutcome.UNDECIDED': 8}; 262,762 valid transitions.
+
+Mean terminal/cutoff floor 16.65; mean fight HP cost 15.90.
+
+PPO: 389 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.16172625008039176, "preparation_seconds": 0.0550783749204129, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 10169, "samples": 10169, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "aadf9454ab69467d814224352acb841a45c37353fd3def7529072519ec37f7c5", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 76, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "2ebad4ba6320d7abf1b97cd9f47d7b030ef1d50be2a9d1a7d56d10aa987afe1f", "task_kind": "run", "wait_seconds": 0.0045903329737484455, "world_seed": 33228}, {"action_trace_sha256": "886ddd277b96a087692e0fbdab28d6233edda6ecd20b0e6c2336c689f4415e19", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 119, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "c13058f5b493f9a43c737382afb50a687bce31662ae6699da79e1a1a269014a7", "task_kind": "run", "wait_seconds": 0.0023018328938633204, "world_seed": 33265}, {"action_trace_sha256": "4c1c4de05c3d3f3b31dcdbbf7675cc6430a6fcc719b12ee120b83ae6ae5f0e34", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 54, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "659b1b0b4849ffafe40e6258e7fb7ad66e969140558f1f610bdcb0acf3c0ce55", "task_kind": "run", "wait_seconds": 0.003242167178541422, "world_seed": 33278}, {"action_trace_sha256": "51b25519b3dc52c0468a47e1ab674e27d36f9bfa6c24c6473623f5209a7a2b96", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 54, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "659b1b0b4849ffafe40e6258e7fb7ad66e969140558f1f610bdcb0acf3c0ce55", "task_kind": "run", "wait_seconds": 0.002732957946136594, "world_seed": 33278}, {"action_trace_sha256": "818fc653773a308210f9075566e6c35b8575a21ccc902e3a5ccf2eceafa8fab9", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 127, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "4b4b908520a1b2b8c9ee48f15e12a2ee6a1a78662f3dac047e28c57bd09a44e5", "task_kind": "run", "wait_seconds": 0.0027238749898970127, "world_seed": 33224}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.49s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0025.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0025.log`.
+
+### 2026-10-12 03:50:17 UTC — joint_act1_0025_dev
+
+Status: **complete**. Finished 2026-10-12 03:50:27 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0025_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0025_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0025.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 90 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 1 --horizon 2048 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'act_clear': 44, 'defeat': 4}; 8,975 valid transitions.
+
+Mean terminal/cutoff floor 16.92; mean fight HP cost 6.06.
+
+Total job wall time 8.51s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0025_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0025_dev.log`.
+
+### 2026-10-12 03:50:27 UTC — joint_act1_0026
+
+Status: **complete**. Finished 2026-10-12 03:53:33 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0025.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 37 --world-start 33328 --horizon 2048 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 12 rounds, 1446 non-fault episodes, 24 surfaced faults, 8 truncations; outcomes {'defeat': 271, 'act_clear': 1167, 'GameOutcome.UNDECIDED': 8}; 263,936 valid transitions.
+
+Mean terminal/cutoff floor 16.61; mean fight HP cost 14.24.
+
+PPO: 339 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.15409945789724588, "preparation_seconds": 0.04295979207381606, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 10073, "samples": 10073, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "d390eb1e35020f3d4e1306fa56b361d5147e34df8b566fabe7bc528f4342d33b", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 131, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "1d833caaa5753e94278a612796acd6bcaa7dbb07fc3ba9b42e4291e73bc52105", "task_kind": "run", "wait_seconds": 0.0029245829209685326, "world_seed": 33394}, {"action_trace_sha256": "f56968e842386e21272f1f648f46461af6e3f6bbb4776c8f2711b271fa40e764", "attempted_action_index": 1, "error": "SimulatorError", "excluded_transitions": 25, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "4d08558ca68b92c1ff39960640f30ba81d6bdf244bfea25a9000db77716303d3", "task_kind": "run", "wait_seconds": 0.002888290910050273, "world_seed": 33438}, {"action_trace_sha256": "3e5c3e319489e41bf339cb5613aa2368d4db87c1663b63c209fb0e14924600a7", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 38, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "8f2e7210258147746a961058d6f4678c450b728650dd59e79c40c15dafa68e18", "task_kind": "run", "wait_seconds": 0.0030182499904185534, "world_seed": 33404}, {"action_trace_sha256": "bbb05da258fab1d4a89369125c84c2bcaefeea65be1793716fbfee16b82b9813", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 34, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "8f2e7210258147746a961058d6f4678c450b728650dd59e79c40c15dafa68e18", "task_kind": "run", "wait_seconds": 0.002898917067795992, "world_seed": 33404}, {"action_trace_sha256": "b6d465a512b3dd2e3d4e41bb21d291f3ffe2f138010ac911cd94314c079e07cf", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 27, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "859c060d0f52d7eefc5a515fa09f453e24f3a278f7565a5e5f08c5c1f938adea", "task_kind": "run", "wait_seconds": 0.003227249952033162, "world_seed": 33402}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.47s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026.log`.
+
+### 2026-10-12 03:53:33 UTC — joint_act1_0026_dev
+
+Status: **complete**. Finished 2026-10-12 03:53:43 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 90 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 1 --horizon 2048 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'act_clear': 45, 'defeat': 3}; 8,883 valid transitions.
+
+Mean terminal/cutoff floor 16.94; mean fight HP cost 4.19.
+
+Total job wall time 8.46s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026_dev.log`.
+
+### 2026-10-12 03:53:43 UTC — joint_act1_0027
+
+Status: **complete**. Finished 2026-10-12 03:56:49 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0027.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0027.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 38 --world-start 33456 --horizon 2048 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 12 rounds, 1477 non-fault episodes, 6 surfaced faults, 8 truncations; outcomes {'defeat': 270, 'act_clear': 1199, 'GameOutcome.UNDECIDED': 8}; 267,795 valid transitions.
+
+Mean terminal/cutoff floor 16.64; mean fight HP cost 13.35.
+
+PPO: 434 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.15997920813970268, "preparation_seconds": 0.050910916179418564, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 13120, "samples": 13120, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "e0639c639383cde233b519f5c7f18715cc34c68a90a7d36ab15c9e78a7041284", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 48, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "ae5abd0cd5677ec3c101796da4b2ff2e0ec2d13fed401cc7785f1ac48472ce0b", "task_kind": "run", "wait_seconds": 0.0036057501565665007, "world_seed": 33465}, {"action_trace_sha256": "a4eea9986dfdd5242724eb8548ebe60a6b0641ed551ab108769d77e4cbfa52a8", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 45, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "ae5abd0cd5677ec3c101796da4b2ff2e0ec2d13fed401cc7785f1ac48472ce0b", "task_kind": "run", "wait_seconds": 0.0038579581305384636, "world_seed": 33465}, {"action_trace_sha256": "4cdb9e3a9ac1591dbf69ca7e0d30c5143e0a773cbdd485a2be05b7d8a5fa7b3d", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 40, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "ae5abd0cd5677ec3c101796da4b2ff2e0ec2d13fed401cc7785f1ac48472ce0b", "task_kind": "run", "wait_seconds": 0.0032982919365167618, "world_seed": 33465}, {"action_trace_sha256": "a5fbc9343120d2acf8f9f8dca7978d18e432da54ef57cc9dc69c3a171538c531", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 20, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "051ab7bb8e7746460f88b3159f5f448e8c43abb47909753684316280595d9663", "task_kind": "run", "wait_seconds": 0.00399416615255177, "world_seed": 33585}, {"action_trace_sha256": "3860bfab12166e48b898b5e092e575f665e6221f59d640154251695151aa4ce7", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 50, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "ae5abd0cd5677ec3c101796da4b2ff2e0ec2d13fed401cc7785f1ac48472ce0b", "task_kind": "run", "wait_seconds": 0.0034696669317781925, "world_seed": 33465}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.44s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0027.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0027.log`.
+
+### 2026-10-12 03:56:49 UTC — joint_act1_0027_dev
+
+Status: **complete**. Finished 2026-10-12 03:56:59 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0027_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0027_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0027.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 90 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 1 --horizon 2048 --fast-replay
+```
+
+Live collection: 1 rounds, 47 non-fault episodes, 1 surfaced faults, 0 truncations; outcomes {'defeat': 8, 'act_clear': 39}; 8,567 valid transitions.
+
+Mean terminal/cutoff floor 16.83; mean fight HP cost 12.70.
+
+Fault evidence: [{"action_trace_sha256": "8afb958453e716fe214f201ae4fc25137e761b7c79e17874ed5e97fc2a7e04b2", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 130, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "90cb7579f89c2d4afad45601834f354940ebe4b661aa8f32f7656c5885721142", "task_kind": "run", "wait_seconds": 0.0028639999218285084, "world_seed": 10046}].
+
+Total job wall time 8.84s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0027_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0027_dev.log`.
+
+### 2026-10-12 03:56:59 UTC — joint_act1_0028
+
+Status: **complete**. Finished 2026-10-12 04:00:04 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0028.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0028.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0027.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 39 --world-start 33584 --horizon 2048 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 12 rounds, 1529 non-fault episodes, 7 surfaced faults, 0 truncations; outcomes {'defeat': 320, 'act_clear': 1209}; 273,756 valid transitions.
+
+Mean terminal/cutoff floor 16.68; mean fight HP cost 15.64.
+
+PPO: 365 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "approx_kl": -3.0850060284137726e-09, "clip_fraction": 0.0, "early_stop": true, "elapsed_seconds": 0.22448187507689, "entropy": 0.41297054290771484, "policy_loss": -0.006793297827243805, "preparation_seconds": 0.06714883400127292, "ratio_mean": 0.9999999403953552, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 23057, "samples": 23057, "steps": 1, "value_loss": 0.019461093470454216}.
+
+Fault evidence: [{"action_trace_sha256": "9e1dbf035440faf372abc443aefdd506f33cb22bd1bd89923bb6e836df2fe79c", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 58, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "1271295d53889d108f5a1334fb3d33e5d62909cc613fd8bd569ef9bf25a95f32", "task_kind": "run", "wait_seconds": 0.0025475837755948305, "world_seed": 33702}, {"action_trace_sha256": "7e0abd2d217e6a17d7ee7e78f2150abd8dc4fe8de4ae6ebd836caaf93be9f966", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 38, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "fdbc9d292d30a50d5c34e87badfbe0b590b24f3587ef0c20994a38717e89e0d1", "task_kind": "run", "wait_seconds": 0.0028498750180006027, "world_seed": 33649}, {"action_trace_sha256": "aa9b80ee8b22a976ab56b1cf9f10416ab96cb36f63d81425023a61b2b42f46ae", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 14, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "051ab7bb8e7746460f88b3159f5f448e8c43abb47909753684316280595d9663", "task_kind": "run", "wait_seconds": 0.002638167003169656, "world_seed": 33585}, {"action_trace_sha256": "1df09b28ea0e02b0cb6543344e81b92128846e935374cf6752cb0a7eb40de5c5", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 50, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "b7221c9f7b441dd6a7e8eb571f2025d457cb130029123f289b74f69e57e3462f", "task_kind": "run", "wait_seconds": 0.002976750023663044, "world_seed": 33645}, {"action_trace_sha256": "6ec27c555ed1cd821436afedf41180a10bd6da5a6206695c2d07eda8f288703b", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 35, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "fdbc9d292d30a50d5c34e87badfbe0b590b24f3587ef0c20994a38717e89e0d1", "task_kind": "run", "wait_seconds": 0.003402333939447999, "world_seed": 33649}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.16s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0028.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0028.log`.
+
+### 2026-10-12 04:00:04 UTC — joint_act1_0028_dev
+
+Status: **complete**. Finished 2026-10-12 04:00:14 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0028_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0028_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0028.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 90 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 1 --horizon 2048 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'act_clear': 42, 'defeat': 6}; 9,062 valid transitions.
+
+Mean terminal/cutoff floor 16.88; mean fight HP cost 9.25.
+
+Total job wall time 8.65s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0028_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0028_dev.log`.
+
+### 2026-10-12 04:00:15 UTC — joint_act1_0029
+
+Status: **complete**. Finished 2026-10-12 04:03:20 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0029.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0029.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0028.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 40 --world-start 33712 --horizon 2048 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 11 rounds, 1368 non-fault episodes, 4 surfaced faults, 8 truncations; outcomes {'defeat': 301, 'act_clear': 1059, 'GameOutcome.UNDECIDED': 8}; 247,361 valid transitions.
+
+Mean terminal/cutoff floor 16.61; mean fight HP cost 17.07.
+
+PPO: 650 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.17417600005865097, "preparation_seconds": 0.06215841695666313, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 15448, "samples": 15448, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "4b4090f8a5c14c979c3accd7df0a9c2342434cd11173fcd12c5d782aa8ff1b80", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 148, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "00e98ea212652b9935fae57dd60e1c298f733e657046cb6a13302adaee4d231c", "task_kind": "run", "wait_seconds": 0.004812542116269469, "world_seed": 33858}, {"action_trace_sha256": "5251ee4ba93feea118c630fe3245e7221d17e77db4e4d1aed758bc92af40ec42", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 31, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "3ec7a6a704dc79753e11925e6bab5de91c904d0ea3472e5052e6ad6098a5880c", "task_kind": "run", "wait_seconds": 0.0028682921547442675, "world_seed": 33817}, {"action_trace_sha256": "9dd9084b007e628d0615c57e6e7550a520909e6250939f0f85aa1b2749f3185d", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 145, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "00e98ea212652b9935fae57dd60e1c298f733e657046cb6a13302adaee4d231c", "task_kind": "run", "wait_seconds": 0.0037779160775244236, "world_seed": 33858}, {"action_trace_sha256": "66c08d2143d2775f76039e1bfcc8beeb32f74e2a6ba9a0e8272156dab66b2ab7", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 43, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "3ec7a6a704dc79753e11925e6bab5de91c904d0ea3472e5052e6ad6098a5880c", "task_kind": "run", "wait_seconds": 0.003940416965633631, "world_seed": 33817}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.46s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0029.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0029.log`.
+
+### 2026-10-12 04:03:20 UTC — joint_act1_0029_dev
+
+Status: **complete**. Finished 2026-10-12 04:03:30 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0029_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0029_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0029.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 90 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 1 --horizon 2048 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'act_clear': 42, 'defeat': 6}; 8,810 valid transitions.
+
+Mean terminal/cutoff floor 16.88; mean fight HP cost 9.40.
+
+Total job wall time 8.48s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0029_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0029_dev.log`.
+
+### 2026-10-12 04:03:30 UTC — joint_act1_0030
+
+Status: **complete**. Finished 2026-10-12 04:06:36 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0030.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0030.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0029.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 41 --world-start 33840 --horizon 2048 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 12 rounds, 1408 non-fault episodes, 8 surfaced faults, 8 truncations; outcomes {'act_clear': 1118, 'defeat': 282, 'GameOutcome.UNDECIDED': 8}; 256,683 valid transitions.
+
+Mean terminal/cutoff floor 16.62; mean fight HP cost 14.93.
+
+PPO: 509 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.1316992079373449, "preparation_seconds": 0.029934790916740894, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 352, "samples": 352, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "574bbe063941e1708f4a17da90ca66a2b397074b6558a5e0ef31f1e3ef3fc03b", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 151, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "00e98ea212652b9935fae57dd60e1c298f733e657046cb6a13302adaee4d231c", "task_kind": "run", "wait_seconds": 0.0027066669426858425, "world_seed": 33858}, {"action_trace_sha256": "b1bbca0b54380d629a09f3e883d238d0831c40375ed53c7ce04148652ec930fa", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 108, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "c09354dec4c293f486e1badab6a9676967b92e8eb5b30d995ff48bd3064d674b", "task_kind": "run", "wait_seconds": 0.002463000128045678, "world_seed": 33902}, {"action_trace_sha256": "2e89d46b2982361646823393a215d789c19166c372ed4b4d0d32ef17b0256d38", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 206, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "4884c404864f0eeb24b18639566495478acc55be4c12cfa24d476fa1980bfe9c", "task_kind": "run", "wait_seconds": 0.0033195000141859055, "world_seed": 33915}, {"action_trace_sha256": "498869b227b1721adce182dafebf4e8f73bdecb3580fd3565ec7e5b97637f8f9", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 34, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "a8c5d9b9eefe6018ef62740eabad9b45cb836ca70a4e3158712d1a7f527d3a3e", "task_kind": "run", "wait_seconds": 0.002658291021361947, "world_seed": 33922}, {"action_trace_sha256": "fab2064ba1be8ce244f1d8ae80c7d591fbc230fdf741e33b9ecb5c2c80586462", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 101, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "c09354dec4c293f486e1badab6a9676967b92e8eb5b30d995ff48bd3064d674b", "task_kind": "run", "wait_seconds": 0.002878874773159623, "world_seed": 33902}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.40s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0030.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0030.log`.
+
+### 2026-10-12 04:06:36 UTC — joint_act1_0030_dev
+
+Status: **complete**. Finished 2026-10-12 04:06:46 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0030_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0030_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0030.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 90 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 1 --horizon 2048 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'act_clear': 40, 'defeat': 8}; 8,468 valid transitions.
+
+Mean terminal/cutoff floor 16.75; mean fight HP cost 13.52.
+
+Total job wall time 8.38s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0030_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0030_dev.log`.
+
+### 2026-10-12 04:06:46 UTC — joint_act3_initial_dev
+
+Status: **complete**. Finished 2026-10-12 04:07:06 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_initial_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_initial_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 240 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 3 --horizon 4096 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'defeat': 48}; 16,253 valid transitions.
+
+Mean terminal/cutoff floor 28.40; mean fight HP cost 80.00.
+
+Total job wall time 15.97s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_initial_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_initial_dev.log`.
+
+### 2026-10-12 04:07:06 UTC — joint_act3_0000
+
+Status: **complete**. Finished 2026-10-12 04:10:12 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0000.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0000.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act1_0026.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 11 --world-start 40000 --horizon 4096 --max-act 3 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 8 rounds, 937 non-fault episodes, 5 surfaced faults, 8 truncations; outcomes {'defeat': 927, 'victory': 2, 'GameOutcome.UNDECIDED': 8}; 280,084 valid transitions.
+
+Mean terminal/cutoff floor 25.69; mean fight HP cost 79.39.
+
+PPO: 171 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.1492321661207825, "preparation_seconds": 0.04390350007452071, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 12640, "samples": 12640, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "e548c59c2f31870d794ac3bd22bbec945d69e00db791091c66acb4bded10e27f", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 33, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "090a0968498f400f76e045bc202a281f05a684900998d644b597ac02209f49ca", "task_kind": "run", "wait_seconds": 0.0031088341493159533, "world_seed": 40052}, {"action_trace_sha256": "e0c49145f8255c0330d4ba29980843e33c4ba768c0ea3991d9d1650d8fcce045", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 238, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "53ed5e14167a39fc5126eccd2f40e1b930b28667a8ab2bb81368701ae9d4558b", "task_kind": "run", "wait_seconds": 0.002931916853412986, "world_seed": 40020}, {"action_trace_sha256": "b5467bc74e44268568eb4deebf361b867ff040a299684cf51678787836ef342d", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 231, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "53ed5e14167a39fc5126eccd2f40e1b930b28667a8ab2bb81368701ae9d4558b", "task_kind": "run", "wait_seconds": 0.003447999944910407, "world_seed": 40020}, {"action_trace_sha256": "9175e6594f9bde1075caf552a5f83a05fecf38734b6f20710dd7d34230ba0ede", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 89, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "ce69b3340e9c6b97fd375955bf39a9a57821df76f29afa51fd44ebfc687e3154", "task_kind": "run", "wait_seconds": 0.0029536248184740543, "world_seed": 40081}, {"action_trace_sha256": "563996e66f6beb91b566b74a90d65db3ec1fb79051ef0fbe5bbb5d2ac26f0e9d", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 230, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "53ed5e14167a39fc5126eccd2f40e1b930b28667a8ab2bb81368701ae9d4558b", "task_kind": "run", "wait_seconds": 0.0027994581032544374, "world_seed": 40020}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.53s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0000.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0000.log`.
+
+### 2026-10-12 04:10:12 UTC — joint_act3_0000_dev
+
+Status: **complete**. Finished 2026-10-12 04:10:32 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0000_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0000_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0000.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 240 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 3 --horizon 4096 --fast-replay
+```
+
+Live collection: 1 rounds, 46 non-fault episodes, 2 surfaced faults, 0 truncations; outcomes {'defeat': 46}; 15,371 valid transitions.
+
+Mean terminal/cutoff floor 28.74; mean fight HP cost 80.00.
+
+Fault evidence: [{"action_trace_sha256": "a9675f4bfd7ce30a78f4734790357fb1b7648df06feafda3cf29728c30c03d4f", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 128, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "e3c71392815e9e535a3bf543cf1c420f1efb205d256010b0ead9afaffd00e644", "task_kind": "run", "wait_seconds": 0.004405790939927101, "world_seed": 10387}, {"action_trace_sha256": "875d65dc740761af7849044c29d5f34e03ba5eda26607829488d52e13e927527", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 117, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "2245bf493af5fccf0da5d74b75a7d0e2d9d31e2027520a7094b298860c4ce406", "task_kind": "run", "wait_seconds": 0.002755583031103015, "world_seed": 10179}].
+
+Total job wall time 15.98s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0000_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0000_dev.log`.
+
+### 2026-10-12 04:10:32 UTC — joint_act3_0001
+
+Status: **complete**. Finished 2026-10-12 04:13:38 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0001.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0001.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0000.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 12 --world-start 40128 --horizon 4096 --max-act 3 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 7 rounds, 890 non-fault episodes, 6 surfaced faults, 0 truncations; outcomes {'defeat': 890}; 265,801 valid transitions.
+
+Mean terminal/cutoff floor 25.43; mean fight HP cost 80.00.
+
+PPO: 304 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "approx_kl": 0.004627293641593109, "clip_fraction": 0.09579567354722102, "early_stop": true, "elapsed_seconds": 4.3161199579481035, "entropy": 0.47803330519160286, "policy_loss": -0.0010495907856059856, "preparation_seconds": 0.09360462496988475, "ratio_mean": 0.9994791101236813, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 39017, "samples": 39017, "steps": 61, "value_loss": 0.009001094084538397}.
+
+Fault evidence: [{"action_trace_sha256": "8ea15074607a9e86a08f45fe82d96973083449d497d0e45aae8855c9b755821e", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 78, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "680a5d8e9f358dfba889248bf9f63c986a950a1fc9a7eecd7bf8c53bede0e966", "task_kind": "run", "wait_seconds": 0.002715958980843425, "world_seed": 40261}, {"action_trace_sha256": "802555813d37593255c06d6b44d09a32194b7c166ca26b581558715ecf35e6eb", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 44, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "f578c6b4e69f366ee28c07cd0544666472fb0e6c56272e0e9d4b7b1c282a2458", "task_kind": "run", "wait_seconds": 0.002866708906367421, "world_seed": 40281}, {"action_trace_sha256": "10431fbef1cd139ebc59e2e706254c990fad6e865b426cc9fce69f965d15079e", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 183, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "204c63799646dc90079bce9f8050be561a937d046f6525c99a03c6d1e3e00592", "task_kind": "run", "wait_seconds": 0.004426209023222327, "world_seed": 40138}, {"action_trace_sha256": "969e8d28c736154b1641d7c39a3ee38da48fd7e549d9404d3bd8aa564ac73e3f", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 342, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "b61cdf0eb0d09c3d33184e15f002655211c410b165aacb7ed92675cb6dad46d3", "task_kind": "run", "wait_seconds": 0.0030440420377999544, "world_seed": 40248}, {"action_trace_sha256": "b4376ab4917acc3963c501f7f1fdfc04cca79fbbb63f9cdd0f0b42612be62f24", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 112, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "b04daa69a0c79668afc2b0af827bf90d2bf32796989156e7d3e0511b4d5f357f", "task_kind": "run", "wait_seconds": 0.003746374975889921, "world_seed": 40225}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.14s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0001.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0001.log`.
+
+### 2026-10-12 04:13:38 UTC — joint_act3_0001_dev
+
+Status: **complete**. Finished 2026-10-12 04:13:58 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0001_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0001_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0001.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 240 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 3 --horizon 4096 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'defeat': 48}; 15,900 valid transitions.
+
+Mean terminal/cutoff floor 28.54; mean fight HP cost 80.00.
+
+Total job wall time 15.80s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0001_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0001_dev.log`.
+
+### 2026-10-12 04:13:58 UTC — joint_act3_0002
+
+Status: **complete**. Finished 2026-10-12 04:17:04 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0001.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 13 --world-start 40256 --horizon 4096 --max-act 3 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 7 rounds, 890 non-fault episodes, 6 surfaced faults, 0 truncations; outcomes {'defeat': 889, 'victory': 1}; 268,103 valid transitions.
+
+Mean terminal/cutoff floor 25.21; mean fight HP cost 79.95.
+
+PPO: 307 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "approx_kl": 0.002138096592137696, "clip_fraction": 0.06178977272727273, "early_stop": true, "elapsed_seconds": 1.465374791994691, "entropy": 0.4898802543228323, "policy_loss": 0.0073727859522808685, "preparation_seconds": 0.08963591721840203, "ratio_mean": 1.000607506795363, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 38433, "samples": 38433, "steps": 22, "value_loss": 0.0067710802170702}.
+
+Fault evidence: [{"action_trace_sha256": "24431c352ffa1070205f67994b419b2dbc32fd25acf60d035222ecdc17c13cd7", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 335, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "26febc6186f3f079f439e7e797fa2729f6bfdaa9f9e02790981899699d42d593", "task_kind": "run", "wait_seconds": 0.003759792074561119, "world_seed": 40395}, {"action_trace_sha256": "c6bf31574b0270009b11de12d44801826f925434d2f1476350048d13a3278094", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 204, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "c02b391dd2b5daa322ee645d76dc8a718195702b3fb83a5938b2157374f7b6b7", "task_kind": "run", "wait_seconds": 0.002928250003606081, "world_seed": 40331}, {"action_trace_sha256": "309d8557c0fab838e4b9e698eaf0b1bdff325e13032149a6ab77cdbb502e8ce9", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 330, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "26febc6186f3f079f439e7e797fa2729f6bfdaa9f9e02790981899699d42d593", "task_kind": "run", "wait_seconds": 0.0026457919739186764, "world_seed": 40395}, {"action_trace_sha256": "435fcb4782a315009d634d459640182e38109ea5034e3e09af7b233f824b120e", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 82, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "680a5d8e9f358dfba889248bf9f63c986a950a1fc9a7eecd7bf8c53bede0e966", "task_kind": "run", "wait_seconds": 0.003658583154901862, "world_seed": 40261}, {"action_trace_sha256": "604152d5b6a8ed52e16e9844bae8a739daee3fd5ef280377fafd6cce6d8cca77", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 178, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "b1e4ff629a4a9d58bcc5657c08ef7308c2ab0de7286e7c6030196ff794b6c5c8", "task_kind": "run", "wait_seconds": 0.0032912089955061674, "world_seed": 40335}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.13s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002.log`.
+
+### 2026-10-12 04:17:04 UTC — joint_act3_0002_dev
+
+Status: **complete**. Finished 2026-10-12 04:17:24 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 240 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 3 --horizon 4096 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'defeat': 48}; 17,061 valid transitions.
+
+Mean terminal/cutoff floor 29.65; mean fight HP cost 80.00.
+
+Total job wall time 16.42s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002_dev.log`.
+
+### 2026-10-12 04:17:24 UTC — joint_act3_0003
+
+Status: **complete**. Finished 2026-10-12 04:20:29 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0003.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0003.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0002.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 14 --world-start 40384 --horizon 4096 --max-act 3 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 7 rounds, 837 non-fault episodes, 9 surfaced faults, 8 truncations; outcomes {'defeat': 829, 'GameOutcome.UNDECIDED': 8}; 258,079 valid transitions.
+
+Mean terminal/cutoff floor 25.51; mean fight HP cost 79.51.
+
+PPO: 333 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.16590470890514553, "preparation_seconds": 0.05745099997147918, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 22536, "samples": 22536, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "6c14f0229dc9bd6c7b032536075a1400c7b78cf7575b495deccda057feaf288a", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 310, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "26febc6186f3f079f439e7e797fa2729f6bfdaa9f9e02790981899699d42d593", "task_kind": "run", "wait_seconds": 0.0036610830575227737, "world_seed": 40395}, {"action_trace_sha256": "ab2ad8d69138ecb3702c4d70fee152df1f125b25aa904ca51a3c17de953bdebb", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 31, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "496a50492a3dc5549292715a32effd894fdfc7f0faa64394cba40f2dc2b632fa", "task_kind": "run", "wait_seconds": 0.00306870904751122, "world_seed": 40450}, {"action_trace_sha256": "f1c82ad86f5a99919276ad6070be38596d794973b8a4d6f303f9e6100018410b", "attempted_action_index": 2, "error": "SimulatorError", "excluded_transitions": 435, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "d9f89c152ad2dd3115bb7ce5a3b6a4cc07cfad8ba09e811e7708034d7ebde399", "task_kind": "run", "wait_seconds": 0.0042066669557243586, "world_seed": 40505}, {"action_trace_sha256": "968ff8e193a7512b2e7d25f1c157b01b0f082906501448f89a8bd82b8199ffc4", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 244, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "c3201313c3517721a748375e11590f2e1bd6a3c172de44600015f27dd1691b53", "task_kind": "run", "wait_seconds": 0.003305500140413642, "world_seed": 40490}, {"action_trace_sha256": "c9547afc4438bddfc6f5e626553ad4c5e552350dee6a0437ff032291e0516a70", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 320, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "d9f89c152ad2dd3115bb7ce5a3b6a4cc07cfad8ba09e811e7708034d7ebde399", "task_kind": "run", "wait_seconds": 0.002895041834563017, "world_seed": 40505}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.51s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0003.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0003.log`.
+
+### 2026-10-12 04:20:29 UTC — joint_act3_0003_dev
+
+Status: **complete**. Finished 2026-10-12 04:20:50 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0003_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0003_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0003.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 240 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 3 --horizon 4096 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'defeat': 48}; 15,567 valid transitions.
+
+Mean terminal/cutoff floor 27.48; mean fight HP cost 80.00.
+
+Total job wall time 15.03s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0003_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0003_dev.log`.
+
+### 2026-10-12 04:20:50 UTC — joint_act3_0004
+
+Status: **complete**. Finished 2026-10-12 04:23:56 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0004.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0004.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0003.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 15 --world-start 40512 --horizon 4096 --max-act 3 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 7 rounds, 789 non-fault episodes, 2 surfaced faults, 8 truncations; outcomes {'defeat': 781, 'GameOutcome.UNDECIDED': 8}; 249,313 valid transitions.
+
+Mean terminal/cutoff floor 26.15; mean fight HP cost 79.35.
+
+PPO: 521 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.06098312488757074, "preparation_seconds": 0.053573374869301915, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 6200, "samples": 6200, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "2e515cdd3fcf3c850274511ed234bc55a8d7a38879e43176bb5e756b8593021c", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 272, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "31a95abef9c0dd192ee35dfc197baf678d85b12411fe78a3ced7a0dab421a182", "task_kind": "run", "wait_seconds": 0.0025587910786271095, "world_seed": 40554}, {"action_trace_sha256": "66ff3af2b3598c6417b0f300b76260d69fd6dbf755ea9e2210b6b966b4ef80af", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 204, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "ee42967c5ed01d10257142007bda1f2b619928103863b89775ff520ee291778f", "task_kind": "run", "wait_seconds": 0.0035897919442504644, "world_seed": 40623}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.44s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0004.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0004.log`.
+
+### 2026-10-12 04:23:56 UTC — joint_act3_0004_dev
+
+Status: **complete**. Finished 2026-10-12 04:24:16 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0004_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0004_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0004.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 240 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 3 --horizon 4096 --fast-replay
+```
+
+Live collection: 1 rounds, 46 non-fault episodes, 2 surfaced faults, 0 truncations; outcomes {'defeat': 46}; 16,408 valid transitions.
+
+Mean terminal/cutoff floor 29.63; mean fight HP cost 80.00.
+
+Fault evidence: [{"action_trace_sha256": "ebf034095511502a6e51da9c5b054c3a9254b6e247d740f2b209b9fdf43e0d85", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 346, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "5c791cb4612845c822d7b1a058ee55910530aa8ba851f5b2fb68a9ae330d55ac", "task_kind": "run", "wait_seconds": 0.003484749933704734, "world_seed": 10315}, {"action_trace_sha256": "ddee5f7ba6f1785fba40bd7937b6ca0336a84d310525f62045a37f347eea0ae3", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 329, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "43dee3e1fbda32f776355051d7c9be080339e5a474096391e22d2132ee184c7a", "task_kind": "run", "wait_seconds": 0.0031152081210166216, "world_seed": 10221}].
+
+Total job wall time 16.90s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0004_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0004_dev.log`.
+
+### 2026-10-12 04:24:16 UTC — joint_act3_0005
+
+Status: **complete**. Finished 2026-10-12 04:27:22 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0005.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0005.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0004.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 16 --world-start 40640 --horizon 4096 --max-act 3 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 6 rounds, 693 non-fault episodes, 15 surfaced faults, 8 truncations; outcomes {'defeat': 685, 'GameOutcome.UNDECIDED': 8}; 217,505 valid transitions.
+
+Mean terminal/cutoff floor 26.13; mean fight HP cost 79.28.
+
+PPO: 766 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.18534654192626476, "preparation_seconds": 0.0716187919024378, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 18539, "samples": 18539, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "fba380f683fbdcbcc52424ceec9ea65deda5bb31fcc48071f227089487679965", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 348, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "8a259913cc6a0be08e91ed7aca09ed0dcf063ee5837aa24f4c89dc8d6908c616", "task_kind": "run", "wait_seconds": 0.0028256659861654043, "world_seed": 40728}, {"action_trace_sha256": "9bd2c21043e7a761807a5268736d811bac9ad289de26d42167c156595028d76e", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 317, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "f2938f14ae5c8bdf79c5f0e2e3fe434e4336b2e7d7bc3d70e858d571c6b2ff18", "task_kind": "run", "wait_seconds": 0.0036864171270281076, "world_seed": 40771}, {"action_trace_sha256": "f7c449ec84f28aeb9e8f546e88bc685c2cf9bd89b6aac4f25b17882626c3831a", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 262, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "de32231eaf91c228254a38725e5bbf89cb171a2ce2d3aa4195c7a0686f46b472", "task_kind": "run", "wait_seconds": 0.0033942919690161943, "world_seed": 40652}, {"action_trace_sha256": "8d9b8269d48c83fe586a9ba903b70ea5d0c52f3d8caafae3b70815728893a705", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 62, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "68521232d7b2a688020b444e14490b15e8b2504709b31c00f6d63310cca62b24", "task_kind": "run", "wait_seconds": 0.0028674169443547726, "world_seed": 40718}, {"action_trace_sha256": "91db0d8e1437a6ed2c9bf6fe655176b3983c06f2e66691f2dadd09344553c3cb", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 34, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "a80dbb071b648fe0bd5f9cdea87c09f5a1b2284c5f97621ba9a1a7cd84083f5a", "task_kind": "run", "wait_seconds": 0.002888874849304557, "world_seed": 40743}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 181.09s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0005.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0005.log`.
+
+### 2026-10-12 04:27:22 UTC — joint_act3_0005_dev
+
+Status: **complete**. Finished 2026-10-12 04:27:42 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0005_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0005_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0005.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 240 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 3 --horizon 4096 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'defeat': 48}; 16,346 valid transitions.
+
+Mean terminal/cutoff floor 28.69; mean fight HP cost 80.00.
+
+Total job wall time 15.57s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0005_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0005_dev.log`.
+
+### 2026-10-12 04:27:42 UTC — joint_act3_0006
+
+Status: **complete**. Finished 2026-10-12 04:30:48 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0006.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0006.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0005.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 17 --world-start 40768 --horizon 4096 --max-act 3 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 8 rounds, 895 non-fault episodes, 13 surfaced faults, 8 truncations; outcomes {'defeat': 887, 'GameOutcome.UNDECIDED': 8}; 262,307 valid transitions.
+
+Mean terminal/cutoff floor 24.47; mean fight HP cost 79.53.
+
+PPO: 338 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "early_stop": true, "elapsed_seconds": 0.1510491669178009, "preparation_seconds": 0.045576666947454214, "rejected_kl": null, "rejected_minibatches": 0, "reused_encoding_count": 2488, "samples": 2488, "steps": 0}.
+
+Fault evidence: [{"action_trace_sha256": "a826e11ae82ac713de5255d854ffe1d2d199ac92eb914cc02a1dba5d3031f0c3", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 70, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "c9a057c3ec800e3f7bc541afe2268b3b107785027cd5d24f809dcb01ea9bbcf4", "task_kind": "run", "wait_seconds": 0.0025744999293237925, "world_seed": 40901}, {"action_trace_sha256": "99511e0424470433f86071475352d2d19fdc6eb0462f8a069e35cccbbba80b86", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 258, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "1572ce7335b9f44c7d1a09eb48901487c710c81d3af1e099cfe0182014531661", "task_kind": "run", "wait_seconds": 0.0028577090706676245, "world_seed": 40821}, {"action_trace_sha256": "8f9b6b4cd5cfa4e1099f325b416ea8127d96ea4948bad5d90b743fdc05e0603b", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 48, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "c0ca0bf0d998dd36780fb3c77c48223aa8dc4f92f8f678656916e13a47a35da6", "task_kind": "run", "wait_seconds": 0.0027748330030590296, "world_seed": 40865}, {"action_trace_sha256": "477000d4bc2ed01b7d3dd0b08f05b4f4f33a1d7b44108aad7198d9e63aef28db", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 209, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "1572ce7335b9f44c7d1a09eb48901487c710c81d3af1e099cfe0182014531661", "task_kind": "run", "wait_seconds": 0.0029609159100800753, "world_seed": 40821}, {"action_trace_sha256": "8fafec9f9e63baa105b5ec4508bc90c9c6e508dbc05b05a784cf5fccd2f00a69", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 223, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "49b59505a7db24ff23731aa8b588fbd251709ef4246c3c8001e1e21e15730377", "task_kind": "run", "wait_seconds": 0.0028042499907314777, "world_seed": 40911}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Total job wall time 180.52s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0006.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0006.log`.
+
+### 2026-10-12 04:30:48 UTC — joint_act3_0006_dev
+
+Status: **complete**. Finished 2026-10-12 04:31:08 UTC; exit code 0.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py evaluate --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0006_dev.unused.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0006_dev.metrics.json --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0006.pt --device cpu --threads 2 --workers 8 --episodes 48 --seed 777 --seconds 240 --task-kind run --split dev --horizon 2048 --simulations 200 --fast-observations --world-start 10000 --max-act 3 --horizon 4096 --fast-replay
+```
+
+Live collection: 1 rounds, 48 non-fault episodes, 0 surfaced faults, 0 truncations; outcomes {'defeat': 48}; 15,709 valid transitions.
+
+Mean terminal/cutoff floor 27.62; mean fight HP cost 80.00.
+
+Total job wall time 14.78s.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0006_dev.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0006_dev.log`.
+
+### 2026-10-12 04:31:08 UTC — joint_act3_0007
+
+Status: **running**. PID 12163; last supervisor heartbeat 2026-10-12 04:32:53 UTC.
+
+Exact command:
+
+```text
+/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/scripts/train_nonllm.py ppo --output /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0007.pt --metrics /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0007.metrics.json --seconds 180 --device mps --threads 2 --batch-size 1024 --seed 11 --simulations 200 --checkpoint /Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0006.pt --workers 8 --updates 100000 --episodes 128 --fast-observations --inference-device cpu --task-kind run --seed 18 --world-start 40896 --horizon 4096 --max-act 3 --clip-ratio 0.1 --entropy-coef 0.01 --gamma 1.0 --kl-guard-before-update --learning-rate 0.0001 --progress-floor-weight 0.05 --reward-mode progress --terminal-hp-weight 0.0 --deferred-bootstrap --fast-replay --warm-optimizer
+```
+
+Live collection: 4 rounds, 511 non-fault episodes, 1 surfaced faults, 0 truncations; outcomes {'defeat': 511}; 150,115 valid transitions.
+
+Mean terminal/cutoff floor 25.28; mean fight HP cost 80.00.
+
+PPO: 192 optimizer steps; last update {"algorithm_version": "masked_ppo_v2_before_update_kl", "approx_kl": 0.0074065446664566, "clip_fraction": 0.10229492409432188, "early_stop": true, "elapsed_seconds": 8.753188582835719, "entropy": 0.4532901006387481, "policy_loss": -0.00246811758872148, "preparation_seconds": 0.07453291700221598, "ratio_mean": 0.9988592529127783, "rejected_kl": 0.04816603660583496, "rejected_minibatches": 1, "reused_encoding_count": 37641, "samples": 37641, "steps": 141, "value_loss": 0.0038627360267102294}.
+
+Fault evidence: [{"action_trace_sha256": "f33c0d16cf85166936561d06c8704a5cd41739986163e08fec159fe325185e25", "attempted_action_index": 0, "error": "SimulatorError", "excluded_transitions": 66, "fault_stage": "step", "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid", "task_id": "be701e1720613f6773ae42528ae672c62199d69d2741ca268aed6f925f41d802", "task_kind": "run", "wait_seconds": 0.002580750035122037, "world_seed": 40977}].
+
+Training-round outcomes combine changing policies; use separate development evaluations for model comparisons.
+
+Raw metrics: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0007.metrics.json`. Log: `/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/data/nonllm_native_revision/campaign/joint_act3_0007.log`.
 
 ## Reproduce or resume
 
