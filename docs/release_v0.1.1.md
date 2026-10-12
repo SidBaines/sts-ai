@@ -31,3 +31,33 @@ checks passed; the patch contains no pybind11 submodule-pointer change.
 The full release suite, bounded CLI smoke, and affected-world replay validation
 are required before creating `env-v0.1.1`. The existing `env-v0.1.0` tag and binary
 remain immutable. This record is deliberately pending those final gates.
+
+## Completed local base gates
+
+On 12 October 2026, `STS_REQUIRE_SIMULATOR=1 PYTHONPATH=src
+.venv/bin/python -m unittest discover -s tests -t .` passed all 195 tests in
+2.9 seconds against the isolated binary. A bounded random OOC seed 3 smoke
+(Act 1, 50 battle simulations, 1024 external-decision cap) ended in ordinary
+defeat after 21 decisions with no simulator fault.
+
+A frozen existing OOC warm policy on the same 32 development worlds (world
+range starting at 10000, policy seed 777, horizon 1024, native 200 simulations,
+CPU inference, four persistent workers) produced exactly equal per-world
+semantic action hashes, step counts, outcomes, and fault traces in three fresh
+runs at 10/10/5-second operation timeouts. Each run took about 2.5 seconds,
+with 19 Act 1 clears among 31 valid worlds and one newly reported native fault
+(world 10218, floor 16). This is a fault-exclusion check, not a new learner score.
+The formerly unstable world 10121 cleared after 69 decisions every time.
+
+For full control, native 200-simulation world 10121 produced 231 decisions and
+465 JSONL records under both 0.1.0 and 0.1.1; complete traces were identical after
+removing only release/binary/interface identity and elapsed-time fields. The
+old binary checksum was rechecked and remained `8dba3d574ea3d4cd4c91b7031ffb38821b3e18c03358263407df3c05329c1724`.
+
+The automatic-combat guard exposes faults previously hidden by the binding;
+zero reported faults from old OOC artifacts therefore must not be interpreted
+as native-state validity. The guard only checks the native live/sticky flag and
+does not establish absence of every form of C++ undefined behavior.
+
+The experiment-branch full test gate and parent review remain required before
+tagging this candidate.
