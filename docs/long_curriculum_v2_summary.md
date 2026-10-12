@@ -1,5 +1,13 @@
 # Full-game RL v2 — latest first
 
+## 2026-10-12 17:42 UTC — user paused training; causal diagnosis underway
+
+The user requested combat versus out-of-combat attribution and a way to prevent forgetting rather than spending the remaining allocation on an unproductive setup. V2 is now **operator-paused**, all recorded controller/workers verified absent. The final retained CP128 SHA is `afc854b4…`; **14,252.174 active seconds (3.959 hours)** remain. The budget is stationary; no automatic resumption or extension is allowed.
+
+A shutdown race initially produced an attention error while workers were exiting. The untouched journal was backed up, all recorded process identities independently checked absent, and the operator pause made durable. This operational error is preserved separately from scientific regression evidence.
+
+Parallel diagnosis will compare original and confirmed regressed models on matched TRAIN worlds with four combat/OOC combinations, plus isolated combat probes if feasible. The first confirmed CP54 is retained for attribution; the second confirmed CP114 model had been deleted by retention, so its metrics cannot substitute for that model. No diagnostic will use final data or train on DEV observations. Code review confirms separate phase models but actor/critic shared encoders within each phase, global phase weighting/clipping, and no fixed-original policy anchor. These are plausible mechanisms pending causal evidence. [Detailed progress](long_curriculum_v2_progress.md) · [Dashboard](http://127.0.0.1:8786/).
+
 ## 2026-10-12 17:33 UTC — second confirmation still below baseline
 
 A second, distinct learner snapshot completed the same 192-world confirmation: **0/192 full-run wins**, versus the original **2/192**, with zero faults, cutoffs or unstarted tasks. Act 1 clears recovered from 131 to **139/192**, still below the initial **151/192**. Full-run mean ending floor rose from 25.18 to 25.86, still below the original 27.63 (valid episodes).
