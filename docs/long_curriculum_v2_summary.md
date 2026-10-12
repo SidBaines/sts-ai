@@ -1,5 +1,11 @@
 # Full-game RL v2 — latest first
 
+## 2026-10-12 17:33 UTC — second confirmation still below baseline
+
+A second, distinct learner snapshot completed the same 192-world confirmation: **0/192 full-run wins**, versus the original **2/192**, with zero faults, cutoffs or unstarted tasks. Act 1 clears recovered from 131 to **139/192**, still below the initial **151/192**. Full-run mean ending floor rose from 25.18 to 25.86, still below the original 27.63 (valid episodes).
+
+On the 190 common-valid worlds, full-run floor delta versus initial was -1.73 and net wins −2; paired Act 1 clear delta was -13. The original remains champion. No severe-decline threshold has been crossed; the run continues with approximately 4.07 active hours left. **Two confirmations now show no useful full-run improvement.** Policy-drift diagnosis is documented below. [Dashboard](http://127.0.0.1:8786/) · [Detailed log](long_curriculum_v2_progress.md).
+
 ## 2026-10-12 17:32 UTC — one-hour stagnation check; policy drift measured
 
 No confirmed full-game improvement has appeared. The one-hour inspection warning is active; a second confirmation cycle is underway. The last completed 192-world result remains 0 wins against the original 2, with 131 Act 1 clears against 151. The original remains champion. Later screens returned 1/48, matching the screen baseline win count while ending around floor 25.5 versus 32.48 initially; this is not confirmation evidence.
