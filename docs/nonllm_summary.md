@@ -3,6 +3,19 @@
 Latest updates first. [Automatic log](nonllm_progress.md) · [Detailed decisions](nonllm_progress_notes.md) · [Plan](nonllm_curriculum_plan.md).
 Deadline: **12 October, 06:30 UTC**. Results below are **development selection results**. The designated final benchmark remains embargoed; an earlier learned-agent smoke used a separate hash-final seed ([protocol exception](nonllm_protocol_audit.md)). Old native-auto evidence is quarantined.
 
+## 2026-10-12 03:39 UTC — 42/48 clears and faster training
+
+The selected full-control policy clears **42/48** matched Act 1 development worlds, versus **29/48** before joint training. All 48 completed with zero faults/truncations and zero native-controlled decisions. Three-act training and final evaluation remain pending.
+
+| Throughput check | Earlier chunks | First completed feature-reuse chunk |
+| --- | ---: | ---: |
+| Accepted transitions/second | 1,157–1,225 | **1,460** |
+| PPO feature preparation per chunk | 39–40 s | **0.75 s** |
+
+**Decision:** reuse the exact public features computed during collection. CPU comparisons produced identical actions, losses, gradients, optimizer states and updated weights; peak numeric cache was about 71 MB. The live throughput comparison uses evolving policies/worlds, so it is not evidence of improved learning quality. [Measured evidence](nonllm_encoding_reuse.md).
+
+All **337 tests** and the bounded core smoke passed. The supervisor reloaded at a completed evaluation boundary without interrupting a training child. Final safeguards now bind core Python files as well as policy, checkpoint, task and native-binary identities.
+
 ## 2026-10-12 03:04 UTC — full-control Act 1 reaches 38/48
 
 The best jointly trained policy now clears **38/48** matched development worlds, up from **29/48** at the composed warm start. All 48 runs completed, with **zero simulator faults or truncations** and no native-controlled decisions. Later checkpoints vary, so selection retains the best rather than the last checkpoint.
