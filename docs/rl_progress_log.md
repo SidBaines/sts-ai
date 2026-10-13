@@ -82,8 +82,9 @@ explore strategic options. Exploration is the lever.
   - **36% of Act 2 boss fights start with no potions**, even though 66% of
     shop purchases are potions.
   - Won fights also started with more HP (90% vs 75%).
-  - Causal test queued: no potion drinking in hallway fights while HP ≥ 30%
-    (`--save-potions-above 0.3`).
+  - Causal test, no potion drinking in hallway fights while HP ≥ 30%: **null**
+    (+0.00 ± 0.24; wins 19 → 19). The correlation was confounding: stronger
+    runs simply have more potions.
 - **Combat v3** after 3 updates: panel Act 2 boss 33.3 → 34.8%, Act 3 boss
   17.5 → 20%. Too early to call.
 
