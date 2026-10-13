@@ -129,3 +129,22 @@ def paired(a: Sequence[dict[str, Any]], b: Sequence[dict[str, Any]], *, bootstra
             "se": float(d.std() / math.sqrt(max(1, len(d)))),
             "ci95": [float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))],
             "wins": [int(sum(fa[s]["win"] for s in common)), int(sum(fb[s]["win"] for s in common))]}
+
+
+def paired_wins(a: Sequence[dict[str, Any]], b: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Act 3 boss wins on common worlds, with an exact McNemar (sign) test on discordant worlds.
+
+    Wins are rare (~2%), so floor-based paired SEs say little about them: at
+    1,024 worlds a 1-point win-rate change is ~1 SE. Use >= 4,096 worlds."""
+    fa, fb = {r["seed"]: r for r in a}, {r["seed"]: r for r in b}
+    common = sorted(set(fa) & set(fb))
+    only_a = sum(fa[s]["win"] and not fb[s]["win"] for s in common)
+    only_b = sum(fb[s]["win"] and not fa[s]["win"] for s in common)
+    n = only_a + only_b
+    tail = sum(math.comb(n, k) for k in range(max(only_a, only_b), n + 1)) / 2 ** n if n else 1.0
+    wins_a = sum(fa[s]["win"] for s in common)
+    wins_b = sum(fb[s]["win"] for s in common)
+    return {"n": len(common), "wins": [wins_a, wins_b],
+            "rate": [wins_a / max(1, len(common)), wins_b / max(1, len(common))],
+            "only_a": only_a, "only_b": only_b, "p_two_sided": min(1.0, 2 * tail)}
+
