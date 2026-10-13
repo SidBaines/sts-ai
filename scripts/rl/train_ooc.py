@@ -21,7 +21,7 @@ def main() -> None:
         elif f.name == "out":
             parser.add_argument(flag, required=True)
         else:
-            kind = {"int": int, "float": float}.get(str(f.type), str)
+            kind = {"int": int, "float": float}.get(str(f.type).replace(" | None", ""), str)  # Optional[float] -> float
             parser.add_argument(flag, type=kind, default=f.default)
     parser.add_argument("--resume", action="store_true")
     args = vars(parser.parse_args())

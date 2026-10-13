@@ -19,7 +19,7 @@ def main() -> None:
         if f.name in ("records", "out"):
             parser.add_argument(flag, required=True)
         else:
-            kind = {"int": int, "float": float}.get(str(f.type), str)
+            kind = {"int": int, "float": float}.get(str(f.type).replace(" | None", ""), str)  # Optional[float] -> float
             parser.add_argument(flag, type=kind, default=f.default)
     distill(DistillConfig(**vars(parser.parse_args())))
 
