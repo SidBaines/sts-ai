@@ -158,9 +158,12 @@ def build_report(root: Path) -> dict:
             last = metrics[-1]
             complete = load(folder/"completion.json") if (folder/"completion.json").exists() else None
             launch = load(folder/"launch.json") if (folder/"launch.json").exists() else None
-            runs.append({"name":str(folder.relative_to(root)),"kind":"native combat BC",
+            config = launch.get("config") if launch else last.get("config")
+            target = config.get("target") if config else None
+            kind = "native combat corrections" if target=="correction" else "native combat preferences" if target=="preference" else "native combat BC"
+            runs.append({"name":str(folder.relative_to(root)),"kind":kind,
                 "status":"fit complete / frozen base verified" if complete else "saved checkpoint; completion marker unavailable",
-                "config":launch.get("config") if launch else last.get("config"),
+                "config":config,
                 "metrics":metrics,"actor_exposures":sum(last["actual_exposures_by_act"].values()),
                 "unique_rows_used":last["unique_rows_used"],"elapsed_seconds":last["elapsed_seconds"],
                 "note":"Teacher likelihood and agreement are supervision diagnostics, not game competence."})

@@ -1,5 +1,41 @@
 # Repaired training study progress
 
+## Current-profile learning controls: 13 October 05:50 UTC
+
+A new 65-task public-policy panel supplies 9,436 combat labels with six search/draw
+conditions each. All queried/no-query trajectories and rewards match; no faults.
+Preference targets require visited roots, a normalized within-search gap and
+cross-condition ordering agreement. These are heuristic filters over biased
+private-search diagnostics, not calibrated public action values or confidence
+intervals. The scorer averages equivalent-copy logits so multiplicity cannot
+create a preference. Vectorized loss fitting takes about 15–16 seconds for
+40,960 exposures; actual counts and every 40-step checkpoint are saved.
+
+| New-profile DEV192 condition | Act 1 | Act 2 | Full wins | Mean floor |
+| --- | ---: | ---: | ---: | ---: |
+| Original transfer | 156 | 20 | 0 | 28.198 |
+| Stable preferences, seed 0 | 158 | 15 | 0 | 28.198 |
+| Stable preferences, seed 1 | 155 | 15 | 0 | 27.839 |
+| Matched filtered-pool one-hot | 156 | 14 | 1 | 27.865 |
+| Correction-only hinge, seed 0 | 135 | 10 | 0 | 25.490 |
+
+None qualifies for scaling or promotion. The matched one-hot win is accompanied
+by six lost Act 2 clears and is not accepted as reliable improvement. Correction
+filtering improved held preference ordering yet severely harmed live play,
+reinforcing that search-proxy fit is insufficient. Later-act holdout coverage is
+small (25 preference rows, seven correction rows) and is explicitly reported.
+The initial target/trainer sources are archived byte-for-byte with matching
+launch hashes; subsequent runs save their source files directly.
+
+The complete suite now passes **539 host/native tests** (one optional generated
+bank skip). Compatible original-policy rehearsal completes 65 TRAIN tasks plus
+24 disjoint TRAIN holdouts without faults/cuts, preserving four training wins
+(one fresh, three conditional) separately. A finite eight-chunk OOC macro pilot
+under the corrected representation is active at
+`data/nonllm_v4/pilots/semantic_macro_lam1_s0_8`: frozen combat, λ=1, original
+rehearsal, new 49-frontier bank and the compatible DEV baseline. No older campaign
+or final cohort is resumed.
+
 ## Latest: semantic revision accepted, 13 October 05:10 UTC
 
 The broader-start credit controls finish **157/19/0** (λ=.95, seed 0),

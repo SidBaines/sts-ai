@@ -9,6 +9,16 @@ The earlier v3 encoder/model sections below describe the preserved 0.2 study.
 Old typed checkpoints/banks must use `external/reference_code_v020` plus the
 pinned v020 native build; current loaders intentionally reject them.
 
+`combat_preferences` is an experimental target, not an action-value oracle.
+Native search gives victory a large discontinuous bonus and its root means are
+affected by adaptive exploration. Per-condition normalization and agreement
+filters do not turn them into calibrated expected returns. Pairwise, one-hot and
+correction-only targets need separate identities and live retention gates.
+Equivalent-copy scores use means rather than group mass to avoid a multiplicity
+bias. Vectorize preference scoring before MPS training; per-pair device operations
+create excessive small-kernel overhead. Preserve target/trainer source bytes with
+launch hashes before changing experimental code.
+
 Inference batches must preserve phase separation. Mixed OOC/combat padding can
 change near-tied greedy choices through floating-point rounding, even with a
 zero residual. Collector v2 uses separate phase batches and compact legacy
