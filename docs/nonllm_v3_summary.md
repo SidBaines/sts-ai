@@ -25,6 +25,15 @@ under `data/nonllm_v4`. The new native-1,000 TRAIN bank has **64/64 valid worlds
 corrected data/execution, not game-learning improvement. Final cohorts stay
 unopened. The older dated entries below remain historical evidence.
 
+At 05:25 UTC, two fresh current-profile processes match all **192 full action-JSON
+hashes**. The new bank's complete 23,278-row encoder audit finds zero unknown
+identities/statuses/action kinds or unresolved joins; 2,514 unsupported damage
+targets remain explicitly unknown. **49/49** new strategic frontiers replay/hash
+verify (40 Act 2, nine Act 3). The dashboard now selects `nonllm_v3` (preserved
+0.2) and `nonllm_v4` (current 0.3) separately, with no compatible learning updates
+yet claimed for the new profile. Next experiments must use its compatible
+initialization, rehearsal, data and baseline rather than reusing old typed inputs.
+
 ## Current state: 13 October, 03:40 UTC
 
 The repaired interface, typed residual models, protected strategic trainer and read-only learning report are implemented. **No training condition is promoted.** Early short combat gains failed optimizer-seed/longer-fit retention checks; learner-state cloning and consensus targets also fail the live outcome gate. Original campaigns and final data remain preserved. The current validated reference is `models/common_initial_context_v2.pt` under `data/nonllm_v3`.
