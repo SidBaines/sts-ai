@@ -38,6 +38,47 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 16:52 BST — Exploration alone is too noisy to learn smithing; tuning the strategy rule with paired evals instead
+
+- **Update-36 evals**, paired:
+
+  | Run, update 36 | Mean floor | vs original | vs main@32 |
+  | --- | --- | --- | --- |
+  | `strat8` (exploration) | 31.92 | +2.69 | **+0.08 ± 0.25** |
+  | `smith70` (rule + PPO) | 32.70 | **+3.43** [2.81, 4.05]; wins 2 → 21 | +0.80 [0.30, 1.31] |
+
+  `smith70` at update 36 vs update 28 + rule (33.06): −0.35 ± 0.28. Four PPO
+  updates on top of the rule have not added anything yet.
+- **Why exploration does not teach smithing.** With `strat8`'s update-36
+  weights (T=8), sampled smith fell to ~2% of rest sites; PPO pushes it down.
+  Macro advantages by HP, ~1,750 rest sites:
+
+  | HP at rest site | Smith advantage (n) | Rest advantage |
+  | --- | --- | --- |
+  | <50% | **−0.41** (3) | −0.016 |
+  | 50–70% | −0.14 (6) | +0.012 |
+  | 70–85% | −0.09 (6) | +0.008 |
+  | ≥85% | +0.03 (7) | −0.010 |
+  | 100% | −0.01 (11) | −0.030 |
+
+  - Exploration samples smith at every HP. The costly low-HP smiths dominate,
+    and the network generalises "smith is bad" across HP.
+  - The true high-HP benefit (~0.02 reward units, ~0.4 floors per decision)
+    sits under advantage noise of ~0.15. It would take ~200 samples per HP
+    bucket to resolve.
+  - **Temperature exploration is the right idea but far too sample-hungry for
+    small-effect strategic decisions under this credit noise.**
+- **Pivot: tune strategy rules with paired evals.** 1,024 shared worlds give
+  SE ≈ 0.25 floors, much lower noise than per-decision credit. Queued vs
+  update 28:
+  - smith threshold 50% and 85% (bracketing the 70% that gave +1.15);
+  - elite-seeking (take an offered elite path at HP ≥ 90%) on top of smith at
+    70%.
+- **Seed-2 replicate stopped at update 12** after replicating (+1.46 at
+  update 8). Its update-12 checkpoint is being evaluated separately.
+
+---
+
 ## 2026-10-13 16:36 BST — The recipe replicates (seed 2 +1.46 at update 8); main plateaus; exploration has a cleaner gradient
 
 - **Seed-2 replicate update 8: 30.70, paired +1.46 (95% CI [0.96, 1.98])** vs the
