@@ -58,6 +58,30 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 19:29 BST — Elite threshold: 90% beats 80%; PPO from distilled is flat; combat v3 slow
+
+- **Elite threshold, win set (4,096 worlds), vs the distilled agent:**
+
+  | Take an elite path at HP ≥ | Floors | Wins | McNemar p |
+  | --- | --- | --- | --- |
+  | 80% | −0.26 [−0.51, −0.00] | 77 → 91 | 0.22 |
+  | 90% | −0.06 [−0.29, +0.16] | 77 → **94** | 0.10 |
+
+  Adopting **90%**.
+- **`ooc_ppo_from_distilled`:** paired evals at updates 4, 8 and 12 read 33.36,
+  33.69 and 33.15, against a start of 33.31. PPO **keeps** the distilled
+  behaviour but does not significantly build on it within 12 updates.
+- **Combat v3 (dense credit), update 7:**
+  - panel Act 2 boss 33.3 → 34.3–34.8%, Act 3 boss 17.5 → 17.5–20%;
+  - sampled win rate flat at ~0.64.
+
+  Better than v2's trajectory, but still slow. First full-game eval at
+  update 10.
+- **Next:** distil smith ≥85% + elite ≥90% together. Then run PPO from that,
+  and confirm on the win set.
+
+---
+
 ## 2026-10-13 19:18 BST — Elite-seeking raises wins at no floor cost (4,096-world win set); potions-at-boss lead
 
 - **Elite-seeking (take an offered elite path at HP ≥ 90%)**, on top of the
