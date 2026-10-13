@@ -26,7 +26,7 @@ All results are greedy, paired vs the original on ~1,010 worlds.
 | Update 28 + "smith whenever HP ≥ 85%" | 33.26 | ≈ +4.0 | 16 | rule: +1.35 [0.95, 1.79] over update 28 |
 | **Update 36 + rule distilled into the network** (`distill_smith85_i36/distilled.pt`) | **33.31** | **+4.05** [3.43, 4.65] | 19 | no rule at deployment; **fresh worlds: +4.29 [3.67, 4.87], wins 3 → 22** |
 
-**Resumed 18:53.** Running: `ooc_ppo_from_distilled` (to 16), 4,096-world win evals, and combat RL v3 (soon).
+**Running (since 19:50):** λ sweep from the distilled agent, discovery-from-scratch, and combat v3. See the latest entries.
 Stopped:
 - `ooc_main_s1` at update 45. This was the control lineage.
 - `ooc_branch_smith70`: PPO trained with the smith rule.
@@ -43,7 +43,7 @@ tuning is fast.
 | OOC PPO, update 28 (`ooc_main_s1/iter_0028.pt`) | 31.92 | **+2.69** [2.12, 3.24] | 11 | E8 recipe |
 | …plus the "smith at ≥70% HP" rule | **33.06** | ≈ +3.8 | 13 | +1.15 [0.70, 1.60] over update 28 |
 
-**Resumed 18:53.** Running: `ooc_ppo_from_distilled` (to 16), 4,096-world win evals, and combat RL v3 (soon).
+**Running (since 19:50):** λ sweep from the distilled agent, discovery-from-scratch, and combat v3. See the latest entries.
 Stopped:
 - `ooc_main_s1` at update 45. This was the control lineage.
 - `ooc_rep_s2`: seed-2 replicate from the original.
@@ -55,6 +55,24 @@ Branches vs main are compared at updates 36/40/44 with
 
 **Main open problem:** the OOC policy's logits are saturated, so PPO cannot
 explore strategic options. Exploration is the lever.
+
+---
+
+## 2026-10-13 19:47 BST — λ sweep and discovery-from-scratch running
+
+Running, all paired on the same training worlds where possible:
+
+| Run | Start | Credit | Exploration | Question |
+| --- | --- | --- | --- | --- |
+| `ooc_ppo_from_distilled` (done) | distilled | λ = 0.95 | none | unlearned smithing by update 16 (−0.54) |
+| `ooc_pfd_lam1` | distilled | **λ = 1.0** | none | does unbiased credit keep and refine smithing? |
+| `ooc_pfd_lam099` | distilled | λ = 0.99 | none | the middle ground |
+| `ooc_discover_strat8_lam1` | main update 36 (never smiths) | λ = 1.0 | strategic T = 8 | **can PPO discover HP-conditional smithing or elites by itself?** |
+| `combat_v3_shaped` | distilled | dense shaping, λ = 0.95 | — | combat learning speed |
+
+- `ooc_pfd_lam1`, updates 1–4: smith rate 38 → 40 → 43 → 43%. This is the
+  same as the λ = 0.95 run early on; its decline only began after update 9.
+- Memory is 46% free with four trainers running. A low-memory alert is armed.
 
 ---
 
