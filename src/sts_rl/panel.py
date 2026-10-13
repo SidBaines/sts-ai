@@ -91,8 +91,15 @@ class PanelEpisode(CurriculumEpisode):
         for sample in samples:
             scratch = raw.bc.copy()
             scratch.reseed_rngs(int(search_seed) * 1009 + int(sample))
-            result = scratch.search_best_action(simulations, search_seed=search_seed + sample,
-                                                draw_order_seed=sample, include_card_type=include)
+            try:
+                result = scratch.search_best_action(simulations, search_seed=search_seed + sample,
+                                                    draw_order_seed=sample, include_card_type=include)
+            except ValueError as exc:
+                # Draw-index card selection (Secret Technique/Weapon) cannot be searched on a
+                # shuffled copy without leaking the true order: abstain, caller falls back.
+                if "draw_order_seed" in str(exc):
+                    return {}
+                raise
             index = int(env.display_index_for_bits(int(result["bits"])))
             votes[index] = votes.get(index, 0) + 1
         return votes

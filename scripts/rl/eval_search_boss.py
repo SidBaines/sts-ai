@@ -39,6 +39,7 @@ def main() -> None:
     p.add_argument("--simulations", type=int, default=1000)
     p.add_argument("--samples", type=int, default=24)
     p.add_argument("--rooms", default="BOSS", help="rooms whose fights use search (e.g. BOSS or BOSS,ELITE)")
+    p.add_argument("--min-act", type=int, default=1, help="search only in fights from this act on")
     p.add_argument("--threads", type=int, default=8)
     p.add_argument("--baseline")
     p.add_argument("--output", required=True)
@@ -68,11 +69,14 @@ def main() -> None:
                             floor = state.get("floor")
                             if floor in BOSS_FLOORS and floor not in boss_hp:
                                 boss_hp[floor] = state.get("cur_hp")
-                        if obs.get("phase") == "combat" and room in rooms and len(legal) > 1:
+                        votes = {}
+                        if (obs.get("phase") == "combat" and room in rooms and len(legal) > 1
+                                and int(state.get("act") or 1) >= args.min_act):
                             votes = inner.search_votes_public(args.simulations, list(range(1, args.samples + 1)),
                                                               task.seed % 100_000 + steps)
+                        if votes:
                             action = max(votes.items(), key=lambda kv: kv[1])[0]
-                        else:
+                        else:  # policy (also the fallback when search abstains)
                             with LOCK, torch.no_grad():
                                 logits, _, _ = forward_policy(model, collate_public([obs]))
                             action = int(legal[int(logits[0][: len(legal)].argmax())]["index"])
