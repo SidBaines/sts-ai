@@ -58,6 +58,34 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 19:40 BST — Confirmed: λ = 0.95 critic bootstrapping biases credit against smithing; λ = 1.0 does not
+
+Smith-vs-rest macro advantages on the **same 512 sampled games** from the
+distilled policy, under two GAE λ (all advantages are shifted positive because
+the critic lags the improved policy; only the gaps matter):
+
+| HP at rest site | λ = 0.95: smith − rest | λ = 1.0: smith − rest |
+| --- | --- | --- |
+| 100% | +0.032 (rest n = 42) | +0.189 |
+| ≥85% | **−0.026** (~2σ) | +0.012 |
+| 70–85% | **−0.049** (~2σ) | **+0.083** (~1.3σ) |
+
+- **Under λ = 0.95, smithing at high HP looks worse than resting.** That is
+  why PPO unlearns it.
+- **Under Monte-Carlo returns (λ = 1.0) it looks better**, matching the paired
+  evaluations (+1.2 floors). The cost is ~3× noisier advantages: SE 0.02–0.04
+  vs 0.007–0.013.
+- **Implication for the E8 recipe:** λ = 0.95 macro credit is biased against
+  delayed-payoff OOC decisions (upgrades, and plausibly card picks and relic
+  choices), because the critic cannot see their value. The original policy's
+  "never smith" was likely learned through the same bias.
+- `ooc_pfd_lam1` (PPO from distilled at λ = 1.0) is running. A middle ground
+  (λ = 0.99) is the next candidate if λ = 1.0 is too noisy.
+- **Combat v3, update 10:** full game −0.20 ± 0.22 vs its start (wins
+  19 → 18); panel Act 2 boss 33.3 → 36.3% (~1 SE). Continuing to update 20.
+
+---
+
 ## 2026-10-13 19:37 BST — Plain PPO *unlearns* smithing: evidence of biased OOC credit (λ = 0.95)
 
 - **`ooc_ppo_from_distilled`** (E8 recipe, λ = 0.95, no rule), from the
