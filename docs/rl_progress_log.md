@@ -16,6 +16,30 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 
 ---
 
+## 2026-10-13 16:25 BST — Removal overlay is null; exploration confirmed; rule-augmented lineage launched
+
+- **Removal overlay** ("no potion buys while a removal is affordable"), paired
+  vs update 28: **+0.12 ± 0.25 (CI [−0.36, 0.60])**. Null on mean floor. Wins
+  11 → 17, but too few to read. Potion-heavy shopping is not the leak; never
+  upgrading is.
+- **The exploration branch explores:**
+
+  | At update 33 (T=1 sampling, training games) | Main | `strat8` |
+  | --- | --- | --- |
+  | Smith rate | 0.0% | **5.2%** |
+  | Elite paths | 0.0% | 0.4% |
+  | Removals | 0.0% | 1.0% |
+  | Potion share of shop actions | 69% | 48% |
+  | Collect floor | 31.0 | 30.0 |
+
+  Collect floor is training-time sampled play, not the greedy eval.
+- **Rule-augmented lineage launched: `ooc_branch_smith70`.** It is main plus
+  the "smith at ≥70% HP" rule, applied in both training and evaluation. It
+  tests whether PPO keeps compounding on top of the +1.15 rule. Compared paired
+  against main and `strat8` at 36/40/44.
+
+---
+
 ## 2026-10-13 16:18 BST — Smithing at ≥70% HP alone is worth +1.15 floors; exploration branch launched
 
 - **Overlay "smith whenever HP ≥ 70%"**, paired on 1,024 worlds vs update 28:
