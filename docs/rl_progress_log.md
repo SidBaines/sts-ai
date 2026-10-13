@@ -26,7 +26,8 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 | + distilled smith rule (`distill_smith85_i36/distilled.pt`) | 1.92% | 33.19 | |
 | + PPO λ = 1.0, 12 updates (`ooc_pfd_lam1/iter_0012.pt`) | 2.09% | **34.08** | best mean floor |
 | + distilled elite rule (`distill_r2_lam1i12/distilled.pt`) | 2.32% | 33.59 | |
-| **+ PPO λ = 1.0, 4 updates** (`ooc_r2_lam1/iter_0004.pt`) | **2.62%** | 33.92 | **best win rate**; vs distilled p = 0.018 |
+| + PPO λ = 1.0, 4 updates (`ooc_r2_lam1/iter_0004.pt`) | 2.62% | 33.92 | vs distilled p = 0.018 |
+| **+ PPO λ = 1.0, 12 updates** (`ooc_r2_lam1/iter_0012.pt`) | **3.76%** | **34.58** | **best**; vs update 4 p = 0.001 |
 
 **What works:**
 - The E8 OOC PPO recipe, now with **λ = 1.0**.
@@ -101,6 +102,24 @@ Branches vs main are compared at updates 36/40/44 with
 
 **Main open problem:** the OOC policy's logits are saturated, so PPO cannot
 explore strategic options. Exploration is the lever.
+
+---
+
+## 2026-10-13 23:24 BST — Confirmed: 3.76% win rate (4,096-world win set), double the distilled agent
+
+**Round-2 PPO, update 12** (`ooc_r2_lam1/iter_0012.pt`), win set:
+
+| vs | Mean floor | Paired floors | Wins | McNemar p |
+| --- | --- | --- | --- | --- |
+| Round-2 PPO update 4 | 34.58 vs 33.92 | **+0.66 [0.39, 0.96]** | 106 → **151** (2.64% → **3.76%**) | **0.001** |
+| Distilled (smith) agent | 34.58 vs 33.19 | +1.38 [1.05, 1.69] | 75 → 150 (1.88% → 3.76%) | < 0.001 |
+
+- **The agent now completes the game (A0 Act 3 boss win) in ~1 run in 27.**
+  That is ~12× the original (~0.3%).
+- The 1,024-world readings (52 wins at update 12, 44 at update 16) were
+  consistent with this; the win set confirms it.
+- Training-game floor kept rising after update 16: 35.2–35.3 at updates
+  19–20. The run continues to update 32.
 
 ---
 
