@@ -38,7 +38,7 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
   unlearns smithing.
 - Combat PPO on fight banks does not move full-game outcomes, sparse or dense.
 
-**Biggest wall:** the Act 2 boss (~31% pass) and the Act 3 boss (~17% pass).
+**Biggest wall:** the Act 2 boss (~31% pass) and the Act 3 boss (~17% pass). Public search adds +8 points at the Act 2 boss (bank fights, p ≈ 0.016).
 
 --- | --- | --- | --- | --- |
 | Original (`joint_act3_0030.pt`) | 0.30% (3/1,009) | 28.8 | — | fresh worlds |
@@ -100,6 +100,25 @@ Branches vs main are compared at updates 36/40/44 with
 
 **Main open problem:** the OOC policy's logits are saturated, so PPO cannot
 explore strategic options. Exploration is the lever.
+
+---
+
+## 2026-10-13 22:11 BST — Back on AC; jobs resumed; public-search expert iteration prepared
+
+- **Back on AC around 22:09.** The queue runner resumed `ooc_r2_lam1` (from
+  update 4) and started the two held evals:
+  - the full-game search-augmented eval, `searcheval_r2_a23_s64`, 2,048
+    win-set worlds;
+  - the round-2 win-set check, `win_r2ppo_i4`.
+- **The paused Act 3 boss search job was killed, not resumed.** Its resume
+  watcher died with the previous session, and its workers' wall-clock
+  timeouts would have expired during the pause anyway. The full-game eval
+  covers Act 3 boss fights.
+- **`collect_combat_labels.py --public --boss-only`** is prepared. It will
+  collect public-search vote labels in boss fights on the learner's own state
+  distribution, then distil them into the combat head (soft targets plus a KL
+  anchor). The earlier failed imitation used privileged labels; this is the
+  fair test of search-driven combat improvement.
 
 ---
 
