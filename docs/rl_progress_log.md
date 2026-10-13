@@ -70,7 +70,7 @@ explore strategic options. Exploration is the lever.
   | --- | --- | --- |
   | `ooc_main_s1` | stopped after update 45 (`latest.pt` = 45) | update 40: 32.29, +3.10, 11 wins |
   | `ooc_branch_smith70` | **done** (update 44) | update 44: 33.01, +3.71, 24 wins |
-  | `ooc_ppo_from_distilled` | stopped after update 4 (`latest.pt` = 4) | none yet; sampled smith rate 37–39% over updates 1–4 |
+  | `ooc_ppo_from_distilled` | stopped after update 4 (`latest.pt` = 4) | update 4: 33.36, +4.09 vs original, 20 wins; vs the distilled start +0.08 ± 0.25. Smithing kept (sampled 37% → 41%) |
 
 - **To resume:**
   1. `.venv/bin/python scripts/rl/queue_runner.py start`
