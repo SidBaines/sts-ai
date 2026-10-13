@@ -16,7 +16,7 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 
 ---
 
-## 2026-10-13 16:25 BST — Removal overlay is null; exploration confirmed; rule-augmented lineage launched
+## 2026-10-13 16:23 BST — Removal overlay is null; exploration confirmed; rule-augmented lineage launched
 
 - **Removal overlay** ("no potion buys while a removal is affordable"), paired
   vs update 28: **+0.12 ± 0.25 (CI [−0.36, 0.60])**. Null on mean floor. Wins
