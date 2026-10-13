@@ -53,6 +53,7 @@ class OOCTrainConfig:
     dominated_filter: bool = False  # drop strictly dominated OOC actions (rest at full HP)
     smith_above: float | None = None  # rule overlay: no 'rest' at HP fraction >= this (train + eval)
     prefer_remove: bool = False     # rule overlay: no potion buys while a removal is affordable
+    elite_above: float | None = None  # rule overlay: take an offered elite path at HP fraction >= this
     train_combat: bool = False     # keep False: combat head frozen
     eval_every: int = 4
     eval_n: int = 1024
@@ -288,12 +289,13 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
         from .parallel_collect import CollectorPool
         pool = CollectorPool(cfg.collectors, workers=cfg.workers, checkpoint=cfg.checkpoint,
                              dead_action_filter=cfg.dead_action_filter, dominated=cfg.dominated_filter,
-                             smith_above=cfg.smith_above, prefer_remove=cfg.prefer_remove)
+                             smith_above=cfg.smith_above, prefer_remove=cfg.prefer_remove,
+                             elite_above=cfg.elite_above)
         workers: list[Any] = []
     else:
         workers = make_workers(cfg.workers, dead_action_filter=cfg.dead_action_filter,
                                dominated=cfg.dominated_filter, smith_above=cfg.smith_above,
-                               prefer_remove=cfg.prefer_remove)
+                               prefer_remove=cfg.prefer_remove, elite_above=cfg.elite_above)
 
     def run_eval(iteration: int) -> None:
         result = evaluate(model, pool if pool is not None else workers, n=cfg.eval_n,

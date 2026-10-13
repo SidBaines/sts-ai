@@ -42,13 +42,15 @@ def train_tasks(start: int, count: int, *, max_act: int = 3, horizon: int = 4096
 
 def make_workers(count: int, *, timeout: float = 10.0, dead_action_filter: bool = False,
                  slim: bool = True, forced_play: bool = False, dominated: bool = False,
-                 smith_above: float | None = None, prefer_remove: bool = False) -> list[Any]:
+                 smith_above: float | None = None, prefer_remove: bool = False,
+                 elite_above: float | None = None) -> list[Any]:
     workers = [CurriculumWorker(config=WORKER_CONFIG, timeout=timeout) for _ in range(count)]
-    if not (dead_action_filter or slim or forced_play or dominated or smith_above is not None or prefer_remove):
+    if not (dead_action_filter or slim or forced_play or dominated or smith_above is not None or prefer_remove
+            or elite_above is not None):
         return workers
     return [FilteringWorker(w, dead_actions=dead_action_filter, slim=slim, forced_play=forced_play,
-                            dominated=dominated, smith_above=smith_above, prefer_remove=prefer_remove)
-            for w in workers]
+                            dominated=dominated, smith_above=smith_above, prefer_remove=prefer_remove,
+                            elite_above=elite_above) for w in workers]
 
 
 def close_workers(workers: Sequence[Any]) -> None:
@@ -167,7 +169,7 @@ def hp_fraction(observation: dict[str, Any]) -> float | None:
 
 
 def apply_overlays(observation: dict[str, Any], *, smith_above: float | None = None,
-                   prefer_remove: bool = False) -> dict[str, Any]:
+                   prefer_remove: bool = False, elite_above: float | None = None) -> dict[str, Any]:
     if observation.get("phase") == "combat":
         return observation
     legal = observation.get("legal_actions") or []
@@ -179,6 +181,10 @@ def apply_overlays(observation: dict[str, Any], *, smith_above: float | None = N
             drop |= {i for i, d in enumerate(descriptions) if d.startswith("rest")}
     if prefer_remove and any(d.startswith("buy card remove") for d in descriptions):
         drop |= {i for i, d in enumerate(descriptions) if d.startswith("buy potion")}
+    if elite_above is not None and any("room=ELITE" in d for d in descriptions):
+        fraction = hp_fraction(observation)
+        if fraction is not None and fraction >= elite_above:
+            drop |= {i for i, d in enumerate(descriptions) if "map node" in d and "room=ELITE" not in d}
     if not drop or len(drop) == len(legal):
         return observation
     return {**observation, "legal_actions": [a for i, a in enumerate(legal) if i not in drop]}
@@ -222,10 +228,10 @@ class FilteringWorker:
 
     def __init__(self, worker: CurriculumWorker, *, dead_actions: bool = True, slim: bool = False,
                  forced_play: bool = False, dominated: bool = False, smith_above: float | None = None,
-                 prefer_remove: bool = False) -> None:
+                 prefer_remove: bool = False, elite_above: float | None = None) -> None:
         self.worker, self.dead_actions, self.slim = worker, dead_actions, slim
         self.forced_play, self.dominated = forced_play, dominated
-        self.smith_above, self.prefer_remove = smith_above, prefer_remove
+        self.smith_above, self.prefer_remove, self.elite_above = smith_above, prefer_remove, elite_above
 
     def _map(self, observation: dict[str, Any]) -> dict[str, Any]:
         # Menu filters run before slimming: they read structured state and relic text.
@@ -233,8 +239,9 @@ class FilteringWorker:
             observation = force_play(observation)
         if self.dominated:
             observation = drop_dominated(observation)
-        if self.smith_above is not None or self.prefer_remove:
-            observation = apply_overlays(observation, smith_above=self.smith_above, prefer_remove=self.prefer_remove)
+        if self.smith_above is not None or self.prefer_remove or self.elite_above is not None:
+            observation = apply_overlays(observation, smith_above=self.smith_above, prefer_remove=self.prefer_remove,
+                                         elite_above=self.elite_above)
         if self.dead_actions:
             return filter_observation(observation, slim=self.slim)
         return {**observation, "text": slim_text(str(observation.get("text", "")))} if self.slim else observation
