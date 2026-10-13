@@ -4,6 +4,7 @@ from __future__ import annotations
 from concurrent.futures import Future
 import json
 import os
+import re
 from pathlib import Path
 import time
 from typing import Any, Callable, Sequence
@@ -39,9 +40,12 @@ def train_tasks(start: int, count: int, *, max_act: int = 3, horizon: int = 4096
     return tasks
 
 
-def make_workers(count: int, *, timeout: float = 10.0, dead_action_filter: bool = False) -> list[Any]:
+def make_workers(count: int, *, timeout: float = 10.0, dead_action_filter: bool = False,
+                 slim: bool = True) -> list[Any]:
     workers = [CurriculumWorker(config=WORKER_CONFIG, timeout=timeout) for _ in range(count)]
-    return [FilteringWorker(w) for w in workers] if dead_action_filter else workers
+    if not (dead_action_filter or slim):
+        return workers
+    return [FilteringWorker(w, dead_actions=dead_action_filter, slim=slim) for w in workers]
 
 
 def close_workers(workers: Sequence[Any]) -> None:
@@ -79,7 +83,19 @@ def is_dead_action(description: str) -> bool:
     return description == "take key" or description.startswith("recall")
 
 
-def filter_observation(observation: dict[str, Any]) -> dict[str, Any]:
+_ENCODER_TEXT = re.compile(r"^(?:(?:Deck|Relics|Potions|Card select|Selection type|Event):.*|Choose a card.*|Act .*end-of-act boss.*)$")
+
+
+def slim_text(text: str) -> str:
+    """Keep only the text lines public_candidate_v2 reads (see encoding.py: _PUBLIC_LINES,
+    the 'Choose a card' purpose and the act-boss line). Glossary/route prose is dropped:
+    it is ~half of each observation and the dominant memory cost of large batches."""
+    return "\n".join(line for line in text.split("\n") if _ENCODER_TEXT.match(line))
+
+
+def filter_observation(observation: dict[str, Any], *, slim: bool = False) -> dict[str, Any]:
+    if slim and "text" in observation:
+        observation = {**observation, "text": slim_text(str(observation["text"]))}
     legal = observation.get("legal_actions") or []
     if observation.get("phase") == "combat" or len(legal) < 2:
         return observation
@@ -98,17 +114,25 @@ class _MappedFuture:
 
 
 class FilteringWorker:
-    """Wraps a CurriculumWorker so observations never offer dead actions."""
+    """Wraps a CurriculumWorker so observations never offer dead actions.
 
-    def __init__(self, worker: CurriculumWorker) -> None:
-        self.worker = worker
+    slim=True additionally drops observation text the encoder never reads
+    (verified to leave public_candidate_v2 encodings byte-identical)."""
+
+    def __init__(self, worker: CurriculumWorker, *, dead_actions: bool = True, slim: bool = False) -> None:
+        self.worker, self.dead_actions, self.slim = worker, dead_actions, slim
+
+    def _map(self, observation: dict[str, Any]) -> dict[str, Any]:
+        if self.dead_actions:
+            return filter_observation(observation, slim=self.slim)
+        return {**observation, "text": slim_text(str(observation.get("text", "")))} if self.slim else observation
 
     def submit(self, method: str, *args: Any) -> Any:
         future = self.worker.submit(method, *args)
         if method == "reset":
-            return _MappedFuture(future, lambda r: (filter_observation(r[0]), r[1]))
+            return _MappedFuture(future, lambda r: (self._map(r[0]), r[1]))
         if method == "step":
-            return _MappedFuture(future, lambda r: (filter_observation(r[0]), *r[1:]))
+            return _MappedFuture(future, lambda r: (self._map(r[0]), *r[1:]))
         return future
 
     def close(self) -> None:

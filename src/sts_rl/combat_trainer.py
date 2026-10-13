@@ -45,6 +45,7 @@ class CombatTrainConfig:
     value_weight: float = 0.25
     gae_lambda: float = 1.0
     target_kl: float = 0.05
+    micro_batch: int = 1024
     hp_weight: float = 0.3          # terminal HP retention bonus on wins
     mix: str = "BOSS2:0.35,ELITE2:0.35,BOSS1:0.1,ELITE1:0.05,BOSS3:0.075,ELITE3:0.075"
     holdout_fraction: float = 0.2
@@ -63,10 +64,11 @@ def _group(row: dict[str, Any]) -> str:
     return f"{row['room']}{row['act']}"
 
 
-def _battle_workers(count: int, hp_weight: float) -> list[CurriculumWorker]:
-    from .common import WORKER_CONFIG
+def _battle_workers(count: int, hp_weight: float) -> list[Any]:
+    from .common import WORKER_CONFIG, FilteringWorker
     config = {**WORKER_CONFIG, "terminal_hp_weight": hp_weight}
-    return [CurriculumWorker(config=config, timeout=60.0) for _ in range(count)]
+    return [FilteringWorker(CurriculumWorker(config=config, timeout=60.0), dead_actions=False, slim=True)
+            for _ in range(count)]
 
 
 def fight_panel(model: torch.nn.Module, workers, rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -148,7 +150,8 @@ def train(cfg: CombatTrainConfig, *, resume: bool = False) -> None:
             transitions = [t for t in result["transitions"] if len(t.observation["legal_actions"]) > 1]
             wins = [e.get("task_outcome") == "battle_victory" for e in result["episodes"]]
             update = update_ppo(model, transitions, collate=collate_public, forward=forward_policy, config=ppo,
-                                device="cpu", seed=cfg.seed * 1000 + iteration, optimizer=optimizer)
+                                device="cpu", seed=cfg.seed * 1000 + iteration, optimizer=optimizer,
+                                micro_batch=cfg.micro_batch)
             optimizer = update.pop("optimizer")
             steps_total += update["steps"]
             state = model.state_dict()

@@ -57,7 +57,8 @@ class OOCTrainConfig:
     workers: int = 14
     seed: int = 0
     health_every: int = 1
-    collect_chunk: int = 256
+    collect_chunk: int = 128
+    micro_batch: int = 1024         # PPO forward/backward chunk (same update, bounded activation memory)
     threads: int = 2
     notes: str = ""
 
@@ -279,6 +280,10 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 gc.collect()
             collect_seconds = time.time() - started
             flat = [t for ep in kept for t in ep]
+            # Kept observations were slimmed above, so a missing sampling-time encoding
+            # would be silently re-encoded from an empty state. Fail loudly instead.
+            if any(t.encoded_observation is None for t in flat):
+                raise RuntimeError("kept OOC transition lacks its sampling-time encoding")
             floors = np.array([e["floor"] for e in game_episodes])
             behaviour = {k: sum(v * n for v, n in vals) / max(1, sum(n for _, n in vals)) for k, vals in stats_acc.items()}
             record: dict[str, Any] = {
@@ -291,9 +296,10 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 "adv_raw_std": float(np.std([t.advantage for t in flat])) if flat else 0.0,
                 **behaviour}
             if cfg.health_every and iteration % cfg.health_every == 0:
-                record["grad_cosine_half"] = gradient_cosine(model, forward, kept, rng=rng)
+                record["grad_cosine_half"] = gradient_cosine(model, forward, kept, rng=rng, chunk=cfg.micro_batch)
             update = update_ppo(model, flat, collate=collate_public, forward=forward, config=ppo, device="cpu",
-                                seed=cfg.seed * 1000 + iteration, optimizer=optimizer)
+                                seed=cfg.seed * 1000 + iteration, optimizer=optimizer,
+                                micro_batch=cfg.micro_batch)
             optimizer = update.pop("optimizer")
             steps_total += update["steps"]
             record.update({k: update.get(k) for k in ("steps", "approx_kl", "clip_fraction", "entropy", "value_loss",
