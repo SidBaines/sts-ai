@@ -16,10 +16,27 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 
 ### Where we are (pinned; updated in place)
 
-All results are greedy, paired vs the original on ~1,014 worlds.
+All results are greedy, paired vs the original on ~1,010 worlds.
 
 | | Mean floor | Paired vs original | Wins | Notes |
 | --- | --- | --- | --- | --- |
+| Original | 29.27 | — | 1–2 | |
+| OOC PPO, update 28 | 31.92 | +2.69 [2.12, 3.24] | 11 | E8 recipe; seed 2 replicates (+1.37 at update 12 vs +1.57) |
+| OOC PPO, update 36 (`ooc_main_s1/iter_0036.pt`) | 32.34 | **+3.14** [2.58, 3.70] | 11 | still improving |
+| Update 28 + "smith whenever HP ≥ 85%" | **33.26** | ≈ +4.0 | 16 | rule: +1.35 [0.95, 1.79] over update 28 |
+
+**Running:**
+- `ooc_main_s1` → update 48. This is the control lineage.
+- `ooc_branch_smith70`: PPO trained with the smith rule.
+- Rule-sweep evals: elites, card skips, and main@36 + rule.
+- `strat8` (exploration) is stopped at update 38.
+
+**Main open problem:** the OOC policy's logits are saturated, and
+strategic-decision credit is noisy (per-decision effect ~0.02 vs noise
+~0.15). Exploration alone teaches smithing very slowly; paired-eval rule
+tuning is fast.
+
+--- | --- | --- | --- | --- |
 | Original | 29.27 | — | 1 | |
 | OOC PPO, update 28 (`ooc_main_s1/iter_0028.pt`) | 31.92 | **+2.69** [2.12, 3.24] | 11 | E8 recipe |
 | …plus the "smith at ≥70% HP" rule | **33.06** | ≈ +3.8 | 13 | +1.15 [0.70, 1.60] over update 28 |
