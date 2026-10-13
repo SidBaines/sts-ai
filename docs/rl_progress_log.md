@@ -58,6 +58,37 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 19:09 BST — Win-set baseline 1.91%; PPO keeps the distilled behaviour and builds on it; combat v3 running
+
+- **Best agent (distilled) on the 4,096-world win set: 1.91% win rate**
+  (77/4,041); mean floor 33.19.
+
+  | Stage | Rate |
+  | --- | --- |
+  | Pass the Act 2 boss | 31% |
+  | Reach the Act 3 boss | 11.5% |
+  | Beat the Act 3 boss, once reached | 16.6% |
+
+  Completing the game ≈ reach the Act 3 boss × beat it. Both boss gates
+  matter.
+- **`ooc_ppo_from_distilled`** (plain PPO, no rule), paired vs its distilled
+  start:
+
+  | Update | Paired (floors) | Wins (19 at start) |
+  | --- | --- | --- |
+  | 4 | +0.08 ± 0.25 | 20 |
+  | 8 | +0.40 ± 0.26 (CI [−0.11, +0.92]) | 25 (p = 0.38) |
+
+  Sampled smith rate stays at 41–43%. **Plain PPO keeps the learned behaviour
+  and appears to build on it.** Not yet significant.
+- **Combat v3** (`combat_v3_shaped`) is running.
+  - New bank from the distilled agent: 21,051 fights, 16,860 of them hallway.
+  - Baseline held-out panel (1,537 fights): Act 2 boss 33%, Act 3 boss 17.5%,
+    Act 2 elite 74%, Act 3 elite 75%, Act 1 boss 94%, hallways 94–100%.
+  - Full-game paired evals at updates 10, 20 and 30 vs the distilled agent.
+
+---
+
 ## 2026-10-13 18:55 BST — Resumed; branch pushed; win-rate measurement; combat RL v3 (dense credit) prepared
 
 - **Pushed** `claude/slay-spire-rl-debug-da6d22` to origin. All code, docs and
