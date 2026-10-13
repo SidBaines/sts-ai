@@ -16,6 +16,40 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 
 ---
 
+## 2026-10-13 16:15 BST — The OOC policy's strategy has collapsed; removing one dominated choice is worth +0.60 floors
+
+- **Strategic choices**, greedy update 28, 119 games (TRAIN-eval worlds):
+
+  | Choice | How often it was available | How often it was taken |
+  | --- | --- | --- |
+  | Upgrade at a rest site ("smith") | 557 rest sites, 98 at full HP and 180 at ≥85% | **0** |
+  | Map path into an elite | 211 map choices | **0** |
+  | Card removal at a shop | 571 shop menus where it was affordable | **0** (77% of purchases were potions) |
+  | Skip a card reward | — | 14.5% in Act 1, 7% in Act 2, 4% in Act 3 |
+
+  Upgrading, thinning the deck and fighting elites for relics are core to
+  strong play. PPO cannot discover them because it almost never samples them
+  (smith is ~1% even under T=1 sampling). This is an **exploration problem**,
+  not a credit-assignment one.
+- **Dominated-action filter** (new, `--dominated-filter`): drop "rest" at full
+  HP, where it heals 0, so smith is the only choice. Dream Catcher is excepted.
+  - Paired on 1,024 worlds vs update 28: **+0.60 ± 0.15 floors (95% CI [0.32,
+    0.89])**; wins 11 → 16; mean 32.50; Act 3 boss reach 8.9%.
+  - A strictly-better menu with a significant gain says upgrades matter a lot.
+- **Running next (paired vs update 28):**
+  - Smith whenever HP ≥ 70%.
+  - Skip potion buys while a card removal is affordable.
+
+  If these are large, the plan is an **exploration prior**: a fixed logit bonus
+  for smith, elite-path and removal candidates, keyed off the encoder's action
+  flags and room one-hot. It is applied the same way in collection, PPO and
+  deployment, so PPO can learn to override it where it is wrong. That beats
+  hard-coding rules.
+- **Load:** three training trees plus evals have slowed the main run to
+  ~190–250 s per update.
+
+---
+
 ## 2026-10-13 16:05 BST — Main run +2.69 at update 28; forced-play is null; lr branch launched
 
 - **`ooc_main_s1` update 28: 31.92, paired +2.69 (95% CI [2.12, 3.24])** vs the

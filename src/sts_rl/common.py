@@ -41,11 +41,13 @@ def train_tasks(start: int, count: int, *, max_act: int = 3, horizon: int = 4096
 
 
 def make_workers(count: int, *, timeout: float = 10.0, dead_action_filter: bool = False,
-                 slim: bool = True, forced_play: bool = False) -> list[Any]:
+                 slim: bool = True, forced_play: bool = False, dominated: bool = False,
+                 smith_above: float | None = None, prefer_remove: bool = False) -> list[Any]:
     workers = [CurriculumWorker(config=WORKER_CONFIG, timeout=timeout) for _ in range(count)]
-    if not (dead_action_filter or slim or forced_play):
+    if not (dead_action_filter or slim or forced_play or dominated or smith_above is not None or prefer_remove):
         return workers
-    return [FilteringWorker(w, dead_actions=dead_action_filter, slim=slim, forced_play=forced_play)
+    return [FilteringWorker(w, dead_actions=dead_action_filter, slim=slim, forced_play=forced_play,
+                            dominated=dominated, smith_above=smith_above, prefer_remove=prefer_remove)
             for w in workers]
 
 
@@ -129,6 +131,59 @@ def force_play(observation: dict[str, Any]) -> dict[str, Any]:
     return {**observation, "legal_actions": [a for a in legal if str(a.get("description")) != "end turn"]}
 
 
+# --- Dominated actions (out of combat) --------------------------------------------
+# Menus at update 28 showed the policy choosing "rest" at full HP (heals 0) over
+# "smith" (upgrades a card): strictly dominated unless Dream Catcher turns a rest
+# into a card reward. PPO rarely samples smith (~1%), so it never learns this.
+
+def drop_dominated(observation: dict[str, Any]) -> dict[str, Any]:
+    if observation.get("phase") == "combat":
+        return observation
+    legal = observation.get("legal_actions") or []
+    descriptions = [str(a.get("description", "")) for a in legal]
+    if not (any(d.startswith("rest") for d in descriptions) and any(d.startswith("smith") for d in descriptions)):
+        return observation
+    state = observation.get("state") or {}
+    try:
+        full = int(state.get("cur_hp")) >= int(state.get("max_hp"))
+    except (TypeError, ValueError):
+        return observation
+    if not full or "Dream Catcher" in str(observation.get("text", "")):
+        return observation
+    return {**observation, "legal_actions": [a for a, d in zip(legal, descriptions) if not d.startswith("rest")]}
+
+
+# --- Strategy overlays (experiments, off by default) ------------------------------
+# The greedy update-28 policy never smiths (0/557 rest sites), never paths into an
+# elite (0/211) and never buys a card removal (0/571 affordable shop menus; 77% of
+# purchases are potions). These menu restrictions measure what each habit costs.
+
+def hp_fraction(observation: dict[str, Any]) -> float | None:
+    state = observation.get("state") or {}
+    try:
+        return int(state.get("cur_hp")) / max(1, int(state.get("max_hp")))
+    except (TypeError, ValueError):
+        return None
+
+
+def apply_overlays(observation: dict[str, Any], *, smith_above: float | None = None,
+                   prefer_remove: bool = False) -> dict[str, Any]:
+    if observation.get("phase") == "combat":
+        return observation
+    legal = observation.get("legal_actions") or []
+    descriptions = [str(a.get("description", "")) for a in legal]
+    drop: set[int] = set()
+    if smith_above is not None and any(d.startswith("smith") for d in descriptions):
+        fraction = hp_fraction(observation)
+        if fraction is not None and fraction >= smith_above:
+            drop |= {i for i, d in enumerate(descriptions) if d.startswith("rest")}
+    if prefer_remove and any(d.startswith("buy card remove") for d in descriptions):
+        drop |= {i for i, d in enumerate(descriptions) if d.startswith("buy potion")}
+    if not drop or len(drop) == len(legal):
+        return observation
+    return {**observation, "legal_actions": [a for i, a in enumerate(legal) if i not in drop]}
+
+
 _ENCODER_TEXT = re.compile(r"^(?:(?:Deck|Relics|Potions|Card select|Selection type|Event):.*|Choose a card.*|Act .*end-of-act boss.*)$")
 
 
@@ -166,13 +221,20 @@ class FilteringWorker:
     (verified to leave public_candidate_v2 encodings byte-identical)."""
 
     def __init__(self, worker: CurriculumWorker, *, dead_actions: bool = True, slim: bool = False,
-                 forced_play: bool = False) -> None:
-        self.worker, self.dead_actions, self.slim, self.forced_play = worker, dead_actions, slim, forced_play
+                 forced_play: bool = False, dominated: bool = False, smith_above: float | None = None,
+                 prefer_remove: bool = False) -> None:
+        self.worker, self.dead_actions, self.slim = worker, dead_actions, slim
+        self.forced_play, self.dominated = forced_play, dominated
+        self.smith_above, self.prefer_remove = smith_above, prefer_remove
 
     def _map(self, observation: dict[str, Any]) -> dict[str, Any]:
+        # Menu filters run before slimming: they read structured state and relic text.
         if self.forced_play:
-            # Before slimming: the energy is read from the structured state.
             observation = force_play(observation)
+        if self.dominated:
+            observation = drop_dominated(observation)
+        if self.smith_above is not None or self.prefer_remove:
+            observation = apply_overlays(observation, smith_above=self.smith_above, prefer_remove=self.prefer_remove)
         if self.dead_actions:
             return filter_observation(observation, slim=self.slim)
         return {**observation, "text": slim_text(str(observation.get("text", "")))} if self.slim else observation

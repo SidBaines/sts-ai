@@ -23,11 +23,11 @@ from sts_policy.losses import PPOConfig
 from .common import close_workers, load_policy, make_workers, phase_forward
 
 
-def _collector_main(conn, checkpoint: str, workers: int, dead_action_filter: bool, threads: int) -> None:
+def _collector_main(conn, checkpoint: str, workers: int, worker_options: dict[str, Any], threads: int) -> None:
     torch.set_num_threads(threads)
     model, _ = load_policy(checkpoint)
     model.eval()
-    pool = make_workers(workers, dead_action_filter=dead_action_filter)
+    pool = make_workers(workers, **worker_options)
     try:
         while True:
             try:
@@ -60,14 +60,15 @@ class CollectorPool:
     """K persistent collector processes splitting ``workers`` game workers."""
 
     def __init__(self, collectors: int, *, workers: int, checkpoint: str, dead_action_filter: bool = True,
-                 threads: int = 1) -> None:
+                 threads: int = 1, **worker_options: Any) -> None:
+        worker_options = {"dead_action_filter": dead_action_filter, **worker_options}
         ctx = mp.get_context("spawn")
         per = max(1, math.ceil(workers / collectors))
         self.conns, self.procs = [], []
         for _ in range(collectors):
             parent, child = ctx.Pipe()
             # Not daemonic: collectors spawn their own game-worker processes.
-            proc = ctx.Process(target=_collector_main, args=(child, checkpoint, per, dead_action_filter, threads))
+            proc = ctx.Process(target=_collector_main, args=(child, checkpoint, per, worker_options, threads))
             proc.start()
             child.close()
             self.conns.append(parent)

@@ -23,17 +23,29 @@ def main() -> None:
     p.add_argument("--world-start", type=int, default=EVAL_WORLD_START)
     p.add_argument("--mode", choices=("greedy", "sample", "greedy_combat"), default="greedy")
     p.add_argument("--dead-action-filter", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--dominated-filter", action=argparse.BooleanOptionalAction, default=False)
+    p.add_argument("--forced-play", action=argparse.BooleanOptionalAction, default=False)
+    p.add_argument("--smith-above", type=float, default=None, help="overlay: drop 'rest' at HP fraction >= this")
+    p.add_argument("--prefer-remove", action=argparse.BooleanOptionalAction, default=False,
+                   help="overlay: drop potion buys while a card removal is affordable")
     p.add_argument("--workers", type=int, default=14)
+    p.add_argument("--collectors", type=int, default=1, help=">1: parallel collector processes")
     p.add_argument("--baseline", help="eval JSON to pair against")
     args = p.parse_args()
     torch.set_num_threads(1)
     model, _ = load_policy(args.checkpoint)
-    workers = make_workers(args.workers, dead_action_filter=args.dead_action_filter)
+    options = dict(dead_action_filter=args.dead_action_filter, dominated=args.dominated_filter,
+                   forced_play=args.forced_play, smith_above=args.smith_above, prefer_remove=args.prefer_remove)
+    if args.collectors > 1:
+        from sts_rl.parallel_collect import CollectorPool
+        workers = CollectorPool(args.collectors, workers=args.workers, checkpoint=args.checkpoint, **options)
+    else:
+        workers = make_workers(args.workers, **options)
     try:
         result = evaluate(model, workers, n=args.n, world_start=args.world_start, mode=args.mode)
     finally:
-        close_workers(workers)
-    result["summary"].update(checkpoint=args.checkpoint, dead_action_filter=args.dead_action_filter)
+        workers.close() if hasattr(workers, "evaluate_tasks") else close_workers(workers)
+    result["summary"].update(checkpoint=args.checkpoint, **options)
     if args.baseline:
         result["paired"] = paired(json.loads(Path(args.baseline).read_text())["records"], result["records"])
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
