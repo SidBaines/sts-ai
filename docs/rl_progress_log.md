@@ -16,7 +16,7 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 
 ---
 
-## 2026-10-13 16:20 BST — Smithing at ≥70% HP alone is worth +1.15 floors; exploration branch launched
+## 2026-10-13 16:18 BST — Smithing at ≥70% HP alone is worth +1.15 floors; exploration branch launched
 
 - **Overlay "smith whenever HP ≥ 70%"**, paired on 1,024 worlds vs update 28:
   **+1.15 ± 0.23 floors (95% CI [0.70, 1.60]); mean 33.06.**
