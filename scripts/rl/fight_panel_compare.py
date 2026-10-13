@@ -47,7 +47,8 @@ def main() -> None:
     p.add_argument("--checkpoint", required=True)
     p.add_argument("--bank", default="data/rl_runs/banks/fights_main_s1_i8.jsonl")
     p.add_argument("--groups", default="BOSS2:300,ELITE2:300,BOSS1:200,BOSS3:90,ELITE3:81")
-    p.add_argument("--variant", default="forced_play")
+    p.add_argument("--variant", default="forced_play", help="FilteringWorker option for the variant ('' for none)")
+    p.add_argument("--variant-checkpoint", help="compare a second checkpoint instead of (or as well as) a worker option")
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--output", required=True)
     args = p.parse_args()
@@ -61,7 +62,11 @@ def main() -> None:
         by[f"{r['room']}{r['act']}"].append(r)
     picked = [r for g, n in (x.split(":") for x in args.groups.split(",")) for r in by[g][: int(n)]]
     base = run(model, picked, args.workers, {})
-    var = run(model, picked, args.workers, {args.variant: True})
+    variant_model = model
+    if args.variant_checkpoint:
+        variant_model, _ = load_policy(args.variant_checkpoint)
+        variant_model.eval()
+    var = run(variant_model, picked, args.workers, {args.variant: True} if args.variant else {})
     report = {}
     for g in dict.fromkeys(f"{r['room']}{r['act']}" for r in picked):
         ids = [task_identity(TaskSpec.from_dict(r["task"])) for r in picked if f"{r['room']}{r['act']}" == g]
