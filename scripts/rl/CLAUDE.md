@@ -74,3 +74,15 @@ Progress log and live-dashboard link: `docs/rl_progress_log.md`. Code: `src/sts_
 - **Win-rate claims** need the 4,096-world win set (`--world-start 6000000000
   --n 4096`, `data/rl_runs/win_eval/`) and the McNemar line from
   `compare_evals.py`. At ~2% wins, 1,024 worlds cannot resolve 1-point changes.
+- **Run every heavy job through `queue_runner.py`, one-off evals and search
+  tests included.** The runner pauses its jobs on battery and resumes them on
+  AC. An ad-hoc `nohup` job keeps draining the battery, and a hand-rolled
+  resume watcher dies with the agent session. Trainers survive a long SIGSTOP
+  (worker step timeouts fire as ordinary faults on resume). Panel and search
+  helpers with long RPC timeouts are better restarted than resumed.
+- **Search helpers:** `PanelWorker.search_votes` is privileged: it keeps the
+  true battle RNG streams. `search_votes_public` re-seeds them and needs
+  `build_pub`. Use only the public one for anything presented as agent
+  capability. Distilling either one's per-decision votes into the combat head
+  hurt the Act 2 boss (−6 points), whereas playing with public search helped
+  (+8 points).
