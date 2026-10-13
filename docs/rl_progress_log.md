@@ -24,7 +24,7 @@ All results are greedy, paired vs the original on ~1,010 worlds.
 | OOC PPO, update 28 | 31.92 | +2.69 [2.12, 3.24] | 11 | E8 recipe; seed 2 replicates (+1.37 at update 12 vs +1.57) |
 | OOC PPO, update 36 (`ooc_main_s1/iter_0036.pt`) | 32.34 | **+3.14** [2.58, 3.70] | 11 | still improving |
 | Update 28 + "smith whenever HP ≥ 85%" | 33.26 | ≈ +4.0 | 16 | rule: +1.35 [0.95, 1.79] over update 28 |
-| **Update 36 + rule distilled into the network** (`distill_smith85_i36/distilled.pt`) | **33.31** | **+4.05** [3.43, 4.65] | 19 | no rule at deployment |
+| **Update 36 + rule distilled into the network** (`distill_smith85_i36/distilled.pt`) | **33.31** | **+4.05** [3.43, 4.65] | 19 | no rule at deployment; **fresh worlds: +4.29 [3.67, 4.87], wins 3 → 22** |
 
 **Running:**
 - `ooc_main_s1` → update 48. This is the control lineage.
@@ -53,6 +53,26 @@ Branches vs main are compared at updates 36/40/44 with
 
 **Main open problem:** the OOC policy's logits are saturated, so PPO cannot
 explore strategic options. Exploration is the lever.
+
+---
+
+## 2026-10-13 17:44 BST — Confirmed on fresh worlds: distilled network +4.29 floors, wins 3 → 22
+
+To rule out selection bias from reusing the same eval worlds, the key agents
+were re-evaluated on **1,024 fresh TRAIN worlds** (seeds from 5.6e9, never used
+before):
+
+| Agent | Mean floor | Paired vs original | Wins |
+| --- | --- | --- | --- |
+| Original | 28.82 | — | 3 |
+| OOC PPO, update 36 | 31.79 | **+2.99** [2.39, 3.57] | 11 |
+| Update 36 + distilled smith rule | **33.12** | **+4.29** [3.67, 4.87] | **22** |
+
+- Distilled vs update 36: **+1.34 [0.85, 1.83]**. This is larger than on the
+  reused worlds (+0.96), so there is no sign of optimistic selection.
+- **PPO from the distilled checkpoint** (no rule, no extra exploration) keeps
+  smithing: sampled smith rate 37.4% → 39.3% over updates 1–2; training-game
+  floor 32.5 → 33.0.
 
 ---
 
