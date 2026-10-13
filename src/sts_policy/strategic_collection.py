@@ -83,7 +83,7 @@ def finish_advantages(rows: Sequence[StrategicTransition], *, gamma: float, gae_
 def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[Any], *,
             credit_unit: str = "macro", sampling_seed: int = 0, deterministic: bool = False,
             gamma: float = 1., gae_lambda: float = .95, max_seconds: float = 120.,
-            retain_transitions: bool = True) -> dict[str, Any]:
+            retain_transitions: bool = True, frozen_combat: bool = True) -> dict[str, Any]:
     if credit_unit not in {"micro", "macro"} or gamma != 1 or not workers or max_seconds <= 0:
         raise ValueError("valid workers, budget and gamma=1 micro/macro mode required")
     model.cpu().eval()
@@ -189,7 +189,7 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
         distributions: dict[int, np.ndarray] = {}
         ooc_slots = [slot for slot, entry in active.items() if entry["obs"]["phase"] != "combat"]
         combat_slots = [slot for slot in active if slot not in ooc_slots]
-        typed_slots = list(active) if credit_unit == "micro" and retain_transitions else ooc_slots
+        typed_slots = list(active) if not frozen_combat or (credit_unit == "micro" and retain_transitions) else ooc_slots
         if typed_slots:
             encoded = [entities.encode_observation(active[slot]["obs"]) for slot in typed_slots]
             logits, values = model(*entities.collate_observations(encoded))
@@ -293,7 +293,7 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
     elapsed = time.monotonic() - started
     primitive_steps = sum(e["steps"] for e in episodes)
     return {"collector_version": COLLECTOR_VERSION, "credit_unit": credit_unit, "sampling_seed": sampling_seed,
-        "deterministic_ooc": deterministic, "combat_controller": "immutable legacy bridge greedy",
+        "deterministic_ooc": deterministic, "combat_controller": "immutable legacy bridge greedy" if frozen_combat else "learned public combat residual greedy",
         "transitions": transitions, "episodes": episodes, "faults": faults, "requested_tasks": len(tasks),
         "unstarted_tasks": len(tasks) - resets, "excluded_primitive_steps": excluded,
         "cohort_completed": len(episodes) + len(faults) == len(tasks) and all(e["termination_reason"] != "collector_budget" for e in episodes),

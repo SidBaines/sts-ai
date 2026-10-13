@@ -88,6 +88,23 @@ class StrategicCollectionTests(unittest.TestCase):
             self.assertTrue(all(r.completed_return is None for r in result["transitions"]))
             self.assertTrue(result["episodes"][0]["truncated"])
 
+    def test_learned_combat_evaluator_routes_through_public_model(self):
+        # A sharply preferred second combat candidate must be used when the
+        # learned-combat path is enabled; the frozen legacy prior remains intact.
+        original = self.model.forward
+        def changed(*batch):
+            logits, values = original(*batch)
+            combat = batch[3][:, 0] > .5
+            logits = logits.clone()
+            if combat.any():
+                logits[combat, 1] = logits[combat].max()+100
+            return logits, values
+        self.model.forward = changed
+        first = collect(self.model,[ScriptedWorker()],self.tasks[:1],deterministic=True,retain_transitions=False)
+        second = collect(self.model,[ScriptedWorker()],self.tasks[:1],deterministic=True,retain_transitions=False,frozen_combat=False)
+        self.assertNotEqual(first["episodes"][0]["action_trace_sha256"],second["episodes"][0]["action_trace_sha256"])
+        self.assertEqual(first["episodes"][0]["reward"],second["episodes"][0]["reward"])
+
 
 if __name__ == "__main__":
     unittest.main()
