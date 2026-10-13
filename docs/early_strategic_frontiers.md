@@ -145,3 +145,29 @@ Evidence: `data/nonllm_v4/counterfactual/early_cards_world6_public` and
 `early_cards_world6_plan1000`. Counterfactual protocol v3 explicitly records
 per-action versus plan-reuse continuation roles. Source snapshots accompany
 both launches; earlier data and controller conditions remain preserved.
+
+## Earlier boss-relic interaction
+
+The next matched panel selects six independent late Act 1 boss-relic menus.
+Every offered choice is evaluated: **24/24 branches** under each continuation,
+all six forced-reference traces matching, zero faults/cuts/unstarted sources.
+Neither reference continuation wins any of the six games. Three menus allow
+greater floor reach under each controller. With privileged plan continuation,
+one menu has two alternatives that produce a full victory; public continuation
+has no full-win gains.
+
+In TRAIN world **431000063**, the original OOC policy chooses Coffee Dripper and
+dies at floor 33 under either continuation. Choosing **Sozu or Snecko Eye**
+instead clears Act 2 and reaches floor 50 with learned combat; with privileged
+plan combat, both alternatives win at floor 51. This is evidence of a strategic
+choice interacting with a combat limitation on this reached source state.
+It does not establish that either relic is generally preferable, that the
+source deck is publicly winnable under our agent, or that one private future
+supplies a calibrated target. No model weights or training labels change.
+
+The result motivates paired strategy/combat diagnosis and broader confirmation
+of boss-relic decision outcomes. It contradicts treating all late failures as
+uninformative or solely attributable to one phase. Earlier negative card-menu
+panels remain preserved rather than being replaced by this favorable case.
+Evidence: `early_bossrelic_world6_public` and
+`early_bossrelic_world6_plan1000` under `data/nonllm_v4/counterfactual`.

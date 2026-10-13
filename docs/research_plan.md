@@ -121,3 +121,11 @@ matching, without faults/cuts. Neither controller produces a full-win gain.
 One public floor gain from skipping a card disappears with the other
 continuation. No strategic target or learner is accepted; broader sequential
 strategy and uncertainty/continuation validation remain necessary.
+
+A matched six-world boss-relic panel completes 24 legal branches per controller
+with all controls matching and no faults/cuts. In one TRAIN world, replacing
+Coffee Dripper with Sozu or Snecko Eye changes Act 2 defeat to final-boss reach
+under learned combat and full victory under privileged plan combat. This is a
+fixed-world strategy/combat interaction, not a public-agent win or accepted
+teacher. Broader confirmation and paired phase diagnosis are the next justified
+investigations; all negative panels remain preserved.

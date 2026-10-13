@@ -2,6 +2,13 @@
 
 ## Current status: morning of 13 October
 
+The six-world boss-relic pilot finds one concrete strategy/combat interaction:
+in TRAIN 431000063, Coffee Dripper dies in Act 2; Sozu or Snecko Eye reaches the
+final boss with learned combat and wins with privileged plan combat. All 24
+legal branches per controller complete with matching controls and no faults.
+This is one fixed-world result; no public policy or target is promoted. Details
+and limitations are in [the earlier-source record](early_strategic_frontiers.md).
+
 The world-balanced six-world card-choice follow-up completes every legal branch
 under frozen public and privileged plan continuation (30 each), with exact
 paired controls and zero faults/cuts. It establishes **no full-win gains**.
