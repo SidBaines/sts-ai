@@ -16,6 +16,36 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 
 ---
 
+## 2026-10-13 16:05 BST — Main run +2.69 at update 28; forced-play is null; lr branch launched
+
+- **`ooc_main_s1` update 28: 31.92, paired +2.69 (95% CI [2.12, 3.24])** vs the
+  original. Updates 24 → 28 added +0.14.
+- **`forced_play` is null.** Paired on 971 bank fights (greedy, update-24
+  policy), the win-rate change was within noise for every group:
+
+  | Fight | Change (pp) |
+  | --- | --- |
+  | Act 2 boss | −1.0 ± 1.6 |
+  | Act 2 elite | 0.0 ± 1.3 |
+  | Act 1 boss | +2.0 ± 1.6 |
+  | Act 3 boss | +1.1 ± 1.9 |
+  | Act 3 elite | +2.5 ± 3.9 |
+
+  - Pooled: +0.4 pp. The wasted end turns are mostly harmless (Defend with no
+    incoming damage, and the like). Left off by default.
+  - This is consistent with the investigation (E5): Act 2 boss losses are mostly
+    decided before the fight, by deck and entry HP. **OOC stays the lever.**
+- **Learning-rate branch, `ooc_branch_lr6e4`:** a copy of update 28, same seed
+  (so the same training worlds), at **lr 6e-4 vs 3e-4**. Paired evals at
+  updates 32 and 36 against the main run will tell us whether learning can go
+  faster. It runs at nice 10 alongside the seed-2 replicate.
+- **Bug caught before it bit:** resuming restored the optimizer's saved lr,
+  which silently overrode `--lr`. The config now wins, and the resume event logs
+  both values. No earlier run was affected.
+- **Machine:** 3 training trees, ~85% CPU, 19 GB of Python RSS, 67% memory free.
+
+---
+
 ## 2026-10-13 16:00 BST — 2× throughput (parallel collectors); seed-2 replicate running; combat diagnosis
 
 - **Collection was bound by one Python thread.** The trainer's main process
