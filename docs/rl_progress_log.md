@@ -26,8 +26,9 @@ All results are greedy, paired vs the original on ~1,010 worlds.
 | Update 28 + "smith whenever HP ≥ 85%" | 33.26 | ≈ +4.0 | 16 | rule: +1.35 [0.95, 1.79] over update 28 |
 | **Update 36 + rule distilled into the network** (`distill_smith85_i36/distilled.pt`) | **33.31** | **+4.05** [3.43, 4.65] | 19 | no rule at deployment; **fresh worlds: +4.29 [3.67, 4.87], wins 3 → 22** |
 
-**PAUSED 17:55 (laptop closed)**, see the latest entry. Previously running:
-- `ooc_main_s1` → update 48. This is the control lineage.
+**Resumed 18:53.** Running: `ooc_ppo_from_distilled` (to 16), 4,096-world win evals, and combat RL v3 (soon).
+Stopped:
+- `ooc_main_s1` at update 45. This was the control lineage.
 - `ooc_branch_smith70`: PPO trained with the smith rule.
 - Rule-sweep evals: elites, card skips, and main@36 + rule.
 - `strat8` (exploration) is stopped at update 38.
@@ -42,8 +43,9 @@ tuning is fast.
 | OOC PPO, update 28 (`ooc_main_s1/iter_0028.pt`) | 31.92 | **+2.69** [2.12, 3.24] | 11 | E8 recipe |
 | …plus the "smith at ≥70% HP" rule | **33.06** | ≈ +3.8 | 13 | +1.15 [0.70, 1.60] over update 28 |
 
-**PAUSED 17:55 (laptop closed)**, see the latest entry. Previously running:
-- `ooc_main_s1` → update 48. This is the control lineage.
+**Resumed 18:53.** Running: `ooc_ppo_from_distilled` (to 16), 4,096-world win evals, and combat RL v3 (soon).
+Stopped:
+- `ooc_main_s1` at update 45. This was the control lineage.
 - `ooc_rep_s2`: seed-2 replicate from the original.
 - `ooc_branch_strat8`: exploration on rest/map/shop menus.
 - `ooc_branch_smith70`: PPO with the smith rule.
@@ -53,6 +55,36 @@ Branches vs main are compared at updates 36/40/44 with
 
 **Main open problem:** the OOC policy's logits are saturated, so PPO cannot
 explore strategic options. Exploration is the lever.
+
+---
+
+## 2026-10-13 18:55 BST — Resumed; branch pushed; win-rate measurement; combat RL v3 (dense credit) prepared
+
+- **Pushed** `claude/slay-spire-rl-debug-da6d22` to origin. All code, docs and
+  the log are on GitHub. `data/` (checkpoints, evals, run logs) is gitignored
+  and stays local.
+- **Resumed** `ooc_ppo_from_distilled` from update 4, with 4 collectors and the
+  machine to itself. Main is not resumed: it was flat from update 36 to 40 and
+  its job as the control is done.
+- **The reward already weights wins heavily.** A run returns 0.05 × floor − 1
+  on death and about +3.55 on a win, so **a win is worth ~41 floors**; +1
+  point of win rate ≈ +0.4 mean floor. The real issue for the new objective
+  is **measurement**: at a ~2% win rate, 1,024 worlds cannot resolve 1-point
+  changes.
+  - New `paired_wins` gives an exact McNemar test on discordant worlds, and
+    `compare_evals.py` prints it.
+  - A fresh **4,096-world win set** (TRAIN seeds from 6e9) is reserved for
+    win-rate claims.
+- **Queued on the win set:** distilled vs distilled + elite-seeking at HP ≥ 90%
+  and ≥ 80%. Elite-seeking raised wins 13 → 22 (p = 0.049) at 1,024 worlds.
+- **Combat RL v3 prepared** (`combat_trainer --shaping-hp/--shaping-enemy`).
+  - Per-step potential shaping: φ = 0.3·HP fraction − 0.5·enemy HP fraction,
+    with GAE λ = 0.95, so a lost fight still credits damage dealt and a won
+    fight credits HP kept.
+  - Regression-tested: the Monte-Carlo return telescopes to
+    terminal + φ(final) − φ(start).
+  - It trains on a new bank from the best agent that **includes hallway
+    fights**, so the shared combat head does not regress elsewhere.
 
 ---
 
