@@ -14,6 +14,12 @@ from a release tag. The `environment-base` branch receives environment fixes;
 
 On the `codex/nonllm-curriculum` experiment branch, the optional non-LLM adapter trains and runs candidate-action policies. See [agent and training usage](docs/nonllm_agent_usage.md), the [latest-first experiment summary](docs/nonllm_summary.md), and the [detailed curriculum plan](docs/nonllm_curriculum_plan.md). Active native-assisted experiments use the corrected `env-v0.1.1` backend; the original release remains available.
 
+The separate `codex/nonllm-critique` branch currently uses unreleased environment
+0.3.0/public-v3/native-API-3 with a repaired typed experiment adapter. Its
+[current status](docs/nonllm_v3_summary.md) and
+[interface migration](docs/public_entities_v4.md) distinguish it from preserved
+0.2 data and signed releases. No new learning condition has been promoted.
+
 ## Install and build
 
 Use Python 3.10–3.13, Git, CMake, and a C++ compiler. On macOS install the Xcode

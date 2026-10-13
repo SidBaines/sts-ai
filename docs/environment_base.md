@@ -1,6 +1,14 @@
 # Environment base: contract and maintenance
 
-The current experiment branch also contains an **unreleased 0.2.0 candidate** with a changed public menu/typed mechanics contract. See [public-v2 migration and validation](environment_public_v2.md). Historical env-v0.1.0/env-v0.1.1 tags and their worktrees remain unchanged; this candidate is not a new signed release or complete simulator-fidelity certification.
+The current `codex/nonllm-critique` experiment branch contains an **unreleased
+0.3.0 candidate**, public contract `sts_env_public_v3` and native API 3. See
+[current mechanics, migration and validation](public_entities_v4.md) and the
+[morning study report](nonllm_overnight_report_2026-10-13.md). The earlier
+[0.2/public-v2 candidate](environment_public_v2.md), its sources/binary and data
+are preserved separately. Historical env-v0.1.0/env-v0.1.1 tags stay immutable;
+0.3 is not a signed release or complete simulator-fidelity certification. The
+[expanded OOC potion menu](ooc_potions_candidate.md) remains a separate candidate
+and is not part of the accepted default interface.
 
 This branch extracts the reusable Slay the Spire environment from the original
 research harness. Its scope is game state, legal actions, stepping, baseline
