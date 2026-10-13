@@ -16,6 +16,38 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 
 ---
 
+## 2026-10-13 16:20 BST — Smithing at ≥70% HP alone is worth +1.15 floors; exploration branch launched
+
+- **Overlay "smith whenever HP ≥ 70%"**, paired on 1,024 worlds vs update 28:
+  **+1.15 ± 0.23 floors (95% CI [0.70, 1.60]); mean 33.06.**
+  - Act 1 boss pass 94% (from ~89%); Act 2 boss reach 68.5%; Act 2 boss pass
+    30.2%; Act 3 boss reach 11.4%.
+  - One collapsed habit (never upgrading) costs more than a floor, which confirms
+    the exploration diagnosis.
+- **Why PPO cannot find this, measured:**
+  - At update 28 the OOC logit gap from each strategic option to the policy's
+    choice has median **−18.7** for smith, −18.6 for elite paths, −21 for
+    removal and −36 for card skips. The sampling probability is ~1e-8.
+  - The combat head is *not* saturated: median top-action probability 0.82,
+    median top-2 gap 1.8. Its slow RL comes from sparse reward, not lack of
+    exploration.
+- **Exploration branch: `ooc_branch_strat8`.** It continues from main update 32
+  on the same training worlds, with a **strategic temperature of 8**: OOC logits
+  on rest-site, map and shop menus are divided by 8 in both collection and the
+  PPO update.
+  - At T=8 a median-gap smith option is sampled ~9% of the time instead of
+    never. Greedy deployment is unchanged.
+  - Compared paired against main at updates 36, 40 and 44.
+- **Seed-2 replicate update 4: +0.43 paired (CI [−0.00, 0.87]).** Seed 1 was
+  +0.24 at update 4, so the replicate is consistent so far.
+- **lr 6e-4 branch cancelled** after 2 updates to free CPU for the exploration
+  branch. The lr question is deferred, not answered.
+- **Running next:** the removal overlay ("no potion buys while a removal is
+  affordable") vs update 28. Then a rule-augmented lineage: main + smith rule
+  during training, to test whether PPO keeps compounding on top of it.
+
+---
+
 ## 2026-10-13 16:12 BST — The OOC policy's strategy has collapsed; removing one dominated choice is worth +0.60 floors
 
 - **Strategic choices**, greedy update 28, 119 games (TRAIN-eval worlds):
