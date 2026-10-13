@@ -124,6 +124,8 @@ explore strategic options. Exploration is the lever.
   to update 32 (`ooc_r2_lam1_ext`).
 - The 1,024-world win counts are noisy (±7). The 4,096-world set is the
   arbiter.
+- **Per-act elite overlay** (Act 1 at ≥70%, Acts 2–3 at ≥90%) on update 4,
+  win set: −0.09 ± 0.05 floors; wins 106 → 110 (p = 0.59). Null.
 
 ---
 
