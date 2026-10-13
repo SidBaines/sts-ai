@@ -103,6 +103,38 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 21:10 BST — Public-information search: most of the privileged gain was clairvoyance, but a real gain remains
+
+- **New native bindings** (RL patch only; the study patch is unchanged):
+  `BattleContext.copy()` and `reseed_rngs(seed)`.
+  - `PanelWorker.search_votes_public` searches deep copies with the draw order
+    shuffled **and** every battle RNG stream re-seeded (enemy AI, card
+    randomness, reshuffles, potions, monster HP).
+  - The build lives in `external/sts_lightspeed_rl/build_pub`, beside the build
+    the running jobs use. All 473 tests pass, and replays reproduce 300/300
+    bank fight outcomes.
+- **Same 120 Act 2 boss fights**, greedy combat head 27.5%:
+
+  | Combat controller | Win rate | Flipped to win / loss | Seconds per decision |
+  | --- | --- | --- | --- |
+  | Privileged search, 8 × 1,000 (true RNG streams) | 44.2% | 27 / 7 | 0.13 |
+  | Public search, 8 × 1,000 | 31.7% | 14 / 9 | 0.11 |
+  | Public search, 24 × 1,000 | **35.0%** | 18 / 9 (p ≈ 0.12) | 0.26 |
+
+  - **Roughly two-thirds of the "search headroom" was knowledge of hidden
+    randomness.**
+  - The public gain grows with samples (+4.2 → +7.5 points).
+  - Running: 64 × 1,000 on 240 fights, for a decisive estimate.
+- **If public search holds at ~+8–10 points, it is affordable at test time.**
+  ~0.3–0.7 s per decision, and 3 boss fights per run. It is also a cleaner
+  expert-iteration teacher than the privileged search used before.
+- Other runs at update 12:
+  - λ = 0.99: 33.61 (+4.39 vs original).
+  - Discovery (exploration + λ = 1): 32.6 (+3.39); smith ~3–4%, no
+    discovery.
+
+---
+
 ## 2026-10-13 21:00 BST — Combat headroom at the Act 2 boss: search wins 44% vs greedy 27.5% (privileged upper bound)
 
 - **Act 2 boss fights from the distilled-agent bank.** Each decision is the
