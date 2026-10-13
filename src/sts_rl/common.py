@@ -217,7 +217,13 @@ def apply_overlays(observation: dict[str, Any], *, smith_above: float | None = N
                  if d.startswith("take boss relic") and any(name in d for name in avoid_boss_relics)}
     if elite_above is not None and any("room=ELITE" in d for d in descriptions):
         fraction = hp_fraction(observation)
-        if fraction is not None and fraction >= elite_above:
+        threshold = elite_above
+        if isinstance(elite_above, dict):  # per-act thresholds, e.g. {1: 0.7, 2: 0.9, 3: 0.9}
+            try:
+                threshold = elite_above.get(int((observation.get("state") or {}).get("act") or 1))
+            except (TypeError, ValueError):
+                threshold = None
+        if fraction is not None and threshold is not None and fraction >= threshold:
             drop |= {i for i, d in enumerate(descriptions) if "map node" in d and "room=ELITE" not in d}
     if not drop or len(drop) == len(legal):
         return observation

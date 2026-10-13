@@ -28,8 +28,8 @@ def main() -> None:
     p.add_argument("--smith-above", type=float, default=None, help="overlay: drop 'rest' at HP fraction >= this")
     p.add_argument("--prefer-remove", action=argparse.BooleanOptionalAction, default=False,
                    help="overlay: drop potion buys while a card removal is affordable")
-    p.add_argument("--elite-above", type=float, default=None,
-                   help="overlay: path into an elite whenever one is offered at HP fraction >= this")
+    p.add_argument("--elite-above", default=None,
+                   help="overlay: path into an offered elite at HP fraction >= this; or per act, e.g. '1:0.7,2:0.9,3:0.9'")
     p.add_argument("--skip-cards-after", type=int, default=None, help="overlay: skip every card reward after this floor")
     p.add_argument("--save-potions-above", type=float, default=None,
                    help="overlay: no potion drinking in hallway fights while HP fraction >= this")
@@ -40,9 +40,13 @@ def main() -> None:
     args = p.parse_args()
     torch.set_num_threads(1)
     model, _ = load_policy(args.checkpoint)
+    elite_above = args.elite_above
+    if elite_above is not None:
+        elite_above = ({int(a): float(t) for a, t in (part.split(":") for part in elite_above.split(","))}
+                       if ":" in elite_above else float(elite_above))
     options = dict(dead_action_filter=args.dead_action_filter, dominated=args.dominated_filter,
                    forced_play=args.forced_play, smith_above=args.smith_above, prefer_remove=args.prefer_remove,
-                   elite_above=args.elite_above, skip_cards_after=args.skip_cards_after,
+                   elite_above=elite_above, skip_cards_after=args.skip_cards_after,
                    save_potions_above=args.save_potions_above,
                    avoid_boss_relics=tuple(x for x in args.avoid_boss_relics.split(",") if x))
     if args.collectors > 1:
