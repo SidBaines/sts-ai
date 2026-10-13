@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Distillation records for a rest-site rule ("smith at HP >= threshold, else rest").
+"""Distillation records for strategy rules: rest site ("smith at HP >= threshold,
+else rest") and optionally map ("path into an offered elite at HP >= threshold").
 
 Plays greedy games with a checkpoint, following the rule at rest sites (so the
 states visited are the rule-policy's), and writes:
   - type "rest": every rest-site menu offering both rest and smith, with the
     rule's choice as a hard label (label_index = native action index);
+  - type "elite" (with --elite-above): every map menu offering an elite, labelled
+    with the policy's best elite node at HP >= threshold, else the policy's own pick;
   - type "rehearsal": a sample of other OOC decisions, for the KL anchor.
 Format matches sts_rl.distill (shard_*.jsonl). TRAIN worlds only.
 """
@@ -34,6 +37,7 @@ def main() -> None:
     p.add_argument("--n", type=int, default=600)
     p.add_argument("--world-start", type=int, default=8_500_000_000)
     p.add_argument("--smith-above", type=float, default=0.85)
+    p.add_argument("--elite-above", type=float, default=None)
     p.add_argument("--rehearsal-rate", type=float, default=0.1)
     p.add_argument("--threads", type=int, default=8)
     p.add_argument("--output", required=True)
@@ -48,7 +52,8 @@ def main() -> None:
     def play(slot: int) -> dict[str, int]:
         rng = random.Random(slot)
         worker = make_workers(1, dead_action_filter=True)[0]
-        counts = {"games": 0, "rest": 0, "smith_labels": 0, "rehearsal": 0, "faults": 0}
+        counts = {"games": 0, "rest": 0, "smith_labels": 0, "elite": 0, "elite_labels": 0, "rehearsal": 0,
+                  "faults": 0}
         with (out / f"shard_{slot:03d}.jsonl").open("w") as sink:
             for task in tasks[slot::args.threads]:
                 rows = []
@@ -70,6 +75,15 @@ def main() -> None:
                                              "label_index": int(obs["legal_actions"][pos]["index"])})
                                 counts["rest"] += 1
                                 counts["smith_labels"] += pos == smith[0]
+                            elif args.elite_above is not None and any("room=ELITE" in d for d in legal):
+                                fraction = hp_fraction(obs)
+                                if fraction is not None and fraction >= args.elite_above:
+                                    elites = [i for i, d in enumerate(legal) if "room=ELITE" in d]
+                                    pos = max(elites, key=lambda i: float(logits[0][i]))
+                                    counts["elite_labels"] += 1
+                                rows.append({"type": "elite", "seed": task.seed, "obs": obs,
+                                             "label_index": int(obs["legal_actions"][pos]["index"])})
+                                counts["elite"] += 1
                             elif rng.random() < args.rehearsal_rate:
                                 rows.append({"type": "rehearsal", "seed": task.seed, "obs": obs})
                                 counts["rehearsal"] += 1
