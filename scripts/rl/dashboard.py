@@ -20,7 +20,7 @@ RUNS = ROOT / "data" / "rl_runs"
 PORT = 8791
 KEEP_TRAIN = ("iteration", "t", "collect_floor", "collect_floor_se", "collect_act1_clear", "collect_act2_clear",
               "collect_wins", "games", "grad_cosine_half", "approx_kl", "entropy", "value_loss", "clip_fraction",
-              "steps", "steps_total", "smith_rate", "card_skip_rate", "map_monster", "map_elite", "map_event",
+              "steps", "steps_total", "collect_win", "smith_rate", "card_skip_rate", "map_monster", "map_elite", "map_event",
               "map_rest", "shop_remove", "shop_potion", "fights_per_run", "iteration_seconds", "adv_raw_std",
               "disp_ratio_state_encoder", "disp_ratio_scorer", "disp_ratio_critic", "disp_ratio_action_encoder",
               "panel_score", "teacher_agreement")
@@ -34,7 +34,7 @@ def state() -> dict:
         log = directory / "log.jsonl"
         if not log.exists():
             continue
-        train, evals, config, done = [], [], {}, False
+        train, evals, panels, config, done = [], [], [], {}, False
         for line in log.read_text().splitlines():
             try:
                 r = json.loads(line)
@@ -46,9 +46,11 @@ def state() -> dict:
                 train.append({k: r.get(k) for k in KEEP_TRAIN if k in r})
             elif r.get("event") == "eval":
                 evals.append({k: v for k, v in r.items() if k != "event"})
+            elif r.get("event") == "panel":
+                panels.append({k: v for k, v in r.items() if k != "event"})
             elif r.get("event") == "done":
                 done = True
-        runs[directory.name] = {"config": config, "train": train, "evals": evals, "done": done,
+        runs[directory.name] = {"config": config, "train": train, "evals": evals, "panels": panels, "done": done,
                                 "mtime": log.stat().st_mtime}
     baseline = None
     base_file = RUNS / "baselines" / "orig_argmax_1024.json"
@@ -84,6 +86,7 @@ label{margin-right:10px;white-space:nowrap}.tw{overflow-x:auto}
 <div class="card"><h2>Paired gain vs original (floors, ±1.96 SE)</h2><canvas id="c_paired"></canvas></div>
 <div class="card"><h2>Boss pass rate (Act 1 solid, Act 2 dashed)</h2><canvas id="c_boss"></canvas></div>
 <div class="card"><h2>Training-time floor (collection policy)</h2><canvas id="c_train"></canvas></div>
+<div class="card"><h2>Combat runs: held-out fight win rate (Act 2 boss solid, Act 2 elite dashed, Act 3 boss dotted)</h2><canvas id="c_panel"></canvas></div>
 <div class="card"><h2>Gradient signal: half-batch cosine (OOC actor)</h2><canvas id="c_cos"></canvas></div>
 <div class="card"><h2>Displacement / Adam random-walk line (scorer)</h2><canvas id="c_disp"></canvas></div>
 <div class="card"><h2>Behaviour: smith rate (solid), card skip (dashed)</h2><canvas id="c_beh"></canvas></div>
@@ -131,6 +134,9 @@ function draw(s){
  mk('c_boss',ds((n,i,r)=>[{label:n+' A1',data:pts(r.evals,'iteration','act1_boss_pass'),borderColor:color(i)},
   {label:n+' A2',data:pts(r.evals,'iteration','act2_boss_pass'),borderColor:color(i),borderDash:[5,4]}]));
  mk('c_train',ds((n,i,r)=>[{label:n,data:pts(r.train,'iteration','collect_floor'),borderColor:color(i),pointRadius:1}]));
+ mk('c_panel',ds((n,i,r)=>(r.panels||[]).length?[{label:n+' BOSS2',data:pts(r.panels,'iteration','BOSS2'),borderColor:color(i),pointRadius:1},
+  {label:n+' ELITE2',data:pts(r.panels,'iteration','ELITE2'),borderColor:color(i),borderDash:[5,4],pointRadius:1},
+  {label:n+' BOSS3',data:pts(r.panels,'iteration','BOSS3'),borderColor:color(i),borderDash:[1,3],pointRadius:1}]:[]));
  mk('c_cos',ds((n,i,r)=>[{label:n,data:pts(r.train,'iteration','grad_cosine_half'),borderColor:color(i),pointRadius:1}]));
  mk('c_disp',ds((n,i,r)=>[{label:n,data:pts(r.train,'iteration','disp_ratio_scorer'),borderColor:color(i),pointRadius:1}]));
  mk('c_beh',ds((n,i,r)=>[{label:n+' smith',data:pts(r.train,'iteration','smith_rate'),borderColor:color(i),pointRadius:1},

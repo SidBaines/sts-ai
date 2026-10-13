@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Detached experiment queue with a power-aware babysitter.
 
-    queue_runner.py add NAME -- CMD...     append a pending run
+    queue_runner.py add NAME [--lane L] -- CMD...   append a pending run (one active job per lane)
     queue_runner.py cancel NAME            mark pending/running run cancelled (kills it)
     queue_runner.py start                  launch the runner detached (idempotent)
     queue_runner.py status                 print queue + runner heartbeat
@@ -125,10 +125,14 @@ def runner() -> None:
                         run.update(cmd=run["cmd"] + ["--resume"], retried=True, status="pending", stalled_at=time.time())
                     else:
                         run.update(status="failed", ended=time.time(), reason="stalled")
-            if not any(r["status"] in ("running", "paused") for r in queue["runs"]) and not battery:
-                pending = [r for r in queue["runs"] if r["status"] == "pending"]
-                if pending:
-                    run = pending[0]
+            # One active job per lane (default lane "main").
+            busy = {r.get("lane", "main") for r in queue["runs"] if r["status"] in ("running", "paused")}
+            if not battery:
+                for run in [r for r in queue["runs"] if r["status"] == "pending"]:
+                    lane = run.get("lane", "main")
+                    if lane in busy:
+                        continue
+                    busy.add(lane)
                     try:
                         run.update(pid=launch(run), status="running", started=time.time())
                     except OSError as exc:
@@ -151,11 +155,13 @@ def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else "status"
     if command == "add":
         name, cmd = sys.argv[2], sys.argv[sys.argv.index("--") + 1:]
+        options = sys.argv[3:sys.argv.index("--")]
+        lane = options[options.index("--lane") + 1] if "--lane" in options else "main"
         with Locked():
             queue = read_queue()
             if any(r["name"] == name for r in queue["runs"]):
                 sys.exit(f"run {name} already queued")
-            queue["runs"].append({"name": name, "cmd": cmd, "status": "pending", "added": time.time()})
+            queue["runs"].append({"name": name, "cmd": cmd, "status": "pending", "added": time.time(), "lane": lane})
             write_queue(queue)
         print("queued", name)
     elif command == "cancel":

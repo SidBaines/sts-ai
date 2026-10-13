@@ -57,6 +57,26 @@ class PanelEpisode(CurriculumEpisode):
                 "hallway": [str(e).rsplit(".", 1)[-1] for e in gc.upcoming_monster_encounters()],
                 "act": int(gc.act), "floor": int(gc.floor_num), "hp": int(gc.cur_hp), "max_hp": int(gc.max_hp)}
 
+    def search_votes(self, simulations: int, draw_order_seeds: Sequence[int],
+                     search_seed: int = 0) -> dict[int, int]:
+        """Native search at the live combat decision, once per shuffled hidden draw
+        order; returns {display index: votes}. Votes over public-consistent draw
+        orders approximate a public-information choice (less privileged than one
+        search on the true order). Does not mutate the live state."""
+        env = self.episode.env
+        raw = env._env
+        votes: dict[int, int] = {}
+        for d in draw_order_seeds:
+            result = raw.search_best_combat_action(simulations, search_seed=search_seed + d, draw_order_seed=d)
+            index = int(env.display_index_for_bits(int(result["bits"])))
+            votes[index] = votes.get(index, 0) + 1
+        return votes
+
+    def menu(self, spec: TaskSpec | dict[str, Any]) -> list[dict[str, Any]]:
+        observation, _ = self.reset(spec)
+        self.finished = True
+        return observation["legal_actions"]
+
     def _fights_from_current(self, fights: Sequence[tuple[str, str, int]], model: Any, sample: bool,
                              full_hp_rooms: Sequence[str], max_decisions: int) -> list[dict[str, Any]]:
         """Play each fight from an in-memory copy of the current OOC game context."""
@@ -187,6 +207,13 @@ class PanelWorker(CurriculumWorker):
         self._ensure()
         return self._call("encounters", spec)
 
+    def menu(self, spec: TaskSpec) -> list[dict[str, Any]]:
+        self._ensure()
+        return self._call("menu", spec)
+
+    def search_votes(self, simulations: int, draw_order_seeds: Sequence[int], search_seed: int = 0) -> dict[int, int]:
+        return {int(k): v for k, v in self._call("search_votes", simulations, list(draw_order_seeds), search_seed).items()}
+
     def panel(self, spec: TaskSpec, fights: Sequence[tuple[str, str, int]], checkpoint: str,
               sample: bool = False, full_hp_rooms: Sequence[str] = ()) -> list[dict[str, Any]]:
         self._ensure()
@@ -199,7 +226,7 @@ class PanelWorker(CurriculumWorker):
                           list(full_hp_rooms))
 
     def submit(self, method: str, *args: Any) -> Future[Any]:
-        if method in {"panel", "encounters", "afterstates"}:
+        if method in {"panel", "encounters", "afterstates", "menu", "search_votes"}:
             return self._executor.submit(getattr(self, method), *args)
         return super().submit(method, *args)
 
