@@ -27,3 +27,35 @@ Progress log and live-dashboard link: `docs/rl_progress_log.md`. Code: `src/sts_
 - Panel fights must never run the game's post-battle code on scratch copies
   (`exit_battle` → `afterBattle` can call an empty native callback:
   `std::bad_function_call`). `panel.py` stubs `exit_battle` during panel fights.
+- **Throughput:** single-process collection is bound by the trainer's main
+  thread (Python encoding plus forward), with game workers mostly idle. Use
+  `--collectors K` (`src/sts_rl/parallel_collect.py`). It gives ~2× throughput
+  at K=4, and greedy eval records are identical. Use `--micro-batch`
+  (default 1024) for the PPO update; a 4,096-row padded minibatch alone spiked
+  to ~12 GB.
+- **Queue names vs `--out`:** the stall watchdog reads the log under the run's
+  `--out` directory (fixed 2026-10-13). Before the fix, a resumed or branched
+  run whose queue name differed from its out dir was killed 40 minutes after
+  launch. Restart the runner process after editing `queue_runner.py`; running
+  jobs survive, since they are in their own sessions.
+- **Branching a run:** copy its `latest.pt` into a new `--out` and pass
+  `--resume`. Same `--seed` means the same training worlds, so comparisons are
+  paired. `--lr` now overrides the optimizer's saved lr on resume; it used to
+  be silently ignored.
+- **Strategic decisions:** the OOC head's logits are saturated. PPO never
+  samples smith, elite paths or removals, and per-decision credit noise
+  (~0.15) dwarfs their effects (~0.02). The working loop is:
+  1. Measure a behaviour with a menu overlay
+     (`eval_policy.py --smith-above/--elite-above/--prefer-remove/--skip-cards-after/--dominated-filter`),
+     paired over 1,024 worlds.
+  2. Distil any winning rule (`collect_rule_labels.py` → `distill_ooc.py`).
+  3. Continue PPO from the distilled checkpoint.
+
+  `--strategic-temperature` explores those menus, but on its own it learned
+  the wrong lesson: low-HP smiths are very costly.
+- **Selection bias:** every comparison uses the same eval worlds (seeds from
+  5e9). After choosing among variants, confirm the winner on fresh TRAIN worlds
+  (`--world-start 5600000000`, `data/rl_runs/fresh_eval/`).
+  `scripts/rl/compare_evals.py A.json B.json ...` gives the paired difference.
+- **Progress-log headers:** take the time from `date` when writing the entry.
+  Never estimate it.
