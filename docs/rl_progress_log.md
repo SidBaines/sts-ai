@@ -14,6 +14,28 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 **29.27 ± 0.26 mean floor**, Act 1 boss pass 88.1%, Act 2 boss reach 48.9% / pass
 23.4%, 1 win.
 
+### Where we are (pinned; updated in place)
+
+All results are greedy, paired vs the original on ~1,014 worlds.
+
+| | Mean floor | Paired vs original | Wins | Notes |
+| --- | --- | --- | --- | --- |
+| Original | 29.27 | — | 1 | |
+| OOC PPO, update 28 (`ooc_main_s1/iter_0028.pt`) | 31.92 | **+2.69** [2.12, 3.24] | 11 | E8 recipe |
+| …plus the "smith at ≥70% HP" rule | **33.06** | ≈ +3.8 | 13 | +1.15 [0.70, 1.60] over update 28 |
+
+**Running:**
+- `ooc_main_s1` → update 48. This is the control lineage.
+- `ooc_rep_s2`: seed-2 replicate from the original.
+- `ooc_branch_strat8`: exploration on rest/map/shop menus.
+- `ooc_branch_smith70`: PPO with the smith rule.
+
+Branches vs main are compared at updates 36/40/44 with
+`scripts/rl/compare_evals.py`.
+
+**Main open problem:** the OOC policy's logits are saturated, so PPO cannot
+explore strategic options. Exploration is the lever.
+
 ---
 
 ## 2026-10-13 16:23 BST — Removal overlay is null; exploration confirmed; rule-augmented lineage launched
