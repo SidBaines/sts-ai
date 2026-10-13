@@ -1,5 +1,14 @@
 # Curriculum task and data adapters
 
+Current semantic profile is environment 0.3.0/public-v3/native-API-3 with
+`public_entities_v4`, OOC model v3 and combat residual v2. Deck selections join
+their precise public inventory source; reward offers retain group membership;
+top-level combat gold/HP/max-HP are live. Entry snapshots support the explicit
+historical bridge. See `docs/public_entities_v4.md` for acceptance and migration.
+The earlier v3 encoder/model sections below describe the preserved 0.2 study.
+Old typed checkpoints/banks must use `external/reference_code_v020` plus the
+pinned v020 native build; current loaders intentionally reject them.
+
 Inference batches must preserve phase separation. Mixed OOC/combat padding can
 change near-tied greedy choices through floating-point rounding, even with a
 zero residual. Collector v2 uses separate phase batches and compact legacy

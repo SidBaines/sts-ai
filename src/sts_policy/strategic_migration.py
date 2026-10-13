@@ -15,7 +15,7 @@ from .training import load_checkpoint, file_identity
 
 
 def verify_zero_prior_equivalence(source: dict[str, Any], reference: dict[str, Any]) -> None:
-    known = {"typed_residual_ooc_v1", "typed_residual_ooc_v2"}
+    known = {"typed_residual_ooc_v1", "typed_residual_ooc_v2", "typed_residual_ooc_v3"}
     if any(payload["model_config"].get("kind") not in known for payload in (source, reference)):
         raise ValueError("unsupported residual architecture for behavior-equivalence migration")
     if source["model_config"].get("encoder_version") != reference["model_config"].get("encoder_version"):

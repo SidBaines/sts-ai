@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..27b8625 100644
+index a9afe35..e4c2b5b 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1690 @@
+@@ -9,24 +9,1701 @@
 
  #include <sstream>
  #include <algorithm>
@@ -1605,12 +1605,23 @@ index a9afe35..27b8625 100644
 +    }
 +    if (gc.screenState == ScreenState::CARD_SELECT && i < gc.info.toSelectCards.size()) {
 +        d["kind"] = "select_card";
-+        d["card"] = publicGameCard(gc.info.toSelectCards[i].card);
++        const auto &selection = gc.info.toSelectCards[i];
++        auto card = publicGameCard(selection.card);
++        if (selection.deckIdx >= 0) {
++            if (selection.deckIdx >= gc.deck.size()) {
++                throw std::runtime_error("selection deck source is outside the public inventory");
++            }
++            d["source_kind"] = "deck";
++            d["source_index"] = selection.deckIdx;
++            card["bottled"] = gc.deck.isCardBottled(selection.deckIdx);
++        }
++        d["card"] = card;
 +        d["selection_type"] = static_cast<int>(gc.info.selectScreenType);
 +    } else if (gc.screenState == ScreenState::REWARDS) {
 +        const auto &r = gc.info.rewardsContainer;
 +        switch (a.getRewardsActionType()) {
 +            case search::GameAction::RewardsActionType::CARD:
++                d["reward_group"] = i; // current public choice set, never a neural ordinal
 +                if (i < r.cardRewardCount && j < r.cardRewards[i].size()) {
 +                    d["kind"] = "take_card"; d["card"] = publicGameCard(r.cardRewards[i][j]);
 +                } else { d["kind"] = "skip_card"; }
@@ -1693,7 +1704,7 @@ index a9afe35..27b8625 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -39,7 +1705,235 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -39,7 +1716,235 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("boss_simulation_multiplier", &search::ScumSearchAgent2::bossSimulationMultiplier, "bonus multiplier to the simulation count for boss fights")
          .def_readwrite("pause_on_card_reward", &search::ScumSearchAgent2::pauseOnCardReward, "causes the agent to pause so as to cede control to the user when it encounters a card reward choice")
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
@@ -1930,7 +1941,7 @@ index a9afe35..27b8625 100644
 
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
-@@ -55,6 +1949,14 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1960,14 @@ PYBIND11_MODULE(slaythespire, m) {
               [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
               "add a card to the deck"
          )
@@ -1945,7 +1956,7 @@ index a9afe35..27b8625 100644
          .def("remove_card",
              [](GameContext &gc, int idx) {
                  if (idx < 0 || idx >= gc.deck.size()) {
-@@ -75,6 +1977,47 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +1988,47 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
@@ -1993,7 +2004,7 @@ index a9afe35..27b8625 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -84,7 +2027,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -84,7 +2038,8 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("cur_map_node_x", &GameContext::curMapNodeX)
          .def_readwrite("cur_map_node_y", &GameContext::curMapNodeY)
          .def_readwrite("cur_room", &GameContext::curRoom)
@@ -2003,7 +2014,7 @@ index a9afe35..27b8625 100644
          .def_readwrite("boss", &GameContext::boss)
 
          .def_readwrite("cur_hp", &GameContext::curHp)
-@@ -836,5 +2780,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +2791,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")

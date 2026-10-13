@@ -25,7 +25,7 @@ from .legacy_bridge import project_legacy_menu
 from .losses import generalized_advantages
 from .rollout_training import task_identity, public_endpoint_state
 
-COLLECTOR_VERSION = "frozen_combat_strategic_v3_v3"
+COLLECTOR_VERSION = "frozen_combat_strategic_v3_v4"
 SAMPLING_STREAM_VERSION = "frozen_combat_strategic_v3_v1"
 
 

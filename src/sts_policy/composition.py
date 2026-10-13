@@ -19,8 +19,10 @@ PROVENANCE_KEYS = ("environment_version", "observation_version", "python_interfa
 def training_environment_record() -> dict[str, Any]:
     """File-based identity only: never initialize/import the native simulator."""
     from sts_env.provenance import interface_identity
+    from sts_env.env import ENVIRONMENT_VERSION, OBSERVATION_VERSION
     directory = Path(__file__).parent
-    record = {**interface_identity(), "encoder_code_sha256": file_identity(directory / "encoding.py"),
+    record = {**interface_identity(), "environment_version":ENVIRONMENT_VERSION,"observation_version":OBSERVATION_VERSION,
+              "encoder_code_sha256": file_identity(directory / "encoding.py"),
               "model_code_sha256": file_identity(directory / "model.py")}
     build = os.environ.get("STS_LIGHTSPEED_BUILD")
     if build:

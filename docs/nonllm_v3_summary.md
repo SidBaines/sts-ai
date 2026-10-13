@@ -1,5 +1,30 @@
 # Repaired training study progress
 
+## Latest: semantic revision accepted, 13 October 05:10 UTC
+
+The broader-start credit controls finish **157/19/0** (λ=.95, seed 0),
+**159/19/0** (λ=1, seed 0), and **156/19/0** (λ=1, optimizer seed 1).
+No full-win gain is established or condition promoted. All checkpoints and
+complete outcomes remain preserved.
+
+Further audits reached three real semantic gaps: bottled-versus-ordinary deck
+upgrade candidates had exactly identical model inputs; Prayer Wheel card-reward
+groups were missing; live gold increased while the encoder retained entry gold.
+The separately versioned [0.3/public-v3/entities-v4 repair](public_entities_v4.md)
+is implemented. It also makes combat HP/max-HP fields coherent while preserving
+explicit entry snapshots for historical transfer. **536 host/native tests** and
+bounded smoke pass. All 192 old/new canonical control traces, rewards and
+endpoints match, with zero faults/cuts. Full JSON trace hashes change intentionally
+with added mechanics; current-profile repeat verification is separate.
+
+Current source/default binary now use 0.3; the 0.2 source is archived at
+`external/reference_code_v020`, its v020 build and all `data/nonllm_v3` results
+are preserved. Current compatible initialization, baseline and fresh bank live
+under `data/nonllm_v4`. The new native-1,000 TRAIN bank has **64/64 valid worlds,
+23,278 labels, 970 fight starts, zero faults**, in 31.01 seconds. This establishes
+corrected data/execution, not game-learning improvement. Final cohorts stay
+unopened. The older dated entries below remain historical evidence.
+
 ## Current state: 13 October, 03:40 UTC
 
 The repaired interface, typed residual models, protected strategic trainer and read-only learning report are implemented. **No training condition is promoted.** Early short combat gains failed optimizer-seed/longer-fit retention checks; learner-state cloning and consensus targets also fail the live outcome gate. Original campaigns and final data remain preserved. The current validated reference is `models/common_initial_context_v2.pt` under `data/nonllm_v3`.

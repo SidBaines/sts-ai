@@ -13,7 +13,7 @@ from typing import Any, Sequence
 from .training import file_identity
 
 
-BRIDGE_VERSION = "legacy_candidate_v2_public_menu_bridge_v1"
+BRIDGE_VERSION = "legacy_candidate_v2_public_menu_bridge_v2"
 _INSTANCE_SUFFIX = re.compile(r" \[hand \d+(?:; [^\]]+)*\]$")
 _COST = re.compile(r"\(cost (?:-?\d+|X|unplayable)\)")
 
@@ -32,8 +32,8 @@ def project_legacy_menu(observation: dict[str, Any]) -> LegacyProjection:
     World/RNG identity and native bits are neither read nor used. Only combat
     duplicates were collapsed in v2; OOC offers must remain one-to-one.
     """
-    if observation.get("state", {}).get("observation_version") != "sts_env_public_v2":
-        raise ValueError("legacy bridge requires the repaired public-v2 observation")
+    if observation.get("state", {}).get("observation_version") not in {"sts_env_public_v2","sts_env_public_v3"}:
+        raise ValueError("legacy bridge requires a repaired public-v2/public-v3 observation")
     combat = observation.get("phase") == "combat"
     actions = []
     current = []
@@ -59,6 +59,12 @@ def project_legacy_menu(observation: dict[str, Any]) -> LegacyProjection:
         current.append(int(action["index"]))
         actions.append({"index": len(actions), "description": label})
     projected = dict(observation)
+    if combat and "gold_at_battle_entry" in observation["state"]:
+        projected["state"] = dict(observation["state"])
+        for field,entry in (("gold","gold_at_battle_entry"),("cur_hp","hp_at_battle_entry"),
+                            ("max_hp","max_hp_at_battle_entry")):
+            if entry in observation["state"]:
+                projected["state"][field] = observation["state"][entry]
     # The v2 encoder uses a public allowlist; inventory and typed extras are
     # deliberately ignored. Retain owned state/text and substitute only the menu.
     projected["legal_actions"] = actions

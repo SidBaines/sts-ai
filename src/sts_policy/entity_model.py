@@ -12,7 +12,7 @@ from .model_agent import policy_from_config, policy_from_payload
 from .training import load_checkpoint, save_checkpoint, file_identity
 from pathlib import Path
 
-MODEL_VERSION = "typed_residual_ooc_v2"
+MODEL_VERSION = "typed_residual_ooc_v3"
 
 
 def code_identity() -> dict[str, str]:

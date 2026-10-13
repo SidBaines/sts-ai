@@ -20,7 +20,7 @@ import numpy as np
 from .encoding import encode_observation as encode_legacy, _room, _card_rule
 from .legacy_bridge import project_legacy_menu
 
-ENCODER_VERSION = "public_entities_v3"
+ENCODER_VERSION = "public_entities_v4"
 VOCABULARY_PATH = Path(__file__).with_name("public_vocabulary_v3.json")
 VOCABULARY_SHA256 = hashlib.sha256(VOCABULARY_PATH.read_bytes()).hexdigest()
 _VOCABULARY = json.loads(VOCABULARY_PATH.read_text())
@@ -179,8 +179,8 @@ class EncodedEntities:
 
 def encode_observation(observation: Mapping[str, Any]) -> EncodedEntities:
     state = observation.get("state", {})
-    if state.get("observation_version") != "sts_env_public_v2":
-        raise ValueError("v3 encoder requires typed sts_env_public_v2 observations")
+    if state.get("observation_version") != "sts_env_public_v3":
+        raise ValueError("v4 encoder requires typed sts_env_public_v3 observations")
     if not isinstance(state.get("inventory"), dict):
         raise ValueError("typed public inventory is missing")
     legal = observation.get("legal_actions", [])
@@ -212,7 +212,7 @@ def encode_observation(observation: Mapping[str, Any]) -> EncodedEntities:
                        for name in ("hand", "draw", "discard", "exhaust")]]:
         for card in pile:
             entity = add(card_ids(card, role), card_values(card), number(card.get("count", 1)))
-            if role == "hand" and "index" in card:
+            if role in {"hand","deck"} and "index" in card:
                 sources[(role, int(card["index"]))] = entity
     for enemy in combat.get("enemies", []):
         if not enemy.get("alive", True):
@@ -260,6 +260,15 @@ def encode_observation(observation: Mapping[str, Any]) -> EncodedEntities:
             row[:22] = route / 15
             row[22] = (coordinate[1] - cur_y) / 15
             add((token("role", "map"), token("room", _room(node_by_coordinate[coordinate].get("room"))), 0, 0), row)
+    offers, reward_groups = {}, {}
+    if observation.get("phase") != "combat":
+        for i,action in enumerate(legal):
+            public = action["public"]
+            if public.get("card") and public.get("source_kind") != "deck":
+                entity = add(card_ids(public["card"],"offer"),card_values(public["card"]))
+                offers[i] = entity
+                if "reward_group" in public:
+                    reward_groups.setdefault(public["reward_group"],[]).append(entity)
     count = len(legal)
     action_ids = np.zeros((count, 4), np.int64)
     action_values = np.zeros((count, ACTION_DIM), np.float32)
@@ -299,6 +308,11 @@ def encode_observation(observation: Mapping[str, Any]) -> EncodedEntities:
                 links[i, 0, sources[source]] = 1
             else:
                 coverage["unresolved_source"] += 1
+        elif i in offers:
+            links[i,0,offers[i]] = 1
+        if "reward_group" in public:
+            for entity in reward_groups.get(public["reward_group"],[]):
+                links[i,1,entity] = 1
         for selected in public.get("selected_cards", []):
             source = ("hand", int(selected["index"]))
             if source not in sources:
@@ -319,6 +333,8 @@ def encode_observation(observation: Mapping[str, Any]) -> EncodedEntities:
         name = str(card.get("name", ""))
         rule = _card_rule(name) if name else ""
         action_values[i, 87:90] = [float(bool(rule)), float(bool(name) and not rule), float(bool(card))]
+        action_values[i,90:93] = [float(public.get("source_kind")=="deck"),
+            float("reward_group" in public),float(bool(reward_groups.get(public.get("reward_group"))))]
     global_values = np.zeros(GLOBAL_DIM, np.float32)
     global_values[:17] = [float(observation.get("phase") == "combat"), number(state.get("act")) / 3,
         number(state.get("floor")) / 60, number(state.get("ascension")) / 20, hp / 100,

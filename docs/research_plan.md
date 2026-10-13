@@ -63,3 +63,12 @@ The corrected-start micro/macro comparison ended 157/18/0 versus 154/16/0, with 
 The short combat fit confirms one win on a separate DEV192 cohort, but a second optimizer seed regresses and ten-times-longer cloning severely regresses. No condition is promoted. The zero-residual discrepancy is resolved by phase-separated inference: all 192 reference traces/rewards now match exactly, with zero faults/cuts; 517 host/native tests and bounded smoke pass. Learner-induced TRAIN supervision and teacher-budget diagnosis are next, alongside remaining interface and reporting work.
 
 At 03:40 UTC, learner-induced 200/1,000-budget fits and a search/draw consensus fit all fail live retention despite valid, pure-query banks. Teacher labels are unstable across search randomness and hidden draw orders; disagreement alone does not prove incorrect choices. Privileged 1,000-search combat improves conditional TRAIN success and Act 2 reach, but has no fresh wins on the small control cohort. A dependency-free read-only report now exposes outcome/retention, actual learning diagnostics, source identities and teacher controls. 529 host/native tests, bounded smoke and default-controller equivalence pass. Broader-start λ=.95/1 macro credit comparisons are next; no final data opened or condition promoted.
+
+The broader credit comparison and optimizer replication finish without full-win
+gains. Reached semantic audits then motivate environment 0.3/public-v3/native-API-3
+and entities-v4: precise deck/bottled joins, reward-group alternatives and live
+combat player scalars. 536 host/native tests, bounded smoke and patch checks pass;
+all 192 canonical original-policy controls/rewards/endpoints transfer unchanged.
+Old 0.2 sources/binaries/data are preserved; fresh compatible artifacts are
+`data/nonllm_v4`. A new 64-world TRAIN bank completes with no faults. Useful
+learning remains unproven; see `docs/public_entities_v4.md` and the latest summary.

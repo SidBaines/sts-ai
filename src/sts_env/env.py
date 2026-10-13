@@ -8,8 +8,8 @@ import operator
 import os
 from typing import Any, Callable
 
-ENVIRONMENT_VERSION = "0.2.0"
-OBSERVATION_VERSION = "sts_env_public_v2"
+ENVIRONMENT_VERSION = "0.3.0"
+OBSERVATION_VERSION = "sts_env_public_v3"
 
 
 class SimulatorError(RuntimeError):
@@ -73,6 +73,14 @@ class _Episode:
         # relic counters must use the already public current combat view.
         combat = state.get("combat")
         if combat:
+            # GameContext keeps battle-entry gold until combat exits. Preserve
+            # that public snapshot for explicit historical-policy transfer.
+            state["gold_at_battle_entry"] = state["gold"]
+            state["gold"] = int(combat["player"]["gold"])
+            state["hp_at_battle_entry"] = state["cur_hp"]
+            state["max_hp_at_battle_entry"] = state["max_hp"]
+            state["cur_hp"] = int(combat["player_cur_hp"])
+            state["max_hp"] = int(combat["player_max_hp"])
             for key in ("potions", "relics"):
                 if key in combat:
                     state["inventory"][key] = deepcopy(combat[key])

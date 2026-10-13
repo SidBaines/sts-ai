@@ -17,7 +17,7 @@ from .entity_model import EntityTower, ResidualOOCPolicy, MODEL_VERSION as BASE_
 from .legacy_bridge import BRIDGE_VERSION
 from .training import load_checkpoint, save_checkpoint, file_identity
 
-MODEL_VERSION = "typed_combat_residual_v1"
+MODEL_VERSION = "typed_combat_residual_v2"
 
 
 def code_identity() -> dict[str, str]:

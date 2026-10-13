@@ -24,7 +24,7 @@ def card(name="Strike", **kwargs):
 def observation(combat=True):
     first, second = card(index=2, free_to_play_once=True), card(index=6)
     return {"phase": "combat" if combat else "out_of_combat", "text": "",
-        "state": {"observation_version": "sts_env_public_v2", "act": 1, "floor": 2, "cur_hp": 50,
+        "state": {"observation_version": "sts_env_public_v3", "act": 1, "floor": 2, "cur_hp": 50,
             "max_hp": 80, "gold": 100, "inventory": {"deck": [card()], "relics": [], "potions": {}, "boss": "Hexaghost"},
             "combat": {"player_cur_hp": 50, "player_max_hp": 80, "player_energy": 3,
                 "player": {"powers": {"The Bomb (2 turns)": 40}},
