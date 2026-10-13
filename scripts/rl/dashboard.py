@@ -3,9 +3,15 @@
 
     dashboard.py serve [--port 8791]     run in foreground
     dashboard.py start                   launch detached (idempotent)
+
+/api/state with no query returns every run in full. The page asks for
+/api/state?since=<runs_sig>&max_points=N instead: runs (and baseline) are
+omitted when no log has changed since <runs_sig>, and long series are thinned
+to N rows, so an idle poll is ~1 KB and the page skips its chart redraw.
 """
 from __future__ import annotations
 
+import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -14,6 +20,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNS = ROOT / "data" / "rl_runs"
@@ -26,39 +33,104 @@ KEEP_TRAIN = ("iteration", "t", "collect_floor", "collect_floor_se", "collect_ac
               "panel_score", "teacher_agreement")
 
 
-def state() -> dict:
-    queue = json.loads((RUNS / "queue.json").read_text()) if (RUNS / "queue.json").exists() else {"runs": []}
-    status = json.loads((RUNS / "runner_status.json").read_text()) if (RUNS / "runner_status.json").exists() else None
-    runs = {}
+SERIES = ("train", "evals", "panels")
+# Parsed logs keyed by path, reused until the file's (mtime_ns, size) changes.
+_LOG_CACHE: dict[Path, tuple[tuple[int, int], dict]] = {}
+
+
+def _read_json(path: Path, default):
+    """Read a JSON file the runner may be rewriting in place; a torn read yields the default."""
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return default
+
+
+def _read_run(log: Path) -> tuple[tuple[int, int], dict]:
+    """Parse one run log, cached on (mtime_ns, size). The returned dict is shared: do not mutate it."""
+    st = log.stat()
+    key = (st.st_mtime_ns, st.st_size)
+    cached = _LOG_CACHE.get(log)
+    if cached is not None and cached[0] == key:
+        return cached
+    train, evals, panels, config, done = [], [], [], {}, False
+    for line in log.read_text().splitlines():
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if r.get("event") == "start":
+            config = r.get("config", {})
+        elif r.get("event") == "train":
+            train.append({k: r.get(k) for k in KEEP_TRAIN if k in r})
+        elif r.get("event") == "eval":
+            evals.append({k: v for k, v in r.items() if k != "event"})
+        elif r.get("event") == "panel":
+            panels.append({k: v for k, v in r.items() if k != "event"})
+        elif r.get("event") == "done":
+            done = True
+    run = {"config": config, "train": train, "evals": evals, "panels": panels, "done": done,
+           "n_train": len(train), "mtime": st.st_mtime}
+    _LOG_CACHE[log] = (key, run)
+    return key, run
+
+
+def _thin(rows: list, cap: int) -> list:
+    """Evenly subsample rows to at most cap (>= 2) entries, always keeping the first and last."""
+    if len(rows) <= cap:
+        return rows
+    last = len(rows) - 1
+    return [rows[round(i * last / (cap - 1))] for i in range(cap)]
+
+
+def state(max_points: int | None = None, since: str | None = None) -> dict:
+    """Dashboard state. With no arguments every run is returned in full.
+
+    max_points thins each run's train/evals/panels lists (n_train keeps the true count).
+    If since equals the current runs_sig, runs and baseline are None: nothing in them changed.
+    """
+    queue = _read_json(RUNS / "queue.json", {"runs": []})
+    status = _read_json(RUNS / "runner_status.json", None)
+    parsed, sig_parts = [], []
     for directory in sorted(p for p in RUNS.iterdir() if p.is_dir() and not p.name.startswith("_")) if RUNS.exists() else []:
         log = directory / "log.jsonl"
-        if not log.exists():
+        try:
+            key, run = _read_run(log)
+        except FileNotFoundError:
             continue
-        train, evals, panels, config, done = [], [], [], {}, False
-        for line in log.read_text().splitlines():
-            try:
-                r = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if r.get("event") == "start":
-                config = r.get("config", {})
-            elif r.get("event") == "train":
-                train.append({k: r.get(k) for k in KEEP_TRAIN if k in r})
-            elif r.get("event") == "eval":
-                evals.append({k: v for k, v in r.items() if k != "event"})
-            elif r.get("event") == "panel":
-                panels.append({k: v for k, v in r.items() if k != "event"})
-            elif r.get("event") == "done":
-                done = True
-        runs[directory.name] = {"config": config, "train": train, "evals": evals, "panels": panels, "done": done,
-                                "mtime": log.stat().st_mtime}
-    baseline = None
+        parsed.append((directory.name, run))
+        sig_parts.append(f"{directory.name}:{key[0]}:{key[1]}")
     base_file = RUNS / "baselines" / "orig_argmax_1024.json"
-    if base_file.exists():
-        baseline = json.loads(base_file.read_text())["summary"]
-    return {"now": time.time(), "runner": status,
-            "queue": [{k: r.get(k) for k in ("name", "status", "started", "ended", "returncode")} for r in queue["runs"]],
-            "runs": runs, "baseline": baseline}
+    try:
+        st = base_file.stat()
+        sig_parts.append(f"baseline:{st.st_mtime_ns}:{st.st_size}")
+    except FileNotFoundError:
+        pass
+    runs_sig = hashlib.sha1("\n".join(sig_parts).encode()).hexdigest()[:16]
+    out = {"now": time.time(), "runner": status,
+           "queue": [{k: r.get(k) for k in ("name", "status", "started", "ended", "returncode")} for r in queue.get("runs", [])],
+           "runs_sig": runs_sig, "runs": None, "baseline": None}
+    if since == runs_sig:
+        return out
+    runs = {}
+    for name, run in parsed:
+        if max_points is not None:
+            run = {**run, **{k: _thin(run[k], max_points) for k in SERIES}}
+        runs[name] = run
+    baseline = _read_json(base_file, {}).get("summary") if base_file.exists() else None
+    out.update(runs=runs, baseline=baseline)
+    return out
+
+
+def state_payload(path: str) -> bytes:
+    """JSON body for /api/state[?since=<runs_sig>&max_points=N]."""
+    query = parse_qs(urlsplit(path).query)
+    since = query.get("since", [""])[0] or None
+    try:
+        max_points = max(2, int(query["max_points"][0])) if "max_points" in query else None
+    except ValueError:
+        max_points = None
+    return json.dumps(state(max_points=max_points, since=since), separators=(",", ":")).encode()
 
 
 PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>StS RL runs</title>
@@ -93,38 +165,50 @@ label{margin-right:10px;white-space:nowrap}.tw{overflow-x:auto}
 <div class="card"><h2>Behaviour: map monster (solid), event (dashed)</h2><canvas id="c_map"></canvas></div>
 </div>
 <script>
+// Charts are built once and updated in place; the server omits runs when no log changed (runs_sig),
+// so an idle poll only refreshes the header. Polling stops while the tab is hidden.
+const POLL_MS=30000, MAX_POINTS=500;
 const COLORS=['#2f6fdb','#d9480f','#2b8a3e','#ae3ec9','#e67700','#0b7285','#c2255c','#5c940d','#495057','#1971c2'];
-let charts={}, selected=null;
+const charts={}, seen=new Set();
+let selected=null, runs={}, baseline=null, runsSig='', lastTable='', lastSel='', timer=null, inflight=false, lastOk=null;
 function color(i){return COLORS[i%COLORS.length]}
-function mk(id,ds,opts={}){const ctx=document.getElementById(id);if(charts[id])charts[id].destroy();
- charts[id]=new Chart(ctx,{type:'line',data:{datasets:ds},options:Object.assign({animation:false,parsing:false,
+function mk(id,ds,opts={}){const c=charts[id];
+ if(c){const hidden=new Set(c.data.datasets.filter((d,i)=>!c.isDatasetVisible(i)).map(d=>d.label));  // keep legend toggles
+  ds.forEach(d=>{if(hidden.has(d.label))d.hidden=true});c.data.datasets=ds;c.update('none');return}
+ charts[id]=new Chart(document.getElementById(id),{type:'line',data:{datasets:ds},options:Object.assign({animation:false,parsing:false,
  plugins:{legend:{labels:{boxWidth:10,font:{size:11}}}},scales:{x:{type:'linear',title:{display:true,text:'update'}}}},opts)});}
 function pts(arr,xk,yk){return arr.filter(r=>r[yk]!=null&&r[yk]===r[yk]).map(r=>({x:r[xk],y:r[yk]}))}
 function fmt(v,d=2){return v==null?'–':Number(v).toFixed(d)}
+function setHtml(id,html,prev){if(html!==prev)document.getElementById(id).innerHTML=html;return html}
 async function load(){
- const s=await (await fetch('/api/state')).json();
+ const res=await fetch(`/api/state?max_points=${MAX_POINTS}&since=${encodeURIComponent(runsSig)}`,{cache:'no-store',signal:AbortSignal.timeout(20000)});
+ if(!res.ok)throw new Error(`HTTP ${res.status}`);
+ const s=await res.json(); const changed=s.runs!==null;
+ if(changed){runs=s.runs;baseline=s.baseline;runsSig=s.runs_sig}
+ lastOk=s.now;
  const rn=s.runner; const age=rn?Math.round(s.now-rn.heartbeat):null;
  document.getElementById('hdr').textContent=(rn?`runner pid ${rn.pid}, heartbeat ${age}s ago, ${rn.on_battery?'ON BATTERY (paused)':'AC power'}, active: ${rn.active.join(', ')||'none'}`:'runner not started')+
-   (s.baseline?` · original baseline ${fmt(s.baseline.mean_floor)} ± ${fmt(s.baseline.se)} floors, Act1 boss ${fmt(100*s.baseline.act1_boss_pass,1)}%, Act2 boss ${fmt(100*s.baseline.act2_boss_pass,1)}%, wins ${s.baseline.wins}/${s.baseline.n}`:'')+
+   (baseline?` · original baseline ${fmt(baseline.mean_floor)} ± ${fmt(baseline.se)} floors, Act1 boss ${fmt(100*baseline.act1_boss_pass,1)}%, Act2 boss ${fmt(100*baseline.act2_boss_pass,1)}%, wins ${baseline.wins}/${baseline.n}`:'')+
    ` · updated ${new Date(s.now*1000).toLocaleTimeString()}`;
- const names=Object.keys(s.runs); const qstat={}; s.queue.forEach(q=>qstat[q.name]=q.status);
- if(selected===null){selected=new Set(names)}
- names.forEach(n=>{if(!(n in (window._seen||{})))selected.add(n)}); window._seen=Object.fromEntries(names.map(n=>[n,1]));
+ const names=Object.keys(runs); const qstat={}; s.queue.forEach(q=>qstat[q.name]=q.status);
+ if(selected===null)selected=new Set(names);
+ names.forEach(n=>{if(!seen.has(n)){seen.add(n);selected.add(n)}});
  let html='<tr><th>run</th><th>status</th><th>updates</th><th>last eval</th><th>paired Δ vs orig</th><th>Act1/Act2 boss</th><th>wins</th><th>notes</th></tr>';
- names.forEach((n,i)=>{const r=s.runs[n];const e=r.evals[r.evals.length-1]||{};const p=e.paired;
+ names.forEach((n,i)=>{const r=runs[n];const e=r.evals[r.evals.length-1]||{};const p=e.paired;
   const st=qstat[n]||(r.done?'done':'?');
-  html+=`<tr><td style="color:${color(i)}">■ ${n}</td><td><span class="pill ${st}">${st}</span></td><td>${r.train.length}/${r.config.iterations||'?'}</td>
+  html+=`<tr><td style="color:${color(i)}">■ ${n}</td><td><span class="pill ${st}">${st}</span></td><td>${r.n_train??r.train.length}/${r.config.iterations||'?'}</td>
   <td>${fmt(e.mean_floor)} ± ${fmt(e.se)}</td><td>${p?`${p.diff>=0?'+':''}${fmt(p.diff)} ± ${fmt(p.se)}`:'–'}</td>
   <td>${fmt(100*(e.act1_boss_pass||0),1)}% / ${fmt(100*(e.act2_boss_pass||0),1)}%</td><td>${e.wins??'–'}</td><td class="mut">${(r.config.notes||'').slice(0,90)}</td></tr>`});
- s.queue.filter(q=>!(q.name in s.runs)).forEach(q=>{html+=`<tr><td class="mut">${q.name}</td><td><span class="pill">${q.status}</span></td><td colspan=6></td></tr>`});
- document.getElementById('runs').innerHTML=html;
- document.getElementById('sel').innerHTML=names.map((n,i)=>`<label><input type="checkbox" data-n="${n}" ${selected.has(n)?'checked':''}> <span style="color:${color(i)}">${n}</span></label>`).join('');
- document.querySelectorAll('#sel input').forEach(cb=>cb.onchange=()=>{cb.checked?selected.add(cb.dataset.n):selected.delete(cb.dataset.n);draw(s)});
- draw(s);
+ s.queue.filter(q=>!(q.name in runs)).forEach(q=>{html+=`<tr><td class="mut">${q.name}</td><td><span class="pill">${q.status}</span></td><td colspan=6></td></tr>`});
+ lastTable=setHtml('runs',html,lastTable);
+ lastSel=setHtml('sel',names.map((n,i)=>`<label><input type="checkbox" data-n="${n}" ${selected.has(n)?'checked':''}> <span style="color:${color(i)}">${n}</span></label>`).join(''),lastSel);
+ if(changed)draw();
 }
-function draw(s){
- const names=Object.keys(s.runs);const ds=f=>names.map((n,i)=>[n,i]).filter(([n])=>selected.has(n)).flatMap(([n,i])=>f(n,i,s.runs[n]));
- const base=s.baseline?[{label:'original',data:[{x:0,y:s.baseline.mean_floor},{x:60,y:s.baseline.mean_floor}],borderColor:'#888',borderDash:[4,4],pointRadius:0}]:[];
+document.getElementById('sel').addEventListener('change',e=>{const cb=e.target;if(!cb.dataset||!cb.dataset.n)return;
+ cb.checked?selected.add(cb.dataset.n):selected.delete(cb.dataset.n);draw()});  // one delegated listener, attached once
+function draw(){
+ const names=Object.keys(runs);const ds=f=>names.map((n,i)=>[n,i]).filter(([n])=>selected.has(n)).flatMap(([n,i])=>f(n,i,runs[n]));
+ const base=baseline?[{label:'original',data:[{x:0,y:baseline.mean_floor},{x:60,y:baseline.mean_floor}],borderColor:'#888',borderDash:[4,4],pointRadius:0}]:[];
  mk('c_eval',[...base,...ds((n,i,r)=>[{label:n,data:pts(r.evals,'iteration','mean_floor'),borderColor:color(i),backgroundColor:color(i)}])]);
  mk('c_paired',ds((n,i,r)=>{const e=r.evals.filter(x=>x.paired);return[
   {label:n,data:e.map(x=>({x:x.iteration,y:x.paired.diff})),borderColor:color(i),backgroundColor:color(i)},
@@ -144,14 +228,24 @@ function draw(s){
  mk('c_map',ds((n,i,r)=>[{label:n+' monster',data:pts(r.train,'iteration','map_monster'),borderColor:color(i),pointRadius:1},
   {label:n+' event',data:pts(r.train,'iteration','map_event'),borderColor:color(i),borderDash:[5,4],pointRadius:1}]));
 }
-load();setInterval(load,30000);
+// One self-rescheduling poll chain (no overlapping fetches), paused while the tab is hidden.
+async function poll(){
+ if(document.hidden||inflight)return;
+ inflight=true;
+ try{await load()}
+ catch(e){document.getElementById('hdr').textContent=`update failed (${e.message||e}); retrying every ${POLL_MS/1000}s`+(lastOk?` · last good update ${new Date(lastOk*1000).toLocaleTimeString()}`:'')}
+ finally{inflight=false}
+ clearTimeout(timer);timer=document.hidden?null:setTimeout(poll,POLL_MS);
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(timer);timer=null}else poll()});
+poll();
 </script></body></html>"""
 
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/state"):
-            body, kind = json.dumps(state()).encode(), "application/json"
+            body, kind = state_payload(self.path), "application/json"
         elif self.path in ("/", "/index.html"):
             body, kind = PAGE.encode(), "text/html; charset=utf-8"
         else:

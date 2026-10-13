@@ -27,6 +27,8 @@ from sts_policy.training import load_checkpoint
 from sts_policy.workers import CurriculumWorker
 
 BOSS_FLOORS = {16, 33, 50}
+ELITE_MAX_ACT = 2
+ELITE_HP = 0.7
 
 
 def rule_choice(obs: dict, rules: set[str], smith_frac: float) -> int | None:
@@ -60,10 +62,14 @@ def rule_choice(obs: dict, rules: set[str], smith_frac: float) -> int | None:
                 r = find(lambda a, n=name: re.match(rf"select card index \d+: {n} \[", a) is not None)
                 if r is not None:
                     return r
-    if "elite" in rules and int(st.get("act") or 0) <= 2 and hp >= 0.7 * mx:
+    if "elite" in rules and int(st.get("act") or 0) <= ELITE_MAX_ACT and hp >= ELITE_HP * mx:
         r = find(lambda a: "room=ELITE" in a)
         if r is not None:
             return r
+    if "noneowswap" in rules and int(st.get("floor") or 0) == 0:
+        bad = [i for i, a in enumerate(legal) if "Obtain a random boss relic" in a]
+        if bad and len(bad) < len(legal):
+            return "AVOID", bad
     if "nokey" in rules:
         bad = [i for i, a in enumerate(legal) if a.startswith("recall") or a == "take key"]
         if bad:
@@ -80,8 +86,12 @@ def main():
     p.add_argument("--smith-frac", type=float, default=0.55)
     p.add_argument("--stochastic", action="store_true")
     p.add_argument("--output")
+    p.add_argument("--elite-max-act", type=int, default=2)
+    p.add_argument("--elite-hp", type=float, default=0.7)
     args = p.parse_args()
     rules = {r for r in args.rules.split(",") if r}
+    global ELITE_MAX_ACT, ELITE_HP
+    ELITE_MAX_ACT, ELITE_HP = args.elite_max_act, args.elite_hp
     torch.set_num_threads(1)
     torch.manual_seed(0)
     model = policy_from_payload(load_checkpoint(args.checkpoint)).eval()

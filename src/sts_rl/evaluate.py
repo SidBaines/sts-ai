@@ -5,6 +5,7 @@ comparison pairable: same world seeds -> identical starting runs.
 """
 from __future__ import annotations
 
+import gc
 import math
 from typing import Any, Sequence
 
@@ -58,7 +59,7 @@ def summarize(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
 @torch.no_grad()
 def evaluate(model: torch.nn.Module, workers: Sequence[Any], *, n: int = 1024,
              world_start: int = EVAL_WORLD_START, mode: str = "greedy",
-             max_seconds: float = 3600.) -> dict[str, Any]:
+             max_seconds: float = 3600., chunk: int = 256) -> dict[str, Any]:
     """mode: greedy (deployment), sample (training-time), greedy_combat (OOC sampled)."""
     model.eval()
     # "greedy" is an exact argmax (first index wins exact ties), so evaluation is
@@ -68,18 +69,26 @@ def evaluate(model: torch.nn.Module, workers: Sequence[Any], *, n: int = 1024,
     forward = {"greedy": forward_policy,
                "sample": phase_forward(),
                "greedy_combat": phase_forward(combat="greedy")}[mode]
-    result = collect_rollouts(model, workers, train_tasks(world_start, n), collate=collate_public,
-                              forward=forward, config=PPOConfig(), max_seconds=max_seconds,
-                              deterministic=mode == "greedy", deferred_bootstrap=True, reuse_encodings=False)
-    by_seed = {e["world_seed"]: e for e in result["episodes"]}
-    records = []
-    for trajectory in _episodes(result["transitions"]):
-        episode = by_seed.get(trajectory[0].world_seed)
-        if episode is not None:
-            records.append(episode_record(trajectory, episode))
+    # Chunked: collect_rollouts keeps every transition (full observations) until it
+    # returns, so evaluating 1,024 games at once held several GB. Each chunk is
+    # reduced to per-world records immediately and then released.
+    tasks = train_tasks(world_start, n)
+    records, faults, elapsed = [], 0, 0.0
+    for start in range(0, len(tasks), chunk):
+        result = collect_rollouts(model, workers, tasks[start:start + chunk], collate=collate_public,
+                                  forward=forward, config=PPOConfig(), max_seconds=max_seconds,
+                                  deterministic=mode == "greedy", deferred_bootstrap=True, reuse_encodings=False)
+        by_seed = {e["world_seed"]: e for e in result["episodes"]}
+        for trajectory in _episodes(result["transitions"]):
+            episode = by_seed.get(trajectory[0].world_seed)
+            if episode is not None:
+                records.append(episode_record(trajectory, episode))
+        faults += len(result["faults"])
+        elapsed += result["elapsed_seconds"]
+        del result, by_seed
+        gc.collect()
     summary = summarize(records)
-    summary.update(faults=len(result["faults"]), mode=mode, world_start=world_start,
-                   elapsed=result["elapsed_seconds"])
+    summary.update(faults=faults, mode=mode, world_start=world_start, elapsed=elapsed)
     return {"summary": summary, "records": records}
 
 

@@ -12,10 +12,39 @@ runs on battery and resumes on AC).
 Reference point for everything below: the original composite (`joint_act3_0030.pt`),
 greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 **29.27 ± 0.26 mean floor**, Act 1 boss pass 88.1%, Act 2 boss reach 48.9% / pass
-23.4%, 1 win.
----
+23.4%, 1 win.---
 
-## 2026-10-13 14:25 BST — Clean confirmation of the OOC gain; boss/elite combat RL launched
+## 2026-10-13 15:15 BST — Memory incident fixed (it crashed Chrome); runs resumed
+
+- **What happened:** Chrome was force-quit by macOS under memory pressure at 14:25.
+  A subagent traced the cause to my `ooc_main_s1` trainer, not the dashboard.
+  It had grown to 19–24 GB, and swap reached 24.5/25.6 GB.
+  `collect_rollouts` holds every transition of a 768-game batch with full
+  observation dicts, then the evaluation held 1,024 more games on top.
+- **Fix:** chunked collection and evaluation, keeping only OOC choice
+  transitions, with their observations slimmed after encoding. Measured peak
+  for one 512-game update plus a 512-game eval: **13.6 GB → 5.9 GB**.
+- The trainer was stopped at update 20 (state saved). It **resumed from update
+  20 on the fixed code** as `ooc_main_s1_ext`, continuing to update 48. Combat
+  RL was also restarted from its own checkpoint (update 14) to pick up the
+  chunked evaluator.
+- The dashboard was not leaking (heap flat over ~10 h-equivalent of polling).
+  The subagent still made it much lighter: charts update in place, a 1.1 KB
+  poll when nothing changed, and no polling while the tab is hidden. Committed.
+- **`ooc_main_s1` before the stop** (old evaluator): update 12 eval 30.82
+  (+1.57 paired); training-time floor 30.5–31.2 at updates 13–20.
+- **Combat RL:**
+  - v1, lr 1e-4: slow. Update 10 full-game paired +0.29 ± 0.20 vs `main_s1@8`;
+    wins 7 → 11 / ~1,016.
+  - Continued as v2 at lr 3e-4. At update 14 the held-out panel shows **Act 2
+    elite 68% → 77.5%**; Act 2 boss still ~24%.
+- **Strategy probes** on `main_s1@8`, paired over ~510 worlds:
+  - **Masking Neow's boss-relic swap: −1.99 ± 0.44 floors.** The policy's
+    near-universal swap is right.
+  - Act-1-only elite seeking: +0.23 ± 0.28, i.e. nothing.
+  - Hand-rules are not where the headroom is; RL is.
+
+## 2026-10-13 14:15 BST — Clean confirmation of the OOC gain; boss/elite combat RL launched
 
 - **Exact-argmax re-score of `ooc_main_s1` update 8: 30.42 ± 0.26 floors,
   paired +1.17 ± 0.26 (95% CI [0.65, 1.70]) vs the original.** Wins 2 → 7 per

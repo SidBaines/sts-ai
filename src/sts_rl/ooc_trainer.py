@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import asdict, dataclass, field
+import gc
 import json
 import math
 from pathlib import Path
@@ -56,6 +57,7 @@ class OOCTrainConfig:
     workers: int = 14
     seed: int = 0
     health_every: int = 1
+    collect_chunk: int = 256
     threads: int = 2
     notes: str = ""
 
@@ -244,24 +246,50 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             started = time.time()
             model.eval()
             world_start = cfg.train_world_start + cfg.seed * 500_000_000 + iteration * 10_000_000
-            result = collect_rollouts(model, workers, train_tasks(world_start, cfg.games), collate=collate_public,
-                                      forward=forward, config=ppo, max_seconds=3600, deterministic=False,
-                                      deferred_bootstrap=True)
+            tasks = train_tasks(world_start, cfg.games)
+            # Chunked collection: keep only OOC choice transitions (with their
+            # encodings) and small per-episode stats; drop combat transitions and
+            # full observation dicts per chunk. Holding all ~270k transitions of a
+            # 768-game batch plus an evaluation pushed the process past 20 GB.
+            kept: list[list[Any]] = []
+            game_episodes: list[dict[str, Any]] = []
+            faults = 0
+            stats_acc: dict[str, list[float]] = {}
+            for chunk_start in range(0, len(tasks), cfg.collect_chunk):
+                result = collect_rollouts(model, workers, tasks[chunk_start:chunk_start + cfg.collect_chunk],
+                                          collate=collate_public, forward=forward, config=ppo, max_seconds=3600,
+                                          deterministic=False, deferred_bootstrap=True)
+                episodes = split_episodes(result["transitions"])
+                kept += (macro_ooc_transitions(episodes, cfg.gae_lambda) if cfg.credit == "macro"
+                         else micro_ooc_transitions(episodes))
+                for key, value in behaviour_stats(episodes).items():
+                    stats_acc.setdefault(key, []).append((value, len(episodes)))
+                # Kept transitions already carry their encodings; PPO only needs the
+                # menu and phase from the observation. Slim the dict in place (its
+                # identity is checked against the cached encoding).
+                for ep in kept:
+                    for t in ep:
+                        obs = t.observation
+                        if "text" in obs:
+                            obs.pop("text")
+                            obs["state"] = {}
+                game_episodes += [{k: e.get(k) for k in ("floor", "task_outcome")} for e in result["episodes"]]
+                faults += len(result["faults"])
+                del result, episodes
+                gc.collect()
             collect_seconds = time.time() - started
-            episodes = split_episodes(result["transitions"])
-            kept = (macro_ooc_transitions(episodes, cfg.gae_lambda) if cfg.credit == "macro"
-                    else micro_ooc_transitions(episodes))
             flat = [t for ep in kept for t in ep]
-            floors = np.array([e["floor"] for e in result["episodes"]])
+            floors = np.array([e["floor"] for e in game_episodes])
+            behaviour = {k: sum(v * n for v, n in vals) / max(1, sum(n for _, n in vals)) for k, vals in stats_acc.items()}
             record: dict[str, Any] = {
                 "event": "train", "iteration": iteration, "collect_floor": float(floors.mean()),
                 "collect_floor_se": float(floors.std() / math.sqrt(max(1, len(floors)))),
                 "collect_act1_clear": float((floors > 16).mean()), "collect_act2_clear": float((floors > 33).mean()),
-                "collect_wins": int(sum(e["task_outcome"] in ("act_clear", "victory") for e in result["episodes"])),
-                "games": len(result["episodes"]), "faults": len(result["faults"]),
+                "collect_wins": int(sum(e["task_outcome"] in ("act_clear", "victory") for e in game_episodes)),
+                "games": len(game_episodes), "faults": faults,
                 "ooc_choice_transitions": len(flat), "collect_seconds": collect_seconds,
                 "adv_raw_std": float(np.std([t.advantage for t in flat])) if flat else 0.0,
-                **behaviour_stats(episodes)}
+                **behaviour}
             if cfg.health_every and iteration % cfg.health_every == 0:
                 record["grad_cosine_half"] = gradient_cosine(model, forward, kept, rng=rng)
             update = update_ppo(model, flat, collate=collate_public, forward=forward, config=ppo, device="cpu",
@@ -281,6 +309,8 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 record[f"disp_ratio_{block}"] = moved / rw
             record["iteration_seconds"] = time.time() - started
             log.emit(record)
+            del kept, flat
+            gc.collect()
             torch.save({"model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(),
                         "iteration": iteration, "steps_total": steps_total}, latest)
             if cfg.eval_every and (iteration % cfg.eval_every == 0 or iteration == cfg.iterations):
