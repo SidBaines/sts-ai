@@ -103,6 +103,29 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 21:21 BST — Avoiding conflicting boss relics hurts; λ = 0.99 ≈ λ = 1.0 at update 16
+
+- **Avoid Fusion Hammer and Coffee Dripper** (both conflict with smithing or
+  resting), on top of round 2, win set: **−0.43 ± 0.05 floors (CI [−0.53,
+  −0.34])**; wins 93 → 85.
+  - Both are energy relics. The extra energy outweighs losing smith or rest,
+    so the policy's choices were right.
+  - Negative result; the overlay stays off.
+- **From distilled, update 16** (1,024 worlds):
+  - λ = 0.99: 34.05, +0.72 [0.16, 1.24];
+  - λ = 1.0: 34.11, +0.80 [0.25, 1.36].
+
+  At this horizon both avoid the λ = 0.95 collapse, which was −0.54 at
+  update 16.
+- **Discovery from scratch** finished 16 updates: smith ~3–4% throughout.
+  **Exploration + unbiased credit did not discover smithing in 16 updates.**
+  The update-16 eval is pending.
+- **New evaluator: `scripts/rl/eval_search_boss.py`.** It plays full games
+  greedily, but uses public search in boss fights. It is smoke-tested; full
+  runs wait on the 64-sample public-search estimate.
+
+---
+
 ## 2026-10-13 21:10 BST — Public-information search: most of the privileged gain was clairvoyance, but a real gain remains
 
 - **New native bindings** (RL patch only; the study patch is unchanged):
