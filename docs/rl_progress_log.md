@@ -38,6 +38,26 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 17:02 BST — Replicate holds at update 12; the smith threshold is sharp (50% hurts, 70% helps)
+
+- **Seed-2 replicate, update 12: +1.37 (CI [0.85, 1.90])**. Seed 1 was +1.57.
+  The two seeds track each other within error across updates 4, 8 and 12.
+- **Smith-threshold sweep**, paired vs update 28:
+
+  | Smith whenever HP ≥ | Paired (floors) |
+  | --- | --- |
+  | 50% | **−0.57** [−1.05, −0.10] |
+  | 70% | **+1.15** [0.70, 1.60] |
+  | 85% | running |
+
+  Smithing in the 50–70% band costs more than resting. This independently
+  confirms the advantage diagnosis (low-HP smiths are very costly), and it is
+  why undirected exploration taught PPO "smith is bad".
+- The exploration branch `strat8` was stopped at update 38 to free CPU for the
+  sweeps. Its `latest.pt` is kept, so it can resume.
+
+---
+
 ## 2026-10-13 16:55 BST — Queue-runner bug killed the main run at update 36; fixed and resumed
 
 - **Bug:** the stall watchdog looked for each run's log at
