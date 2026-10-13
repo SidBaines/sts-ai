@@ -104,6 +104,29 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 23:03 BST — Round-2 PPO keeps climbing: 34.7 mean floor; wins ~4–5% at 1,024 worlds (win-set check queued)
+
+`ooc_r2_lam1` (smith + elite distilled, then PPO with λ = 1.0), standard
+1,024 worlds:
+
+| Update | Mean floor | Wins | vs distilled agent (wins 19) |
+| --- | --- | --- | --- |
+| 4 | 33.65 | 36 (3.6%) | p = 0.016 |
+| 8 | 33.93 | 35 (3.5%) | p = 0.026 |
+| 12 | **34.66** | **52 (5.2%)** | +1.35 [0.70, 1.95] floors; **p < 0.001** |
+| 16 | **34.69** | 44 (4.4%) | +1.39 [0.78, 2.02]; p = 0.001 |
+
+- From update 4 to update 12: +1.03 [0.48, 1.58] floors; wins 36 → 52
+  (p = 0.05).
+- Sampled smith rate is drifting down (31% → 25% by 16). Elite paths are
+  steady at 6–7%. Watch the smith drift.
+- **Queued:** win-set (4,096) evals of updates 12 and 16; the run is extended
+  to update 32 (`ooc_r2_lam1_ext`).
+- The 1,024-world win counts are noisy (±7). The 4,096-world set is the
+  arbiter.
+
+---
+
 ## 2026-10-13 22:51 BST — Distilling public-search votes into the combat head hurts the Act 2 boss (−6.2 points)
 
 - **Labels:** 320 games from the best agent; every boss-fight decision labelled
