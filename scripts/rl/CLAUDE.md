@@ -59,3 +59,18 @@ Progress log and live-dashboard link: `docs/rl_progress_log.md`. Code: `src/sts_
   `scripts/rl/compare_evals.py A.json B.json ...` gives the paired difference.
 - **Progress-log headers:** take the time from `date` when writing the entry.
   Never estimate it.
+- **OOC credit must not be critic-bootstrapped at λ = 0.95** (2026-10-13). The
+  OOC critic cannot see the value of delayed-payoff choices, such as a single
+  card upgrade, but it sees HP directly. So λ = 0.95 macro advantages rank
+  "rest" above "smith" at high HP: the sign is flipped relative to paired
+  evaluation. Plain PPO from a distilled smithing policy unlearned it: smith
+  rate 45% → 14.5% by update 16, −0.54 floors. With `--gae-lambda 1.0`
+  (Monte-Carlo, critic only as a baseline) it kept the behaviour and improved,
+  +0.88 floors by update 12. Prefer λ = 1.0 for OOC runs; it is noisier,
+  but it is not biased.
+- **Combat:** fight-bank PPO did not move full-game outcomes, either with
+  sparse win/loss (v1/v2) or with dense potential shaping (v3, 20 updates).
+  Don't re-run either without a new idea.
+- **Win-rate claims** need the 4,096-world win set (`--world-start 6000000000
+  --n 4096`, `data/rl_runs/win_eval/`) and the McNemar line from
+  `compare_evals.py`. At ~2% wins, 1,024 worlds cannot resolve 1-point changes.
