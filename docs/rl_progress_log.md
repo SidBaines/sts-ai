@@ -125,8 +125,16 @@ explore strategic options. Exploration is the lever.
   - public search on 158 Act 3 boss fights. Started, then paused with SIGSTOP
     for battery; a watcher resumes it on AC.
 - **The laptop went on battery (~21:20).** The queue runner paused
-  `ooc_r2_lam1` at update 4 and holds new jobs. Round-2 update 4 (1,024
-  worlds): 33.65 mean floor.
+  `ooc_r2_lam1` at update 4 and holds new jobs.
+- **Round-2 PPO update 4** (smith + elite distilled, then λ = 1.0 PPO),
+  1,024 standard worlds vs the distilled agent:
+  - **wins 19 → 36 (1.88% → 3.56%)**, discordant 14/31, McNemar p = 0.016;
+  - mean floor +0.34 ± 0.31.
+
+  This is the strongest win signal so far. It needs win-set confirmation,
+  which is queued once on AC.
+- **Discovery from scratch, update 16:** +0.33 ± 0.29 vs its main@36 start.
+  Smith rate stayed ~3–4%, so **no discovery** in 16 updates.
 
 ---
 
