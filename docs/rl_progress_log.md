@@ -38,6 +38,24 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 16:55 BST — Queue-runner bug killed the main run at update 36; fixed and resumed
+
+- **Bug:** the stall watchdog looked for each run's log at
+  `data/rl_runs/<queue name>/log.jsonl`. Resumed and branched runs write
+  elsewhere: `ooc_main_s1_ext4` writes to `ooc_main_s1/`. For those, "last
+  activity" was the launch time, so the watchdog killed healthy runs 40
+  minutes after launch.
+- `ooc_main_s1_ext4` was killed mid-update 36. Update 35's checkpoint was
+  intact (atomic save). Its queued rescore then started in its place.
+- **Fix:** activity is now read from the `--out` log and `stdout.log`.
+  Log-less evaluation jobs get 3× the limit.
+- The runner was restarted on the fixed code, and main resumed from update 35
+  as `ooc_main_s1_ext5`. About 20 minutes of main-run time was lost.
+- No other run was affected. The other renamed runs were all cancelled by me
+  within 40 minutes.
+
+---
+
 ## 2026-10-13 16:52 BST — Exploration alone is too noisy to learn smithing; tuning the strategy rule with paired evals instead
 
 - **Update-36 evals**, paired:
