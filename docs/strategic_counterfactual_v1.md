@@ -57,3 +57,31 @@ and `ooc_menu_greedy_panel4_repeat`. Current execution acceptance: **546
 host/native tests**, one optional artifact skip, plus bounded smoke without
 error. The new unit cases verify executed interventions, preserved RNG/control,
 whole-menu invalidation, forbidden on-policy rows and split/role boundaries.
+
+## Explicit privileged continuation comparator
+
+Protocol v2 adds optional native combat continuation, with its simulation budget
+and privileged role recorded in every panel. The original v1 execution sources
+are preserved in commit `88e4abf`; old data are not reinterpreted or overwritten.
+
+The four matched sources finish with native-1,000 combat in **8.65 seconds**.
+All 12 legal branches complete, no faults/cuts, and all four reference controls
+match. The first Act 2 start in world 390000000 now wins under the same original
+OOC rest choice, whereas learned combat died at floor 33. Changing that first
+choice to smith loses the native-control victory. Across these four sources,
+there is still **no alternative first-choice full-win gain**; one menu improves
+floor reach. This is a conditional privileged diagnosis on three source worlds,
+not evidence of a trained public agent or an estimated fresh-game win rate.
+
+Continuation competence therefore matters to interpreting outcome ties. The
+next study should broaden/move earlier the strategic starts and validate combat
+continuations alongside strategic targets. It should not force preferences from
+menus where every sampled choice loses under an inadequate continuation policy.
+
+The dashboard now displays each counterfactual run separately, checks panel
+hashes against its manifest, and excludes incomplete-menu gains from usable
+summaries. PPO plots expose actual actor samples and weighted loss mass by act;
+they are different measurements. Current acceptance: **549 host/native tests**,
+one optional artifact skip, and bounded smoke. Browser verification finds eight
+Act 3 loss-mass plot points, the expected complete-menu counts, and no console
+errors. Evidence: `data/nonllm_v4/counterfactual/ooc_menu_native1000_panel4`.

@@ -8,7 +8,7 @@ import json
 import math
 from pathlib import Path
 
-REPORT_VERSION = "nonllm_learning_report_v3_v1"
+REPORT_VERSION = "nonllm_learning_report_v3_v2"
 MAX_DOCUMENT_BYTES = 32 * 1024**2
 
 
@@ -81,6 +81,25 @@ def paired(reference: dict, candidate: dict) -> dict:
     return result
 
 
+def counterfactual_summary(documents: list[dict]) -> dict:
+    complete = [doc for doc in documents if doc.get("usable_complete_menu")]
+    panels = [panel for doc in complete for panel in doc["panels"]]
+    branches = [branch for doc in documents for panel in doc["panels"] for branch in panel["branches"]]
+    return {"source_menus":len(documents), "source_worlds":len({doc["task"]["seed"] for doc in documents}),
+        "usable_source_menus":len(complete), "complete_paired_panels":len(panels),
+        "planned_branches":sum(len(doc["observation"]["legal_actions"])*len(doc["panels"]) for doc in documents),
+        "valid_branches":sum(branch["valid_completed"] for branch in branches),
+        "reference_conditional_wins":sum(panel["reference"]["episodes"][0]["task_outcome"]=="victory" for panel in panels),
+        "menus_with_win_gain":sum(any(branch["paired"]["victory_delta"]>0
+            for panel in doc["panels"] for branch in panel["branches"]) for doc in complete),
+        "menus_with_floor_gain":sum(any(branch["paired"]["floor_delta"]>0
+            for panel in doc["panels"] for branch in panel["branches"]) for doc in complete),
+        "menus_all_tied":sum(all(not any(branch["paired"].values())
+            for panel in doc["panels"] for branch in panel["branches"]) for doc in complete),
+        "continuation":documents[0]["continuation"] if documents else None,
+        "note":"Fixed-world conditional diagnostics; repeated/related menus are not independent fresh-game evidence. No teacher target accepted."}
+
+
 def build_report(root: Path) -> dict:
     root = root.resolve()
     errors,sources,evaluations,runs,nonfinite,teacher_controls = [],[],[],[],[],[]
@@ -137,6 +156,7 @@ def build_report(root: Path) -> dict:
                     "actor_steps","critic_steps","unique_actor_rows_used","unique_critic_rows_used","elapsed_seconds",
                     "actor_grad_norm_before_clip","actor_grad_norm_after_clip","critic_grad_norm_before_clip",
                     "critic_grad_norm_after_clip","buffer_drift","rehearsal_drift","calibration_before","calibration_after",
+                    "actual_actor_exposures_by_act","actual_actor_loss_mass_by_act",
                     "rows_by_phase_act_choice","advantage_before_normalization","collection_summary","stop_reason")})
         def total(key):
             values = [u[key] for u in updates]
@@ -187,8 +207,32 @@ def build_report(root: Path) -> dict:
             audit = load(path)
             if audit is not None:
                 teacher_audits.append({"name":name,"audit":audit})
+    counterfactuals = []
+    for folder in sorted((root/"counterfactual").glob("*")):
+        if not (folder/"manifest.json").exists():
+            continue
+        manifest = load(folder/"manifest.json")
+        if manifest is None:
+            continue
+        documents = []
+        for row in manifest.get("panels",[]):
+            filename = row["path"]
+            if Path(filename).name != filename:
+                errors.append({"path":str(folder.relative_to(root)),"error":"counterfactual panel path escapes its run"})
+                continue
+            path = folder/filename
+            document = load(path)
+            if document is None:
+                continue
+            if hashlib.sha256(path.read_bytes()).hexdigest() != row["sha256"]:
+                errors.append({"path":str(path.relative_to(root)),"error":"counterfactual panel hash differs from manifest"})
+                continue
+            documents.append(document)
+        counterfactuals.append({"name":str(folder.relative_to(root)),"status":manifest.get("status"),
+            "elapsed_seconds":manifest.get("elapsed_seconds"), "faults":len(manifest.get("faults",[])),
+            "unstarted":manifest.get("unstarted"), "summary":counterfactual_summary(documents)})
     return {"report_version":REPORT_VERSION,"generated_utc":datetime.now(timezone.utc).isoformat(),"root":str(root),
         "selection_note":"Promotion is explicit in condition status. Repeated DEV tuning is descriptive; final cohorts stay unopened.",
         "evaluations":evaluations,"runs":runs,"sources":sources,"errors":errors,"nonfinite_metrics":nonfinite,
-        "teacher_controls":teacher_controls,"teacher_audits":teacher_audits,
-        "coverage_note":"Curated eval, learner and teacher-control documents plus named audit summaries only; partial journals, teacher rows, checkpoints and final data are not read."}
+        "teacher_controls":teacher_controls,"teacher_audits":teacher_audits,"counterfactuals":counterfactuals,
+        "coverage_note":"Curated eval, learner, teacher-control and manifest-pinned counterfactual documents plus named audits; teacher rows, checkpoints and final data are not read."}

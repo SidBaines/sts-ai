@@ -93,3 +93,12 @@ and broader strategic starts plus validation of continuation competence before
 scaling an outcome teacher. No generated intervention data enters PPO; no
 teacher targets are accepted. Latest full suite runs 546 tests with one optional
 skip; bounded smoke passes.
+
+The explicit native-1,000 comparator on four matched sources wins one reference
+continuation where learned combat loses, yet finds no alternative first-choice
+win gain. These are privileged conditional diagnostics on three source worlds.
+The next strategic teacher must validate continuation competence as well as
+start coverage. Protocol v2 records controller roles, and reporting now displays
+counterfactual runs separately with manifest hash checks plus actual actor
+exposure/loss mass by act. Current suite: 549 tests, one optional skip; browser
+verification and bounded smoke pass. No new policy or teacher target is adopted.

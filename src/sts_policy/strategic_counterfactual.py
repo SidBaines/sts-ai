@@ -15,7 +15,7 @@ from .curriculum import TaskSpec, public_hash, world_split
 from .rollout_training import task_identity
 from .strategic_collection import collect
 
-COUNTERFACTUAL_VERSION = "public_continuation_ooc_menu_v1"
+COUNTERFACTUAL_VERSION = "frozen_continuation_ooc_menu_v2"
 
 
 def valid_episode(result: dict[str, Any]) -> dict[str, Any] | None:
@@ -38,6 +38,7 @@ def paired_outcomes(reference: dict[str, Any], candidate: dict[str, Any]) -> dic
 
 def evaluate_menu(model: Any, worker: Any, task: TaskSpec, *, max_seconds: float = 60.,
                   sampling_seeds: Sequence[int] = (0,), deterministic: bool = True,
+                  native_combat_simulations: int | None = None,
                   collector: Callable[..., dict[str, Any]] = collect) -> dict[str, Any]:
     """Replay every legal first choice, followed by the same frozen policy.
 
@@ -52,6 +53,10 @@ def evaluate_menu(model: Any, worker: Any, task: TaskSpec, *, max_seconds: float
         raise ValueError("positive budget and distinct continuation sampling seeds required")
     if deterministic and len(sampling_seeds) != 1:
         raise ValueError("greedy continuation has no independent policy-sampling replications")
+    if native_combat_simulations is not None and (
+            isinstance(native_combat_simulations, bool) or not isinstance(native_combat_simulations, int)
+            or native_combat_simulations < 1):
+        raise ValueError("privileged combat comparator requires a positive simulation count")
     started = time.monotonic()
     observation, info = worker.reset(task)
     if observation["phase"] != "out_of_combat" or len(observation["legal_actions"]) < 2:
@@ -63,7 +68,9 @@ def evaluate_menu(model: Any, worker: Any, task: TaskSpec, *, max_seconds: float
         "task_id": identity, "observation": observation, "public_hash": source_hash,
         "source_provenance": {key: info.get(key) for key in
             ("environment_version", "observation_version", "python_interface_sha256", "native_provenance")},
-        "continuation": {"policy": "frozen public OOC / immutable legacy greedy combat",
+        "continuation": {"policy": "frozen public OOC / privileged native combat" if native_combat_simulations
+            else "frozen public OOC / immutable legacy greedy combat",
+            "native_combat_simulations": native_combat_simulations,
             "deterministic_ooc": deterministic, "sampling_seeds": list(sampling_seeds),
             "hidden_futures": "one fixed native world; no hidden-state randomization"},
         "panels": [], "usable_complete_menu": False, "teacher_target": None}
@@ -77,6 +84,7 @@ def evaluate_menu(model: Any, worker: Any, task: TaskSpec, *, max_seconds: float
             chosen.extend(index for step, index in zip(steps, actions) if step == 0)
         result = collector(model, [worker], [task], credit_unit="macro", sampling_seed=seed,
             deterministic=deterministic, retain_transitions=False, max_seconds=remaining,
+            native_combat_simulations=native_combat_simulations,
             decision_observer=observer, initial_actions={} if action is None else {identity: action})
         result.pop("transitions")
         result["first_executed_index"] = chosen[0] if chosen else None

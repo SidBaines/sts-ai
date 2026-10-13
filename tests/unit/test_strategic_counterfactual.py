@@ -72,6 +72,21 @@ class CounterfactualTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 evaluate_menu(None, worker, task, collector=fake_collector, **settings)
 
+    def test_privileged_comparator_is_explicit_and_uses_same_branch_controller(self):
+        calls = []
+        def inspected(*args, **kwargs):
+            calls.append(kwargs["native_combat_simulations"])
+            return fake_collector(*args, **kwargs)
+        result = evaluate_menu(None, SourceWorker(), self.task, collector=inspected,
+                               native_combat_simulations=1000)
+        self.assertTrue(result["usable_complete_menu"])
+        self.assertIn("privileged", result["continuation"]["policy"])
+        self.assertEqual(calls, [1000] * 4)
+        self.assertIsNone(result["teacher_target"])
+        with self.assertRaises(ValueError):
+            evaluate_menu(None, SourceWorker(), self.task, collector=inspected,
+                          native_combat_simulations=0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -33,6 +33,8 @@ def main() -> None:
     parser.add_argument("--panel-seconds", type=float, default=30.)
     parser.add_argument("--stochastic", action="store_true")
     parser.add_argument("--sampling-seeds", type=int, nargs="+", default=[0])
+    parser.add_argument("--native-combat-simulations", type=int,
+        help="Explicitly privileged diagnostic continuation; never a public-agent benchmark")
     args = parser.parse_args()
     if args.per_act < 1 or args.seconds <= 0 or args.panel_seconds <= 0:
         parser.error("positive source counts and time bounds required")
@@ -74,7 +76,8 @@ def main() -> None:
             task = TaskSpec.from_dict(row)
             try:
                 panel = evaluate_menu(model, worker, task, max_seconds=min(args.panel_seconds, remaining),
-                    sampling_seeds=args.sampling_seeds, deterministic=not args.stochastic)
+                    sampling_seeds=args.sampling_seeds, deterministic=not args.stochastic,
+                    native_combat_simulations=args.native_combat_simulations)
             except SimulatorError as error:
                 manifest["faults"].append({"seed": task.seed, "start_act": row["start_act"],
                     "type": type(error).__name__, "message": str(error)})

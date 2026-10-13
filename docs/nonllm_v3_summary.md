@@ -11,6 +11,15 @@ signal in the existing late-frontier bank, not OOC irrelevance. Four-source
 fresh-process repeat matches all 16 baseline/branch traces and outcomes. See
 [diagnostic details and limitations](strategic_counterfactual_v1.md).
 
+The matched four-source native-1,000 continuation comparator finishes in 8.65
+seconds with all 12 legal branches valid and all four controls matching. One
+reference continuation changes from defeat under learned combat to victory
+under privileged native combat, but no alternative first action adds a win.
+This supports validating continuation competence jointly with earlier/broader
+strategic supervision. The dashboard now includes these separate diagnostic
+runs and actual actor exposures/loss mass by act. Current suite: 549 tests,
+one optional skip; bounded smoke and browser checks pass.
+
 **The repaired setup is verified; reliable full-game improvement is not.** All
 four current-profile strategic pilots finished and saved their recovery models.
 The last learner finished at **06:25:46 UTC**, before the allocation checkpoint.

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from sts_policy.reporting_v3 import build_report, outcome_summary, paired, read_json, finite_document
+from sts_policy.reporting_v3 import build_report, counterfactual_summary, outcome_summary, paired, read_json, finite_document
 
 
 def episode(seed,family="fresh",win=False,truncated=False):
@@ -53,6 +54,41 @@ class ReportingV3Tests(unittest.TestCase):
             self.assertEqual(len(report["sources"]),1)
             with self.assertRaises(ValueError):
                 read_json(root.parent/"escape.json",root)
+
+    def test_counterfactual_reporting_excludes_incomplete_menu_gains_and_checks_hashes(self):
+        def document(complete):
+            return {"task":{"seed":1},"observation":{"legal_actions":[{},{}]},
+                "continuation":{"policy":"privileged native combat"},"usable_complete_menu":complete,
+                "panels":[{"reference":{"episodes":[{"task_outcome":"defeat"}]},"branches":[
+                    {"valid_completed":True,"paired":{"victory_delta":1,"floor_delta":1}},
+                    {"valid_completed":complete,"paired":{"victory_delta":0,"floor_delta":0} if complete else None}]}]}
+        summary=counterfactual_summary([document(True),document(False)])
+        self.assertEqual(summary["menus_with_win_gain"],1)
+        self.assertEqual(summary["source_menus"],2)
+        self.assertEqual(summary["source_worlds"],1)
+        self.assertEqual(summary["valid_branches"],3)
+        with TemporaryDirectory() as folder:
+            root=Path(folder); run=root/"counterfactual/probe";run.mkdir(parents=True)
+            panel=run/"panel_000.json";panel.write_text(json.dumps(document(True)))
+            manifest={"status":"saved","panels":[{"path":panel.name,"sha256":hashlib.sha256(panel.read_bytes()).hexdigest()}]}
+            (run/"manifest.json").write_text(json.dumps(manifest))
+            report=build_report(root)
+            self.assertEqual(report["counterfactuals"][0]["summary"]["usable_source_menus"],1)
+            panel.write_text(json.dumps(document(False)))
+            report=build_report(root)
+            self.assertEqual(report["counterfactuals"][0]["summary"]["source_menus"],0)
+            self.assertIn("hash differs",report["errors"][0]["error"])
+
+    def test_report_preserves_actual_act_exposure_and_weighted_loss_mass(self):
+        with TemporaryDirectory() as folder:
+            root=Path(folder); run=root/"pilots/balanced";run.mkdir(parents=True)
+            (run/"status.json").write_text(json.dumps({"status":"saved"}))
+            values={"chunk":1,"actual_actor_exposures_by_act":{"1":100,"2":20,"3":5},
+                "actual_actor_loss_mass_by_act":{"1":40.,"2":40.,"3":40.}}
+            (run/"update_0001.json").write_text(json.dumps(values))
+            update=build_report(root)["runs"][0]["updates"][0]
+            self.assertEqual(update["actual_actor_exposures_by_act"],values["actual_actor_exposures_by_act"])
+            self.assertEqual(update["actual_actor_loss_mass_by_act"],values["actual_actor_loss_mass_by_act"])
 
 
 if __name__ == "__main__":
