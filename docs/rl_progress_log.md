@@ -56,6 +56,27 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 17:31 BST — Distillation captures the whole rule; main flat over updates 36→40; card picks matter
+
+- **Distilled network vs the rule it learned from:** update 36 + smith ≥85%
+  applied at evaluation scores 33.40 (+1.05 [0.64, 1.45] vs update 36). The
+  distilled network, with no rule, scores 33.31: **−0.08 ± 0.23**, the same.
+  The network absorbed the rule's full value.
+- **Update 40:**
+  - main 32.29 (+3.10 vs original; vs update 36: −0.05 ± 0.23, flat);
+  - `smith70` 33.06 (+3.78; **+0.78 [0.21, 1.41] vs main@40**; vs the
+    distilled network −0.25 ± 0.28).
+
+  Training *with* the rule for 7 updates is worth about the rule itself. No
+  extra compounding is visible yet.
+- **Skip every card reward after Act 1:** **−1.63 [−2.04, −1.22]** vs
+  smith ≥70%. The policy's Act 2 card picks carry a lot of value; deck bloat is
+  not the problem.
+- **PPO from the distilled checkpoint, update 1:** sampled smith rate 37.4% of
+  rest sites (main ~0.2%); training-game floor 32.5 (main ~31.4).
+
+---
+
 ## 2026-10-13 17:23 BST — The network now smiths on its own (distilled): 33.31, +4.05 vs the original; PPO-from-distilled launched
 
 - **Distilled the smith ≥85% rule into update 36's OOC head.**
