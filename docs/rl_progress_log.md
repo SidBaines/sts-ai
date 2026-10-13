@@ -26,7 +26,7 @@ All results are greedy, paired vs the original on ~1,010 worlds.
 | Update 28 + "smith whenever HP ≥ 85%" | 33.26 | ≈ +4.0 | 16 | rule: +1.35 [0.95, 1.79] over update 28 |
 | **Update 36 + rule distilled into the network** (`distill_smith85_i36/distilled.pt`) | **33.31** | **+4.05** [3.43, 4.65] | 19 | no rule at deployment; **fresh worlds: +4.29 [3.67, 4.87], wins 3 → 22** |
 
-**Running:**
+**PAUSED 17:55 (laptop closed)**, see the latest entry. Previously running:
 - `ooc_main_s1` → update 48. This is the control lineage.
 - `ooc_branch_smith70`: PPO trained with the smith rule.
 - Rule-sweep evals: elites, card skips, and main@36 + rule.
@@ -42,7 +42,7 @@ tuning is fast.
 | OOC PPO, update 28 (`ooc_main_s1/iter_0028.pt`) | 31.92 | **+2.69** [2.12, 3.24] | 11 | E8 recipe |
 | …plus the "smith at ≥70% HP" rule | **33.06** | ≈ +3.8 | 13 | +1.15 [0.70, 1.60] over update 28 |
 
-**Running:**
+**PAUSED 17:55 (laptop closed)**, see the latest entry. Previously running:
 - `ooc_main_s1` → update 48. This is the control lineage.
 - `ooc_rep_s2`: seed-2 replicate from the original.
 - `ooc_branch_strat8`: exploration on rest/map/shop menus.
@@ -53,6 +53,33 @@ Branches vs main are compared at updates 36/40/44 with
 
 **Main open problem:** the OOC policy's logits are saturated, so PPO cannot
 explore strategic options. Exploration is the lever.
+
+---
+
+## 2026-10-13 17:54 BST — PAUSED (laptop closing); objective set to Act 3 boss wins; resume notes
+
+- **Objective (from Sid):** "complete the game" means an **Ascension 0 Act 3
+  boss win** (`victory`). Win rate is now the headline metric; mean floor is
+  secondary. The current reward is floor-progress based, so it does not target
+  wins directly. Next: weight victories in the reward and re-test
+  elite-seeking (−0.26 floors, but wins 13 → 22).
+- **Stopped cleanly** (all checkpoints are atomic). The queue runner is
+  stopped and no jobs are running.
+
+  | Run | State | Last eval |
+  | --- | --- | --- |
+  | `ooc_main_s1` | stopped after update 45 (`latest.pt` = 45) | update 40: 32.29, +3.10, 11 wins |
+  | `ooc_branch_smith70` | **done** (update 44) | update 44: 33.01, +3.71, 24 wins |
+  | `ooc_ppo_from_distilled` | stopped after update 4 (`latest.pt` = 4) | none yet; sampled smith rate 37–39% over updates 1–4 |
+
+- **To resume:**
+  1. `.venv/bin/python scripts/rl/queue_runner.py start`
+  2. Re-add main as `ooc_main_s1_ext6`, with the same command as `ext5` plus
+     `--resume`.
+  3. Re-add `ooc_ppo_from_distilled` as `ooc_ppo_from_distilled_r1`, with the
+     same command plus `--resume`.
+- Then: eval `ooc_ppo_from_distilled` at 4/8/12/16, and decide on a
+  win-weighted reward.
 
 ---
 
