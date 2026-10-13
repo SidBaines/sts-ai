@@ -23,7 +23,8 @@ All results are greedy, paired vs the original on ~1,010 worlds.
 | Original | 29.27 | — | 1–2 | |
 | OOC PPO, update 28 | 31.92 | +2.69 [2.12, 3.24] | 11 | E8 recipe; seed 2 replicates (+1.37 at update 12 vs +1.57) |
 | OOC PPO, update 36 (`ooc_main_s1/iter_0036.pt`) | 32.34 | **+3.14** [2.58, 3.70] | 11 | still improving |
-| Update 28 + "smith whenever HP ≥ 85%" | **33.26** | ≈ +4.0 | 16 | rule: +1.35 [0.95, 1.79] over update 28 |
+| Update 28 + "smith whenever HP ≥ 85%" | 33.26 | ≈ +4.0 | 16 | rule: +1.35 [0.95, 1.79] over update 28 |
+| **Update 36 + rule distilled into the network** (`distill_smith85_i36/distilled.pt`) | **33.31** | **+4.05** [3.43, 4.65] | 19 | no rule at deployment |
 
 **Running:**
 - `ooc_main_s1` → update 48. This is the control lineage.
@@ -52,6 +53,27 @@ Branches vs main are compared at updates 36/40/44 with
 
 **Main open problem:** the OOC policy's logits are saturated, so PPO cannot
 explore strategic options. Exploration is the lever.
+
+---
+
+## 2026-10-13 17:23 BST — The network now smiths on its own (distilled): 33.31, +4.05 vs the original; PPO-from-distilled launched
+
+- **Distilled the smith ≥85% rule into update 36's OOC head.**
+  - Data: 2,877 rest-site labels (48% smith) plus 4,404 rehearsal decisions with
+    a KL anchor; 12 epochs at lr 3e-4.
+  - Held-out rest-site agreement with the rule rose 0.50 → 0.82–0.90.
+    Agreement with the original on other decisions: 0.96.
+- **Greedy, no rule at deployment: 33.31 mean floor.**
+  - Paired **+0.96 [0.46, 1.45]** vs update 36.
+  - **+4.05 [3.43, 4.65] vs the original**; wins 2 → 19.
+  - **Best pure-network agent so far:**
+    `data/rl_runs/distill_smith85_i36/distilled.pt`.
+- **`ooc_ppo_from_distilled` launched** (seed 3, 16 updates). It runs the E8
+  recipe from the distilled checkpoint, **with no rule and no extra
+  exploration**. Watch its `smith_rate` and paired evals: they show whether
+  plain PPO keeps, refines or unlearns the behaviour.
+- **Skip every Act 3 card reward:** −0.09 ± 0.04 vs smith ≥70%; wins 13 → 9.
+  Late card-taking is fine.
 
 ---
 
