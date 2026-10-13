@@ -116,7 +116,8 @@ def build_report(root: Path) -> dict:
                 "summary":outcome_summary(result)})
     references = {}
     for row in evaluations:
-        if row["name"] in ("evals/common_initial_context_v2_dev192.json","evals/confirmation331_baseline_dev192.json"):
+        if row["name"] in ("evals/common_initial_context_v2_dev192.json","evals/confirmation331_baseline_dev192.json",
+                           "evals/common_initial_semantics_v3_dev192.json"):
             references[row["summary"]["cohort_identity"]] = row["name"]
     for row in evaluations:
         baseline = references.get(row["summary"]["cohort_identity"])
