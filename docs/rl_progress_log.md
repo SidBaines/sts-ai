@@ -16,7 +16,7 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 
 ---
 
-## 2026-10-13 16:15 BST — The OOC policy's strategy has collapsed; removing one dominated choice is worth +0.60 floors
+## 2026-10-13 16:12 BST — The OOC policy's strategy has collapsed; removing one dominated choice is worth +0.60 floors
 
 - **Strategic choices**, greedy update 28, 119 games (TRAIN-eval worlds):
 

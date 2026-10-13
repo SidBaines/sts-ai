@@ -41,7 +41,9 @@ def _collector_main(conn, checkpoint: str, workers: int, worker_options: dict[st
                 torch.manual_seed(payload.pop("seed"))
                 if kind == "ooc":
                     from .ooc_trainer import collect_ooc_batch
-                    forward = phase_forward(combat=payload.pop("combat"), temperature=payload.pop("temperature"))
+                    forward = phase_forward(combat=payload.pop("combat"), temperature=payload.pop("temperature"),
+                                            strategic_temperature=payload.pop("strategic_temperature", 1.0),
+                                            strategic_cards=payload.pop("strategic_cards", False))
                     out = collect_ooc_batch(model, pool, payload.pop("tasks"), forward=forward, **payload)
                 elif kind == "eval":
                     from .evaluate import evaluate_tasks
@@ -89,9 +91,11 @@ class CollectorPool:
         return results
 
     def collect_ooc(self, model: torch.nn.Module, tasks: Sequence[Any], *, combat: str, temperature: float,
-                    ppo: PPOConfig, credit: str, gae_lambda: float, chunk: int, seed: int) -> dict[str, Any]:
+                    ppo: PPOConfig, credit: str, gae_lambda: float, chunk: int, seed: int,
+                    strategic_temperature: float = 1.0, strategic_cards: bool = False) -> dict[str, Any]:
         parts = self._scatter("ooc", model, tasks, seed, combat=combat, temperature=temperature, ppo=ppo,
-                              credit=credit, gae_lambda=gae_lambda, chunk=chunk)
+                              credit=credit, gae_lambda=gae_lambda, chunk=chunk,
+                              strategic_temperature=strategic_temperature, strategic_cards=strategic_cards)
         merged: dict[str, Any] = {"kept": [], "game_episodes": [], "faults": 0, "stats": {}}
         for part in parts:
             # Unpickled observations are new objects: re-bind the encoding identity

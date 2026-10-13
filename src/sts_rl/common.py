@@ -253,16 +253,40 @@ class FilteringWorker:
 
 # --- Forward wrappers ------------------------------------------------------------
 
-def phase_forward(*, combat: str = "sample", ooc: str = "sample", temperature: float = 1.0):
+# public_candidate_v2 action-feature columns (encoding.ACTION_FLAGS order).
+_FLAG_SKIP_CARD, _FLAG_BUY, _FLAG_SMITH, _FLAG_MAP_NODE = 7, 11, 14, 19
+
+
+def strategic_rows(actions: torch.Tensor, mask: torch.Tensor, *, cards: bool = False) -> torch.Tensor:
+    """Rows whose menu is a rest site (smith offered), a map choice or a shop
+    (optionally a card reward), read from the encoder's action flags."""
+    flags = actions * mask[..., None].to(actions.dtype)
+    rows = (flags[..., _FLAG_SMITH] > .5) | (flags[..., _FLAG_MAP_NODE] > .5) | (flags[..., _FLAG_BUY] > .5)
+    if cards:
+        rows = rows | (flags[..., _FLAG_SKIP_CARD] > .5)
+    return rows.any(-1)
+
+
+def phase_forward(*, combat: str = "sample", ooc: str = "sample", temperature: float = 1.0,
+                  strategic_temperature: float = 1.0, strategic_cards: bool = False):
     """Forward that makes one or both phases greedy (logit scale 1e4).
 
     Scaling preserves masking and keeps log-probs finite, so the same function
     can be used for collection and for PPO ratios.
+
+    strategic_temperature divides OOC logits on rest-site, map and shop menus
+    (and card rewards if strategic_cards). At update 28 those logits were
+    saturated (median gap of the unchosen strategic option to the best ~ -18 to
+    -36), so T=1 sampling never explored smith, elites or removal. Argmax, and so
+    deployment, is unchanged by any temperature.
     """
     def forward(model: torch.nn.Module, batch: Any):
         logits, values, mask = forward_policy(model, batch)
         is_combat = batch[0][:, 7] > .5
         scale = torch.full_like(values, 1.0 / temperature)
+        if strategic_temperature != 1.0:
+            strategic = strategic_rows(batch[1], mask, cards=strategic_cards) & ~is_combat
+            scale = torch.where(strategic, torch.full_like(values, 1.0 / strategic_temperature), scale)
         if combat == "greedy":
             scale = torch.where(is_combat, torch.full_like(values, 1e4), scale)
         if ooc == "greedy":
