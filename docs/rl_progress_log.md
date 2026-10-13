@@ -103,6 +103,33 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 21:25 BST — Public search +8 points at the Act 2 boss (p ≈ 0.016); laptop on battery, compute paused
+
+- **Public-information search, 64 samples × 1,000 simulations, 238 Act 2 boss
+  fights:** **37.4% vs greedy 29.4%**, +8.0 points.
+  - 38 fights flipped to wins and 19 to losses; sign test p ≈ 0.016.
+  - 0.68 s per decision.
+
+  | Samples | Gain over greedy |
+  | --- | --- |
+  | 8 | +4.2 points |
+  | 24 | +7.5 points |
+  | 64 | **+8.0 points** |
+
+  - Two of 240 fights errored: a simulator UB fault, and a draw-index card
+    select (Secret Technique/Weapon). The latter now abstains and falls back to
+    the policy.
+- **Queued (held while on battery):**
+  - **full-game search-augmented eval**: round-2 agent with public search in
+    Act 2 and 3 boss fights, 2,048 win-set worlds, paired vs round 2;
+  - public search on 158 Act 3 boss fights. Started, then paused with SIGSTOP
+    for battery; a watcher resumes it on AC.
+- **The laptop went on battery (~21:20).** The queue runner paused
+  `ooc_r2_lam1` at update 4 and holds new jobs. Round-2 update 4 (1,024
+  worlds): 33.65 mean floor.
+
+---
+
 ## 2026-10-13 21:21 BST — Avoiding conflicting boss relics hurts; λ = 0.99 ≈ λ = 1.0 at update 16
 
 - **Avoid Fusion Hammer and Coffee Dripper** (both conflict with smithing or
