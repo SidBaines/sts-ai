@@ -58,6 +58,35 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 19:37 BST — Plain PPO *unlearns* smithing: evidence of biased OOC credit (λ = 0.95)
+
+- **`ooc_ppo_from_distilled`** (E8 recipe, λ = 0.95, no rule), from the
+  distilled checkpoint:
+  - sampled smith rate 37–48% over updates 1–9, then **24% at 11 and 14.5% at
+    16**;
+  - greedy at update 16: smith at 15/52 full-HP rest sites and 8/84 at ≥85% HP.
+    The distilled start smithed ~all of these;
+  - paired vs the start: +0.08, +0.40, −0.16, then **−0.54 [−1.07, −0.01]** at
+    update 16; wins 19 → 14.
+- With ~40% smith sampling there are plenty of samples, so this is **bias, not
+  just noise**. PPO's credit pushes against a choice that paired evaluation
+  says is worth about +1.2 floors.
+- **Hypothesis: critic bias under λ = 0.95.**
+  - An OOC advantage is dominated by the critic's bootstraps over the next ~20
+    decisions.
+  - The critic sees HP directly but barely sees one upgrade (one "+" in the
+    deck bag), so resting (+24 HP) always looks better.
+  - The upgrade's payoff at the boss lies beyond the effective credit horizon.
+  - The original policy's "never smith" habit may itself be a product of this
+    bias.
+- **Tests running:**
+  1. `ooc_pfd_lam1`: the same run (same seed, so the same training worlds) with
+     **λ = 1.0**, pure Monte-Carlo credit with the critic only as a baseline.
+  2. Smith-vs-rest advantages by HP under λ = 0.95 vs 1.0 on the same 512 games
+     from the distilled policy.
+
+---
+
 ## 2026-10-13 19:29 BST — Elite threshold: 90% beats 80%; PPO from distilled is flat; combat v3 slow
 
 - **Elite threshold, win set (4,096 worlds), vs the distilled agent:**
