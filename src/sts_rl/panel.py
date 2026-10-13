@@ -72,6 +72,31 @@ class PanelEpisode(CurriculumEpisode):
             votes[index] = votes.get(index, 0) + 1
         return votes
 
+    def search_votes_public(self, simulations: int, samples: Sequence[int], search_seed: int = 0) -> dict[int, int]:
+        """Public-information search votes at the live combat decision.
+
+        Each sample searches a deep copy of the battle whose hidden draw order is
+        shuffled AND whose battle RNG streams (enemy AI, card randomness, reshuffles,
+        potions, monster HP) are re-seeded, so the search cannot foresee hidden
+        randomness (search_votes above keeps the true streams: privileged). Needs the
+        rl build with BattleContext.copy/reseed_rngs. Does not mutate the live state."""
+        from sts_env._backend.lightspeed import _TYPED_COMBAT_OBSERVATIONS
+        env = self.episode.env
+        raw = env._env
+        raw.advance_to_decision()
+        if raw.bc is None:
+            raise RuntimeError("search_votes_public requires a pending combat decision")
+        include = raw.combat_observation in _TYPED_COMBAT_OBSERVATIONS
+        votes: dict[int, int] = {}
+        for sample in samples:
+            scratch = raw.bc.copy()
+            scratch.reseed_rngs(int(search_seed) * 1009 + int(sample))
+            result = scratch.search_best_action(simulations, search_seed=search_seed + sample,
+                                                draw_order_seed=sample, include_card_type=include)
+            index = int(env.display_index_for_bits(int(result["bits"])))
+            votes[index] = votes.get(index, 0) + 1
+        return votes
+
     def menu(self, spec: TaskSpec | dict[str, Any]) -> list[dict[str, Any]]:
         observation, _ = self.reset(spec)
         self.finished = True
@@ -214,6 +239,9 @@ class PanelWorker(CurriculumWorker):
     def search_votes(self, simulations: int, draw_order_seeds: Sequence[int], search_seed: int = 0) -> dict[int, int]:
         return {int(k): v for k, v in self._call("search_votes", simulations, list(draw_order_seeds), search_seed).items()}
 
+    def search_votes_public(self, simulations: int, samples: Sequence[int], search_seed: int = 0) -> dict[int, int]:
+        return {int(k): v for k, v in self._call("search_votes_public", simulations, list(samples), search_seed).items()}
+
     def panel(self, spec: TaskSpec, fights: Sequence[tuple[str, str, int]], checkpoint: str,
               sample: bool = False, full_hp_rooms: Sequence[str] = ()) -> list[dict[str, Any]]:
         self._ensure()
@@ -226,7 +254,7 @@ class PanelWorker(CurriculumWorker):
                           list(full_hp_rooms))
 
     def submit(self, method: str, *args: Any) -> Future[Any]:
-        if method in {"panel", "encounters", "afterstates", "menu", "search_votes"}:
+        if method in {"panel", "encounters", "afterstates", "menu", "search_votes", "search_votes_public"}:
             return self._executor.submit(getattr(self, method), *args)
         return super().submit(method, *args)
 

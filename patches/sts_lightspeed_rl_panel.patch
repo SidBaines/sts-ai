@@ -1,8 +1,29 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index 7dca98a..4f82571 100644
+index 7dca98a..eb32fd7 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -1767,6 +1767,22 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -1573,6 +1573,20 @@ PYBIND11_MODULE(slaythespire, m) {
+ 
+     pybind11::class_<BattleContext> battleContext(m, "BattleContext");
+     battleContext.def(pybind11::init<>())
++        // sts_rl public-information search (teacher/test-time use on copies only): the
++        // study patch's search_best_action simulates with the TRUE battle RNG streams
++        // (enemy AI, card randomness, reshuffles), i.e. it foresees hidden randomness.
++        // Searching a copy whose streams were re-seeded removes that knowledge.
++        .def("copy", [](const BattleContext &bc) { return BattleContext(bc); },
++             "independent deep copy of the battle (scratch use)")
++        .def("reseed_rngs", [](BattleContext &bc, std::uint64_t seed) {
++            bc.aiRng = sts::Random(seed * 6 + 1);
++            bc.cardRandomRng = sts::Random(seed * 6 + 2);
++            bc.miscRng = sts::Random(seed * 6 + 3);
++            bc.monsterHpRng = sts::Random(seed * 6 + 4);
++            bc.potionRng = sts::Random(seed * 6 + 5);
++            bc.shuffleRng = sts::Random(seed * 6 + 6);
++        }, "replace every battle RNG stream with fresh seeded streams (call on a copy only)")
+         .def("init", [](BattleContext &bc, const GameContext &gc) { bc.init(gc); },
+              "initialize the battle from the current GameContext; drains the engine to the first player decision or a decided outcome")
+         .def("exit_battle", [](BattleContext &bc, GameContext &gc) { bc.exitBattle(gc); },
+@@ -1767,6 +1781,22 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("cur_room", &GameContext::curRoom)
          .def_property_readonly("current_event", [](const GameContext &gc) { return std::string(publicEventNames[static_cast<int>(gc.curEvent)]); })
          .def("public_event", &publicEvent)
