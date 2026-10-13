@@ -1,5 +1,12 @@
 # Curriculum task and data adapters
 
+Inference batches must preserve phase separation. Mixed OOC/combat padding can
+change near-tied greedy choices through floating-point rounding, even with a
+zero residual. Collector v2 uses separate phase batches and compact legacy
+combat choices in both micro and macro frozen-controller modes; its task RNG
+stream remains v1. Exact preservation requires trajectory checks, not only
+matching aggregate outcomes.
+
 The environment release remains unchanged. `workers.CurriculumWorker` wraps a
 private base episode only inside a persistent, bounded native subprocess. The
 parent owns inference, learning and model memory. Each worker supplies reset,

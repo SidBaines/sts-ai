@@ -25,7 +25,8 @@ from .legacy_bridge import project_legacy_menu
 from .losses import generalized_advantages
 from .rollout_training import task_identity, public_endpoint_state
 
-COLLECTOR_VERSION = "frozen_combat_strategic_v3_v1"
+COLLECTOR_VERSION = "frozen_combat_strategic_v3_v2"
+SAMPLING_STREAM_VERSION = "frozen_combat_strategic_v3_v1"
 
 
 @dataclass
@@ -83,7 +84,8 @@ def finish_advantages(rows: Sequence[StrategicTransition], *, gamma: float, gae_
 def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[Any], *,
             credit_unit: str = "macro", sampling_seed: int = 0, deterministic: bool = False,
             gamma: float = 1., gae_lambda: float = .95, max_seconds: float = 120.,
-            retain_transitions: bool = True, frozen_combat: bool = True) -> dict[str, Any]:
+            retain_transitions: bool = True, frozen_combat: bool = True,
+            decision_observer=None) -> dict[str, Any]:
     if credit_unit not in {"micro", "macro"} or gamma != 1 or not workers or max_seconds <= 0:
         raise ValueError("valid workers, budget and gamma=1 micro/macro mode required")
     model.cpu().eval()
@@ -104,7 +106,7 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
         identity = task_identity(task)
         active[slot] = {"task": task, "identity": identity, "future": workers[slot].submit("reset", task),
             "rows": [], "pending_row": None, "obs": None, "info": {}, "reward": 0., "steps": 0,
-            "components": Counter(), "rng": random.Random(f"{COLLECTOR_VERSION}:{sampling_seed}:{identity}:ooc"),
+            "components": Counter(), "rng": random.Random(f"{SAMPLING_STREAM_VERSION}:{sampling_seed}:{identity}:ooc"),
             "trace": hashlib.sha256(), "start_state": None, "max_act": 0, "choices": Counter(),
             "fight": None, "fights": [], "hp_decreases": 0., "hp_increases": 0.}
         resets += 1
@@ -189,8 +191,12 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
         distributions: dict[int, np.ndarray] = {}
         ooc_slots = [slot for slot, entry in active.items() if entry["obs"]["phase"] != "combat"]
         combat_slots = [slot for slot in active if slot not in ooc_slots]
-        typed_slots = list(active) if not frozen_combat or (credit_unit == "micro" and retain_transitions) else ooc_slots
-        if typed_slots:
+        typed_groups = [ooc_slots]
+        if not frozen_combat or (credit_unit == "micro" and retain_transitions):
+            typed_groups.append(combat_slots)
+        for typed_slots in typed_groups:
+            if not typed_slots:
+                continue
             encoded = [entities.encode_observation(active[slot]["obs"]) for slot in typed_slots]
             logits, values = model(*entities.collate_observations(encoded))
             logits, values = logits.cpu().numpy(), values.cpu().tolist()
@@ -203,7 +209,7 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
                     values64 = logits[i, :len(obs["legal_actions"])].astype(np.float64)
                     probabilities = np.exp(values64 - np.max(values64))
                     distributions[slot] = probabilities / probabilities.sum()
-        remaining_combat = [slot for slot in combat_slots if slot not in samples]
+        remaining_combat = combat_slots if frozen_combat else [slot for slot in combat_slots if slot not in samples]
         if remaining_combat:
             projections = [project_legacy_menu(active[slot]["obs"]) for slot in remaining_combat]
             logits, values = model.prior(*collate_legacy([encode_legacy(p.observation) for p in projections]))
@@ -211,8 +217,17 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
                 old_position = int(logits[i].argmax().item())
                 index = projection.current_indices[old_position]
                 position = next(j for j, a in enumerate(active[slot]["obs"]["legal_actions"]) if int(a["index"]) == index)
-                samples[slot] = (position, 0., float(values[i]), None)
+                # Micro critic values come from the typed critic, while the
+                # frozen combat action always follows the compact legacy menu.
+                typed = samples.get(slot)
+                samples[slot] = (position, 0., typed[2] if typed else float(values[i]), typed[3] if typed else None)
         timings["policy_seconds"] += time.monotonic() - stamp
+        if decision_observer is not None:
+            slots = list(samples)
+            decision_observer([active[slot]["obs"] for slot in slots],
+                              [active[slot]["task"].seed for slot in slots],
+                              [active[slot]["steps"] for slot in slots],
+                              [int(active[slot]["obs"]["legal_actions"][samples[slot][0]]["index"]) for slot in slots])
         steps = {}
         for slot, (position, log_prob, value, encoded) in samples.items():
             entry, obs = active[slot], active[slot]["obs"]
@@ -292,7 +307,8 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
                 start(slot)
     elapsed = time.monotonic() - started
     primitive_steps = sum(e["steps"] for e in episodes)
-    return {"collector_version": COLLECTOR_VERSION, "credit_unit": credit_unit, "sampling_seed": sampling_seed,
+    return {"collector_version": COLLECTOR_VERSION, "sampling_stream_version": SAMPLING_STREAM_VERSION,
+        "credit_unit": credit_unit, "sampling_seed": sampling_seed,
         "deterministic_ooc": deterministic, "combat_controller": "immutable legacy bridge greedy" if frozen_combat else "learned public combat residual greedy",
         "transitions": transitions, "episodes": episodes, "faults": faults, "requested_tasks": len(tasks),
         "unstarted_tasks": len(tasks) - resets, "excluded_primitive_steps": excluded,

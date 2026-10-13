@@ -104,6 +104,33 @@ class StrategicCollectionTests(unittest.TestCase):
         second = collect(self.model,[ScriptedWorker()],self.tasks[:1],deterministic=True,retain_transitions=False,frozen_combat=False)
         self.assertNotEqual(first["episodes"][0]["action_trace_sha256"],second["episodes"][0]["action_trace_sha256"])
         self.assertEqual(first["episodes"][0]["reward"],second["episodes"][0]["reward"])
+        micro = collect(self.model,[ScriptedWorker()],self.tasks[:1],credit_unit="micro",deterministic=True)
+        self.assertEqual(first["episodes"][0]["action_trace_sha256"],micro["episodes"][0]["action_trace_sha256"])
+
+    def test_inference_batches_keep_phases_separate(self):
+        class MixedWorker(ScriptedWorker):
+            def submit(self, method, *args):
+                future = super().submit(method, *args)
+                if method == "reset" and self.task.seed == 11:
+                    self.frames[0] = observation()
+                    future = Future()
+                    future.set_result((deepcopy(self.frames[0]), {}))
+                return future
+
+        phases = []
+        original = self.model.forward
+        def inspected(*batch):
+            combat = batch[3][:, 0] > .5
+            self.assertTrue(bool(combat.all()) or bool((~combat).all()))
+            phases.extend(combat.tolist())
+            return original(*batch)
+        self.model.forward = inspected
+        result = collect(self.model,[MixedWorker(),MixedWorker()],self.tasks,
+                         deterministic=True,retain_transitions=False,frozen_combat=False)
+        self.assertEqual(len(result["episodes"]),2)
+        self.assertIn(True,phases)
+        self.assertIn(False,phases)
+        self.assertEqual(result["sampling_stream_version"],"frozen_combat_strategic_v3_v1")
 
 
 if __name__ == "__main__":
