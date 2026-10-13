@@ -9,6 +9,7 @@ import torch
 from sts_env.env import SimulatorError
 from sts_policy.curriculum import TaskSpec
 from sts_policy.entity_model import ResidualOOCPolicy
+from sts_policy.rollout_training import task_identity
 from sts_policy.strategic_collection import collect
 from tests.unit.test_public_entities import observation
 
@@ -156,6 +157,36 @@ class StrategicCollectionTests(unittest.TestCase):
         self.assertEqual(failed["faults"][0]["stage"],"native_combat_query")
         with self.assertRaises(ValueError):
             collect(self.model,[NativeWorker()],self.tasks[:1],native_combat_simulations=200)
+
+    def test_first_choice_intervention_is_executed_and_never_used_for_ppo(self):
+        task = self.tasks[0]
+        chosen = []
+        result = collect(self.model, [ScriptedWorker()], [task], deterministic=True,
+            retain_transitions=False, initial_actions={task_identity(task): 4},
+            decision_observer=lambda obs, seeds, steps, actions: chosen.extend(
+                action for step, action in zip(steps, actions) if step == 0))
+        self.assertEqual(chosen, [4])
+        self.assertEqual(result["episodes"][0]["initial_action_intervention"], 4)
+        self.assertEqual(result["transitions"], [])
+        with self.assertRaises(ValueError):
+            collect(self.model, [ScriptedWorker()], [task], initial_actions={task_identity(task): 4})
+        with self.assertRaises(ValueError):
+            collect(self.model, [ScriptedWorker()], [task], retain_transitions=False,
+                    initial_actions={task_identity(task): 999})
+        with self.assertRaises(ValueError):
+            collect(self.model, [ScriptedWorker()], [task], retain_transitions=False,
+                    initial_actions={"unknown-task": 4})
+
+    def test_forcing_original_first_action_preserves_trace_and_return(self):
+        chosen = []
+        task = self.tasks[0]
+        reference = collect(self.model, [ScriptedWorker()], [task], sampling_seed=42,
+            retain_transitions=False, decision_observer=lambda obs, seeds, steps, actions: chosen.extend(
+                action for step, action in zip(steps, actions) if step == 0))
+        forced = collect(self.model, [ScriptedWorker()], [task], sampling_seed=42,
+            retain_transitions=False, initial_actions={task_identity(task): chosen[0]})
+        self.assertEqual(reference["episodes"][0]["action_trace_sha256"], forced["episodes"][0]["action_trace_sha256"])
+        self.assertEqual(reference["episodes"][0]["reward"], forced["episodes"][0]["reward"])
 
 
 if __name__ == "__main__":

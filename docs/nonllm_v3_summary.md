@@ -2,6 +2,15 @@
 
 ## Current status: morning of 13 October
 
+A bounded follow-up now evaluates every legal first OOC choice under frozen
+public continuation. All **49 menus / 140 branches** complete with zero faults
+in 43.37 seconds; all 49 forced-reference controls match. There are three
+reference conditional wins, **zero alternative full-win gains**, three menus
+with floor gains and 33 tied menus. This identifies limited useful full-win
+signal in the existing late-frontier bank, not OOC irrelevance. Four-source
+fresh-process repeat matches all 16 baseline/branch traces and outcomes. See
+[diagnostic details and limitations](strategic_counterfactual_v1.md).
+
 **The repaired setup is verified; reliable full-game improvement is not.** All
 four current-profile strategic pilots finished and saved their recovery models.
 The last learner finished at **06:25:46 UTC**, before the allocation checkpoint.

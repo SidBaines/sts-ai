@@ -83,3 +83,13 @@ determinism. These establish execution and interpretable experiments, not
 full-game mastery. See the [morning report](nonllm_overnight_report_2026-10-13.md)
 for the next proposed outcome-validated supervision study. The expanded OOC
 potion menu remains a separately tested candidate, not the default interface.
+
+A bounded post-allocation [complete-menu OOC diagnostic](strategic_counterfactual_v1.md)
+replays all 49 compatible late frontiers and 140 legal alternatives with frozen
+public continuation. All control traces match, no branches fault/cut, and no
+alternative converts a reference defeat to a full victory. Three menus improve
+floor reach; 33 are tied on the recorded paired outcomes. This supports earlier
+and broader strategic starts plus validation of continuation competence before
+scaling an outcome teacher. No generated intervention data enters PPO; no
+teacher targets are accepted. Latest full suite runs 546 tests with one optional
+skip; bounded smoke passes.

@@ -12,7 +12,7 @@ import hashlib
 import json
 import random
 import time
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 import torch
@@ -25,7 +25,7 @@ from .legacy_bridge import project_legacy_menu
 from .losses import generalized_advantages
 from .rollout_training import task_identity, public_endpoint_state
 
-COLLECTOR_VERSION = "frozen_combat_strategic_v3_v4"
+COLLECTOR_VERSION = "frozen_combat_strategic_v3_v5"
 SAMPLING_STREAM_VERSION = "frozen_combat_strategic_v3_v1"
 
 
@@ -85,11 +85,19 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
             credit_unit: str = "macro", sampling_seed: int = 0, deterministic: bool = False,
             gamma: float = 1., gae_lambda: float = .95, max_seconds: float = 120.,
             retain_transitions: bool = True, frozen_combat: bool = True,
-            decision_observer=None, native_combat_simulations: int | None = None) -> dict[str, Any]:
+            decision_observer=None, native_combat_simulations: int | None = None,
+            initial_actions: Mapping[str, int] | None = None) -> dict[str, Any]:
     if credit_unit not in {"micro", "macro"} or gamma != 1 or not workers or max_seconds <= 0:
         raise ValueError("valid workers, budget and gamma=1 micro/macro mode required")
     if native_combat_simulations is not None and (native_combat_simulations < 1 or retain_transitions or not frozen_combat):
         raise ValueError("native combat comparator requires a positive budget, frozen OOC base and no training rows")
+    initial_actions = dict(initial_actions or {})
+    if initial_actions and retain_transitions:
+        raise ValueError("counterfactual interventions cannot produce on-policy training rows")
+    if set(initial_actions) - {task_identity(task) for task in tasks}:
+        raise ValueError("initial action intervention refers to an unknown task")
+    if any(isinstance(index, bool) or not isinstance(index, int) for index in initial_actions.values()):
+        raise ValueError("initial action interventions require integer menu indices")
     model.cpu().eval()
     started = time.monotonic()
     pending = iter(tasks)
@@ -138,6 +146,7 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
         final_row = entry["rows"][-1] if entry["rows"] else None
         episodes.append({"task_id": entry["identity"], "world_seed": entry["task"].seed,
             "task_kind": entry["task"].kind, "start_family": "continuation" if entry["task"].prefix else "fresh",
+            "initial_action_intervention": initial_actions.get(entry["identity"]),
             "prefix_length": len(entry["task"].prefix), "start_state": entry["start_state"],
             "termination_state": public_endpoint_state(entry["obs"]), "reward": entry["reward"],
             "reward_components": dict(entry["components"]), "steps": entry["steps"],
@@ -240,6 +249,19 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
                     samples.pop(slot)
                     fault(slot,error,"native_combat_query")
                 timings["teacher_wait_seconds"] += time.monotonic()-stamp
+        for slot in list(samples):
+            entry = active[slot]
+            if entry["steps"] or entry["identity"] not in initial_actions:
+                continue
+            obs, index = entry["obs"], initial_actions[entry["identity"]]
+            if obs["phase"] != "out_of_combat":
+                raise ValueError("initial action intervention requires an OOC source")
+            position = next((i for i, action in enumerate(obs["legal_actions"])
+                             if int(action["index"]) == index), None)
+            if position is None:
+                raise ValueError("initial action intervention is outside the legal source menu")
+            previous = samples[slot]
+            samples[slot] = (position, 0., previous[2], None)
         if decision_observer is not None:
             slots = list(samples)
             decision_observer([active[slot]["obs"] for slot in slots],
@@ -331,6 +353,7 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
         "combat_controller": f"privileged native combat search ({native_combat_simulations} simulations)" if native_combat_simulations
             else "immutable legacy bridge greedy" if frozen_combat else "learned public combat residual greedy",
         "native_combat_simulations":native_combat_simulations,
+        "initial_action_interventions": initial_actions,
         "transitions": transitions, "episodes": episodes, "faults": faults, "requested_tasks": len(tasks),
         "unstarted_tasks": len(tasks) - resets, "excluded_primitive_steps": excluded,
         "cohort_completed": len(episodes) + len(faults) == len(tasks) and all(e["termination_reason"] != "collector_budget" for e in episodes),
