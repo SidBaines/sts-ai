@@ -104,6 +104,40 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 22:51 BST — Distilling public-search votes into the combat head hurts the Act 2 boss (−6.2 points)
+
+- **Labels:** 320 games from the best agent; every boss-fight decision labelled
+  by public search (24 samples × 1,000 simulations), as soft vote targets.
+  - 18,683 labels plus 3,166 rehearsal decisions.
+  - The policy agreed with the search plurality on only 45.5%.
+- **Distillation** (combat head only, KL anchor, 4 epochs, lr 1e-4):
+  - held-out agreement with the plurality 0.445 → 0.503;
+  - rehearsal argmax agreement 0.90.
+- **Paired bank panel, base vs distilled combat head:**
+
+  | Fight group | n | Base | Distilled | Change (pp) | Fights changed |
+  | --- | --- | --- | --- | --- | --- |
+  | **Act 2 boss** | 400 | 29.5% | **23.3%** | **−6.2 ± 2.3** | 89 |
+  | Act 3 boss | 157 | 16.6% | 15.3% | −1.3 ± 3.0 | 22 |
+  | Act 1 boss | 300 | 91.7% | 93.0% | +1.3 ± 1.5 | 20 |
+  | Act 2 elite | 300 | 77.7% | 78.7% | +1.0 ± 1.7 | 25 |
+  | Act 2 hallway | 400 | 96.3% | 96.8% | +0.5 ± 0.6 | 6 |
+  | Act 3 hallway | 300 | 95.3% | 94.0% | −1.3 ± 0.9 | 8 |
+
+- **This replicates the earlier imitation failure, with public labels this
+  time**, so privileged information was not the cause.
+  - The network reproduces only ~half of the search's choices.
+  - Partial, per-decision imitation breaks the coherence of multi-turn plans:
+    search helps when it *plays* the fight, not when its choices are copied
+    one at a time.
+  - Not adopted. Combat improvement from search needs either test-time search
+    or a different training signal: value targets, search inside the RL loop,
+    or a model that can represent the plan.
+- The full-game search-augmented eval (test-time public search at the Act 2
+  and Act 3 bosses) is still running.
+
+---
+
 ## 2026-10-13 22:28 BST — New best on wins: round-2 PPO update 4, 2.62% (p = 0.018 vs distilled)
 
 4,096-world win set:
