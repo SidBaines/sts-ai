@@ -83,6 +83,31 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 20:51 BST — λ sweep at update 12: credit bias scales with 1 − λ; round-2 distillation (smith + elite) done
+
+| From distilled, update 12 | Paired floors vs start | Wins /~1,008 (start 19) | Smith rate |
+| --- | --- | --- | --- |
+| λ = 0.95 | −0.15 (→ −0.54 at 16) | 20 | 23% (→ 14.5%) |
+| λ = 0.99 | +0.32 [−0.25, +0.91] | 27 | 34–38% |
+| λ = 1.0 | **+0.88 [0.35, 1.45]** | 16 | 45% |
+
+- Smith retention orders exactly with λ. Floors favour λ = 1.0.
+- Wins at 1,024 worlds disagree (λ = 0.99 27 vs λ = 1.0 16, p = 0.07), which
+  is exactly why win claims need the 4,096-world set. A win-set eval of
+  λ = 1.0 update 12 is running.
+- **Round-2 distillation** of smith ≥85% + elite ≥90% into λ = 1.0
+  update 12 (`data/rl_runs/distill_r2_lam1i12/distilled.pt`):
+  - 3,750 rest and 1,448 elite labels;
+  - held-out rule agreement 0.79 → 0.94; rehearsal agreement 0.97;
+  - win-set eval running.
+- **Added an `--avoid-boss-relics` overlay.** Fusion Hammer disables smithing
+  and was taken in ~10% of runs; Coffee Dripper disables resting. Test queued
+  after the current evals.
+- The machine is saturated (0% idle): three trainers plus two 4,096-world
+  evals.
+
+---
+
 ## 2026-10-13 20:27 BST — λ = 1.0 fixes the unlearning and improves: 34.17 mean floor (+0.88 over the distilled start)
 
 | From the distilled agent, same training worlds | Update 4 | Update 8 | Update 12 | Smith rate at update 12 |
