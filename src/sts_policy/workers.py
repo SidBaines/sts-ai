@@ -186,7 +186,11 @@ class CurriculumEpisode:
 
 
 def _serve(connection: Any, config: dict[str, Any]) -> None:
-    episode = CurriculumEpisode(config)
+    if config.get("native_plan_cache",False):
+        from .native_plan import NativePlanEpisode
+        episode = NativePlanEpisode(config)
+    else:
+        episode = CurriculumEpisode(config)
     try:
         while True:
             method, args = connection.recv()

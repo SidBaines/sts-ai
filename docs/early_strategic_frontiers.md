@@ -34,3 +34,85 @@ boss-relic choice, which shapes later deck viability. More frontier rows cannot
 substitute for more independent late-act worlds. Future sampling must choose
 worlds before starts so a world with many recorded screens does not dominate
 the training mix.
+
+## Menu stages and native-controller scope
+
+Frontier v2 records the first public menu-kind/selection-purpose stage in Acts
+2/3, plus the late Act 1 boss-relic decision. This captures actual card-only
+rewards after gold/potions are collected and distinguishes removal, upgrade and
+bottling purposes. Repeated stages are skipped before copying their observations.
+V1's exact source remains in commit `b58d0fb` and its original data are preserved.
+
+Collector v6 removes combat scoring that native control immediately discards,
+and reports actual externally native-controlled decisions separately from the
+environment's automatic `native_steps`. A fixed 16-world timing comparison
+preserves all 16 control traces, rewards and endpoints: policy CPU time falls
+4.065→2.753 seconds, but total wall time is 19.679→20.894 seconds. That pair does
+**not** demonstrate an end-to-end speedup; native/step wait variation matters.
+
+The per-action native comparator also differs from the simulator's built-in
+agent: it discards the rest of a searched winning sequence after each action,
+whereas the built-in agent retains a winning plan. Earlier native-control
+results therefore characterize the per-action comparator, not all native
+controllers. This could understate competence and inflate cost.
+
+A separately named `privileged_winning_plan_reuse_v2` controller retains only
+winning sequences with a matching first action. Every cached step checks current
+legal bits, native description and turn; policy deviations/settings changes,
+resets and battle boundaries clear the cache. Its diagnostics count queries,
+cache hits, invalidations, exhausted plans and unexpected defeats. This is a
+private controller diagnostic, not an exact reproduction of the built-in agent
+or a public expert oracle.
+
+The first cache prototype compared native descriptions with enriched public
+display labels, causing 2,577 conservative invalidations on the 16-world panel.
+Those v1 results stay preserved. The v2 guard uses the same native description
+format as search. On the same 16 worlds it has **zero invalidations, zero
+winning-plan defeats, 690 searches and 3,981 cache hits**. It reaches 15/16 Act 1
+clears and 3/16 Act 2 clears, versus 14/16 and 1/16 for per-action replanning;
+both have zero full wins. It finishes in 15.006 seconds, but changed trajectories
+make this a controller comparison rather than a matched-workload speed benchmark.
+All 259 new starts replay exactly. No policy or target is promoted.
+
+The short prototypes initially saved source hashes without source bytes.
+Their executed sources are now preserved with every file verified against its
+original launch hash, including reconstructed timing-control sources. New
+frontier and counterfactual launches automatically snapshot environment/policy/
+script sources, vocabulary, project metadata and the native patch. Runtime,
+checkpoint and native-binary identities remain separately recorded; snapshots
+do not replace preservation of the runtime/models/build.
+
+## Expanded source bank
+
+The independent 64-world panel at world range 431000000 finishes every game with
+zero faults/cuts in 45.53 seconds, using two workers and the v2 plan controller.
+It reaches **60 Act 1 clears and 17 Act 2 clears**, with **zero full wins**.
+This is explicitly privileged source play, not a public trained-policy result.
+Its full source outcomes remain in `early_stage_native1000_plan_v2_64`.
+
+The initial 45-second replay window verifies 990/1,051 starts and preserves the
+61 remaining candidates. `complete_frontier_replays.py` verifies the rest into
+a **new child bank**, preserving the first output and parent hashes. All
+**1,051/1,051** candidates now replay exactly, with no failures/unverified starts.
+The complete bank is `data/nonllm_v4/banks/early_stage_native1000_plan_v2_64_complete/starts.jsonl`:
+
+- 60 late Act 1 boss-relic starts, from 60 worlds.
+- 780 Act 2 starts, from 60 worlds.
+- 211 Act 3 starts, from **17 independent worlds**.
+- 77 card-only reward decisions across the recorded acts.
+
+The original current-profile late bank had nine Act 3 source worlds. These 17
+are new, independent TRAIN worlds; multiple menus within each remain correlated.
+This establishes broader/earlier source coverage, not useful gradients or a
+teacher. World-balanced sampling and outcome validation are still required
+before fitting a condition. No original campaigns or final cohorts are opened.
+
+Final acceptance runs **563 host/native tests**, one optional generated-bank
+skip, and the mandatory bounded smoke without error. A separate fresh process
+repeats all **16 full plan-controller traces, rewards, endpoints and diagnostic
+counters**, and reconstructs the same 259 starts. The 64-world panel has 2,634
+search queries, 15,298 cached actions, **zero invalidations, zero exhausted plans
+and zero predicted-winning-plan defeats**. These are sampled execution checks,
+not complete simulator certification. Parent/child bank hashes and every saved
+source file (116/117 files respectively) verify. No generated teacher target or
+learning condition is accepted from this collection.

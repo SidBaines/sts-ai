@@ -15,6 +15,7 @@ from sts_policy.composition import training_environment_record
 from sts_policy.curriculum import TaskSpec, world_split
 from sts_policy.entity_model import load_policy
 from sts_policy.strategic_counterfactual import COUNTERFACTUAL_VERSION, evaluate_menu
+from sts_policy.source_snapshot import snapshot_experiment_sources
 from sts_policy.training import file_identity
 from sts_policy.workers import CurriculumWorker
 try:
@@ -56,9 +57,11 @@ def main() -> None:
     torch.set_num_threads(1)
     model, payload = load_policy(str(args.checkpoint))
     args.output.mkdir(parents=True)
+    snapshot = snapshot_experiment_sources(args.output/"executed_sources")
     manifest = {"version": COUNTERFACTUAL_VERSION, "status": "running", "config": {
         key: str(value) if isinstance(value, Path) else value for key, value in vars(args).items()},
         "checkpoint_sha256": file_identity(args.checkpoint), "checkpoint_metadata": payload["metadata"],
+        "source_snapshot":snapshot,
         "starts_sha256": file_identity(args.starts), "environment": training_environment_record(),
         "worker_settings": worker_settings(), "source_tasks": selected,
         "sources": {name: file_identity(Path(name)) for name in

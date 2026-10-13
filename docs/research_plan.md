@@ -102,3 +102,14 @@ start coverage. Protocol v2 records controller roles, and reporting now displays
 counterfactual runs separately with manifest hash checks plus actual actor
 exposure/loss mass by act. Current suite: 549 tests, one optional skip; browser
 verification and bounded smoke pass. No new policy or teacher target is adopted.
+
+The earlier-source follow-up now provides **1,051 exact replay-verified starts**
+from 60 new TRAIN worlds, with 17 independent Act 3 worlds, 77 card-only reward
+decisions and 60 late Act 1 boss-relic choices. Source play uses the original
+frozen OOC parameters and an explicitly privileged winning-plan controller;
+its independent 64-world source panel scores 60/17/0. This broadens curriculum
+coverage but does not establish a trained public agent or validated teacher.
+Per-action native replanning differs from the built-in agent's plan retention,
+so old comparator conclusions are scoped accordingly. Automatic source-byte
+snapshots and hash-checked replay completion preserve reproducibility. See
+[source bank, comparisons and limitations](early_strategic_frontiers.md).

@@ -25,7 +25,7 @@ from .legacy_bridge import project_legacy_menu
 from .losses import generalized_advantages
 from .rollout_training import task_identity, public_endpoint_state
 
-COLLECTOR_VERSION = "frozen_combat_strategic_v3_v5"
+COLLECTOR_VERSION = "frozen_combat_strategic_v3_v6"
 SAMPLING_STREAM_VERSION = "frozen_combat_strategic_v3_v1"
 
 
@@ -86,11 +86,14 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
             gamma: float = 1., gae_lambda: float = .95, max_seconds: float = 120.,
             retain_transitions: bool = True, frozen_combat: bool = True,
             decision_observer=None, native_combat_simulations: int | None = None,
-            initial_actions: Mapping[str, int] | None = None) -> dict[str, Any]:
+            initial_actions: Mapping[str, int] | None = None,
+            legacy_native_scoring: bool = False) -> dict[str, Any]:
     if credit_unit not in {"micro", "macro"} or gamma != 1 or not workers or max_seconds <= 0:
         raise ValueError("valid workers, budget and gamma=1 micro/macro mode required")
     if native_combat_simulations is not None and (native_combat_simulations < 1 or retain_transitions or not frozen_combat):
         raise ValueError("native combat comparator requires a positive budget, frozen OOC base and no training rows")
+    if legacy_native_scoring and native_combat_simulations is None:
+        raise ValueError("legacy native scoring is a native-comparator timing control")
     initial_actions = dict(initial_actions or {})
     if initial_actions and retain_transitions:
         raise ValueError("counterfactual interventions cannot produce on-policy training rows")
@@ -119,7 +122,7 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
             "rows": [], "pending_row": None, "obs": None, "info": {}, "reward": 0., "steps": 0,
             "components": Counter(), "rng": random.Random(f"{SAMPLING_STREAM_VERSION}:{sampling_seed}:{identity}:ooc"),
             "trace": hashlib.sha256(), "start_state": None, "max_act": 0, "choices": Counter(),
-            "fight": None, "fights": [], "hp_decreases": 0., "hp_increases": 0.}
+            "fight": None, "fights": [], "hp_decreases": 0., "hp_increases": 0., "native_combat_decisions":0}
         resets += 1
 
     def fault(slot: int, error: Exception, stage: str) -> None:
@@ -156,6 +159,8 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
             "task_outcome": info.get("task_outcome"), "outcome": info.get("task_outcome") or info.get("outcome"),
             "terminated": bool(info.get("terminated", False)), "truncated": budget or bool(info.get("truncated", False)),
             "native_steps": info.get("native_steps"), "action_trace_sha256": entry["trace"].hexdigest(),
+            "native_combat_decisions":entry["native_combat_decisions"],
+            "native_plan_stats":info.get("native_plan_stats"),
             "choice_counts": dict(entry["choices"]), "fights": entry["fights"],
             "observed_hp_decreases": entry["hp_decreases"], "observed_hp_increases": entry["hp_increases"]})
 
@@ -222,7 +227,13 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
                     probabilities = np.exp(values64 - np.max(values64))
                     distributions[slot] = probabilities / probabilities.sum()
         remaining_combat = combat_slots if frozen_combat else [slot for slot in combat_slots if slot not in samples]
-        if remaining_combat:
+        if remaining_combat and native_combat_simulations is not None and not legacy_native_scoring:
+            # No training rows are permitted in this comparator. Native search
+            # supplies the actual action below, so discarded legacy scoring is
+            # unnecessary; placeholders cannot reach an executed step.
+            for slot in remaining_combat:
+                samples[slot] = (0, 0., 0., None)
+        elif remaining_combat:
             projections = [project_legacy_menu(active[slot]["obs"]) for slot in remaining_combat]
             logits, values = model.prior(*collate_legacy([encode_legacy(p.observation) for p in projections]))
             for i, (slot, projection) in enumerate(zip(remaining_combat, projections)):
@@ -308,6 +319,8 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
                 continue
             timings["step_wait_seconds"] += time.monotonic() - stamp
             entry = active[slot]
+            if native_combat_simulations is not None and entry["obs"]["phase"]=="combat":
+                entry["native_combat_decisions"] += 1
             old_hp = public_endpoint_state(entry["obs"])["hp"]
             new_hp = public_endpoint_state(obs)["hp"]
             if old_hp is not None and new_hp is not None:
@@ -353,6 +366,8 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
         "combat_controller": f"privileged native combat search ({native_combat_simulations} simulations)" if native_combat_simulations
             else "immutable legacy bridge greedy" if frozen_combat else "learned public combat residual greedy",
         "native_combat_simulations":native_combat_simulations,
+        "legacy_native_scoring":legacy_native_scoring,
+        "native_combat_decisions":sum(episode["native_combat_decisions"] for episode in episodes),
         "initial_action_interventions": initial_actions,
         "transitions": transitions, "episodes": episodes, "faults": faults, "requested_tasks": len(tasks),
         "unstarted_tasks": len(tasks) - resets, "excluded_primitive_steps": excluded,

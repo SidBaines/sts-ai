@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from copy import deepcopy
 import unittest
+from unittest.mock import patch
 
 from sts_policy.curriculum import TaskSpec, world_split
-from sts_policy.early_frontiers import PROVENANCE_KEYS, completed_frontiers, coverage, frontier_before_action
+from sts_policy.early_frontiers import PROVENANCE_KEYS, EarlyFrontierWorker, completed_frontiers, coverage, frontier_before_action, menu_stage
 from tests.unit.test_public_entities import observation
 
 
@@ -54,6 +55,28 @@ class EarlyFrontierTests(unittest.TestCase):
         self.assertEqual(summary["independent_source_worlds"],3)
         self.assertEqual(summary["frontiers"],4)
         self.assertEqual(summary["source_worlds_by_act"]["3"],1)
+
+    def test_reward_stages_record_actual_card_choice_after_gold(self):
+        mixed=deepcopy(self.observation)
+        mixed["legal_actions"]=[{"index":0,"public":{"kind":"take_gold"}},
+                                {"index":1,"public":{"kind":"take_card"}},
+                                {"index":2,"public":{"kind":"skip_card"}}]
+        cards=deepcopy(mixed);cards["legal_actions"]=cards["legal_actions"][1:]
+        self.assertNotEqual(menu_stage(mixed),menu_stage(cards))
+        with EarlyFrontierWorker() as worker, patch("sts_policy.workers.CurriculumWorker.step",return_value=None):
+            worker.source_task=self.task;worker.info=self.info;worker.observation=mixed
+            worker.step(0);worker.step(0)
+            worker.observation=cards;worker.step(1)
+            self.assertEqual(len(worker.frontiers),2)
+            self.assertEqual(worker.frontiers[-1]["decision_family"],"card_only_rewards")
+
+    def test_late_act1_boss_relic_is_eligible_and_select_purposes_are_distinct(self):
+        obs=deepcopy(self.observation);obs["state"].update(act=1,floor=17,screen_state="ScreenState.BOSS_RELIC_REWARDS")
+        self.assertIsNotNone(frontier_before_action(self.task,obs,self.info,4))
+        a=deepcopy(self.observation);b=deepcopy(a)
+        a["legal_actions"][0]["public"]["selection_type"]=3
+        b["legal_actions"][0]["public"]["selection_type"]=7
+        self.assertNotEqual(menu_stage(a),menu_stage(b))
 
 
 if __name__ == "__main__":

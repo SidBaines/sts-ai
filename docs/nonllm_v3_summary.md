@@ -2,6 +2,16 @@
 
 ## Current status: morning of 13 October
 
+The latest bounded follow-up adds a fully replay-verified earlier bank:
+**1,051 starts from 60 worlds**, including 211 Act 3 starts from **17 new
+independent TRAIN worlds**, 77 card-only rewards and 60 late Act 1 boss relics.
+The source uses frozen original OOC parameters plus an explicitly privileged
+winning-plan controller; its 64 fresh games reach 60/17/0, not public-agent
+mastery. [Coverage, controller caveats and source preservation](early_strategic_frontiers.md).
+Earlier native controls used per-action replanning, which discards winning
+continuations and differs from the built-in plan-retaining agent. Their scope is
+now explicit. No learner or generated target is promoted.
+
 A bounded follow-up now evaluates every legal first OOC choice under frozen
 public continuation. All **49 menus / 140 branches** complete with zero faults
 in 43.37 seconds; all 49 forced-reference controls match. There are three

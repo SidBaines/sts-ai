@@ -151,6 +151,8 @@ class StrategicCollectionTests(unittest.TestCase):
             native_combat_simulations=200,decision_observer=lambda obs,seeds,steps,actions:
                 choices.extend(a for o,a in zip(obs,actions) if o["phase"]=="combat"))
         self.assertEqual(choices,[20,20]); self.assertEqual(worker.calls,2)
+        self.assertEqual(result["native_combat_decisions"],2)
+        self.assertEqual(result["episodes"][0]["native_combat_decisions"],2)
         self.assertIn("privileged",result["combat_controller"])
         failed=collect(self.model,[NativeWorker(True)],self.tasks[:1],retain_transitions=False,native_combat_simulations=200)
         self.assertEqual(failed["episodes"],[])
@@ -187,6 +189,23 @@ class StrategicCollectionTests(unittest.TestCase):
             retain_transitions=False, initial_actions={task_identity(task): chosen[0]})
         self.assertEqual(reference["episodes"][0]["action_trace_sha256"], forced["episodes"][0]["action_trace_sha256"])
         self.assertEqual(reference["episodes"][0]["reward"], forced["episodes"][0]["reward"])
+
+    def test_native_continuation_does_not_depend_on_discarded_combat_scoring(self):
+        original=self.model.prior.forward
+        def ooc_only(*batch):
+            if bool(batch[0][:,7].any()):
+                raise AssertionError("native continuation must not call the public combat scorer")
+            return original(*batch)
+        self.model.prior.forward=ooc_only
+        class NativeWorker(ScriptedWorker):
+            def submit(self,method,*args):
+                if method=="teacher_action":
+                    future=Future();future.set_result(20);return future
+                return super().submit(method,*args)
+        result=collect(self.model,[NativeWorker()],self.tasks[:1],deterministic=True,
+            retain_transitions=False,native_combat_simulations=1000)
+        self.assertEqual(result["episodes"][0]["task_outcome"],"victory")
+        self.assertEqual(result["native_combat_decisions"],2)
 
 
 if __name__ == "__main__":
