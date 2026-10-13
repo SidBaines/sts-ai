@@ -1,5 +1,18 @@
 # Repaired training study progress
 
+At 06:05 UTC, an act-balanced actor-loss control is running under the accepted
+0.3 profile. Its first 57 pre-update trajectories match the uniform-loss control
+exactly. Actual first-buffer exposures are 1,276/935/237 for Acts 1/2/3, while
+loss mass is **816/816/816**. The critic and rehearsal settings stay matched;
+this changes loss weighting rather than reporting nominal episode balance as
+gradient balance. The uniform current-profile arm ended **159/18/0**.
+
+An independent [OOC potion candidate](ooc_potions_candidate.md) repairs missing
+legal consumption/discard choices and native execution fallthrough, with bounded
+mechanics and patch checks. It does not replace the accepted binary, existing
+data or policy menus; its expanded action space needs explicit policy transfer
+and integration before adoption.
+
 ## Current-profile learning controls: 13 October 05:50 UTC
 
 A new 65-task public-policy panel supplies 9,436 combat labels with six search/draw

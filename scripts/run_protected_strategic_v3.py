@@ -46,6 +46,7 @@ def main():
     parser.add_argument("--actor-lr", type=float, default=3e-5)
     parser.add_argument("--critic-lr", type=float, default=1e-4)
     parser.add_argument("--lambda", dest="gae_lambda", type=float, default=.95)
+    parser.add_argument("--actor-act-balanced",action="store_true",help="Give each present act equal actor-loss mass")
     parser.add_argument("--deadline-utc", default="2026-10-13T07:30:00+00:00")
     parser.add_argument("--device", choices=("cpu", "mps"), default="mps")
     args = parser.parse_args()
@@ -76,7 +77,7 @@ def main():
             raise ValueError(f"pilot environment differs from common initialization: {key}")
     from sts_policy.curriculum import TaskSpec
     evaluation_tasks = [TaskSpec.from_dict(row) for row in baseline_document["tasks"]]
-    config = StrategicConfig(actor_lr=args.actor_lr, critic_lr=args.critic_lr)
+    config = StrategicConfig(actor_lr=args.actor_lr, critic_lr=args.critic_lr,actor_act_balanced=args.actor_act_balanced)
     actor, critic = optimizers(model, config)
     state = {"control_version": CONTROL_VERSION, "run_id": str(uuid.uuid4()), "pid": os.getpid(),
         "started_utc": datetime.now(timezone.utc).isoformat(), "status": "starting", "phase": "preflight",

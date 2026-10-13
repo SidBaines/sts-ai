@@ -15,7 +15,7 @@ from . import entities
 from .entity_model import ResidualOOCPolicy
 from .strategic_collection import StrategicTransition
 
-TRAINER_VERSION = "protected_strategic_ppo_v3_v3"
+TRAINER_VERSION = "protected_strategic_ppo_v3_v4"
 
 
 @dataclass(frozen=True)
@@ -30,6 +30,7 @@ class StrategicConfig:
     max_actor_norm: float = .5
     max_critic_norm: float = 1.
     post_update_kl_stop: float = .01
+    actor_act_balanced: bool = False
 
     def __post_init__(self):
         if any(not math.isfinite(float(value)) for value in asdict(self).values()):
@@ -45,6 +46,15 @@ def optimizers(model: ResidualOOCPolicy, config: StrategicConfig):
     # unused parameters in either separate optimizer after zero-gradient steps.
     return (torch.optim.Adam(model.actor_parameters(), lr=config.actor_lr),
             torch.optim.Adam(model.critic_parameters(), lr=config.critic_lr))
+
+
+def actor_loss_weights(rows, indices, balanced):
+    weights=np.zeros(len(rows),np.float32)
+    counts=Counter(int(rows[i].observation['state']['act']) for i in indices)
+    for i in indices:
+        act=int(rows[i].observation['state']['act'])
+        weights[i]=len(indices)/(len(counts)*counts[act]) if balanced else 1.
+    return weights
 
 
 class OptimizerBundle:
@@ -185,6 +195,8 @@ def update(model: ResidualOOCPolicy, rows: Sequence[StrategicTransition], *,
     chosen_advantages = advantages[actor_indices]
     mean, std = (float(chosen_advantages.mean()), float(chosen_advantages.std())) if actor_indices else (0., 1.)
     advantages = (advantages-mean)/max(std, 1e-8)
+    actor_weights=actor_loss_weights(rows,actor_indices,config.actor_act_balanced)
+    actor_by_act,weighted_by_act=Counter(),Counter()
     rng = random.Random(seed)
     actor_steps, critic_steps, actor_exposures, critic_exposures, rehearsal_exposures = 0, 0, 0, 0, 0
     unique_actor, unique_critic = set(), set()
@@ -204,9 +216,10 @@ def update(model: ResidualOOCPolicy, rows: Sequence[StrategicTransition], *,
                 old = torch.tensor([rows[i].behavior_log_prob for i in indices], device=device)
                 ratio = (current-old).exp()
                 adv = torch.as_tensor(advantages[indices], device=device)
-                policy_loss = -torch.minimum(ratio*adv, ratio.clamp(1-config.clip_ratio, 1+config.clip_ratio)*adv).mean()
+                weights=torch.as_tensor(actor_weights[indices],device=device)
+                policy_loss = -(torch.minimum(ratio*adv, ratio.clamp(1-config.clip_ratio, 1+config.clip_ratio)*adv)*weights).mean()
                 probabilities = log_probs.exp()
-                entropy = -(probabilities*log_probs).sum(-1).mean()
+                entropy = (-((probabilities*log_probs).sum(-1))*weights).mean()
                 loss = policy_loss-config.entropy_weight*entropy
                 if rehearsal and config.rehearsal_weight:
                     picked = rng.sample(range(len(rehearsal)), min(config.batch_size, len(rehearsal)))
@@ -232,6 +245,9 @@ def update(model: ResidualOOCPolicy, rows: Sequence[StrategicTransition], *,
                 actor_steps += 1
                 actor_exposures += len(indices)
                 unique_actor.update(indices)
+                for i in indices:
+                    act=int(rows[i].observation['state']['act'])
+                    actor_by_act[act]+=1;weighted_by_act[act]+=float(actor_weights[i])
             model.eval()
             choice_encoded = [encoded[i] for i in actor_indices]
             current_drift = drift(model, choice_encoded, device=device, batch_size=config.batch_size,
@@ -264,6 +280,7 @@ def update(model: ResidualOOCPolicy, rows: Sequence[StrategicTransition], *,
         "actor_steps": actor_steps, "critic_steps": critic_steps, "actor_exposures": actor_exposures,
         "critic_exposures": critic_exposures, "rehearsal_exposures": rehearsal_exposures,
         "unique_actor_rows_used": len(unique_actor), "unique_critic_rows_used": len(unique_critic),
+        "actual_actor_exposures_by_act":dict(actor_by_act),"actual_actor_loss_mass_by_act":dict(weighted_by_act),
         "actor_grad_norm_before_clip": _summary(actor_norms), "critic_grad_norm_before_clip": _summary(critic_norms),
         "actor_grad_norm_after_clip": _summary(actor_after_norms),
         "critic_grad_norm_after_clip": _summary(critic_after_norms),
