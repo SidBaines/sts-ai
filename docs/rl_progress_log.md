@@ -83,6 +83,27 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 20:17 BST — Combat v3 (dense credit) is also null; λ = 1.0 at update 8 matches λ = 0.95
+
+- **Combat v3 stopped at update 20.**
+  - Full-game paired vs its start: **−0.20 ± 0.22** at update 10, **+0.08 ±
+    0.24** at update 20; wins 19 → 15.
+  - Panel: Act 2 boss 33.3 → 33.8%; Act 3 boss 17.5 → 25% (n = 40, noise).
+  - Sampled training win rate flat at ~0.64.
+  - Dense potential shaping with GAE did not make fight-level PPO learn
+    usefully at ~20k fights.
+  - **Combat needs a different method.** Candidates: much larger scale;
+    imitation of a *public-information* search (sampled hidden draw orders and
+    enemy RNG) rather than privileged search; or test-time search.
+- **λ = 1.0 vs λ = 0.95 from the distilled agent, update 8:**
+  - λ = 1.0: 33.73, +0.46 vs start, wins 19 → 26;
+  - λ = 0.95: 33.69, +0.40;
+  - difference +0.05 ± 0.27.
+
+  The λ = 0.95 run only declined after update 9, so updates 12 and 16 decide.
+
+---
+
 ## 2026-10-13 19:47 BST — λ sweep and discovery-from-scratch running
 
 Running, all paired on the same training worlds where possible:
