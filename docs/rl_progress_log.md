@@ -30,6 +30,7 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 | + PPO λ = 1.0, 4 updates (`ooc_r2_lam1/iter_0004.pt`) | 2.62% | 33.92 | vs distilled p = 0.018 |
 | **+ PPO λ = 1.0, 12 updates** (`ooc_r2_lam1/iter_0012.pt`) | **3.76%** | **34.58** | **best**; vs update 4 p = 0.001 |
 | + PPO λ = 1.0, 16 updates (`ooc_r2_lam1/iter_0016.pt`) | 3.79% | 34.50 | level with update 12 |
+| Round-2 start + **play-time public search** at Act 2/3 bosses | 3.42% (vs 2.63% without, 2,019 worlds, p = 0.085) | 34.79 | not learned; see findings §7.2 |
 
 **What works:**
 - The E8 OOC PPO recipe, now with **λ = 1.0**.
@@ -104,6 +105,38 @@ Branches vs main are compared at updates 36/40/44 with
 
 **Main open problem:** the OOC policy's logits are saturated, so PPO cannot
 explore strategic options. Exploration is the lever.
+
+---
+
+## 2026-10-13 23:48 BST — Write-up published; dashboard rebuilt; play-time search full-game result
+
+- **Write-up:** [rl_findings_2026-10-13.md](rl_findings_2026-10-13.md). It
+  covers what works, what failed and why, the mechanisms, pitfalls, and future
+  directions, including play-time search and proposals for combat with
+  multi-turn planning.
+- **Dashboard rebuilt** (`scripts/rl/dashboard.py`, http://127.0.0.1:8791;
+  `dashboard.py restart` reloads it). From the top:
+  1. win-set table with Wilson 95% intervals;
+  2. fresh-world confirmations;
+  3. **only active jobs**, with progress (the queue history collapses to one
+     line);
+  4. the key lineage runs, with everything else behind "show archived";
+  5. charts: paired gain, wins per eval, training floor, smith and elite
+     rates, boss rates, gradient cosine.
+
+  Labels for runs and eval files are in `RUN_INFO` and `EVAL_LABELS`.
+- **Play-time public search, full games** (round-2 start agent, Act 2 and 3
+  bosses, 64 × 1,000; paired on 2,019 win-set worlds):
+
+  | | Act 2 boss pass | Act 3 boss pass | Wins |
+  | --- | --- | --- | --- |
+  | No search | 38.0% | 18.8% | 53 (2.63%) |
+  | Search | **46.1%** | 20.2% | **69 (3.42%)** |
+
+  McNemar p = 0.085; mean floor +0.78 [0.54, 1.02]. This matches the
+  fight-bank estimate. It has not yet been tried on the best network.
+- **Round 2, update 16, win set:** 3.79%, level with update 12 (3.76%). The
+  extension to 32 continues; update 24 is +5.75 vs original on the 1,024 set.
 
 ---
 

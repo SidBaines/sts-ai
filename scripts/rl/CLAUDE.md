@@ -21,7 +21,7 @@ Code: `src/sts_rl/`.
   "greedy" sampling breaks exact ties (duplicate card copies) randomly, and the
   run diverges chaotically, so results become irreproducible. Argmax results
   are identical across worker counts.
-- `dashboard.py` updates its charts in place, polls
+- `dashboard.py` (rebuilt 2026-10-13; `dashboard.py restart` after edits) shows the win set first, then active jobs and key runs (`RUN_INFO`; others archived). It updates charts in place, polls
   `/api/state?since=<runs_sig>&max_points=N`, and pauses while the tab is hidden.
   Don't go back to destroying and recreating charts on every poll. Chrome
   dying on this machine is usually system-wide memory exhaustion from

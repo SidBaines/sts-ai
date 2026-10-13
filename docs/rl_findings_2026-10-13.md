@@ -66,9 +66,17 @@ the original, and about 2× the agent that only had the upgrade rule distilled.
 
 - `ooc_r2_lam1` continuing to update 32. Training-game floor was ~34.7–35.3
   at updates 19–24.
-- A full-game test of the best network plus play-time public search in Act 2
-  and 3 boss fights (`searcheval_r2_a23_s64` →
-  `data/rl_runs/win_eval/r2_search_a23_s64_n2048.json`).
+
+**Play-time search, full-game result** (§7.2): adding public search at the Act 2
+and 3 bosses to the round-2 *starting* agent, paired on 2,019 win-set worlds:
+
+| | Act 2 boss pass | Wins |
+| --- | --- | --- |
+| No search | 38.0% | 53 (2.63%) |
+| Public search | **46.1%** | **69 (3.42%)** |
+
+- McNemar p = 0.085; mean floor +0.78 [0.54, 1.02].
+- It has not yet been tried on top of the best network.
 
 ---
 
@@ -512,10 +520,25 @@ head on the same starts):
 **Cost:** ~40 decisions per boss fight, so ~25–30 s per boss fight at
 64 × 1,000.
 
+**Full game** (`scripts/rl/eval_search_boss.py`, 64 × 1,000, search only in
+Act 2 and 3 boss fights). Round-2 start agent, paired on 2,019 win-set worlds:
+
+| | Act 2 boss pass | Act 3 boss reach | Act 3 boss pass | Wins |
+| --- | --- | --- | --- | --- |
+| No search | 38.0% | 282 | 18.8% | 53 (2.63%) |
+| Search | **46.1%** | 341 | 20.2% | **69 (3.42%)** |
+
+- McNemar p = 0.085. Mean floor +0.78 [0.54, 1.02].
+- The Act 2 boss gain (+8.1 points) matches the fight-bank estimate exactly.
+  The Act 3 boss gain is small.
+- Cost: ~1.6 h for 2,048 games on 6 threads; 1.3% faults vs the usual ~1%.
+
 **Open questions before adopting it:**
 
-- The **full-game** effect on wins, from the eval running now, and the Act 3
-  boss effect.
+- The effect on top of the best network (`ooc_r2_lam1/iter_0012.pt`, 3.8%
+  learned-only), and on a larger world set for a decisive win test.
+- Why the Act 3 boss gains less. Perhaps those fights are more deck-limited;
+  perhaps more samples are needed.
 - Whether search should also cover elites.
 - How far gains keep scaling with samples and simulations.
 - **Whether "the agent" may use play-time computation at all.** This is a
@@ -651,8 +674,9 @@ Ordered roughly by expected value per effort.
 
 ## 9. Open questions
 
-- Does play-time public search raise full-game wins as much as the
-  fight-level numbers suggest? Does it help at the Act 3 boss?
+- Play-time public search raised Act 2 boss pass +8 points in full games (wins
+  +30% relative, p = 0.085). Does it stack on the best network, and why is
+  the Act 3 boss gain small?
 - How far does the λ = 1.0 OOC loop go with more rounds and compute, and does
   smith drift need periodic re-distillation?
 - Can a critic with deck-quality features make bootstrapped credit unbiased
