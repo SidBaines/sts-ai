@@ -38,6 +38,23 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 16:36 BST — The recipe replicates (seed 2 +1.46 at update 8); main plateaus; exploration has a cleaner gradient
+
+- **Seed-2 replicate update 8: 30.70, paired +1.46 (95% CI [0.96, 1.98])** vs the
+  original. Seed 1 was +1.14 at update 8. **The E8 recipe replicates across
+  training seeds.**
+- **Main has plateaued:** update 28 +2.69, update 32 +2.65 (CI [2.08, 3.21]).
+  Training-game floor is flat at ~31.0–32.0. This fits the exploration limit:
+  PPO has exhausted what it can change among options it samples.
+- **The exploration branch's gradient is cleaner.** Half-batch gradient cosine
+  over its first three updates is 0.30, 0.31 and 0.37, against −0.39 to +0.22
+  for main over the same updates. Its training-game floor rose 30.0 → 31.0
+  despite the exploration noise. First greedy eval at update 36.
+- **Smith-rule branch:** training-game floor 32.6 vs main ~31.7, so the rule
+  also helps the sampled policy. First eval at update 36.
+
+---
+
 ## 2026-10-13 16:23 BST — Removal overlay is null; exploration confirmed; rule-augmented lineage launched
 
 - **Removal overlay** ("no potion buys while a removal is affordable"), paired
