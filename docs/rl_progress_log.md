@@ -55,6 +55,28 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 17:12 BST — Elite-seeking trades mean floor for wins; rule-distillation experiment started
+
+- **Overlay "take an offered elite path at HP ≥ 90%"** on top of smith ≥70%,
+  paired vs smith ≥70% alone:
+  - mean floor **−0.26 ± 0.18** (CI [−0.62, +0.10]);
+  - **wins 13 → 22**. Of 17 worlds where only one variant won, 13 favour
+    elites (sign test p ≈ 0.05);
+  - more Act 1 deaths (70 → 83) and Act 3 deaths (94 → 107).
+  - Elites buy late-game strength (relics) at early-death risk.
+  - **Objective question for Sid:** we optimise a mean-floor progress reward.
+    If the goal is win rate, wins should carry more reward weight, and
+    elite-seeking may then be right.
+- **Rule-as-initialisation experiment** (answering "can RL learn this without
+  the rule?"):
+  1. Collect rest-site labels from update 36 following the smith ≥85% rule
+     (`scripts/rl/collect_rule_labels.py`; 600 TRAIN games from seed 8.5e9).
+  2. Distil the labels into the OOC head with a KL anchor on other decisions.
+  3. Run PPO from the distilled checkpoint **without** the rule.
+  4. Track whether it keeps, refines or unlearns smithing.
+
+---
+
 ## 2026-10-13 17:07 BST — Correction: main had not plateaued (+3.14 at update 36); smith ≥85% ≈ ≥70%
 
 - **Correction to the 16:36 entry:** `ooc_main_s1` update 36 is **32.34,
