@@ -116,3 +116,32 @@ and zero predicted-winning-plan defeats**. These are sampled execution checks,
 not complete simulator certification. Parent/child bank hashes and every saved
 source file (116/117 files respectively) verify. No generated teacher target or
 learning condition is accepted from this collection.
+
+## World-first card-choice pilot
+
+`strategic_world_then_start_v1` chooses source worlds before choosing a start
+within each world. Stable independent RNG streams and canonical row order make
+selection reproducible under input reordering; duplicate rows are removed.
+Adding many menus to one world does not change world selection probability.
+The diagnostic CLI retains its historical first-source default and explicitly
+opts into world-balanced selection, act/family filters and plan-controller use.
+
+A matched six-world pilot selects three Act 2 and three Act 3 card-only reward
+menus from the complete bank. Both frozen-public and privileged-plan
+continuations evaluate **30/30 legal branches**, with all six control traces
+matching and zero faults/cuts/unstarted sources. The selected task definitions
+match exactly between controllers. Every reference and alternative loses the
+full game; no menu supplies a new win. Four public-continuation menus tie on all
+paired outcomes, versus five with privileged continuation.
+
+Skipping the card in world 431000032 improves public-continuation floor reach
+24→29; that gain disappears under privileged continuation. Thus even the lone
+positive progression signal is controller-dependent. These fixed-world,
+single-choice probes do not identify a reliable strategic teacher. No targets
+are accepted. Broader sequential strategy, continuation competence and hidden-
+future uncertainty remain unresolved rather than being replaced by proxy labels.
+
+Evidence: `data/nonllm_v4/counterfactual/early_cards_world6_public` and
+`early_cards_world6_plan1000`. Counterfactual protocol v3 explicitly records
+per-action versus plan-reuse continuation roles. Source snapshots accompany
+both launches; earlier data and controller conditions remain preserved.

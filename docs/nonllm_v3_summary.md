@@ -2,6 +2,13 @@
 
 ## Current status: morning of 13 October
 
+The world-balanced six-world card-choice follow-up completes every legal branch
+under frozen public and privileged plan continuation (30 each), with exact
+paired controls and zero faults/cuts. It establishes **no full-win gains**.
+A five-floor skip-card gain under public continuation disappears with the
+privileged controller; targets remain unaccepted. The explicit world-first
+sampler, source snapshots and role annotations are implemented and preserved.
+
 The latest bounded follow-up adds a fully replay-verified earlier bank:
 **1,051 starts from 60 worlds**, including 211 Act 3 starts from **17 new
 independent TRAIN worlds**, 77 card-only rewards and 60 late Act 1 boss relics.

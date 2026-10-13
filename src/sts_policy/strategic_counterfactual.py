@@ -15,7 +15,7 @@ from .curriculum import TaskSpec, public_hash, world_split
 from .rollout_training import task_identity
 from .strategic_collection import collect
 
-COUNTERFACTUAL_VERSION = "frozen_continuation_ooc_menu_v2"
+COUNTERFACTUAL_VERSION = "frozen_continuation_ooc_menu_v3"
 
 
 def valid_episode(result: dict[str, Any]) -> dict[str, Any] | None:
@@ -64,12 +64,15 @@ def evaluate_menu(model: Any, worker: Any, task: TaskSpec, *, max_seconds: float
     source_hash = public_hash(observation)
     task = replace(task, expected_public_hash=source_hash)
     identity = task_identity(task)
+    plan_cache=bool(getattr(worker,"config",{}).get("native_plan_cache",False)) and native_combat_simulations is not None
     output = {"counterfactual_version": COUNTERFACTUAL_VERSION, "task": task.to_dict(),
         "task_id": identity, "observation": observation, "public_hash": source_hash,
         "source_provenance": {key: info.get(key) for key in
             ("environment_version", "observation_version", "python_interface_sha256", "native_provenance")},
-        "continuation": {"policy": "frozen public OOC / privileged native combat" if native_combat_simulations
+        "continuation": {"policy": "frozen public OOC / privileged winning-plan reuse" if plan_cache
+            else "frozen public OOC / privileged per-action native replanning" if native_combat_simulations
             else "frozen public OOC / immutable legacy greedy combat",
+            "native_plan_cache":plan_cache,
             "native_combat_simulations": native_combat_simulations,
             "deterministic_ooc": deterministic, "sampling_seeds": list(sampling_seeds),
             "hidden_futures": "one fixed native world; no hidden-state randomization"},

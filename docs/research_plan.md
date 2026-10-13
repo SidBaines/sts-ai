@@ -113,3 +113,11 @@ Per-action native replanning differs from the built-in agent's plan retention,
 so old comparator conclusions are scoped accordingly. Automatic source-byte
 snapshots and hash-checked replay completion preserve reproducibility. See
 [source bank, comparisons and limitations](early_strategic_frontiers.md).
+
+A world-first sampler now prevents menu-rich worlds from dominating diagnostic
+selection. The matched six-world card-only reward pilot completes 30 legal
+branches under each frozen-public/privileged-plan continuation, all controls
+matching, without faults/cuts. Neither controller produces a full-win gain.
+One public floor gain from skipping a card disappears with the other
+continuation. No strategic target or learner is accepted; broader sequential
+strategy and uncertainty/continuation validation remain necessary.
