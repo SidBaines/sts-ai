@@ -3,6 +3,7 @@
 **Live dashboard: <http://127.0.0.1:8791>** (all runs, eval curves, paired gain vs original, learning health)
 · queue: `.venv/bin/python scripts/rl/queue_runner.py status`
 · runs and logs: `data/rl_runs/<name>/log.jsonl`
+· **distilled write-up (start here): [rl_findings_2026-10-13.md](rl_findings_2026-10-13.md)**
 · background: [rl_investigation_2026-10-13.md](rl_investigation_2026-10-13.md)
 
 If the dashboard is down: `.venv/bin/python scripts/rl/dashboard.py start`. If the
@@ -28,6 +29,7 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 | + distilled elite rule (`distill_r2_lam1i12/distilled.pt`) | 2.32% | 33.59 | |
 | + PPO λ = 1.0, 4 updates (`ooc_r2_lam1/iter_0004.pt`) | 2.62% | 33.92 | vs distilled p = 0.018 |
 | **+ PPO λ = 1.0, 12 updates** (`ooc_r2_lam1/iter_0012.pt`) | **3.76%** | **34.58** | **best**; vs update 4 p = 0.001 |
+| + PPO λ = 1.0, 16 updates (`ooc_r2_lam1/iter_0016.pt`) | 3.79% | 34.50 | level with update 12 |
 
 **What works:**
 - The E8 OOC PPO recipe, now with **λ = 1.0**.

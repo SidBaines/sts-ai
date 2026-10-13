@@ -1,6 +1,8 @@
 # scripts/rl — sts_rl experiment tooling
 
-Progress log and live-dashboard link: `docs/rl_progress_log.md`. Code: `src/sts_rl/`.
+Start with `docs/rl_findings_2026-10-13.md` (what works, what failed and why, next
+directions). Chronological detail and the dashboard link: `docs/rl_progress_log.md`.
+Code: `src/sts_rl/`.
 
 - **Run jobs through `queue_runner.py`** (detached, pauses on battery, one job
   per `--lane`). Run outputs and logs are in `data/rl_runs/<name>/`.
