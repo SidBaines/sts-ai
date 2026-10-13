@@ -58,6 +58,37 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 19:18 BST — Elite-seeking raises wins at no floor cost (4,096-world win set); potions-at-boss lead
+
+- **Elite-seeking (take an offered elite path at HP ≥ 90%)**, on top of the
+  distilled agent, 4,096 fresh worlds:
+  - mean floor −0.06 ± 0.12 (null);
+  - **wins 77 → 94 (1.91% → 2.34%)**, discordant 39/56, McNemar p = 0.10;
+  - the earlier 1,024-world test on a different base and worlds was 13 → 22
+    (p = 0.049).
+  - Pooled across the two independent world sets: 43 vs 69 discordant worlds,
+    sign test **p ≈ 0.015**.
+  - **Adopt for the win objective.** The 80% threshold is being tested.
+- **Potions at boss entry** (distilled-agent bank, 1,012 Act 2 boss fights;
+  correlational):
+
+  | Potions held at entry | Act 2 boss win rate |
+  | --- | --- |
+  | 0 | 23% |
+  | 1 | 23% |
+  | 2 | 39% |
+  | 3 | 45% |
+
+  - **36% of Act 2 boss fights start with no potions**, even though 66% of
+    shop purchases are potions.
+  - Won fights also started with more HP (90% vs 75%).
+  - Causal test queued: no potion drinking in hallway fights while HP ≥ 30%
+    (`--save-potions-above 0.3`).
+- **Combat v3** after 3 updates: panel Act 2 boss 33.3 → 34.8%, Act 3 boss
+  17.5 → 20%. Too early to call.
+
+---
+
 ## 2026-10-13 19:09 BST — Win-set baseline 1.91%; PPO keeps the distilled behaviour and builds on it; combat v3 running
 
 - **Best agent (distilled) on the 4,096-world win set: 1.91% win rate**
