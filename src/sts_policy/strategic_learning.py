@@ -15,7 +15,7 @@ from . import entities
 from .entity_model import ResidualOOCPolicy
 from .strategic_collection import StrategicTransition
 
-TRAINER_VERSION = "protected_strategic_ppo_v3_v2"
+TRAINER_VERSION = "protected_strategic_ppo_v3_v3"
 
 
 @dataclass(frozen=True)
@@ -189,6 +189,7 @@ def update(model: ResidualOOCPolicy, rows: Sequence[StrategicTransition], *,
     actor_steps, critic_steps, actor_exposures, critic_exposures, rehearsal_exposures = 0, 0, 0, 0, 0
     unique_actor, unique_critic = set(), set()
     actor_norms, critic_norms, losses, ratios, clip_fractions = [], [], [], [], []
+    actor_after_norms, critic_after_norms = [], []
     stop_reason = None
     before_calibration = calibration(model, rows, device=device, batch_size=config.batch_size)
     model.to(device).train()
@@ -220,8 +221,11 @@ def update(model: ResidualOOCPolicy, rows: Sequence[StrategicTransition], *,
                 actor_optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 norm = torch.nn.utils.clip_grad_norm_(model.actor_parameters(), config.max_actor_norm, error_if_nonfinite=True)
+                after = torch.nn.utils.get_total_norm([p.grad for p in model.actor_parameters() if p.grad is not None], error_if_nonfinite=True)
                 actor_optimizer.step()
-                actor_norms.append(float(norm.cpu()))
+                before_value, after_value = torch.stack((norm, after)).cpu().tolist()
+                actor_norms.append(before_value)
+                actor_after_norms.append(after_value)
                 losses.append(float(policy_loss.detach().cpu()))
                 ratios.append(float(ratio.detach().mean().cpu()))
                 clip_fractions.append(float(((ratio.detach()-1).abs()>config.clip_ratio).float().mean().cpu()))
@@ -243,8 +247,11 @@ def update(model: ResidualOOCPolicy, rows: Sequence[StrategicTransition], *,
             critic_optimizer.zero_grad(set_to_none=True)
             loss.backward()
             norm = torch.nn.utils.clip_grad_norm_(model.critic_parameters(), config.max_critic_norm, error_if_nonfinite=True)
+            after = torch.nn.utils.get_total_norm([p.grad for p in model.critic_parameters() if p.grad is not None], error_if_nonfinite=True)
             critic_optimizer.step()
-            critic_norms.append(float(norm.cpu()))
+            before_value, after_value = torch.stack((norm, after)).cpu().tolist()
+            critic_norms.append(before_value)
+            critic_after_norms.append(after_value)
             critic_steps += 1
             critic_exposures += len(indices)
             unique_critic.update(indices)
@@ -258,8 +265,8 @@ def update(model: ResidualOOCPolicy, rows: Sequence[StrategicTransition], *,
         "critic_exposures": critic_exposures, "rehearsal_exposures": rehearsal_exposures,
         "unique_actor_rows_used": len(unique_actor), "unique_critic_rows_used": len(unique_critic),
         "actor_grad_norm_before_clip": _summary(actor_norms), "critic_grad_norm_before_clip": _summary(critic_norms),
-        "actor_grad_norm_after_clip": _summary([min(n, config.max_actor_norm) for n in actor_norms]),
-        "critic_grad_norm_after_clip": _summary([min(n, config.max_critic_norm) for n in critic_norms]),
+        "actor_grad_norm_after_clip": _summary(actor_after_norms),
+        "critic_grad_norm_after_clip": _summary(critic_after_norms),
         "gradient_interference": "zero by disjoint actor/critic parameter sets; original prior excluded",
         "policy_loss": _summary(losses), "ratio_mean": _summary(ratios), "clip_fraction": _summary(clip_fractions),
         "advantage_before_normalization": {"mean": mean, "std": std}, "stop_reason": stop_reason,

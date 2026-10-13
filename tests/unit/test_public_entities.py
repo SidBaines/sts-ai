@@ -80,12 +80,26 @@ class PublicEntityTests(unittest.TestCase):
                           {"x": 1, "y": 1, "room": "REST", "edges": [1]},
                           {"x": 0, "y": 2, "room": "REST", "edges": []},
                           {"x": 1, "y": 2, "room": "ELITE", "edges": []}]}
+        # Identical reachable nodes/room counts; only feasible path edges differ.
+        # The safe arm offers a REST->REST path, whereas each mandatory arm
+        # crosses exactly one ELITE. A union-of-reachable-rooms bag aliases them.
+        safe["nodes"][2]["edges"] = [0]
+        safe["nodes"][1]["edges"] = [1]
         mandatory = deepcopy(safe)
         mandatory["nodes"][2]["edges"] = [1]
-        safe["nodes"][4]["room"] = "REST"
+        mandatory["nodes"][1]["edges"] = [0]
         a, b = entities.route_features(safe)[(0, 0)], entities.route_features(mandatory)[(0, 0)]
         self.assertEqual(a[1], 0)
         self.assertEqual(b[1], 1)
+        first, second = observation(False), observation(False)
+        first["state"]["map"] = {"cur_y": -1, **safe}
+        second["state"]["map"] = {"cur_y": -1, **mandatory}
+        for obs in (first, second):
+            obs["legal_actions"] = [{"index": 0, "description": "choose map node x=0 room=MONSTER",
+                                     "public": {"kind": "map", "map_x": 0, "map_y": 0}}]
+        np.testing.assert_array_equal(legacy_encode(first).action_features, legacy_encode(second).action_features)
+        self.assertFalse(np.array_equal(entities.encode_observation(first).action_values,
+                                       entities.encode_observation(second).action_values))
         shifted = deepcopy(safe)
         for node in shifted["nodes"]:
             node["x"] += 7
@@ -170,6 +184,28 @@ class PublicEntityTests(unittest.TestCase):
         obs["state"]["observation_version"] = "sts_env_public_v1"
         with self.assertRaisesRegex(ValueError, "requires typed"):
             entities.encode_observation(obs)
+
+    def test_residual_reads_public_selection_purpose(self):
+        first = observation(False)
+        first["state"].pop("combat")
+        first["text"] = "Choose a card to remove from your deck."
+        first["legal_actions"] = [{"index": 0, "description": "select card index 0: Strike [Attack] (cost 1)",
+                                   "public": {"kind": "select_card", "card": card()}}]
+        second = deepcopy(first)
+        second["text"] = "Choose a card to upgrade in your deck."
+        a, b = entities.encode_observation(first), entities.encode_observation(second)
+        # The typed card/inventory fields are identical in this context pair;
+        # controlled public text must also reach the trainable residual itself.
+        np.testing.assert_array_equal(a.entity_values, b.entity_values)
+        np.testing.assert_array_equal(a.action_values, b.action_values)
+        self.assertFalse(np.array_equal(a.legacy_state, b.legacy_state))
+        model = ResidualOOCPolicy({"size": "small", "context": "none"}, width=32, embedding=4)
+        batch = entities.collate_observations([a, b])
+        typed = (*batch[3:10], batch[2], batch[0], batch[1])
+        state, actions, menu, sources, targets = model.actor(*typed)
+        self.assertFalse(torch.allclose(state[0], state[1], atol=1e-7, rtol=1e-7))
+        critic_state = model.value(*typed)[0]
+        self.assertFalse(torch.allclose(critic_state[0], critic_state[1], atol=1e-7, rtol=1e-7))
 
 
 if __name__ == "__main__":

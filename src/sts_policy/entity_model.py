@@ -12,7 +12,7 @@ from .model_agent import policy_from_config, policy_from_payload
 from .training import load_checkpoint, save_checkpoint, file_identity
 from pathlib import Path
 
-MODEL_VERSION = "typed_residual_ooc_v1"
+MODEL_VERSION = "typed_residual_ooc_v2"
 
 
 def code_identity() -> dict[str, str]:
@@ -33,19 +33,23 @@ class EntityTower(nn.Module):
         self.embeddings = nn.ModuleList([nn.Embedding(len(entities.TOKENS), embedding, padding_idx=0)
                                          for _ in range(4)])
         self.entity_encoder = mlp(4 * embedding + entities.ENTITY_DIM, width)
-        self.action_encoder = mlp(4 * embedding + entities.ACTION_DIM, width)
-        self.state_encoder = mlp(2 * width + entities.GLOBAL_DIM, width)
+        # Keep the old controlled public semantics available to the trainable
+        # residual, including screen/selection purpose and complex event prose.
+        # Typed entities add distinctions that the historical hashes discarded.
+        self.action_encoder = mlp(4 * embedding + entities.ACTION_DIM + 128, width)
+        self.state_encoder = mlp(2 * width + entities.GLOBAL_DIM + 256, width)
 
     def embedded(self, ids: torch.Tensor) -> torch.Tensor:
         return torch.cat([embedding(ids[..., i]) for i, embedding in enumerate(self.embeddings)], -1)
 
-    def forward(self, global_values, entity_ids, entity_values, weights, action_ids, action_values, links, mask):
+    def forward(self, global_values, entity_ids, entity_values, weights, action_ids, action_values,
+                links, mask, legacy_state, legacy_actions):
         entity = self.entity_encoder(torch.cat((self.embedded(entity_ids), entity_values), -1))
         weighted = entity * weights.unsqueeze(-1)
         mean = weighted.sum(1) / weights.sum(1, keepdim=True).clamp_min(1)
         total = weighted.sum(1) / 20
-        state = self.state_encoder(torch.cat((mean, total, global_values), -1))
-        actions = self.action_encoder(torch.cat((self.embedded(action_ids), action_values), -1))
+        state = self.state_encoder(torch.cat((mean, total, global_values, legacy_state), -1))
+        actions = self.action_encoder(torch.cat((self.embedded(action_ids), action_values, legacy_actions), -1))
         menu_weights = mask.unsqueeze(-1).to(actions.dtype)
         menu = (actions * menu_weights).sum(1) / menu_weights.sum(1).clamp_min(1)
         # Membership masks only perform joins. Visible source indices are absent.
@@ -93,7 +97,8 @@ class ResidualOOCPolicy(nn.Module):
         with torch.no_grad():
             prior_logits, prior_value = self.prior(legacy_state, legacy_actions, prior_mask)
             prior_logits = prior_logits.gather(1, representatives)
-        typed = (global_values, entity_ids, entity_values, weights, action_ids, action_values, links, mask)
+        typed = (global_values, entity_ids, entity_values, weights, action_ids, action_values, links, mask,
+                 legacy_state, legacy_actions)
         state, actions, menu, sources, targets = self.actor(*typed)
         expanded = state.unsqueeze(1).expand_as(actions)
         residual = self.actor_score(torch.cat((expanded, actions, expanded * actions,

@@ -27,7 +27,7 @@ def power_record(text: str) -> dict[str, Any]:
     percent = re.search(r"(\d+)%;", text)
     return {"battery_percent": int(percent.group(1)) if percent else None,
             "ac_present": "AC Power" in text, "discharging": "discharging" in text,
-            "charging": "charging" in text and "discharging" not in text,
+            "charging": "charging" in text and "discharging" not in text and "not charging" not in text,
             "raw": text.strip()[:500]}
 
 

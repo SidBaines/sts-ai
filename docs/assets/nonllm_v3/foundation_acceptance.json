@@ -381,9 +381,10 @@
     "charging": true,
     "checked_utc": "2026-10-12T23:17:00+00:00"
   },
-  "vocabulary_sha256": {
+  "policy_code_identity": {
     "legacy_bridge_sha256": "4b3ea67b08cfdd221535ff63e8028e09b8843ef4003535c1ca517829b1058c45",
     "typed_encoder_sha256": "3f0bbcd79db4d2c4f61ec0c3abfa257058a16c17f8f36b00df6db7b2ac4c97d5",
     "typed_model_sha256": "1e31998b35016125119cb496a79e4b1fb9f9dd71239e332d4ac4aeefe71f2a50"
-  }
+  },
+  "vocabulary_sha256": "c2159812bd3e052a0801e1d29d7374cb9835bfc312267a6f73fd355aefb6cf82"
 }

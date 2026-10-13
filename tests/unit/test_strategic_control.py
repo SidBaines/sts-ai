@@ -30,6 +30,10 @@ class StrategicControlTests(unittest.TestCase):
         self.assertIsNone(resource_gate(record))
         record["disk_free_bytes"] = 7*1024**3
         self.assertEqual(resource_gate(record), "storage_reserve")
+        record = power_record("Now drawing from 'AC Power'\n 24%; AC attached; not charging")
+        record["disk_free_bytes"] = 20*1024**3
+        self.assertFalse(record["charging"])
+        self.assertEqual(resource_gate(record), "battery_reserve")
 
     def test_paired_retention_preserves_win_gains_and_flags_missing_games(self):
         def episode(i, act=2, outcome="defeat", floor=20):

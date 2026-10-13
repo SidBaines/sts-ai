@@ -49,11 +49,22 @@ def summarize(result: dict) -> dict:
     valid = [e for e in result["episodes"] if e["terminated"] and not e["truncated"]]
     wins = sum(e["task_outcome"] == "victory" for e in valid)
     fresh = [e for e in valid if e["start_family"] == "fresh"]
-    return {"requested": result["requested_tasks"], "finished": len(result["episodes"]),
+    continuations = [e for e in valid if e["start_family"] != "fresh"]
+    fresh_wins = sum(e["task_outcome"] == "victory" for e in fresh)
+    unique_fresh = len({e["world_seed"] for e in fresh}) == len(fresh)
+    return {"summary_version": "strategic_summary_v2", "requested": result["requested_tasks"], "finished": len(result["episodes"]),
         "valid_completed": len(valid), "faults": len(result["faults"]),
         "truncated": sum(e["truncated"] for e in result["episodes"]), "unstarted": result["unstarted_tasks"],
-        "wins": wins, "win_rate": wins / max(1, len(valid)), "win_wilson_95": wilson(wins, len(valid)),
-        "fresh_completed": len(fresh), "fresh_wins": sum(e["task_outcome"] == "victory" for e in fresh),
+        "wins": wins, "win_rate": wins / max(1, len(valid)),
+        "win_wilson_95": wilson(wins, len(valid)) if not continuations and unique_fresh else None,
+        "pooled_rate_note": "Mixed/repeated continuation starts are descriptive counts; no independent-binomial interval.",
+        "wins_with_actor_choices": sum(e["task_outcome"] == "victory" and e["actor_choice_rows"] > 0 for e in valid),
+        "wins_without_actor_choices": sum(e["task_outcome"] == "victory" and e["actor_choice_rows"] == 0 for e in valid),
+        "fresh_completed": len(fresh), "fresh_wins": fresh_wins,
+        "fresh_win_wilson_95": wilson(fresh_wins, len(fresh)) if unique_fresh else None,
+        "fresh_mean_floor": float(np.mean([e["floor"] for e in fresh])) if fresh else None,
+        "continuation_completed": len(continuations), "continuation_wins": sum(e["task_outcome"] == "victory" for e in continuations),
+        "continuation_mean_floor": float(np.mean([e["floor"] for e in continuations])) if continuations else None,
         "act1_clears_fresh": sum(e["max_act_reached"] >= 2 for e in fresh),
         "act2_clears_fresh": sum(e["max_act_reached"] >= 3 for e in fresh),
         "mean_floor": float(np.mean([e["floor"] for e in valid])) if valid else None,

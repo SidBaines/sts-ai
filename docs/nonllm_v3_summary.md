@@ -34,4 +34,16 @@ The first four-chunk macro pilot is complete: all 220 TRAIN requests finished wi
 
 Matched-buffer rates 3e−5/3e−4/1e−3/3e−3 produced original rehearsal mean KL about 2e−11/6e−9/1.9e−7/4.7e−6 after one epoch, with no changed greedy rehearsal choices. The measurements caught a new telemetry bug: MPS flushed tiny float32 reference probabilities to zero in `p*log(p)`, yielding NaN in final behavior KL. Trainer v2 computes diagnostics in CPU float64 and fails closed on non-finite inputs; a real-MPS subnormal regression passes. Original affected outputs remain preserved, and corrected metrics are saved separately in `recomputed_float64_drift.json`. No condition qualifies for scaling from those software measurements alone.
 
-The stronger charger is now verified: 69%, **charging** at 23:17–23:21 UTC. Unattended power gates remain in place. Next: improve residual context/plasticity, then run matched protected learning comparisons and broader independent retention/usefulness checks.
+The stronger charger is now verified: 69%, **charging** at 23:17–23:21 UTC. Unattended power gates remain in place.
+
+## Context-aware learning and actor-bearing curriculum
+
+Model `typed_residual_ooc_v2` adds the controlled legacy features to the trainable actor/critic residual inputs. The new initialization retains all 192 original DEV traces exactly; native micro/macro equivalence still matches all eight TRAIN trajectories/rewards. The source/rehearsal migration checks zero residual outputs and bitwise prior identity, preserves actual old rollout identities, and rejects learned residual migration. Latest host/native suite: **512 tests**, one optional generated-bank skip.
+
+An eight-chunk macro pilot at residual LR 0.003 briefly reached 158/21/0 on DEV192 at chunk 4, then ended **156/18/0** at chunk 8 versus the 156/20/0 baseline. No faults or cuts occurred. Those early gains are not accepted as learning progress. Every checkpoint/evaluation remains saved; the validated champion remains the initialization.
+
+The pilot exposed ineffective positive experience: **eight of ten TRAIN victories started inside the final boss and had zero trainable OOC rows**. The other two actor-bearing wins came from one source world. A new start bank selects real choices before the fight: **44/44 frontiers replay/hash verified**, 37 Act 2 and seven Act 3. The controller reports wins with/without actor choices, independent fresh intervals, conditional counts and separate floor means. Trainer v3 measures actual post-clipping gradient norms; the power parser correctly handles “AC attached; not charging.”
+
+Matched macro/micro pilots from the new OOC starts are active under `data/nonllm_v3/pilots/ooc_starts_{macro,micro}_s0_lr003_8`; a distinct 256-world native TRAIN bank is collecting under `data/nonllm_v3/banks/native_train_expand256`. Both use bounded owned workers and preserve previous results. The first three corrected macro chunks each supplied one actor-bearing conditional win; fresh wins remain zero.
+
+Next gates: compare the matched arms and replicate optimizer seeds, broaden actor-bearing late starts from the expanded bank, test completed-return/longer-credit alternatives if needed, and develop protected native combat supervision using the repaired instance/typed features. Further representation audits should check OOC deck-instance/bottled-card joins, multiple card-reward group associations, and live combat gold; identity coverage alone does not establish semantic completeness. New final data remains unopened.

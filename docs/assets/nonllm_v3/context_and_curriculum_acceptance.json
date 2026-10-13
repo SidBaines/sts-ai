@@ -1,0 +1,211 @@
+{
+  "checkpoint_sha256": "97baecd465f3bf8ad62054c179cd749f6326a074fcca8392cfb78e652947e1a8",
+  "first_context_macro_pilot": {
+    "evaluations": [
+      {
+        "act1": {
+          "candidate": 157,
+          "gains": 1,
+          "losses": 0,
+          "net": 1,
+          "reference": 156
+        },
+        "act2": {
+          "candidate": 20,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 20
+        },
+        "candidate_valid": 192,
+        "changed_traces": 11,
+        "common_valid": 192,
+        "mean_floor_delta": 0.06770833333333333,
+        "reference_valid": 192,
+        "victory": {
+          "candidate": 0,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 0
+        }
+      },
+      {
+        "act1": {
+          "candidate": 158,
+          "gains": 5,
+          "losses": 3,
+          "net": 2,
+          "reference": 156
+        },
+        "act2": {
+          "candidate": 21,
+          "gains": 5,
+          "losses": 4,
+          "net": 1,
+          "reference": 20
+        },
+        "candidate_valid": 192,
+        "changed_traces": 104,
+        "common_valid": 192,
+        "mean_floor_delta": 0.125,
+        "reference_valid": 192,
+        "victory": {
+          "candidate": 0,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 0
+        }
+      },
+      {
+        "act1": {
+          "candidate": 157,
+          "gains": 2,
+          "losses": 1,
+          "net": 1,
+          "reference": 156
+        },
+        "act2": {
+          "candidate": 19,
+          "gains": 0,
+          "losses": 1,
+          "net": -1,
+          "reference": 20
+        },
+        "candidate_valid": 192,
+        "changed_traces": 45,
+        "common_valid": 192,
+        "mean_floor_delta": -0.026041666666666668,
+        "reference_valid": 192,
+        "victory": {
+          "candidate": 0,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 0
+        }
+      },
+      {
+        "act1": {
+          "candidate": 156,
+          "gains": 1,
+          "losses": 1,
+          "net": 0,
+          "reference": 156
+        },
+        "act2": {
+          "candidate": 18,
+          "gains": 0,
+          "losses": 2,
+          "net": -2,
+          "reference": 20
+        },
+        "candidate_valid": 192,
+        "changed_traces": 22,
+        "common_valid": 192,
+        "mean_floor_delta": -0.041666666666666664,
+        "reference_valid": 192,
+        "victory": {
+          "candidate": 0,
+          "gains": 0,
+          "losses": 0,
+          "net": 0,
+          "reference": 0
+        }
+      }
+    ],
+    "status": "pilot_complete",
+    "train_wins": 10,
+    "train_wins_with_actor_choices": 2,
+    "train_wins_without_actor_choices": 8,
+    "unique_winning_actor_worlds": 1
+  },
+  "host_native_suite": {
+    "optional_skips": 1,
+    "passed": true,
+    "tests": 512
+  },
+  "initialization_baseline": {
+    "act1_clears_fresh": 156,
+    "act2_clears_fresh": 20,
+    "elapsed_seconds": 57.96654154197313,
+    "faults": 0,
+    "finished": 192,
+    "fresh_completed": 192,
+    "fresh_wins": 0,
+    "mean_floor": 28.197916666666668,
+    "primitive_steps": 64866,
+    "primitive_steps_per_second": 1119.02484216746,
+    "requested": 192,
+    "truncated": 0,
+    "unstarted": 0,
+    "valid_completed": 192,
+    "win_rate": 0.0,
+    "win_wilson_95": [
+      1.734723475976807e-18,
+      0.01961514606675411
+    ],
+    "wins": 0
+  },
+  "micro_macro_equivalence": {
+    "common": 8,
+    "completed_both": true,
+    "matched_rewards": 8,
+    "matched_traces": 8
+  },
+  "model_kind": "typed_residual_ooc_v2",
+  "native_environment": {
+    "encoder_code_sha256": "ba9cf80d896b9fb02aa4598b3c349cf96b5c0f310df8b73546630abc4b2df82e",
+    "model_code_sha256": "322d5e0e154458b285ddfc78b8e48de015d69d70a925503dcdf6664fceb71029",
+    "native_module_sha256": "ee6f05c837995f90e52908e97cab9972c92185f809ce5f057c52a5cd7aa8b8b9",
+    "python_interface_sha256": "6103bc54422eca1ac34860edda1f9e700aa2969c11b7a83722ed166e9f459552",
+    "runtime_python_version": "3.12.13",
+    "sourced_env_manifest": {
+      "backend_api": 2,
+      "cmake_version": "cmake version 4.1.3",
+      "compiler_version": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+      "json_commit": "0b345b20c888f7dc8888485768e4bf9a6be29de0",
+      "module_file": "slaythespire.cpython-312-darwin.so",
+      "module_sha256": "ee6f05c837995f90e52908e97cab9972c92185f809ce5f057c52a5cd7aa8b8b9",
+      "patch_sha256": "079bfb91efb37a664fb8355766430f75dcbe69670221310a6f2806502f6ba70b",
+      "platform": "macosx-11.0-arm64",
+      "pybind11_tag": "v2.13.6",
+      "python_cache_tag": "cpython-312",
+      "python_version": "3.12.13",
+      "upstream_commit": "7476a81954020087da31d41d16fddf475746ec2d"
+    },
+    "sourced_env_manifest_sha256": "7b3ed4ac06367e0629c8c86d4fe31b2c6cb58ef9519831a2ec6606e0047c2774"
+  },
+  "new_strategic_frontiers": {
+    "act2": 37,
+    "act3": 7,
+    "frontiers": 44,
+    "source_bank_manifest_sha256": "e989079bf987991c85ca4edb8c897a20d04b36c1c72a3ef520325a4b621a43a4",
+    "starts_sha256": "cb8a3968e9dcf8221ec34c1aa7bcfa4a97fb1ad3917c32c6943edb887ea31890",
+    "verified": 44
+  },
+  "note": "No accepted full-game learning gain; corrected strategic-start pilots and expanded TRAIN collection remain active.",
+  "original_baseline_trace_equivalence": {
+    "common": 192,
+    "identical": 192
+  },
+  "policy_code_identity": {
+    "legacy_bridge_sha256": "4b3ea67b08cfdd221535ff63e8028e09b8843ef4003535c1ca517829b1058c45",
+    "typed_encoder_sha256": "3f0bbcd79db4d2c4f61ec0c3abfa257058a16c17f8f36b00df6db7b2ac4c97d5",
+    "typed_model_sha256": "976fd34113ca7654ddcf7ef84b7bd63aee5f8738ab1775de884461fd7bd81089"
+  },
+  "rehearsal_reference_migration": {
+    "output_sha256": "7c67e0a1b6c887593c888a391f24ae5049b2737cac2db72ffd4b94c77c188924",
+    "reference_migration": {
+      "actor_and_value_residual_outputs_zero": true,
+      "frozen_prior_bitwise_equal": true,
+      "note": "Architecture/hidden residual weights change; original behavior and public features are verified equal.",
+      "reference_checkpoint_sha256": "97baecd465f3bf8ad62054c179cd749f6326a074fcca8392cfb78e652947e1a8",
+      "source_buffer_sha256": "a1a15abf816ae4861b39a84f4bf7cb6bf9c1fae8965c4b3d0264a9f6ad513788",
+      "source_checkpoint_sha256": "36a09a52335b083342fbdae6e4726cb956263ce8c12aacaad787b5e46321a276",
+      "version": "checked_zero_residual_reference_v1"
+    },
+    "rows": 2117
+  }
+}

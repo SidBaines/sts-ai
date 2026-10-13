@@ -59,9 +59,9 @@ def main():
     torch.set_num_threads(1)
     model, payload = load_policy(args.initial)
     rehearsal_rows, buffer_metadata = read_buffer(args.rehearsal)
-    if buffer_metadata.get("source_checkpoint_sha256") != file_identity(args.initial):
+    if buffer_metadata.get("reference_checkpoint_sha256", buffer_metadata.get("source_checkpoint_sha256")) != file_identity(args.initial):
         raise ValueError("rehearsal reference differs from the common initialization")
-    if buffer_metadata.get("policy_code_identity") != payload["metadata"]["policy_code_identity"]:
+    if buffer_metadata.get("reference_policy_code_identity", buffer_metadata.get("policy_code_identity")) != payload["metadata"]["policy_code_identity"]:
         raise ValueError("rehearsal policy encoding identity mismatch")
     rehearsal = [entities.encode_observation(r.observation) for r in rehearsal_rows if r.actor_choice]
     baseline_document = json.loads(args.baseline.read_text())

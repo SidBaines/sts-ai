@@ -229,3 +229,14 @@ MPS flushes subnormal float32 probabilities to zero. Final policy KL/TV/entropy
 diagnostics therefore transfer logits to CPU and compute in float64. Never use
 MPS `p * log(p)` with tiny reference probabilities as a stopping guard: it can
 produce NaN and silently bypass comparisons. Non-finite diagnostics fail closed.
+
+Model v2 feeds controlled legacy features into the trainable residual as well
+as the immutable prior; model v1 remains reproducible at `bab055a`. A checked
+zero-residual migration can add a new rehearsal reference without relabeling its
+actual source trajectories. Learned residuals require a separate migration.
+
+Use `scripts/build_strategic_starts_v3.py` to construct/hash-replay OOC starts
+before later fights. OOC teacher records have `simulations=None`; prefix task
+settings come from the run-level journal configuration. Boss-only continuation
+wins can have zero actor rows and must not count as useful strategic learning
+experience. Mixed/repeated continuation counts do not get a binomial interval.
