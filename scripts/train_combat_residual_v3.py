@@ -102,20 +102,22 @@ def main():
     parser.add_argument("--teacher", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--data-seed", type=int, default=0)
     parser.add_argument("--steps", type=int, default=160)
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--lr", type=float, default=3e-4)
     parser.add_argument("--per-act", type=int, default=6000)
     parser.add_argument("--anchor", type=float, default=.1)
+    parser.add_argument("--checkpoint-every", type=int, default=40)
     parser.add_argument("--device", choices=("cpu","mps"), default="mps")
     args = parser.parse_args()
-    if args.output.exists() or min(args.steps,args.batch_size,args.per_act,args.lr) <= 0:
+    if args.output.exists() or min(args.steps,args.batch_size,args.per_act,args.lr,args.checkpoint_every) <= 0:
         parser.error("use fresh output and positive training settings")
     torch.set_num_threads(1)
     started = time.monotonic()
     model, transfer = initialize(args.base, seed=args.seed)
     args.output.mkdir(parents=True)
-    data, data_record = prepare(args.teacher, args.seed, args.per_act)
+    data, data_record = prepare(args.teacher, args.data_seed, args.per_act)
     if not data["train"]:
         raise ValueError("no choice combat examples")
     before = validation(model, data["holdout"], args.device)
@@ -149,7 +151,7 @@ def main():
                         "grad_before":float(norm.cpu()),"grad_after":float(after_norm.cpu())})
         exposures.update(act for act,_ in selected)
         unique.update(selected)
-        if step%40 == 0 or step == args.steps:
+        if step%args.checkpoint_every == 0 or step == args.steps:
             path = args.output/f"combat_{step:04d}.pt"
             save_policy(str(path),model,optimizer=optimizer,step=step,
                 metadata={"stage":"native_combat_equivalence_bc","transfer":transfer,"data":data_record,

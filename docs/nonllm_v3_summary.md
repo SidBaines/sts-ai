@@ -59,3 +59,11 @@ The first fit used 207 TRAIN worlds, with 49 different TRAIN worlds held for tea
 The live DEV192 result is **164/15/1**, mean floor 28.484: paired +8 Act 1 clears, −5 Act 2 clears, +1 full-game win, +0.286 mean floors. All 192 games completed without faults/cuts. This is a mixed early candidate requiring independent confirmation and further diagnosis; it is not promoted. Checkpoints at steps 40/80/120/160 and complete metrics are preserved in `data/nonllm_v3/combat/bc_s0_lr0003_160`; eval is `data/nonllm_v3/evals/combat_bc_s0_160_dev192.json`.
 
 The zero-combat control retains aggregate **156/20/0**, but one of 192 action traces differs under full typed combat batching. Padding/floating-point rounding is a hypothesis, not a verified cause. Resolve that discrepancy before claiming exact behavior preservation for the combat extension. Latest complete suite: **516 tests**, one optional generated-bank skip; mandatory bounded native smoke passes. Next: trace diagnosis, independent DEV confirmation, optimizer-seed replication and stronger teacher/credit comparisons as evidence warrants. No final cohort has been opened.
+
+## Confirmation and rejected scaling controls
+
+The short combat candidate independently confirms **164/17/1** on a second DEV192 cohort, versus baseline **157/16/0**. Across those two disjoint cohorts it wins 2/384 versus 0/384, with mixed Act 2 retention; this remains a small, unpromoted signal.
+
+The fixed-pool optimizer/model seed-1 replication finishes **152/17/0**, mean floor 27.078 versus 28.198. A ten-times-longer seed-0 fit (1,600 updates, 409,600 exposures) finishes **134/8/0**, a severe regression despite improved held teacher loss. More cloning is not qualified. Native-private labels, source-state distribution and public-state distinguishability require diagnosis; teacher likelihood is not an outcome gate.
+
+A live single-world probe of the zero-combat discrepancy (world 330001092) records maximum compact-versus-expanded logit delta **5.72e−6**, with no changed choices when run alone. This supports a batching/rounding hypothesis but does not resolve the eight-worker trace difference. Evidence is `data/nonllm_v3/preflight/zero_combat_rounding_probe.json`. Subsequent work should capture the first divergence under the original batch layout and preserve mathematical/control fidelity explicitly.
