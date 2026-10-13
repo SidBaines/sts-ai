@@ -16,10 +16,35 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 
 ### Where we are (pinned; updated in place)
 
-All results are greedy, paired vs the original on ~1,010 worlds.
+**Objective:** complete the game, i.e. an Ascension 0 Act 3 boss win
+("victory"). Win rate is the headline; mean floor is secondary.
 
-| | Mean floor | Paired vs original | Wins | Notes |
+| Agent | Win rate | Mean floor | Paired floors vs original | Evidence |
 | --- | --- | --- | --- | --- |
+| Original (`joint_act3_0030.pt`) | 0.30% (3/1,009) | 28.8 | — | fresh worlds |
+| OOC PPO, update 36 | 1.09% (11/1,009) | 31.8 | +2.99 [2.39, 3.57] | fresh worlds |
+| **Update 36 + distilled smith rule** (`distill_smith85_i36/distilled.pt`) | **1.91%** (77/4,041) | 33.2 | +4.29 [3.67, 4.87] | fresh 1,024 + win set 4,096 |
+| …plus the elite rule (HP ≥ 90%) as an overlay | **2.34%** (94/4,023) | 33.1 | ≈ +4.2 | win set; wins p ≈ 0.015 pooled across 2 world sets |
+
+**What works:**
+- The E8 OOC PPO recipe: +3 floors, replicated across seeds.
+- Measuring strategy rules with paired evals, then distilling them into the
+  network: smith ≥85% gives +1.3 floors; elite ≥90% gives more wins.
+
+**What we learned:**
+- The OOC logits are saturated, so PPO never explores strategic options.
+- With λ = 0.95 macro credit, the critic biases against delayed-payoff
+  choices. Plain PPO unlearns distilled smithing (−0.54 by update 16).
+  λ = 1.0 credit has the right sign.
+
+**Running:**
+- λ = 1.0 and λ = 0.99 PPO from the distilled agent.
+- Discovery from scratch (exploration + λ = 1).
+- Combat v3 (dense credit).
+
+**Biggest wall:** the Act 2 boss (31% pass) and the Act 3 boss (17% pass).
+
+--- | --- | --- | --- | --- |
 | Original | 29.27 | — | 1–2 | |
 | OOC PPO, update 28 | 31.92 | +2.69 [2.12, 3.24] | 11 | E8 recipe; seed 2 replicates (+1.37 at update 12 vs +1.57) |
 | OOC PPO, update 36 (`ooc_main_s1/iter_0036.pt`) | 32.34 | **+3.14** [2.58, 3.70] | 11 | still improving |
