@@ -19,8 +19,28 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 **Objective:** complete the game, i.e. an Ascension 0 Act 3 boss win
 ("victory"). Win rate is the headline; mean floor is secondary.
 
-| Agent | Win rate | Mean floor | Paired floors vs original | Evidence |
-| --- | --- | --- | --- | --- |
+| Agent | Win rate (4,096-world win set) | Mean floor | Notes |
+| --- | --- | --- | --- |
+| Original (`joint_act3_0030.pt`) | ~0.3% (3/1,009 fresh) | 28.8 | |
+| OOC PPO, update 36 (λ = 0.95) | ~1.1% (11/1,009 fresh) | 31.8 | |
+| + distilled smith rule (`distill_smith85_i36/distilled.pt`) | 1.92% | 33.19 | |
+| + PPO λ = 1.0, 12 updates (`ooc_pfd_lam1/iter_0012.pt`) | 2.09% | **34.08** | best mean floor |
+| + distilled elite rule (`distill_r2_lam1i12/distilled.pt`) | **2.32%** | 33.59 | best win rate (n.s. vs the others) |
+
+**What works:**
+- The E8 OOC PPO recipe, now with **λ = 1.0**.
+- Measuring strategy rules with paired evals, then distilling them into the
+  network and continuing PPO.
+
+**What we learned:**
+- The OOC logits are saturated, so PPO never explores strategic options.
+- λ = 0.95 critic bootstrapping biases credit against delayed payoffs and
+  unlearns smithing.
+- Combat PPO on fight banks does not move full-game outcomes, sparse or dense.
+
+**Biggest wall:** the Act 2 boss (~31% pass) and the Act 3 boss (~17% pass).
+
+--- | --- | --- | --- | --- |
 | Original (`joint_act3_0030.pt`) | 0.30% (3/1,009) | 28.8 | — | fresh worlds |
 | OOC PPO, update 36 | 1.09% (11/1,009) | 31.8 | +2.99 [2.39, 3.57] | fresh worlds |
 | **Update 36 + distilled smith rule** (`distill_smith85_i36/distilled.pt`) | **1.91%** (77/4,041) | 33.2 | +4.29 [3.67, 4.87] | fresh 1,024 + win set 4,096 |
@@ -80,6 +100,31 @@ Branches vs main are compared at updates 36/40/44 with
 
 **Main open problem:** the OOC policy's logits are saturated, so PPO cannot
 explore strategic options. Exploration is the lever.
+
+---
+
+## 2026-10-13 20:56 BST — Win set: λ = 1.0 gives +0.87 floors (tight); elite-seeking keeps trading floors for wins
+
+4,096-world win set (TRAIN seeds from 6e9), paired vs the distilled agent:
+
+| Agent | Mean floor | Paired floors | Wins (of ~4,010) | McNemar p |
+| --- | --- | --- | --- | --- |
+| Distilled (smith ≥85%) | 33.19 | — | 77 (1.92%) | — |
+| λ = 1.0 PPO, update 12 | **34.08** | **+0.87 [0.59, 1.13]** | 84 (2.09%) | 0.58 |
+| Round 2 = λ1@12 + distilled smith + elite | 33.59 | +0.41 [0.11, 0.73] | **93 (2.32%)** | 0.18 |
+| Distilled + elite ≥90% overlay | 33.12 | −0.06 | 94 (2.34%) | 0.10 |
+
+- **λ = 1.0 is a robust mean-floor gain**, confirmed at 4,096 worlds. It
+  translates into only a small win gain so far.
+- **Elite-seeking consistently trades ~0.4–0.5 floors for +10–17 wins per
+  4,000.** The direction holds in every comparison, but no single one is
+  significant (round 2 vs λ1@12: −0.47 floors, 82 → 93 wins, p = 0.39).
+- λ = 1.0 at update 16, standard set: +0.80 [0.25, 1.36] vs distilled. It is
+  holding.
+- **Launched:**
+  - `ooc_r2_lam1`: PPO λ = 1.0 from the round-2 agent.
+  - Win-set test of avoiding Fusion Hammer and Coffee Dripper on top of
+    round 2.
 
 ---
 
