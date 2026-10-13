@@ -43,14 +43,16 @@ def train_tasks(start: int, count: int, *, max_act: int = 3, horizon: int = 4096
 def make_workers(count: int, *, timeout: float = 10.0, dead_action_filter: bool = False,
                  slim: bool = True, forced_play: bool = False, dominated: bool = False,
                  smith_above: float | None = None, prefer_remove: bool = False,
-                 elite_above: float | None = None, skip_cards_after: int | None = None) -> list[Any]:
+                 elite_above: float | None = None, skip_cards_after: int | None = None,
+                 save_potions_above: float | None = None) -> list[Any]:
     workers = [CurriculumWorker(config=WORKER_CONFIG, timeout=timeout) for _ in range(count)]
     if not (dead_action_filter or slim or forced_play or dominated or smith_above is not None or prefer_remove
-            or elite_above is not None or skip_cards_after is not None):
+            or elite_above is not None or skip_cards_after is not None or save_potions_above is not None):
         return workers
     return [FilteringWorker(w, dead_actions=dead_action_filter, slim=slim, forced_play=forced_play,
                             dominated=dominated, smith_above=smith_above, prefer_remove=prefer_remove,
-                            elite_above=elite_above, skip_cards_after=skip_cards_after) for w in workers]
+                            elite_above=elite_above, skip_cards_after=skip_cards_after,
+                            save_potions_above=save_potions_above) for w in workers]
 
 
 def close_workers(workers: Sequence[Any]) -> None:
@@ -117,6 +119,25 @@ def _energy(observation: dict[str, Any]) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def save_potions(observation: dict[str, Any], below: float) -> dict[str, Any]:
+    """In hallway (MONSTER) fights, hide potion drinking unless HP fraction < ``below``.
+
+    Act 2 boss fights entered with 0-1 potions are won ~23% of the time vs 39-45%
+    with 2-3 (correlational), and 36% start with none, so test saving potions for
+    elites and bosses."""
+    if observation.get("phase") != "combat":
+        return observation
+    state = observation.get("state") or {}
+    if not str(state.get("room", "")).endswith("MONSTER"):
+        return observation
+    fraction = hp_fraction(observation)
+    if fraction is None or fraction < below:
+        return observation
+    legal = observation.get("legal_actions") or []
+    kept = [a for a in legal if not str(a.get("description", "")).startswith("drink potion")]
+    return observation if not kept or len(kept) == len(legal) else {**observation, "legal_actions": kept}
 
 
 def force_play(observation: dict[str, Any]) -> dict[str, Any]:
@@ -237,11 +258,12 @@ class FilteringWorker:
     def __init__(self, worker: CurriculumWorker, *, dead_actions: bool = True, slim: bool = False,
                  forced_play: bool = False, dominated: bool = False, smith_above: float | None = None,
                  prefer_remove: bool = False, elite_above: float | None = None,
-                 skip_cards_after: int | None = None) -> None:
+                 skip_cards_after: int | None = None, save_potions_above: float | None = None) -> None:
         self.worker, self.dead_actions, self.slim = worker, dead_actions, slim
         self.forced_play, self.dominated = forced_play, dominated
         self.smith_above, self.prefer_remove, self.elite_above = smith_above, prefer_remove, elite_above
         self.skip_cards_after = skip_cards_after
+        self.save_potions_above = save_potions_above
 
     def _map(self, observation: dict[str, Any]) -> dict[str, Any]:
         # Menu filters run before slimming: they read structured state and relic text.
@@ -249,6 +271,8 @@ class FilteringWorker:
             observation = force_play(observation)
         if self.dominated:
             observation = drop_dominated(observation)
+        if self.save_potions_above is not None:
+            observation = save_potions(observation, self.save_potions_above)
         if (self.smith_above is not None or self.prefer_remove or self.elite_above is not None
                 or self.skip_cards_after is not None):
             observation = apply_overlays(observation, smith_above=self.smith_above, prefer_remove=self.prefer_remove,
