@@ -47,6 +47,7 @@ def main():
     parser.add_argument("--critic-lr", type=float, default=1e-4)
     parser.add_argument("--lambda", dest="gae_lambda", type=float, default=.95)
     parser.add_argument("--actor-act-balanced",action="store_true",help="Give each present act equal actor-loss mass")
+    parser.add_argument("--training-reward",choices=("progress","sparse"),default="progress")
     parser.add_argument("--deadline-utc", default="2026-10-13T07:30:00+00:00")
     parser.add_argument("--device", choices=("cpu", "mps"), default="mps")
     args = parser.parse_args()
@@ -99,6 +100,9 @@ def main():
     state["source_identity"] = source_identity
     state["bank_sha256"] = file_identity(args.bank)
     state["rehearsal_sha256"] = file_identity(args.rehearsal)
+    training_settings={**worker_settings(),"reward_mode":args.training_reward}
+    state["training_worker_settings"]=training_settings
+    state["evaluation_worker_settings"]=worker_settings()
     args.output.mkdir(parents=True)
     journal = args.output / "status.json"
     def publish(status=None, phase=None):
@@ -118,7 +122,9 @@ def main():
         except FileNotFoundError:
             pass
         with ExitStack() as stack:
-            workers = [stack.enter_context(CurriculumWorker(worker_settings(), timeout=10.)) for _ in range(args.workers)]
+            workers = [stack.enter_context(CurriculumWorker(training_settings, timeout=10.)) for _ in range(args.workers)]
+            evaluation_workers=workers if args.training_reward=="progress" else [
+                stack.enter_context(CurriculumWorker(worker_settings(),timeout=10.)) for _ in range(args.workers)]
             total_steps = 0
             for chunk in range(1, args.chunks+1):
                 state["resources"] = resources(args.output)
@@ -192,7 +198,7 @@ def main():
                         publish("allocation_checkpoint", "saved")
                         break
                     publish(phase=f"evaluate_{chunk:04d}")
-                    evaluation = collect(model, workers, evaluation_tasks, credit_unit="macro", deterministic=True,
+                    evaluation = collect(model, evaluation_workers, evaluation_tasks, credit_unit="macro", deterministic=True,
                         max_seconds=min(180., remaining-5), retain_transitions=False)
                     evaluation.pop("transitions")
                     paired = paired_retention(baseline, evaluation)

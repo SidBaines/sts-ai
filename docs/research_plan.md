@@ -72,3 +72,14 @@ all 192 canonical original-policy controls/rewards/endpoints transfer unchanged.
 Old 0.2 sources/binaries/data are preserved; fresh compatible artifacts are
 `data/nonllm_v4`. A new 64-world TRAIN bank completes with no faults. Useful
 learning remains unproven; see `docs/public_entities_v4.md` and the latest summary.
+
+The overnight study is saved with no promoted learner. Current-profile strategic
+controls end 159/18/0 (uniform), 158/20/0 (act-balanced seed 0), 156/17/0
+(act-balanced seed 1), and 157/20/0 (sparse-reward act-balanced seed 0), versus
+156/20/0 initially on the same DEV192 panel. The final learner finishes at
+06:25:46 UTC. Current acceptance is 540 host/native tests (one optional skip),
+bounded smoke, 192/192 canonical transfer and 192/192 fresh-process full-trace
+determinism. These establish execution and interpretable experiments, not
+full-game mastery. See the [morning report](nonllm_overnight_report_2026-10-13.md)
+for the next proposed outcome-validated supervision study. The expanded OOC
+potion menu remains a separately tested candidate, not the default interface.

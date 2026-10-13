@@ -1,17 +1,47 @@
 # Repaired training study progress
 
-At 06:05 UTC, an act-balanced actor-loss control is running under the accepted
-0.3 profile. Its first 57 pre-update trajectories match the uniform-loss control
+## Current status: morning of 13 October
+
+**The repaired setup is verified; reliable full-game improvement is not.** All
+four current-profile strategic pilots finished and saved their recovery models.
+The last learner finished at **06:25:46 UTC**, before the allocation checkpoint.
+No learner was promoted. The [morning report](nonllm_overnight_report_2026-10-13.md)
+collects the main findings, changes and proposed next study.
+
+| Current 0.3 DEV192 condition | Act 1 clears | Act 2 clears | Full wins |
+| --- | ---: | ---: | ---: |
+| Original-policy transfer | 156 | 20 | 0 |
+| Macro λ=1, uniform actor loss, seed 0 | 159 | 18 | 0 |
+| Macro λ=1, act-balanced actor loss, seed 0 | 158 | 20 | 0 |
+| Same act-balanced condition, seed 1 | 156 | 17 | 0 |
+| Sparse training reward, act-balanced, seed 0 | 157 | 20 | 0 |
+
+Every panel has 192 valid common worlds. These repeated development evaluations
+are not independent win-rate replications. Sparse training uses separate
+evaluation workers with the unchanged progress-reward reference configuration;
+its outcome gate is directly paired to the same baseline. Removing progress
+shaping did not establish a full-win gain in this bounded pilot.
+
+The act-balanced arm's first 57 pre-update trajectories match the uniform arm
 exactly. Actual first-buffer exposures are 1,276/935/237 for Acts 1/2/3, while
-loss mass is **816/816/816**. The critic and rehearsal settings stay matched;
-this changes loss weighting rather than reporting nominal episode balance as
-gradient balance. The uniform current-profile arm ended **159/18/0**.
+loss mass is **816/816/816**. This verifies the intended weighting intervention;
+it does not demonstrate learning superiority. The seed-0 retention result does
+not replicate in seed 1.
+
+Latest acceptance is **540 host/native tests**, one optional generated-bank
+skip, plus the mandatory bounded native smoke without error. Old/new canonical
+control transfer matches 192/192 worlds; two new-profile fresh processes also
+match all 192 full action-JSON hashes. The dashboard export includes completed
+current-profile learning alongside the preserved older profile.
 
 An independent [OOC potion candidate](ooc_potions_candidate.md) repairs missing
 legal consumption/discard choices and native execution fallthrough, with bounded
 mechanics and patch checks. It does not replace the accepted binary, existing
 data or policy menus; its expanded action space needs explicit policy transfer
 and integration before adoption.
+
+The dated sections below are historical investigation records. Their active or
+pending statements are superseded by this current status.
 
 ## Current-profile learning controls: 13 October 05:50 UTC
 
