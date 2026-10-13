@@ -18,6 +18,8 @@ Next bounded study: λ=.95 versus λ=1 strategic macro credit under identical br
 
 Earlier dated entries below are the historical progress record; current status above supersedes their active/pending statements.
 
+At 03:57 UTC, the broader-start λ=.95 reference completes all eight chunks and ends **157/19/0**, mean floor delta +0.046875 on DEV192, versus 156/20/0 initially. All checks are complete and no full-win gain is established. The matched λ=1 optimizer-seed-0 arm is active in `pilots/expanded_macro_lam1_s0_8`. Source/model code stays frozen through these arms.
+
 ## 12 October overnight allocation started
 
 Work is active in `codex/nonllm-critique` under the user's new CPU/GPU authorization until approximately **13 October 07:30 UTC**. The earlier v1/v2 campaigns and their unused budgets are preserved. The [implementation plan](nonllm_v3_plan.md) and [critique](nonllm_training_critique_2026-10-12.md) define the scope. This study needs a compatible retaining warm start and evidence of useful learning before a sustained run.
