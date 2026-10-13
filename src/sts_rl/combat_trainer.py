@@ -46,7 +46,14 @@ class CombatTrainConfig:
     gae_lambda: float = 1.0
     target_kl: float = 0.05
     micro_batch: int = 1024
-    hp_weight: float = 0.3          # terminal HP retention bonus on wins
+    hp_weight: float = 0.3          # terminal HP retention bonus on wins (worker reward)
+    # Dense credit (2026-10-13): win/loss alone over ~40-decision boss fights moved the
+    # sampled win rate only 0.51 -> 0.55 in 38 updates. Per-step shaping by
+    # phi = shaping_hp * player_hp_frac - shaping_enemy * enemy_hp_frac, telescoping to
+    # phi(final) - phi(start): HP kept on wins, damage dealt on losses. Use with
+    # gae_lambda < 1 so the combat critic localises credit. 0/0 = original behaviour.
+    shaping_hp: float = 0.0
+    shaping_enemy: float = 0.0
     mix: str = "BOSS2:0.35,ELITE2:0.35,BOSS1:0.1,ELITE1:0.05,BOSS3:0.075,ELITE3:0.075"
     holdout_fraction: float = 0.2
     panel_every: int = 2
@@ -69,6 +76,52 @@ def _battle_workers(count: int, hp_weight: float) -> list[Any]:
     config = {**WORKER_CONFIG, "terminal_hp_weight": hp_weight}
     return [FilteringWorker(CurriculumWorker(config=config, timeout=60.0), dead_actions=False, slim=True)
             for _ in range(count)]
+
+
+def combat_potential(observation: dict[str, Any], hp_weight: float, enemy_weight: float) -> float:
+    state = observation.get("state") or {}
+    combat = state.get("combat") or {}
+    hp = float(combat.get("player_cur_hp", state.get("cur_hp", 0)) or 0)
+    max_hp = float(combat.get("player_max_hp", state.get("max_hp", 1)) or 1)
+    enemies = [e for e in combat.get("enemies", []) if float(e.get("max_hp", 0) or 0) > 0]
+    total = sum(float(e["max_hp"]) for e in enemies)
+    alive = sum(max(0.0, float(e.get("cur_hp", 0) or 0)) for e in enemies if e.get("alive", True))
+    return hp_weight * hp / max(1.0, max_hp) - enemy_weight * alive / max(1.0, total)
+
+
+def shape_episodes(transitions: list[Any], episodes: list[dict[str, Any]], *, hp_weight: float,
+                   enemy_weight: float, gae_lambda: float) -> int:
+    """Recompute advantages/returns with potential shaping; returns episodes shaped.
+
+    Terminal potential is the true final state: a win leaves no enemy HP (player HP
+    from the last observation), a loss leaves no player HP (enemy HP from the last
+    observation, before the final action, a slight underestimate of damage dealt)."""
+    from sts_policy.losses import generalized_advantages
+    from .ooc_trainer import split_episodes
+    groups = split_episodes(transitions)
+    finished = [e for e in episodes if e.get("steps")]
+    if len(groups) != len(finished):
+        raise RuntimeError(f"episode alignment failed: {len(groups)} trajectories vs {len(finished)} episodes")
+    for ep, info in zip(groups, finished):
+        if ep[0].world_seed != info["world_seed"]:
+            raise RuntimeError("episode alignment failed: world seeds differ")
+        phis = [combat_potential(t.observation, hp_weight, enemy_weight) for t in ep]
+        last = ep[-1]
+        if last.terminated:
+            won = info.get("task_outcome") == "battle_victory"
+            final = combat_potential(last.observation, hp_weight, 0.0) if won else \
+                combat_potential(last.observation, 0.0, enemy_weight)
+        else:
+            final = phis[-1]
+        nexts = phis[1:] + [final]
+        rewards = [t.reward + n - p for t, p, n in zip(ep, phis, nexts)]
+        adv, ret = generalized_advantages(rewards, [t.behavior_value for t in ep],
+                                          [t.terminated for t in ep], [t.truncated for t in ep],
+                                          [0.0 if t.terminated else float(t.next_value) for t in ep],
+                                          gamma=1.0, gae_lambda=gae_lambda)
+        for t, a, r in zip(ep, adv, ret):
+            t.advantage, t.returns = a, r
+    return len(groups)
 
 
 def fight_panel(model: torch.nn.Module, workers, rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -151,6 +204,9 @@ def train(cfg: CombatTrainConfig, *, resume: bool = False) -> None:
             model.eval()
             result = collect_rollouts(model, workers, tasks, collate=collate_public, forward=forward_policy,
                                       config=ppo, max_seconds=3600, deterministic=False, deferred_bootstrap=True)
+            if cfg.shaping_hp or cfg.shaping_enemy:
+                shape_episodes(result["transitions"], result["episodes"], hp_weight=cfg.shaping_hp,
+                               enemy_weight=cfg.shaping_enemy, gae_lambda=cfg.gae_lambda)
             transitions = [t for t in result["transitions"] if len(t.observation["legal_actions"]) > 1]
             wins = [e.get("task_outcome") == "battle_victory" for e in result["episodes"]]
             update = update_ppo(model, transitions, collate=collate_public, forward=forward_policy, config=ppo,
