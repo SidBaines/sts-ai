@@ -38,6 +38,26 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 17:07 BST — Correction: main had not plateaued (+3.14 at update 36); smith ≥85% ≈ ≥70%
+
+- **Correction to the 16:36 entry:** `ooc_main_s1` update 36 is **32.34,
+  paired +3.14 (CI [2.58, 3.70])**, up from +2.65 at update 32. The "plateau"
+  call at update 32 was premature, based on one noisy eval step. Main is still
+  improving.
+- **At matched update 36, vs main:**
+  - `strat8` (exploration): −0.37 ± 0.26.
+  - `smith70` (rule + PPO): +0.35 ± 0.28.
+
+  Neither is significant.
+- **Smith threshold 85%:** +1.35 (CI [0.95, 1.79]) vs update 28, and
+  +0.18 ± 0.17 vs the 70% threshold. **The rule is robust from 70% to 85%;
+  50% is harmful (−0.57).**
+- **Queued:** main update 36 + smith ≥85% applied at evaluation only. This
+  separates the rule's value from the value of training with it.
+- **Elite and card-skip overlay evals** are next in the queue.
+
+---
+
 ## 2026-10-13 17:02 BST — Replicate holds at update 12; the smith threshold is sharp (50% hurts, 70% helps)
 
 - **Seed-2 replicate, update 12: +1.37 (CI [0.85, 1.90])**. Seed 1 was +1.57.
@@ -122,7 +142,7 @@ explore strategic options. Exploration is the lever.
 - **Seed-2 replicate update 8: 30.70, paired +1.46 (95% CI [0.96, 1.98])** vs the
   original. Seed 1 was +1.14 at update 8. **The E8 recipe replicates across
   training seeds.**
-- **Main has plateaued:** update 28 +2.69, update 32 +2.65 (CI [2.08, 3.21]).
+- **Main has plateaued (WRONG, see correction above: update 36 is +3.14):** update 28 +2.69, update 32 +2.65 (CI [2.08, 3.21]).
   Training-game floor is flat at ~31.0–32.0. This fits the exploration limit:
   PPO has exhausted what it can change among options it samples.
 - **The exploration branch's gradient is cleaner.** Half-batch gradient cosine
