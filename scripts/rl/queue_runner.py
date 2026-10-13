@@ -69,6 +69,24 @@ def alive(pid: int) -> bool:
         return False
 
 
+def run_log(run: dict) -> Path:
+    """The trainer's log: under its --out directory, which need not match the queue name
+    (resumed and branched runs). Using RUNS/<name> for those made the stall watchdog
+    kill healthy runs STALL_MINUTES after launch (2026-10-13, ooc_main_s1_ext4)."""
+    cmd = run.get("cmd", [])
+    if "--out" in cmd and cmd.index("--out") + 1 < len(cmd):
+        return ROOT / cmd[cmd.index("--out") + 1] / "log.jsonl"
+    return RUNS / run["name"] / "log.jsonl"
+
+
+def last_activity(run: dict) -> tuple[float, bool]:
+    """Latest sign of progress, and whether the run writes a progress log at all."""
+    log, stdout = run_log(run), RUNS / run["name"] / "stdout.log"
+    times = [run.get("started", 0), run.get("resumed_at", 0)]
+    times += [f.stat().st_mtime for f in (log, stdout) if f.exists()]
+    return max(times), log.exists()
+
+
 def launch(run: dict) -> int:
     out = RUNS / run["name"]
     out.mkdir(parents=True, exist_ok=True)
@@ -106,7 +124,7 @@ def runner() -> None:
                     finished = not alive(pid)
                     run.setdefault("returncode", None)
                 if finished:
-                    log = RUNS / run["name"] / "log.jsonl"
+                    log = run_log(run)
                     done = log.exists() and '"event": "done"' in log.read_text()[-2000:]
                     code = run.get("returncode")
                     # Non-trainer jobs (evals) write no log.jsonl; a runner restarted since
@@ -121,9 +139,10 @@ def runner() -> None:
                     os.killpg(pid, signal.SIGCONT)
                     run["status"] = "running"
                     run["resumed_at"] = time.time()
-                log = RUNS / run["name"] / "log.jsonl"
-                last = max(log.stat().st_mtime if log.exists() else 0, run.get("started", 0), run.get("resumed_at", 0))
-                if run["status"] == "running" and time.time() - last > STALL_MINUTES * 60:
+                last, has_log = last_activity(run)
+                # Jobs without a progress log (evaluations) only print at the end.
+                limit = STALL_MINUTES * 60 * (1 if has_log else 3)
+                if run["status"] == "running" and time.time() - last > limit:
                     os.killpg(pid, signal.SIGKILL)
                     if not run.get("retried") and "--resume" not in run["cmd"]:
                         run.update(cmd=run["cmd"] + ["--resume"], retried=True, status="pending", stalled_at=time.time())
