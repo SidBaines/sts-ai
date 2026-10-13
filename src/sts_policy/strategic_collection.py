@@ -25,7 +25,7 @@ from .legacy_bridge import project_legacy_menu
 from .losses import generalized_advantages
 from .rollout_training import task_identity, public_endpoint_state
 
-COLLECTOR_VERSION = "frozen_combat_strategic_v3_v2"
+COLLECTOR_VERSION = "frozen_combat_strategic_v3_v3"
 SAMPLING_STREAM_VERSION = "frozen_combat_strategic_v3_v1"
 
 
@@ -85,16 +85,19 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
             credit_unit: str = "macro", sampling_seed: int = 0, deterministic: bool = False,
             gamma: float = 1., gae_lambda: float = .95, max_seconds: float = 120.,
             retain_transitions: bool = True, frozen_combat: bool = True,
-            decision_observer=None) -> dict[str, Any]:
+            decision_observer=None, native_combat_simulations: int | None = None) -> dict[str, Any]:
     if credit_unit not in {"micro", "macro"} or gamma != 1 or not workers or max_seconds <= 0:
         raise ValueError("valid workers, budget and gamma=1 micro/macro mode required")
+    if native_combat_simulations is not None and (native_combat_simulations < 1 or retain_transitions or not frozen_combat):
+        raise ValueError("native combat comparator requires a positive budget, frozen OOC base and no training rows")
     model.cpu().eval()
     started = time.monotonic()
     pending = iter(tasks)
     active: dict[int, dict[str, Any]] = {}
     transitions, episodes, faults = [], [], []
     resets, excluded = 0, 0
-    timings = {"policy_seconds": 0., "reset_wait_seconds": 0., "step_wait_seconds": 0., "bootstrap_seconds": 0.}
+    timings = {"policy_seconds": 0., "reset_wait_seconds": 0., "step_wait_seconds": 0., "bootstrap_seconds": 0.,
+               "teacher_wait_seconds":0.}
     exposures: Counter = Counter()
 
     def start(slot: int) -> None:
@@ -222,6 +225,21 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
                 typed = samples.get(slot)
                 samples[slot] = (position, 0., typed[2] if typed else float(values[i]), typed[3] if typed else None)
         timings["policy_seconds"] += time.monotonic() - stamp
+        if native_combat_simulations is not None:
+            queries = {slot:workers[slot].submit("teacher_action",native_combat_simulations) for slot in combat_slots}
+            for slot,future in queries.items():
+                stamp = time.monotonic()
+                try:
+                    index = int(future.result())
+                    position = next((i for i,a in enumerate(active[slot]["obs"]["legal_actions"]) if int(a["index"])==index),None)
+                    if position is None:
+                        raise SimulatorError("Native comparator selected an illegal public action")
+                    previous = samples[slot]
+                    samples[slot] = (position,0.,previous[2],None)
+                except SimulatorError as error:
+                    samples.pop(slot)
+                    fault(slot,error,"native_combat_query")
+                timings["teacher_wait_seconds"] += time.monotonic()-stamp
         if decision_observer is not None:
             slots = list(samples)
             decision_observer([active[slot]["obs"] for slot in slots],
@@ -309,7 +327,10 @@ def collect(model: ResidualOOCPolicy, workers: Sequence[Any], tasks: Sequence[An
     primitive_steps = sum(e["steps"] for e in episodes)
     return {"collector_version": COLLECTOR_VERSION, "sampling_stream_version": SAMPLING_STREAM_VERSION,
         "credit_unit": credit_unit, "sampling_seed": sampling_seed,
-        "deterministic_ooc": deterministic, "combat_controller": "immutable legacy bridge greedy" if frozen_combat else "learned public combat residual greedy",
+        "deterministic_ooc": deterministic,
+        "combat_controller": f"privileged native combat search ({native_combat_simulations} simulations)" if native_combat_simulations
+            else "immutable legacy bridge greedy" if frozen_combat else "learned public combat residual greedy",
+        "native_combat_simulations":native_combat_simulations,
         "transitions": transitions, "episodes": episodes, "faults": faults, "requested_tasks": len(tasks),
         "unstarted_tasks": len(tasks) - resets, "excluded_primitive_steps": excluded,
         "cohort_completed": len(episodes) + len(faults) == len(tasks) and all(e["termination_reason"] != "collector_budget" for e in episodes),

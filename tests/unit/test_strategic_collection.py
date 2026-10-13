@@ -132,6 +132,31 @@ class StrategicCollectionTests(unittest.TestCase):
         self.assertIn(False,phases)
         self.assertEqual(result["sampling_stream_version"],"frozen_combat_strategic_v3_v1")
 
+    def test_native_comparator_records_executed_actions_and_quarantines_query_faults(self):
+        class NativeWorker(ScriptedWorker):
+            def __init__(self,fail=False):
+                super().__init__(); self.fail=fail; self.calls=0
+            def submit(self,method,*args):
+                if method!="teacher_action":
+                    return super().submit(method,*args)
+                self.calls+=1; future=Future()
+                if self.fail:
+                    future.set_exception(SimulatorError("injected search fault"))
+                else:
+                    future.set_result(20)
+                return future
+        choices=[]; worker=NativeWorker()
+        result=collect(self.model,[worker],self.tasks[:1],deterministic=True,retain_transitions=False,
+            native_combat_simulations=200,decision_observer=lambda obs,seeds,steps,actions:
+                choices.extend(a for o,a in zip(obs,actions) if o["phase"]=="combat"))
+        self.assertEqual(choices,[20,20]); self.assertEqual(worker.calls,2)
+        self.assertIn("privileged",result["combat_controller"])
+        failed=collect(self.model,[NativeWorker(True)],self.tasks[:1],retain_transitions=False,native_combat_simulations=200)
+        self.assertEqual(failed["episodes"],[])
+        self.assertEqual(failed["faults"][0]["stage"],"native_combat_query")
+        with self.assertRaises(ValueError):
+            collect(self.model,[NativeWorker()],self.tasks[:1],native_combat_simulations=200)
+
 
 if __name__ == "__main__":
     unittest.main()

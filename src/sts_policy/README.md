@@ -7,6 +7,31 @@ combat choices in both micro and macro frozen-controller modes; its task RNG
 stream remains v1. Exact preservation requires trajectory checks, not only
 matching aggregate outcomes.
 
+`combat_dagger.LabelingWorker` supplies privileged search labels while executing
+the public policy's original choices. Completed/fault/cut worlds have separate
+journals; faults discard every label from that world. Consolidated banks require
+matching no-query traces and native/interface provenance. `teacher_panel` adds a
+separate experimental RPC for search RNG and cloned hidden draw interventions;
+its results never enter policy observations. A panel RPC contains six native
+conditions, so panel RPC counts must not be called individual search counts.
+
+One-hot and consensus losses are different conditions. Consensus averages the
+negative log probability mass of each recorded model-equivalent label group;
+it does not expose private root values or draw permutations as neural features.
+Search disagreement may reflect near-equivalent good choices. Native root means
+are search diagnostics, not calibrated public action values.
+
+The combat fitter verifies the completed bank manifest and data digest before
+creating an output. Publication writes the consolidated data before its final
+digest manifest, so an in-flight bank correctly fails this gate; wait for the
+collector's completed result rather than fitting a partial publication.
+
+`reporting_v3`/`scripts/report_nonllm_v3.py` read curated JSON summaries only and
+need no Torch import. Historical non-finite fields become explicitly flagged
+unavailable values; source hashes preserve the original evidence. The portable
+HTML snapshot is read-only and refreshes by rerunning the exporter. It does not
+infer promotion or completion from a live PID or checkpoint filename.
+
 The environment release remains unchanged. `workers.CurriculumWorker` wraps a
 private base episode only inside a persistent, bounded native subprocess. The
 parent owns inference, learning and model memory. Each worker supplies reset,

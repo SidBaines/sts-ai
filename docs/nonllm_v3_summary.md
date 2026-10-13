@@ -1,5 +1,23 @@
 # Repaired training study progress
 
+## Current state: 13 October, 03:40 UTC
+
+The repaired interface, typed residual models, protected strategic trainer and read-only learning report are implemented. **No training condition is promoted.** Early short combat gains failed optimizer-seed/longer-fit retention checks; learner-state cloning and consensus targets also fail the live outcome gate. Original campaigns and final data remain preserved. The current validated reference is `models/common_initial_context_v2.pt` under `data/nonllm_v3`.
+
+Latest complete acceptance: **529 host/native tests**, one optional generated-bank skip; bounded native smoke without error; native micro/macro default-controller equivalence on all eight sampled TRAIN games. Zero-combat acceptance remains 192 identical reference traces/reward totals. The collector is now v3, with an optional explicitly privileged, evaluation-only native combat comparator; its default sampling stream remains v1.
+
+The report exporter is `scripts/report_nonllm_v3.py`. The current interactive snapshot is `data/nonllm_v3/report_0310/index.html`, served read-only at `http://127.0.0.1:8388`. It shows fresh/conditional wins separately, paired gains/losses, survival curves, actual exposures/gradients/calibration, source/checkpoint identities and teacher controls. Historical NaN metrics display as unavailable with their exact source fields flagged; original files stay unchanged. Browser checks verify both charts and paired outcomes without console errors. Saved BC checkpoints without historical completion markers are labelled explicitly rather than inferred complete from file presence.
+
+The new `policy_dagger_original_68` bank has **9,650 labels** from 32 fresh TRAIN games and 36 continuations. Search budgets 200/1,000 are queried on identical learned states, and all 68 queried/no-query traces and reward totals match; no faults/cuts. Collection took 38.91 seconds versus 16.65 without queries. Their short matched fits end **157/13/0** and **156/13/0** on DEV192 versus 156/20/0. Neither qualifies. The combat trainer now verifies bank native/interface provenance and completed query-purity/digest gates before fitting; new runs save plain JSON settings and a frozen-base completion marker.
+
+A teacher stability panel covers **637 states** across the same tasks. Only **212/637** have unanimous equivalent labels across search seeds 1,2,3. Across three hidden draw permutations, 287/637 are unanimous and 252/637 all match the actual-draw baseline. Permutations preserve exposed unordered contents, but a full public history could constrain admissible permutations. Disagreement can include equally good actions; these rates measure label sensitivity, not teacher correctness. The full panel bank then labels all 9,650 states with six conditions each, retaining exact no-query trajectory purity. A short consensus fit ends **155/12/0**, also rejected; its matched one-hot control is being evaluated.
+
+Privileged combat competence controls use the same frozen learned OOC parameters. On the matched TRAIN tasks, learned combat has **1/32 fresh wins and 1/36 conditional wins**. Native search at 200 has **0/32 and 6/36**; at 1,000, **0/32 and 7/36**. Fresh Act 2 clears are respectively 5/32, 3/32 and 9/32. Stronger search helps later progression here, but does not establish a fresh-game teacher or public-agent benchmark. Every comparison completes without faults/cuts; outputs are `teacher_controls/native_combat_68`.
+
+Next bounded study: λ=.95 versus λ=1 strategic macro credit under identical broader 114-frontier sampling, original initialization/rehearsal, reward and frozen combat. Use eight chunks, 32 fresh starts plus up to 16 starts per later act (12 Act 3 worlds available), evaluation every four chunks, and optimizer-seed replication of λ=1. This is a separately named hypothesis, not an alteration of earlier matched micro/macro evidence. Remaining interface audits include deck/bottled instance joins, reward-group association and stale top-level combat gold. No core/interface/model encoding is silently changed while studies use its pinned banks.
+
+Earlier dated entries below are the historical progress record; current status above supersedes their active/pending statements.
+
 ## 12 October overnight allocation started
 
 Work is active in `codex/nonllm-critique` under the user's new CPU/GPU authorization until approximately **13 October 07:30 UTC**. The earlier v1/v2 campaigns and their unused budgets are preserved. The [implementation plan](nonllm_v3_plan.md) and [critique](nonllm_training_critique_2026-10-12.md) define the scope. This study needs a compatible retaining warm start and evidence of useful learning before a sustained run.
