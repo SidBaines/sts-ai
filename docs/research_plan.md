@@ -1,5 +1,17 @@
 # Non-LLM curriculum research goals and current state
 
+**Latest status, 13 October:** the independent critique/repair study on
+`codex/nonllm-critique` is stopped at the user's explicit request. No trained
+policy or teacher target was promoted; reliable fresh full-game wins remain
+unestablished. No investigation jobs remain running, and its dashboard server
+is stopped. The [complete handoff](nonllm_critique_handoff_2026-10-13.md) records
+the implementation, all experiment families, accepted 0.3 profile, 565-test
+acceptance, local artifact/recovery paths, limitations and proposed next work.
+The primary allocation ended at 07:30 UTC; later diagnostics exceeded it.
+Older active/pending passages are historical. Further work requires a new user
+instruction and allocation; original studies and final-cohort embargoes remain
+preserved.
+
 The first local campaign is **complete**. Work is isolated on `codex/nonllm-curriculum`; the original `astra-6sep` checkout is preserved. Signed environment releases `env-v0.1.0` and corrected `env-v0.1.1` remain immutable. Core stays dependency-free; PyTorch/NumPy and Gymnasium are optional extras.
 
 The [curriculum plan](nonllm_curriculum_plan.md) considers action representations, architecture/method alternatives, hyperparameters and bounded selection. Executed stages include supervised candidate policies, combat DAgger/PPO, corrected-native OOC PPO and joint full-control Acts 1–3 PPO. Separate 2.3M candidate heads are trained together in the final composite. Scope is Ironclad, ascension0, ordinary Acts1–3.

@@ -1,5 +1,16 @@
 # Repaired training study progress
 
+## Stopped at user request: 13 October
+
+The user explicitly requested a complete writeup and handoff, then stopping.
+No learner, probe or collection job is running; the owned dashboard server was
+stopped. No policy or teacher target was promoted. The authoritative
+[handoff](nonllm_critique_handoff_2026-10-13.md) records all changes, results,
+limitations, recovery paths and proposed next work. Latest code acceptance is
+565 host/native tests (one optional skip) and the bounded smoke. Resume only
+under a new instruction and allocation. Older active/pending statements below
+are historical.
+
 ## Current status: morning of 13 October
 
 The six-world boss-relic pilot finds one concrete strategy/combat interaction:
