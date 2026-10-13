@@ -83,6 +83,28 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 20:27 BST — λ = 1.0 fixes the unlearning and improves: 34.17 mean floor (+0.88 over the distilled start)
+
+| From the distilled agent, same training worlds | Update 4 | Update 8 | Update 12 | Smith rate at update 12 |
+| --- | --- | --- | --- | --- |
+| λ = 0.95 (E8 recipe) | +0.08 | +0.40 | −0.15 (→ −0.54 at 16) | 23% (→ 14.5% at 16) |
+| **λ = 1.0** | +0.23 | +0.46 | **+0.88 [0.35, 1.45]** | **45%** (stable) |
+
+- **34.17 mean floor at λ = 1.0, update 12: a new best.** Wins 19 → 16 at
+  1,024 worlds, which is noise; a win-set check will follow.
+- This confirms the critic-bias diagnosis end to end. Credit bootstrapped with
+  λ = 0.95 unlearns a delayed-payoff behaviour worth ~1.2 floors. Monte-Carlo
+  credit keeps it and keeps improving.
+- **Recipe change: OOC PPO should use λ = 1.0**, or close to it; λ = 0.99 is
+  running.
+- **Discovery from scratch** (exploration + λ = 1, from update 36): smith rate
+  3–5% through update 8. No discovery yet.
+- **Combined labels collected** for the next distillation, from 789 games:
+  3,790 rest-site labels (1,419 smith) and 1,458 elite-option map decisions
+  (583 labelled elite).
+
+---
+
 ## 2026-10-13 20:17 BST — Combat v3 (dense credit) is also null; λ = 1.0 at update 8 matches λ = 0.95
 
 - **Combat v3 stopped at update 20.**
