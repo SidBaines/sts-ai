@@ -56,6 +56,37 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 17:45 BST — Where the best agent dies: the Act 2 boss (44% of runs)
+
+- **Death locations on fresh worlds** (counts per 1,024):
+
+  | Agent | Act 1 boss | Act 2 hallway | Act 2 boss | Act 3 hallway | Act 3 boss | Win |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | Original | 126 | 382 | 391 | 74 | 24 | 3 |
+  | Update 36 | 92 | 267 | 466 | 94 | 74 | 11 |
+  | Distilled | 77 | 241 | **449** | 123 | 94 | 22 |
+
+  Act 2 boss pass rate: 20.5% → 27.8% → **34.6%**. Entry HP 62 → 65 → 67.
+- **Act 2 boss win rate by identity** (update-8 fight bank, before smithing):
+
+  | Boss | Win rate |
+  | --- | --- |
+  | Bronze Automaton | 18% |
+  | Collector | 25% |
+  | Champ | 27% |
+
+  Entry HP is ~78% for all three. No single boss is the problem; it is deck
+  strength plus combat play.
+- **Open decisions for Sid:**
+  1. Objective: mean floor or win rate. Elite-seeking trades −0.26 floors for
+     wins 13 → 22.
+  2. krill-mill compute.
+  3. Next lever for the Act 2 boss: combat RL with dense (HP/damage) credit,
+     more deck-strength levers via the overlay → distil loop, or test-time
+     public-information search in boss fights.
+
+---
+
 ## 2026-10-13 17:44 BST — Confirmed on fresh worlds: distilled network +4.29 floors, wins 3 → 22
 
 To rule out selection bias from reusing the same eval worlds, the key agents
