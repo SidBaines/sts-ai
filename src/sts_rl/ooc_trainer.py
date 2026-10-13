@@ -258,8 +258,12 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
         state = torch.load(latest, map_location="cpu", weights_only=False)
         model.load_state_dict(state["model_state"])
         optimizer.load_state_dict(state["optimizer_state"])
+        # load_state_dict restores the saved lr; the config is authoritative (branches change it).
+        saved_lr = optimizer.param_groups[0]["lr"]
+        for group in optimizer.param_groups:
+            group["lr"] = cfg.lr
         start_iteration, steps_total = state["iteration"] + 1, state["steps_total"]
-        log.emit({"event": "resume", "iteration": state["iteration"]})
+        log.emit({"event": "resume", "iteration": state["iteration"], "saved_lr": saved_lr, "lr": cfg.lr})
     else:
         (out / "config.json").write_text(json.dumps(asdict(cfg), indent=1))
         log.emit({"event": "start", "config": asdict(cfg)})

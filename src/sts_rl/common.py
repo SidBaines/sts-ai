@@ -41,11 +41,12 @@ def train_tasks(start: int, count: int, *, max_act: int = 3, horizon: int = 4096
 
 
 def make_workers(count: int, *, timeout: float = 10.0, dead_action_filter: bool = False,
-                 slim: bool = True) -> list[Any]:
+                 slim: bool = True, forced_play: bool = False) -> list[Any]:
     workers = [CurriculumWorker(config=WORKER_CONFIG, timeout=timeout) for _ in range(count)]
-    if not (dead_action_filter or slim):
+    if not (dead_action_filter or slim or forced_play):
         return workers
-    return [FilteringWorker(w, dead_actions=dead_action_filter, slim=slim) for w in workers]
+    return [FilteringWorker(w, dead_actions=dead_action_filter, slim=slim, forced_play=forced_play)
+            for w in workers]
 
 
 def close_workers(workers: Sequence[Any]) -> None:
@@ -92,6 +93,42 @@ def is_dead_action(description: str) -> bool:
     return description == "take key" or description.startswith("recall")
 
 
+# --- Forced play (combat) ---------------------------------------------------------
+# Audit 2026-10-13: in Act 2 boss fights the frozen combat head ended ~11% of turns
+# with unspent energy while an affordable card was playable (~1 per fight). The
+# filter hides "end turn" while energy remains and some *safe* card can be played.
+# Self-damaging / deck-polluting cards and curses/statuses (playable with Blue
+# Candle at an HP cost) do not count as safe, so they never force the turn on.
+UNSAFE_PLAY = re.compile(r"\[(?:Curse|Status)\]|\b(?:Hemokinesis|Offering|Bloodletting|Wild Strike|Reckless Charge|"
+                         r"Immolate|Burning Pact|True Grit|Fiend Fire|Sever Soul|J\.A\.X\.|Second Wind|"
+                         r"Combust|Brutality|Berserk|Rupture|Panacea|Purity|Violence|Chrysalis|Metamorphosis)\b")
+
+
+def _energy(observation: dict[str, Any]) -> int:
+    state = observation.get("state") or {}
+    cards = state.get("cards") or {}
+    combat = state.get("combat") or {}
+    value = cards.get("energy", combat.get("player_energy"))
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def force_play(observation: dict[str, Any]) -> dict[str, Any]:
+    """Drop "end turn" from a combat menu while energy remains and a safe card is playable."""
+    if observation.get("phase") != "combat":
+        return observation
+    legal = observation.get("legal_actions") or []
+    if not any(str(a.get("description")) == "end turn" for a in legal) or _energy(observation) <= 0:
+        return observation
+    safe = [a for a in legal if str(a.get("description", "")).startswith("play ")
+            and not UNSAFE_PLAY.search(str(a.get("description", "")))]
+    if not safe:
+        return observation
+    return {**observation, "legal_actions": [a for a in legal if str(a.get("description")) != "end turn"]}
+
+
 _ENCODER_TEXT = re.compile(r"^(?:(?:Deck|Relics|Potions|Card select|Selection type|Event):.*|Choose a card.*|Act .*end-of-act boss.*)$")
 
 
@@ -128,10 +165,14 @@ class FilteringWorker:
     slim=True additionally drops observation text the encoder never reads
     (verified to leave public_candidate_v2 encodings byte-identical)."""
 
-    def __init__(self, worker: CurriculumWorker, *, dead_actions: bool = True, slim: bool = False) -> None:
-        self.worker, self.dead_actions, self.slim = worker, dead_actions, slim
+    def __init__(self, worker: CurriculumWorker, *, dead_actions: bool = True, slim: bool = False,
+                 forced_play: bool = False) -> None:
+        self.worker, self.dead_actions, self.slim, self.forced_play = worker, dead_actions, slim, forced_play
 
     def _map(self, observation: dict[str, Any]) -> dict[str, Any]:
+        if self.forced_play:
+            # Before slimming: the energy is read from the structured state.
+            observation = force_play(observation)
         if self.dead_actions:
             return filter_observation(observation, slim=self.slim)
         return {**observation, "text": slim_text(str(observation.get("text", "")))} if self.slim else observation

@@ -16,6 +16,41 @@ greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 
 ---
 
+## 2026-10-13 16:00 BST — 2× throughput (parallel collectors); seed-2 replicate running; combat diagnosis
+
+- **Collection was bound by one Python thread.** The trainer's main process
+  ran at 96% CPU while 14 game workers idled at ~13% each and the machine sat
+  50% idle. Profile: observation encoding ~44% of main-thread time, policy
+  forward ~16%.
+  - New `CollectorPool` (`src/sts_rl/parallel_collect.py`): K persistent
+    collector processes, each with its own workers and a copy of the policy.
+  - Greedy evaluation records are identical to single-process
+    (`scripts/rl/check_parallel_collect.py`).
+  - `ooc_main_s1` resumed at update 28 with 4 collectors. **Collection 159–179 s
+    → 106 s** per 768 games, while a second training run shares the machine.
+  - Also: atomic `latest.pt`, and `--update-threads` for the PPO phase.
+  - Commits `dbc3f9e`, `e0dd889`.
+- **Replicate running: `ooc_rep_s2`.** Same E8 recipe, seed 2, from the
+  original checkpoint, 24 updates, at nice 10. It tests whether the +2.5 floors
+  is the recipe or seed luck.
+- **Combat RL diagnosis:**
+  - Over 38 bank-PPO updates (~39k fights), the *sampled* training win rate on
+    the boss/elite mix moved only 0.51 → 0.55. Win/loss reward over long boss
+    fights is too sparse to learn from at this scale.
+  - Splicing combat v1@10 onto OOC update 24 changes nothing: **+0.09 ± 0.21**
+    paired.
+- **Combat behaviour audit**, 60 Act 2 boss fights, frozen greedy combat head:
+  - **11% of "end turn" choices (59/523, ~1 per fight) leave energy unspent with
+    an affordable card in hand.** Examples: ending the turn instead of a 9-damage
+    Strike, or with a Defend playable.
+  - Potions are used fine: 66 uses, and only 1 loss with a usable potion left.
+  - A win/loss reward barely penalises this. Dense HP/damage credit would.
+  - Testing a policy-side `forced_play` filter now: hide "end turn" while energy
+    remains and a safe card (no self-damage, curse or status) is playable. The
+    test is paired on ~970 bank fights.
+
+---
+
 ## 2026-10-13 15:50 BST — OOC PPO at +2.55 floors; combat boss RL stopped (hurts full games); update-phase memory fixed
 
 - **`ooc_main_s1` update 24: 31.77 ± 0.27 mean floor, paired +2.55 (95% CI
