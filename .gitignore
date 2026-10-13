@@ -49,3 +49,4 @@ scratch/
 
 # Shared local runtime symlink
 .venv
+.venv-native/

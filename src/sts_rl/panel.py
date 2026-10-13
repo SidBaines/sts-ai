@@ -1,0 +1,228 @@
+"""Fight-panel deck-strength evaluation (requires the sts_rl_panel native build).
+
+Given a decision state (world seed + action prefix), replay it into a scratch
+episode, salt the combat seed, start a battle against a chosen encounter and
+play it with a frozen combat policy inside the worker process. Repeating this
+over a small panel (act boss, upcoming elites/hallways) and a few seeds gives a
+low-variance estimate of how strong the current deck/relics/potions/HP are.
+
+Privileged by construction (uses the run's pregenerated encounter lists and
+replays hidden state); use it as a teacher/diagnostic, never as a policy input.
+"""
+from __future__ import annotations
+
+from concurrent.futures import Future
+import multiprocessing
+import os
+from typing import Any, Sequence
+
+from sts_policy.curriculum import TaskSpec
+from sts_policy.workers import CurriculumEpisode, CurriculumWorker
+
+_POLICY_CACHE: dict[str, Any] = {}
+
+
+def _policy(path: str):
+    if path not in _POLICY_CACHE:
+        import torch
+        from sts_policy.model_agent import policy_from_payload
+        from sts_policy.training import load_checkpoint
+        torch.set_num_threads(1)
+        _POLICY_CACHE.clear()
+        _POLICY_CACHE[path] = policy_from_payload(load_checkpoint(path)).eval()
+    return _POLICY_CACHE[path]
+
+
+def _choose(model: Any, observation: dict[str, Any], sample: bool, rng: Any) -> int:
+    import torch
+    from sts_policy.losses import masked_distribution
+    from sts_policy.model_agent import collate_public, forward_policy
+    with torch.no_grad():
+        logits, _, mask = forward_policy(model, collate_public([observation], "cpu"))
+    if sample:
+        probs = masked_distribution(logits, mask).probs[0]
+        position = int(torch.multinomial(probs, 1, generator=rng))
+    else:
+        position = int(logits[0].argmax())
+    return int(observation["legal_actions"][position]["index"])
+
+
+class PanelEpisode(CurriculumEpisode):
+    def encounters(self, spec: TaskSpec | dict[str, Any]) -> dict[str, Any]:
+        """Upcoming encounters at a decision state (names), for panel construction."""
+        self.reset(spec)
+        gc = self.episode.env._env.gc
+        return {"boss": str(gc.boss).rsplit(".", 1)[-1],
+                "elites": [str(e).rsplit(".", 1)[-1] for e in gc.upcoming_elite_encounters()],
+                "hallway": [str(e).rsplit(".", 1)[-1] for e in gc.upcoming_monster_encounters()],
+                "act": int(gc.act), "floor": int(gc.floor_num), "hp": int(gc.cur_hp), "max_hp": int(gc.max_hp)}
+
+    def _fights_from_current(self, fights: Sequence[tuple[str, str, int]], model: Any, sample: bool,
+                             full_hp_rooms: Sequence[str], max_decisions: int) -> list[dict[str, Any]]:
+        """Play each fight from an in-memory copy of the current OOC game context."""
+        import torch
+        raw = self.episode.env._env
+        sts, base = raw.sts, raw.gc
+        if raw.bc is not None:
+            raise RuntimeError("panel requires an out-of-combat decision state")
+        base_steps = self.episode.steps
+        results = []
+        original_exit = sts.BattleContext.exit_battle
+        try:
+            for encounter_name, room, salt in fights:
+                ended: dict[str, Any] = {}
+
+                def record_exit(bc: Any, context: Any) -> None:
+                    # Never run the game's post-battle code on a scratch copy (it can
+                    # call an empty native callback); record and leave BATTLE.
+                    ended["won"] = bc.outcome == sts.BattleOutcome.PLAYER_VICTORY
+                    ended["hp"] = int(bc.player_cur_hp)
+                    context.screen_state = sts.ScreenState.MAP_SCREEN
+
+                try:
+                    gc = base.copy()
+                    raw.gc, raw.bc = gc, None
+                    raw._combat_recent_actions = []
+                    raw._combat_history_turn = None
+                    self.episode.steps, self.episode.finished = base_steps, False
+                    if room in full_hp_rooms:
+                        gc.cur_hp = gc.max_hp
+                    hp_before = int(gc.cur_hp)
+                    gc.seed = (int(gc.seed) + 1_000_003 * (salt + 1)) % (1 << 63)
+                    gc.cur_room = getattr(sts.Room, room)
+                    sts.BattleContext.exit_battle = record_exit
+                    gc.enter_battle(getattr(sts.MonsterEncounter, encounter_name))
+                    raw.advance_to_decision()
+                    observation = self.episode._observe()
+                    rng = torch.Generator().manual_seed(salt * 7919 + 17)
+                    decisions = 0
+                    while not ended and observation.get("phase") == "combat" and decisions < max_decisions:
+                        action = _choose(model, observation, sample, rng)
+                        observation, _, terminated, truncated, _ = self.episode.step(action)
+                        decisions += 1
+                        if terminated or truncated:
+                            break
+                    won = bool(ended.get("won", False))
+                    results.append({"encounter": encounter_name, "room": room, "salt": salt, "win": won,
+                                    "hp_before": hp_before, "max_hp": int(gc.max_hp),
+                                    "hp_after": ended.get("hp", 0) if won else 0,
+                                    "decisions": decisions, "cut": not ended,
+                                    "ub": bool(raw._undefined_behavior_evoked)})
+                except Exception as exc:  # report, never count as a loss
+                    import traceback
+                    results.append({"encounter": encounter_name, "room": room, "salt": salt,
+                                    "fault": f"{type(exc).__name__}: {exc}"[:200],
+                                    "trace": traceback.format_exc()[-1200:]})
+                finally:
+                    sts.BattleContext.exit_battle = original_exit
+                    raw._undefined_behavior_evoked = False
+        finally:
+            raw.gc, raw.bc = base, None
+            self.finished = True
+        return results
+
+    def panel(self, spec: TaskSpec | dict[str, Any], fights: Sequence[tuple[str, str, int]],
+              checkpoint: str, sample: bool = False, full_hp_rooms: Sequence[str] = (),
+              max_decisions: int = 600) -> list[dict[str, Any]]:
+        """fights: (encounter_name, room 'MONSTER'|'ELITE'|'BOSS', salt). One result per fight."""
+        model = _policy(checkpoint)
+        self.reset(spec)
+        return self._fights_from_current(fights, model, sample, full_hp_rooms, max_decisions)
+
+    def afterstates(self, spec: TaskSpec | dict[str, Any], options: Sequence[Sequence[int]],
+                    fights: Sequence[tuple[str, str, int]], checkpoint: str, sample: bool = False,
+                    full_hp_rooms: Sequence[str] = ("BOSS",), max_decisions: int = 600) -> list[dict[str, Any]]:
+        """Score each option (an action-index sequence from spec's state) on identical fights."""
+        model = _policy(checkpoint)
+        base = TaskSpec.from_dict(spec) if isinstance(spec, dict) else spec
+        out = []
+        for option in options:
+            try:
+                self.reset(TaskSpec(seed=base.seed, kind=base.kind, prefix=tuple(base.prefix) + tuple(option),
+                                    max_act=base.max_act, horizon=base.horizon, seek_combat=False))
+                if self.episode.env._env.bc is not None:
+                    raise RuntimeError("option leads into combat; afterstate panel undefined")
+                out.append({"option": list(option),
+                            "fights": self._fights_from_current(fights, model, sample, full_hp_rooms, max_decisions)})
+            except Exception as exc:
+                out.append({"option": list(option), "fault": f"{type(exc).__name__}: {exc}"[:200]})
+        return out
+
+
+def _serve_panel(connection: Any, config: dict[str, Any]) -> None:
+    episode = PanelEpisode(config)
+    try:
+        while True:
+            method, args = connection.recv()
+            if method == "close":
+                break
+            try:
+                connection.send(("ok", getattr(episode, method)(*args)))
+            except Exception as exc:
+                connection.send(("error", {"type": type(exc).__name__, "message": str(exc)}))
+                break
+    except (EOFError, BrokenPipeError):
+        pass
+    finally:
+        connection.close()
+
+
+class PanelWorker(CurriculumWorker):
+    """CurriculumWorker with `encounters` and `panel` RPCs (long per-call timeout)."""
+
+    def _launch(self) -> None:
+        context = multiprocessing.get_context("spawn")
+        self._connection, child = context.Pipe()
+        self._process = context.Process(target=_serve_panel, args=(child, self.config),
+                                        name="sts-panel-native", daemon=True)
+        self._process.start()
+        child.close()
+
+    def _ensure(self) -> None:
+        with self._lock:
+            if self._process is None:
+                self._launch()
+
+    def encounters(self, spec: TaskSpec) -> dict[str, Any]:
+        self._ensure()
+        return self._call("encounters", spec)
+
+    def panel(self, spec: TaskSpec, fights: Sequence[tuple[str, str, int]], checkpoint: str,
+              sample: bool = False, full_hp_rooms: Sequence[str] = ()) -> list[dict[str, Any]]:
+        self._ensure()
+        return self._call("panel", spec, list(fights), checkpoint, sample, list(full_hp_rooms))
+
+    def afterstates(self, spec: TaskSpec, options: Sequence[Sequence[int]], fights: Sequence[tuple[str, str, int]],
+                    checkpoint: str, sample: bool = False, full_hp_rooms: Sequence[str] = ("BOSS",)) -> list[dict[str, Any]]:
+        self._ensure()
+        return self._call("afterstates", spec, [list(o) for o in options], list(fights), checkpoint, sample,
+                          list(full_hp_rooms))
+
+    def submit(self, method: str, *args: Any) -> Future[Any]:
+        if method in {"panel", "encounters", "afterstates"}:
+            return self._executor.submit(getattr(self, method), *args)
+        return super().submit(method, *args)
+
+
+def default_fights(encounters: dict[str, Any], samples: int, *, hallway: int = 2, elites: int = 2,
+                   boss: bool = True) -> list[tuple[str, str, int]]:
+    fights = []
+    for k in range(samples):
+        if boss:
+            fights.append((encounters["boss"], "BOSS", k))
+        fights += [(e, "ELITE", k) for e in encounters["elites"][:elites]]
+        fights += [(e, "MONSTER", k) for e in encounters["hallway"][:hallway]]
+    return fights
+
+
+def summarize_panel(results: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    valid = [r for r in results if "fault" not in r and not r.get("ub")]
+    def rate(room: str) -> float | None:
+        rows = [r for r in valid if r["room"] == room]
+        return sum(r["win"] for r in rows) / len(rows) if rows else None
+    def hp_loss(room: str) -> float | None:
+        rows = [r for r in valid if r["room"] == room]
+        return sum(r["hp_before"] - r["hp_after"] for r in rows) / len(rows) if rows else None
+    return {"boss_win": rate("BOSS"), "elite_win": rate("ELITE"), "hallway_win": rate("MONSTER"),
+            "boss_hp_loss": hp_loss("BOSS"), "elite_hp_loss": hp_loss("ELITE"), "hallway_hp_loss": hp_loss("MONSTER"),
+            "valid": len(valid), "faults": len(results) - len(valid)}

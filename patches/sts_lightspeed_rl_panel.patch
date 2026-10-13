@@ -1,0 +1,27 @@
+diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
+index 7dca98a..4f82571 100644
+--- a/bindings/slaythespire.cpp
++++ b/bindings/slaythespire.cpp
+@@ -1767,6 +1767,22 @@ PYBIND11_MODULE(slaythespire, m) {
+         .def_readwrite("cur_room", &GameContext::curRoom)
+         .def_property_readonly("current_event", [](const GameContext &gc) { return std::string(publicEventNames[static_cast<int>(gc.curEvent)]); })
+         .def("public_event", &publicEvent)
++        // sts_rl panel evaluation (diagnostic/teacher use on scratch replays only):
++        // start a battle against an arbitrary encounter from the current context.
++        .def("copy", [](const GameContext &gc) { return GameContext(gc); },
++             "independent copy (map shared, read-only in combat) for scratch panel fights")
++        .def("enter_battle", [](GameContext &gc, MonsterEncounter encounter) { gc.enterBattle(encounter); },
++             "set screen to BATTLE against the given encounter (scratch contexts only)")
++        .def("upcoming_monster_encounters", [](const GameContext &gc) {
++            std::vector<MonsterEncounter> out;
++            for (int i = gc.monsterListOffset; i < gc.monsterList.size(); ++i) { out.push_back(gc.monsterList[i]); }
++            return out;
++        }, "remaining hallway encounters in this act's pregenerated list (privileged)")
++        .def("upcoming_elite_encounters", [](const GameContext &gc) {
++            std::vector<MonsterEncounter> out;
++            for (int i = gc.eliteMonsterListOffset; i < gc.eliteMonsterList.size(); ++i) { out.push_back(gc.eliteMonsterList[i]); }
++            return out;
++        }, "remaining elite encounters in this act's pregenerated list (privileged)")
+         .def_readwrite("boss", &GameContext::boss)
+ 
+         .def_readwrite("cur_hp", &GameContext::curHp)
