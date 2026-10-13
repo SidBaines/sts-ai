@@ -30,6 +30,7 @@ def main() -> None:
                    help="overlay: drop potion buys while a card removal is affordable")
     p.add_argument("--elite-above", type=float, default=None,
                    help="overlay: path into an elite whenever one is offered at HP fraction >= this")
+    p.add_argument("--skip-cards-after", type=int, default=None, help="overlay: skip every card reward after this floor")
     p.add_argument("--workers", type=int, default=14)
     p.add_argument("--collectors", type=int, default=1, help=">1: parallel collector processes")
     p.add_argument("--baseline", help="eval JSON to pair against")
@@ -38,7 +39,7 @@ def main() -> None:
     model, _ = load_policy(args.checkpoint)
     options = dict(dead_action_filter=args.dead_action_filter, dominated=args.dominated_filter,
                    forced_play=args.forced_play, smith_above=args.smith_above, prefer_remove=args.prefer_remove,
-                   elite_above=args.elite_above)
+                   elite_above=args.elite_above, skip_cards_after=args.skip_cards_after)
     if args.collectors > 1:
         from sts_rl.parallel_collect import CollectorPool
         workers = CollectorPool(args.collectors, workers=args.workers, checkpoint=args.checkpoint, **options)
