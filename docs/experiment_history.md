@@ -169,6 +169,38 @@ advantage over the simple heuristic or early RL checkpoint was established.
 
 ## Open items
 
+The 6 September [Gemma template repairs](gemma_template_fixes_2026-09-06.md)
+address all ten audited information/presentation findings through opt-in
+`combat_public_v4`, preserving frozen v3 and the native binary. Independent review
+approved the final changes; 847 tests passed (11 skipped), all 202 attempted
+source starts passed exact prefix replay, and a three-decision fresh-process MLX
+repeat matched exactly excluding latency. A paired 202-start rerun was launched
+as `gemma4_t1_p095_k64_public_v4_v1` with the same pinned model, per-fight seeds,
+temperature 1.0/top-p .95/top-k 64, and thinking off. Outcomes remain pending;
+this is a combined interface intervention on the audited cohort, not evidence
+of generalization or an isolated effect of any one repair.
+
+The 6 September ten-minute full-trace search collection saved 2,132 completed
+Act 1 fights and 49,462 positions from 227 repeat/replay-validated worlds, using
+1.22 GB including validation copies. The 600-second budget includes duplicate
+generation and replay. Search replans with 2,000 simulations and seed 1 on every
+combat decision; this differs from the five-fight hybrid timing probe. Nine
+phantom-power flags, two native undefined-behavior flags, and one deadline cutoff
+were excluded with all raw files retained. The audit is
+`outputs/search_bank_audit_2026-09-06/audit.json`; the usable bank is
+`data/experiments/single_fight_v1/search_10min_2026-09-06/`.
+
+The 6 September [local single-fight setup](single_fight_lab.md) adds a fresh,
+pinned HF MLX 4-bit Gemma 4 26B-A4B baseline. Its 12 heuristic worlds produced
+1,898 replay-checked states and 89 battle starts. On three opening eval fights
+(two Cultists, one Jaw Worm), heuristic and Gemma both won 3/3; Gemma's net HP
+losses were 0/7/6 versus heuristic 3/9/0. Greedy model repeats matched all 49
+decision records across fresh processes except latency. One generation hit the
+1,024-token pilot cap while remaining parse-valid. A synthetic one-step QLoRA
+update/save/reload passed; this is setup evidence, not a trained combat result.
+Broader baseline coverage, real-prompt training-memory checks, and held-out-enemy
+learning experiments remain outstanding.
+
 - Checkpoint selection still relies on behavioural evaluation; no frozen validation split exists, and dev57 statics remain unpredictive.
 - The gap to the search teacher (100% on all cohorts) is 22–39 points of win rate depending on encounter.
 - The adapter has still not been evaluated inside full-game runs; the `adapter_fc` composite arm was postponed and only the two base arms exist.

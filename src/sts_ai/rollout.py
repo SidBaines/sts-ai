@@ -89,10 +89,15 @@ def prepare_decision(env: LightspeedHybridEnv) -> tuple[str, dict[str, Any] | No
     # passed separately so glossary can place it without scraping raw state text.
     turn_math_lines = (
         env._turn_math_lines()
-        if getattr(env, "combat_observation", "legacy") == "combat_public_v3"
+        if getattr(env, "combat_observation", "legacy") in ("combat_public_v3", "combat_public_v4", "combat_public_v5")
         else None
     )
-    state_text = glossary.augment(
+    augment = glossary.augment
+    if getattr(env, "combat_observation", "legacy") == "combat_public_v4":
+        from sts_ai.glossary_v4 import augment
+    elif getattr(env, "combat_observation", "legacy") == "combat_public_v5":
+        from sts_ai.glossary_v5 import augment
+    state_text = augment(
         env.describe_state(),
         legal_action_dicts,
         phase,

@@ -383,10 +383,11 @@ def _action_object_span(
     expected_action: int | str | None,
     output_contract: str,
 ) -> tuple[int, int]:
-    stripped = text.strip()
-    offset = len(text) - len(text.lstrip())
-    candidates = [(stripped, (offset, offset + len(stripped)))]
-    candidates.extend(reversed(_balanced_json_candidates(text)))
+    # Use the same answer-region selection as inference. Malformed braces in
+    # native thought must not hide a valid final answer from the training mask.
+    from sts_ai.agents import _extract_json_with_span
+    extracted = _extract_json_with_span(text)
+    candidates = [] if extracted is None else [(text[extracted[1][0]:extracted[1][1]], extracted[1])]
     seen: set[tuple[int, int]] = set()
     for candidate, span in candidates:
         if span in seen:

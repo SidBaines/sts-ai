@@ -103,6 +103,16 @@ def competence_interface_provenance(env: Any, agent: Any) -> dict[str, Any]:
         ),
     }
     module_path = getattr(getattr(env, "sts", None), "__file__", None)
+    if getattr(env, "combat_observation", "legacy") in ("combat_public_v4", "combat_public_v5"):
+        # V4 composes an immutable v3 engine view with a new presentation layer.
+        # Fingerprint both layers and the routing code, not just the base files.
+        for name in ("combat_public_v4", "glossary_v4", "turn_math_v4", "rollout", "turn_math"):
+            result[f"{name}_sha256"] = file_sha256(root / f"src/sts_ai/{name}.py")
+    if getattr(env, "combat_observation", "legacy") == "combat_public_v5":
+        for name in ("combat_public_v5", "glossary_v5", "agents"):
+            result[f"{name}_sha256"] = file_sha256(root / f"src/sts_ai/{name}.py")
+        result["action_parser_version"] = "final_channel_v2"
+        result["action_span_sha256"] = file_sha256(root / "src/sts_ai/train/sft_format.py")
     if module_path:
         result["simulator_binary_sha256"] = file_sha256(module_path)
 

@@ -4,6 +4,128 @@ CLI entry points and build tooling. See the top-level [`CLAUDE.md`](../CLAUDE.md
 
 ## Contents
 
+- `view_fight_comparison.py` — builds a self-contained, read-only three-column
+  fight viewer from hash-checked saved trajectories. Run with
+  `PYTHONPATH=src .venv/bin/python -m scripts.view_fight_comparison --state-id …`.
+  Shared jumps align recorded turns (opening is turn 0), not decision indices;
+  each arm steps independently and has an explicit final-outcome position.
+  A missing later turn shows the completed outcome, not a fabricated board.
+  Includes full saved observations, legal menus, thinking, responses, and JSON.
+  No model/simulator calls, dependencies, or live sampling routes. The HTML
+  works directly from disk; serving its output directory is optional.
+- `compare_fight_formats.py` — rerunnable three-arm comparison using
+  `sts_ai.fight_comparison` and `fight_analysis`. Restricts the old larger schedule
+  to the same 202 selected starts; explicitly separates unfinished, invalid,
+  timeout, death, and win outcomes. Paired success uses jointly finished starts;
+  paired HP uses jointly resolved fights and allows net healing. Confidence
+  intervals resample worlds. Produces dated reports, CSV/JSON snapshots, and
+  45 captioned PNG/SVG plots. `--snapshot <comparison.json>` rerenders frozen
+  analyzed data without rereading live files. V4 start checking compares full
+  structured public state and action identities after only the declared label
+  normalization; requiring identical prompt text would wrongly reject v4.
+  Plot/report pair ordering is explicit: JSON snapshots sort object keys, so
+  relying on dictionary insertion order changes the paired overview figures
+  when rerendering an otherwise identical snapshot.
+  Cap diagnostics apply one rule across arms: saved truncation flags or unclosed
+  preserved thought channels regardless of token count, counts at/above the actual
+  limit, or invalid responses within eight tokens below it. These are
+  indicators because saved counts re-tokenize text. The old frozen sampler's
+  strict 4,096 threshold therefore differs from this derived diagnostic; the
+  comparison report also lists at-limit and near-limit counts separately.
+  For unattended local runs, `caffeinate -i` does not prevent clamshell sleep,
+  thermal-protection sleep, or low-power sleep when the battery is exhausted.
+  Do not override thermal protection. The wall-clock watchdog can mark the active
+  fight timed out after waking. Check `pmset -g log` and monitor timestamp gaps
+  before attributing such a timeout to the model; archive the infrastructure
+  interruption before a same-seed recovery. The comparison includes recovery
+  records from each arm's `infrastructure_interruptions/*/recovery.json`.
+  Historical unreplayed system-sleep timeouts can be annotated in
+  `infrastructure_annotations.json`; trace/result hashes must match. They stay
+  in coverage counts but are excluded from paired performance and the common
+  three-arm cohort. Ordinary invalid outputs and non-infrastructure failures
+  remain in success-rate denominators.
+- `monitor_fight_runs.py` — read-only process/trace/queue checks every 30 seconds,
+  with progress and alert history under `outputs/gemma_overnight_monitor_2026-09-06`.
+  Run as `PYTHONPATH=src .venv/bin/python -m scripts.monitor_fight_runs`.
+  Refreshes three-arm reports after each of the first five thinking fights,
+  then every ten fights, budget changes, and completion; it does not restart
+  models on an observation failure. A final report requires every expected result
+  and the thinking queue to finish, so pending budget escalation is not mistaken
+  for a completed final arm. Model watchdogs remain in the run supervisor.
+
+- `queue_thinking_fights.py` — separate launcher for a matched thinking-on
+  follow-up without editing an active sampler's fingerprinted files. Run with
+  `PYTHONPATH=src .venv/bin/python -m scripts.queue_thinking_fights ...` from
+  the repo root. `prepare --after <arm> --output <fresh-arm>` copies the entire
+  frozen schedule/settings and changes only thinking; `watch --output <arm>`
+  waits for all predecessor attempts and released locks before invoking the
+  existing resumable supervisor. `stop` cancels a pending queue or running arm;
+  `watch --resume` explicitly clears STOP. A paused/errored predecessor is not
+  mistaken for completion. Queue status and hashes live in sidecars; model
+  results retain the existing schema. Do not change the queued launcher's file
+  after preparation: its hash is checked before launch.
+  An optional `budget_policy` activates `thinking_fight_budget.py`: observe the
+  first 20 generations, raise frequent caps after stopping the worker, archive
+  all early attempt data, and restart the full cohort at the next limit. The
+  dedicated thinking process binds the existing supervisor's worker/result/
+  validation hooks without editing the active sampler. Its runtime hash is
+  checked separately. **The frozen sampler's result helper counts >=4,096 as
+  a cap hit**; the thinking runtime overrides that count using the actual
+  recorded episode max_tokens. Always launch this arm through its queue helpers,
+  which select that runtime. Watchdog limits scale with the completion budget.
+
+- `analyze_fight_bank.py` — read-only, rerunnable analysis of finished sampling
+  attempts. Creates a new dated snapshot under `outputs/gemma_fight_analysis_2026-09-06/`
+  with 53 captioned PNG/SVG figures, HTML gallery, CSV tables, raw invalid outputs,
+  and hash-verified input manifest. `--snapshot <previous/snapshot.json>` rebuilds
+  the same cohort even while collection advances. Core aggregation is in
+  `sts_ai.fight_analysis`; no model or simulator is loaded. Incomplete attempts
+  remain in overall win-rate denominators, while paired HP statistics use only
+  resolved fights. Net HP includes post-fight healing; mixed-enemy groups overlap.
+  Runtime plots omit missing durations rather than treating timeouts as zero.
+  Uses the existing matplotlib/numpy/Pillow installation; no new deps were added.
+
+- `sample_fight_bank.py` — resumable full-bank Gemma sampling with one persistent
+  MLX model worker. The frozen selection includes every combat start; schedule
+  order is shuffled with seed 20260906 and each state has its own recorded MLX
+  sampling seed. `start --root <bank> --output <fresh-arm>` freezes settings;
+  `stop --output <arm>` writes STOP, and `resume --output <arm>` clears it under
+  an exclusive run/GUI lock. Every decision is appended immediately; each finished
+  attempt gets an atomic `.result.json`, and `progress.json` / `report.json` update
+  every two seconds. Interrupted attempts move to `partials/` before restarting
+  from the same source/seed. Finished attempts (including invalid/error outcomes)
+  are skipped on resume; their trace/meta hashes and implementation/runtime
+  identities are checked. A 300-second no-decision watchdog and one-hour fight
+  limit preserve timeout attempts and continue. Three unexplained worker crashes
+  stop the supervisor. See the single-fight runbook for live run paths and helpers.
+  `--baseline-run <arm> --combat-observation combat_public_v4` selects all starts
+  with results or nonempty partial traces, retaining baseline order and seeds.
+  Baseline settings/model/result hashes are verified and the subset is frozen;
+  resume checks baseline files too. V4 replays the original v3 prefix before
+  changing presentation. The paired arm and checks are documented in
+  [`docs/gemma_template_fixes_2026-09-06.md`](../docs/gemma_template_fixes_2026-09-06.md).
+  **Throughput is inference-bound, and existing batching changes seed semantics.**
+  A read-only 59-fight / 1,171-decision v4 snapshot measured 98.6% of fight wall
+  time inside agent calls, mean 1,291 prompt / 22 completion tokens. The worker
+  keeps one model resident but generates serially without cross-request prompt
+  cache reuse. Adjacent same-fight prompts share only 111 prefix tokens on average
+  (8.6% of prompt tokens); repeated later glossary text cannot be reused as a
+  causal prefix after earlier state changes. See
+  `outputs/gemma_efficiency_audit_2026-09-06/measurements.json`.
+  Benchmark batch sizes and memory before claiming a speedup. Existing
+  `parallel_rollout.py` seeds by batch membership, so it cannot be substituted
+  mid-arm while preserving the sampler's independent per-fight seed contract.
+
+- `fight_lab.py` — bounded, process-isolated heuristic collection (two independent
+  runs plus exact public-prefix replay), deterministic filters/frozen selections,
+  generic single-fight evaluation from any selected combat position, and the
+  local GUI (`serve`, port 8010) with single-state model launch, progress, cancel,
+  and automatic trajectory loading. `fight_lab_model.py` downloads/hashes
+  the pinned HF Gemma 4 26B-A4B MLX checkpoint and checks generation + a disposable
+  one-step QLoRA adapter. See [`docs/single_fight_lab.md`](../docs/single_fight_lab.md).
+  Use fresh output directories. Keep eval arms under `<collection>/runs/<arm>/`
+  for GUI discovery. Do not run multiple MLX workers concurrently on the 48 GB Mac.
+
 - `build_lightspeed.sh` — clones `sts_lightspeed`, applies `patches/sts_lightspeed_python_api.patch` (only if not already applied), and builds the `slaythespire` pybind module. Run this before any rollout.
 - `run_rollout.py` — runs a single hybrid rollout from the CLI. Always invoke with `PYTHONPATH=src`.
 - `run_batch.py` — batch rollouts over a seed range/list. Seeds come from `--seeds`, `--seed-start/--seed-count`, or `--seeds-config configs/frozen_seeds.json --split {smoke,dev,eval}`. For `--agent mlx` add `--thinking` (captures `<think>` chain-of-thought into `agent.thinking`), `--max-tokens`, `--temperature`. Use `--seed-timeout-seconds` for LLM/thinking runs (per-seed subprocess + kill) — thinking mode can hang on the seed-2-class UB and is slow.
@@ -30,6 +152,18 @@ CLI entry points and build tooling. See the top-level [`CLAUDE.md`](../CLAUDE.md
 - `interactive_app.py` — launches the **Interactive Rollout Studio** (FastAPI + offline browser UI): interactively drive agents, sample N decisions per turn from any method (`user`/`first`/`random`/`heuristic`/`model`), edit the LLM framing/prompt (with saved templates), branch to explore alternatives, and cache sessions as canonical rollout JSONL. Combats are steppable (`combat_control="llm"`, default) or auto-resolved (`search`). Needs the `app` extra (+ `llm` for the local MLX model backend); runs fully offline once a model is cached. Run: `PYTHONPATH=src .venv/bin/python scripts/interactive_app.py` then open `http://127.0.0.1:8000`. Backend + core logic live in the unit-tested `sts_ai.interactive` package (see [`src/sts_ai/interactive/CLAUDE.md`](../src/sts_ai/interactive/CLAUDE.md)); board HTML is the shared `sts_ai.rollout_view_html`.
 
 ## Area gotchas
+
+- **`collect_search_bank.py` captures every combat decision.** Its native teacher
+  replans with a fixed seed and 2,000 simulations on each decision; this differs
+  from the hybrid resolver's multi-action plan commits and from the pilot's
+  first-legal combat policy. Native search returns v2 descriptions, so render
+  its selected action with v3 computed damage before mapping to the deduplicated
+  menu (raw bits can identify a duplicate hand copy absent from that menu).
+  The timed budget includes independent duplicate generation and exact replay.
+  All raw files, including deadline-cutoff or failed worlds, are retained; only
+  fully validated sources enter `collection.json`. Reproduce a recorded world
+  with `worker --root <bank> --seed <recorded-seed> --output <fresh-path>`;
+  a wall-clock budget alone cannot reproduce the same cohort on different hardware.
 
 - **Whole-game paired reports need an external completeness/contract check.** `compare_paired.py` uses the world-seed intersection without enforcing episode identities or matching generation settings; `local_task_compare.py` is stricter. COMP023 eval30 also overlaps the shared combat adapter's training worlds (23/30), and its historical hybrid control uses a different OOC output contract/retry count/backend from OOC RL. The [2026-09-05 review](../docs/repository_review_2026-09-05.md) records the artifact checks; do not interpret those comparisons as unseen-world or weights-only effects without the appropriate controls.
 

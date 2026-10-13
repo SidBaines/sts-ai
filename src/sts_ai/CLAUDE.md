@@ -4,6 +4,36 @@ Core harness package. See the top-level [`CLAUDE.md`](../../CLAUDE.md) for proje
 
 ## Module map
 
+- **MLX sampling filters must be forwarded explicitly.** `MlxQwenJsonAgent`
+  and `build_agent` now support `top_p` and `top_k`; previously the factory
+  silently ignored them for MLX. Defaults retain the original temperature-only
+  sampler call. Explicit filters reach `mlx_lm.sample_utils.make_sampler` and
+  are recorded in agent config. Missing sampler support fails closed. The common
+  disabled top-k sentinel `-1` maps to MLX's `0`. Full-bank sampling reseeds per
+  state, so pausing, resuming, or evaluating another fight does not change that
+  state's random stream; this new arm seed rule does not alter older lab runs.
+
+- `fight_lab.py` / `fight_lab_server.py` / `fight_lab_jobs.py` — generic single-fight collection sidecars,
+  filters, exact replay, and a collection/trajectory browser with background Gemma
+  launches from the displayed source state. No changes
+  to `DecisionRecord` or frozen observation serializers. Replay calls production
+  `prepare_decision` at every prefix step and checks the full public state/menu
+  plus executed actions/after-states. Collections require matching native binary,
+  patch, serializer and glossary hashes; simulator stalls are isolated externally
+  by the CLI. See [`docs/single_fight_lab.md`](../../docs/single_fight_lab.md).
+  **Gemma thinking-off is not text-format enforcement:** it can produce an action,
+  reconsider in prose, and emit another action. The existing parser selects the
+  last complete JSON object; a token-capped response may still count as valid.
+  Preserve this contract across paired arms and report cap hits beside validity.
+  **GUI run identity follows the displayed source decision, not the initial
+  filter highlight.** `/api/view` supplies `source_state`; model-trajectory views
+  cannot be used as source-bank starts. Single-state selections add `state_ids`
+  and validate against the exact collection rows. The GUI manager runs the existing
+  CLI in a process group, persists status outside frozen sources, and cancels the
+  whole group on shutdown/cancel. Polling only reads status. Its per-collection
+  file lock is inherited by the launcher to guard against duplicate model loads;
+  standalone CLI runs remain the operator's responsibility.
+
 - `lightspeed.py` — `LightspeedHybridEnv`: wraps the simulator, advances through battles, lists/executes actions, summarizes state. Supports two combat modes via `combat_control`: `"search"` (default, hybrid — battles auto-resolved by the built-in C++ search agent) and `"llm"` (full control — each in-combat micro-decision is surfaced to the agent).
 - `agents.py` — policies (`first`, `random`, `heuristic`, optional `mlx`/Qwen for Apple Silicon, `vllm` for NVIDIA/CUDA) and the JSON action parser. `MlxQwenJsonAgent` and `VllmJsonAgent` share one public surface (`reseed`/`choose_action`/`choose_actions_batch`/`config`/mutable `enable_thinking`) so either is a drop-in for the serial and batched loops; `VllmJsonAgent` also implements the `GenerationBackend` streaming primitives (`stream_submit`/`stream_poll`/`stream_has_unfinished`/`build_decision_from_text`) used by `streaming_rollout.py`. `VllmJsonAgent` resolves a general **`reasoning_mode`** (`none`/`native`/`prompted`): it probes whether the model's chat template honours `enable_thinking` — models with a native toggle (Qwen3, **Gemma 4**) use it; models without one (Gemma 3, Llama) get reasoning *induced* via the prompt (`render_action_prompt(induce_reasoning=True)`, which routes CoT through `<think>` tags). **The captured reasoning format is model-dependent — `parse_json_action`/`_extract_thinking_with_metadata` handle both:** Qwen3-native and prompted use `<think>…</think>`; **Gemma 4 native uses a `thought` channel** (`<|channel>thought\n…<channel|>`). vLLM's default `skip_special_tokens=True` strips the markers (completion *starts* with `thought\n…`), but **`VllmJsonAgent.preserve_special_tokens` (default = native) now sets `skip_special_tokens=False` for native runs** so the markers survive into `raw_response` (needed for native-thinking SFT + laundering); `--preserve-special-tokens {auto,on,off}` on `run_until`. `_extract_gemma_thought` captures the thought either way and (bounding at the channel close, else the JSON answer) and tags `metadata["reasoning_format"]="gemma_thought"`; without this the `<think>`-only parser recorded `thinking_tokens=0` for Gemma 4 even though it reasoned (~800 tok). (Benchmark tables live in git history.) vLLM generation is **fail-soft** (returns `None` on any error → invalid decisions, never an exception) so a batched sweep survives a model crash. vLLM prefix caching is enabled by default (`enable_prefix_caching=True`) and recorded in `config`. `vllm` is an optional extra (`pip install -e '.[vllm]'`); the import is lazy so the unit tier runs without it.
 - `rollout.py` — drives the serial env+agent loop and records `DecisionRecord`s as JSONL. Before each decision it runs `glossary.augment(...)` over `state_text` (so the agent sees it *and* it's recorded). Shared, reused-by-the-parallel-path helpers live here: `prepare_decision` (advance + assemble the augmented view), `clamp_action_index`, `build_decision_record` (incl. computed `affordances`), and `build_rollout_meta`/`write_rollout_meta` (the per-rollout `<output>.meta.json` sidecar with outcome + model/config/**framing**/git provenance).
@@ -65,6 +95,52 @@ Core harness package. See the top-level [`CLAUDE.md`](../../CLAUDE.md) for proje
 - **Competence training uses an auditable action mask, not a rewritten completion.** `sft_format.tokenize_example(..., loss_mask_mode="action")` keeps the sampled thought in causal context, masks every private/non-action payload, and supervises only required channel/JSON/turn formatting plus the top-level `action_index` value. A subword touching private thought is masked unless it also touches the action value. Dataset CLIs default to `--loss-mask action` and record format/thought/action counts; trainers default to `--loss-mask auto` (new manifest → recorded mode, legacy/no mode → historical completion loss) and reject an explicit manifest mismatch. MLX SFT action loss uses the in-process non-contiguous-mask trainer; the stock mlx-lm prompt-offset loss cannot represent holes around thought tokens.
 
 ## In-combat (full-control) mode
+
+- **Native thinking can expose a whole-response JSON scanner bug.** The paused
+  8 September audit found `seed_4012_r0_d213` line 29 contains valid final-channel
+  JSON selecting a legal action, rejected as `no json object` because an unmatched
+  `{` in the preceding thought leaves `_balanced_json_candidates` nested. Parsing
+  only the saved final channel succeeds. `final_channel_v2` now fixes this and
+  shares extraction with training action masks; regressions cover malformed
+  braces/quotes and JSON examples in reasoning. Do not retroactively
+  count the unexecuted action as a win. Evidence and additional remaining v4
+  information gaps: `outputs/gemma_analysis_2026-09-08/REPORT.md`.
+- **The comparison's eight-token near-cap proxy can miss real truncated
+  thinking.** The Nob response `seed_4053_r0_d158` has 16,375 re-tokenized tokens
+  against a 16,384 limit and `thinking_truncated=true`; the proxy reports zero.
+  Read explicit channel-closure metadata alongside saved token counts. The
+  accepted first-20 budget status is frozen calibration, not a live truncation
+  summary. Diagnostics now include the saved flag OR unclosed preserved thought
+  markers independently of length. Two previously accepted thought-only JSON
+  replies bring the corrected thinking count to three; original results remain unchanged.
+
+- **New fight-lab evaluations default to combat_public_v5.** See
+  [the v5 fix report](../../docs/gemma_template_fixes_2026-09-08.md). The wrapper
+  still requires a v3 environment after original-prefix replay. V5 resolves
+  instance card values, exact public buff amounts, slime rules, energy/round
+  notation, and selection labels without changing native indices or bits.
+  Its fixed-Block calculation intentionally matches the installed simulator's
+  **double application of the Block modifier for Iron Wave**; do not replace
+  that with retail-game arithmetic without a separately versioned simulator fix.
+  Nonempty multi-select labels decode actual low-ten-bit hand masks because the
+  native printed indices are incorrect. Existing paused manifests fail closed
+  on this runtime change; new experiments need fresh arms.
+
+- **The frozen v3 glossary/turn summaries have audited gaps.** The
+  [6 September Gemma audit](../../docs/gemma_template_audit_2026-09-06.md)
+  records evidence; opt-in fixes now live in `glossary_v4.py`, `turn_math_v4.py`,
+  and the `CombatPublicV4Env` presentation adapter. In frozen v3, `_INTENT_RE` captures a
+  trailing comma on nonattacking intents with powers, bypassing valid glossary
+  entries. TURN MATH's negative lethal verdict is not a proof that no winning
+  sequence exists, and its end-turn projection only accounts for incoming
+  attacks, current Block, and Metallicize. Do not silently repair frozen prompts;
+  version the interface and keep the original sampled baseline reproducible.
+  `fight_lab.evaluate_worker` verifies every v3 source-prefix state/action before
+  wrapping the live environment for v4. Do not set the underlying env's observation
+  to v4: the wrapper retains v3 native getters and changes public presentation only.
+  Displayed combat turns are zero-based; relic timing descriptions use both
+  ordinal and displayed turns. Referenced relic statuses must be explained even
+  when inactive (e.g. Incense Burner with no current Intangible).
 
 - **`self.bc` is the phase signal.** In `combat_control="llm"`, `advance_to_decision` constructs a `BattleContext` and holds it on `self.bc` while an in-combat decision is pending; `phase()` returns `"combat"` iff `self.bc is not None`. The four decision methods (`raw_actions`/`legal_actions`/`describe_state`/`step`) branch on `self.bc` and use `self.bc` (not `self.gc`) as the action context. `step` captures the context **before** executing, since a battle-ending action clears `self.bc` inside the follow-up `advance_to_decision`.
 - **The engine drains itself.** `BattleContext.init` and `BattleAction.execute` both call the C++ `executeActions()` internally, so Python never calls `execute_actions` directly — after either, the state is already at the next player decision or a decided `outcome`.

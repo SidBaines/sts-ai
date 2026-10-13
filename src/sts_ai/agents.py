@@ -251,7 +251,11 @@ class MlxQwenJsonAgent:
         adapter_path: str | None = None,
         output_contract: str = REASONING_ACTION_OUTPUT,
         ooc_output_contract: str | None = None,
+        top_p: float = 1.0,
+        top_k: int = -1,
     ) -> None:
+        if not 0 < top_p <= 1 or (top_k < 0 and top_k != -1):
+            raise ValueError("top_p must be in (0, 1]; top_k must be -1 or nonnegative")
         try:
             from mlx_lm import generate, load
         except ImportError as exc:
@@ -268,6 +272,8 @@ class MlxQwenJsonAgent:
         self.framing = framing
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
         self.max_retries = max_retries
         self.enable_thinking = enable_thinking
         self.adapter_path = adapter_path
@@ -291,7 +297,12 @@ class MlxQwenJsonAgent:
         self._generate = generate
         self._batch_generate = batch_generate
         self._stream_generate = stream_generate
-        self._sampler = make_sampler(temp=temperature) if make_sampler is not None else None
+        if make_sampler is None and (top_p != 1.0 or top_k > 0):
+            raise RuntimeError("this mlx-lm cannot apply the requested sampling filters")
+        sampler_kwargs = {"temp": temperature}
+        if top_p != 1.0 or top_k > 0:
+            sampler_kwargs.update(top_p=top_p, top_k=max(0, top_k))
+        self._sampler = make_sampler(**sampler_kwargs) if make_sampler is not None else None
 
     def reseed(self, policy_seed: int) -> None:
         import mlx.core as mx
@@ -305,6 +316,8 @@ class MlxQwenJsonAgent:
             "model_id": self.model_id,
             "framing": self.framing,
             "temperature": self.temperature,
+            "top_p": self.top_p,
+            "top_k": self.top_k,
             "max_tokens": self.max_tokens,
             "thinking": self.enable_thinking,
             "reasoning_mode": "native" if self.enable_thinking else "none",
@@ -1077,6 +1090,10 @@ def parse_json_action(
     json_span = extracted[1] if extracted is not None else None
     thinking, thinking_meta = _extract_thinking_with_metadata(response, json_span)
     base_metadata: dict[str, object] = dict(thinking_meta)
+    answer_start = _answer_start(response)
+    base_metadata["parser_version"] = "final_channel_v2"
+    if answer_start is not None:
+        base_metadata["answer_text"] = response[answer_start:]
     if json_span is not None:
         base_metadata["json_span"] = [json_span[0], json_span[1]]
 
@@ -1233,9 +1250,57 @@ def _extract_gemma_thought(
     return _strip_answer_fence(text[body_start:]), meta
 
 
+def explicit_thinking_truncated(text: str) -> bool:
+    """Unclosed preserved thought markers, independent of JSON inside thought.
+
+    This diagnoses channel completeness, not the generator's exact stop reason.
+    Stripped-marker responses are deliberately not inferred from the word thought.
+    """
+    lower = text.lower().lstrip()
+    if lower.startswith("<think>"):
+        return "</think>" not in lower[len("<think>"):]
+    match = re.match(r"<\|channel>thought\b", lower)
+    if match:
+        return not any(close in lower[match.end():]
+                       for close in ("<channel|>", "</channel>", "<|channel|>"))
+    return False
+
+
+def _answer_start(text: str) -> int | None:
+    """Locate an explicit answer boundary before inspecting any JSON syntax.
+
+    Unclosed explicit thought blocks have no answer region. The stripped Gemma
+    form remains a compatibility fallback because its channel markers are lost.
+    Never fall back into a closed thought if its final answer is absent/invalid.
+    """
+    lower = text.lower()
+    opening = re.match(r"\s*<think>", lower)
+    start = opening.end() if opening else -1
+    closes = ("</think>",)
+    if start == -1:
+        match = re.match(r"\s*<\|channel>thought\b", lower)
+        if match:
+            start = match.end()
+            closes = ("<channel|>", "</channel>", "<|channel|>")
+        elif re.match(r"\s*thought\b", lower):
+            # A close can survive even when the opening marker was stripped.
+            start = lower.index("thought") + len("thought")
+            closes = ("<channel|>", "</channel>", "<|channel|>")
+            if not any(close in lower[start:] for close in closes):
+                return None
+        else:
+            return None
+    ends = [(pos + len(close)) for close in closes
+            if (pos := lower.find(close, start)) != -1]
+    return min(ends) if ends else len(text)
+
+
 def _extract_json_with_span(text: str) -> tuple[dict, tuple[int, int]] | None:
+    answer_start = _answer_start(text)
+    offset_base = answer_start if answer_start is not None else 0
+    text = text[offset_base:]
     stripped = text.strip()
-    offset = len(text) - len(text.lstrip())
+    offset = offset_base + len(text) - len(text.lstrip())
     parsed = _parse_json_dict(stripped)
     if parsed is not None:
         return parsed, (offset, offset + len(stripped))
@@ -1243,7 +1308,7 @@ def _extract_json_with_span(text: str) -> tuple[dict, tuple[int, int]] | None:
     for candidate, span in reversed(_balanced_json_candidates(text)):
         parsed = _parse_json_dict(candidate)
         if parsed is not None:
-            return parsed, span
+            return parsed, (span[0] + offset_base, span[1] + offset_base)
 
     return None
 

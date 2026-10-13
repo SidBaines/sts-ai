@@ -2,6 +2,9 @@
 
 Minimal local harness for de-risking LLM rollouts on `gamerpuppy/sts_lightspeed`.
 
+For the current local Gemma 4 single-fight experiments, model download, state
+collection/filtering, and GUI, see [the single-fight lab runbook](docs/single_fight_lab.md).
+
 ## Current MVP
 
 The current adapter is a hybrid environment:

@@ -53,18 +53,48 @@ class ParseJsonActionTest(unittest.TestCase):
         start, end = decision.metadata["json_span"]
         self.assertEqual(text[start:end], '{"reasoning": "final", "action_index": 1}')
 
-    def test_unclosed_think_with_final_json_does_not_pollute_thinking(self):
+    def test_json_inside_unclosed_explicit_thought_is_not_an_answer(self):
         text = (
             "<think>Prefer the second action because it is stronger.\n"
             '{"reasoning": "final", "action_index": 1}'
         )
         decision = parse_json_action(text, self.actions)
-        self.assertTrue(decision.valid)
-        self.assertEqual(decision.action_index, 1)
+        self.assertFalse(decision.valid)
         self.assertIn("Prefer the second", decision.thinking)
-        self.assertNotIn('"action_index"', decision.thinking)
+        self.assertIn('"action_index"', decision.thinking)
         self.assertFalse(decision.metadata["thinking_closed"])
-        self.assertTrue(decision.metadata["json_inside_unclosed_think"])
+        self.assertTrue(decision.metadata["thinking_truncated"])
+
+    def test_final_channel_ignores_malformed_reasoning_syntax(self):
+        for opening, closing in (("<think>", "</think>"),
+                                 ("<|channel>thought\n", "<channel|>")):
+            for reasoning in ('unmatched {', 'unmatched "', '{"action_index":0} {'):
+                text = opening + reasoning + closing + '\n```json\n{"action_index":1}\n```'
+                decision = parse_json_action(text, self.actions)
+                self.assertTrue(decision.valid)
+                self.assertEqual(decision.action_index, 1)
+                self.assertEqual(decision.raw_response, text)
+                start, end = decision.metadata["json_span"]
+                self.assertEqual(text[start:end], '{"action_index":1}')
+                self.assertEqual(decision.thinking, reasoning)
+
+    def test_never_uses_thought_json_when_final_answer_is_missing_or_invalid(self):
+        for final in ('', 'not JSON', '{"action_index":99}', '{"action_index":'):
+            text = '<|channel>thought\n{"action_index":0}<channel|>' + final
+            self.assertFalse(parse_json_action(text, self.actions).valid)
+        self.assertFalse(parse_json_action(
+            '<|channel>thought\nExample: {"action_index":0}', self.actions).valid)
+
+    def test_training_action_span_agrees_with_native_final_answer(self):
+        from sts_ai.train.sft_format import _action_object_span
+        text = '<|channel>thought\n{"action_index":0} unmatched { " <channel|>{"action_index":1}'
+        decision = parse_json_action(text, self.actions)
+        span = _action_object_span(text, action_key="action_index", expected_action=1,
+                                   output_contract="action_only")
+        self.assertEqual(list(span), decision.metadata["json_span"])
+        with self.assertRaises(ValueError):
+            _action_object_span('<|channel>thought {"action_index":0}<channel|>bad',
+                                action_key="action_index", expected_action=0, output_contract="action_only")
 
     def test_stray_closing_think_is_flagged_but_json_parses(self):
         text = '{"reasoning": "ok", "action_index": 0}\n</think>'
@@ -430,6 +460,8 @@ class RandomLegalAgentSeedTest(unittest.TestCase):
 class MlxQwenJsonAgentRetryTest(unittest.TestCase):
     def test_config_records_action_only_output_contract(self):
         agent = object.__new__(MlxQwenJsonAgent)
+        agent.top_p = 1.0
+        agent.top_k = -1
         agent.model_id = "model"
         agent.framing = NEUTRAL_FRAME
         agent.temperature = 0.2
