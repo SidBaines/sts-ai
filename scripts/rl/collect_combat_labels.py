@@ -6,6 +6,11 @@ hallway fights entered below --low-hp of max HP, every decision is labelled with
 native search votes over shuffled hidden draw orders (see PanelEpisode.search_votes).
 A fraction of other combat decisions is stored as rehearsal. The policy's own
 action is always played (learner state distribution).
+
+--public uses PanelEpisode.search_votes_public (battle RNG streams re-seeded per
+sample as well as the draw order shuffled), so labels do not encode foreknowledge
+of hidden randomness; it needs the RL build with BattleContext.reseed_rngs
+(external/sts_lightspeed_rl/build_pub). --boss-only labels boss fights only.
 """
 from __future__ import annotations
 
@@ -39,6 +44,8 @@ def main() -> None:
     p.add_argument("--draw-orders", type=int, default=3)
     p.add_argument("--low-hp", type=float, default=0.5)
     p.add_argument("--rehearsal-rate", type=float, default=0.05)
+    p.add_argument("--public", action="store_true", help="public-information search labels (re-seeded RNG)")
+    p.add_argument("--boss-only", action="store_true", help="label only boss fights")
     p.add_argument("--record-dir", required=True)
     args = p.parse_args()
     torch.set_num_threads(1)
@@ -74,18 +81,21 @@ def main() -> None:
                         if phase == "combat" and previous_phase != "combat":
                             room = str(state.get("room", ""))
                             hp, max_hp = state.get("cur_hp") or 0, state.get("max_hp") or 80
-                            fight_label = ("BOSS" in room or "ELITE" in room or
-                                           (int(state.get("act") or 1) >= 2 and hp < args.low_hp * max_hp))
+                            fight_label = ("BOSS" in room if args.boss_only else
+                                           ("BOSS" in room or "ELITE" in room or
+                                            (int(state.get("act") or 1) >= 2 and hp < args.low_hp * max_hp)))
                         previous_phase = phase
                         with LOCK, torch.no_grad():
                             logits, _, _ = forward_policy(model, collate_public([obs], "cpu"))
                         chosen = obs["legal_actions"][int(logits[0].argmax())]
                         if phase == "combat" and len(obs["legal_actions"]) > 1:
                             if fight_label:
-                                votes = inner.search_votes(args.simulations, seeds, task.seed % 100000)
-                                shard.write(json.dumps({"type": "combat", "seed": task.seed, "obs": obs,
-                                                        "votes": votes, "policy_index": chosen["index"]}) + "\n")
-                                labelled += 1
+                                search = inner.search_votes_public if args.public else inner.search_votes
+                                votes = search(args.simulations, seeds, task.seed % 100000 + labelled)
+                                if votes:  # public search abstains on draw-index card selection
+                                    shard.write(json.dumps({"type": "combat", "seed": task.seed, "obs": obs,
+                                                            "votes": votes, "policy_index": chosen["index"]}) + "\n")
+                                    labelled += 1
                             elif rng.random() < args.rehearsal_rate:
                                 shard.write(json.dumps({"type": "rehearsal", "seed": task.seed, "obs": obs}) + "\n")
                         obs, _, terminated, truncated, info = game.submit("step", int(chosen["index"])).result()
