@@ -28,6 +28,7 @@ from sts_policy.workers import CurriculumWorker
 
 from .common import save_atomic, JsonlLog, close_workers, load_policy, make_workers, save_policy
 from .evaluate import evaluate, paired
+from .recording import begin_run, resume_payload, restore_rng, write_collection, require_fresh_or_resume
 
 
 @dataclass(frozen=True)
@@ -145,6 +146,7 @@ def fight_panel(model: torch.nn.Module, workers, rows: list[dict[str, Any]]) -> 
 
 def train(cfg: CombatTrainConfig, *, resume: bool = False) -> None:
     out = Path(cfg.out)
+    require_fresh_or_resume(out, resume)
     out.mkdir(parents=True, exist_ok=True)
     log = JsonlLog(out / "log.jsonl")
     torch.set_num_threads(cfg.threads)
@@ -172,6 +174,9 @@ def train(cfg: CombatTrainConfig, *, resume: bool = False) -> None:
     optimizer = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=cfg.lr)
     first, steps_total = 1, 0
     latest = out / "latest.pt"
+    run_record = begin_run(out, {**asdict(cfg), 'resume': resume},
+                           latest if resume and latest.exists() else cfg.checkpoint,
+                           inputs=[cfg.bank] + ([cfg.game_baseline] if cfg.game_baseline else []))
     if resume and latest.exists():
         state = torch.load(latest, map_location="cpu", weights_only=False)
         model.load_state_dict(state["model_state"])
@@ -181,10 +186,11 @@ def train(cfg: CombatTrainConfig, *, resume: bool = False) -> None:
         for group in optimizer.param_groups:
             group["lr"] = cfg.lr
         first, steps_total = state["iteration"] + 1, state["steps_total"]
-        log.emit({"event": "resume", "iteration": state["iteration"], "saved_lr": saved_lr, "lr": cfg.lr})
+        log.emit({"event": "resume", "iteration": state["iteration"], "saved_lr": saved_lr, "lr": cfg.lr,
+                  'config': asdict(cfg), 'run_record': run_record, 'rng_restored': restore_rng(state, rng)})
     else:
         (out / "config.json").write_text(json.dumps(asdict(cfg), indent=1))
-        log.emit({"event": "start", "config": asdict(cfg), "bank_train": len(train_rows), "bank_held": len(held_rows),
+        log.emit({"event": "start", "config": asdict(cfg), 'run_record': run_record, "bank_train": len(train_rows), "bank_held": len(held_rows),
                   "panel": len(panel_rows), "groups": {g: len(v) for g, v in groups.items()}})
     ppo = PPOConfig(gamma=1.0, gae_lambda=cfg.gae_lambda, clip_ratio=cfg.clip, entropy_weight=cfg.entropy,
                     value_weight=cfg.value_weight, epochs=cfg.epochs, minibatch_size=cfg.minibatch,
@@ -204,6 +210,9 @@ def train(cfg: CombatTrainConfig, *, resume: bool = False) -> None:
             model.eval()
             result = collect_rollouts(model, workers, tasks, collate=collate_public, forward=forward_policy,
                                       config=ppo, max_seconds=3600, deterministic=False, deferred_bootstrap=True)
+            write_collection(out/f'collection_{iteration:04d}.json.gz', {
+                'schema':'sts_training_collection_v1', 'run_record':run_record, 'iteration':iteration,
+                'tasks':[task.to_dict() for task in tasks], 'episodes':result['episodes'], 'faults':result['faults']})
             if cfg.shaping_hp or cfg.shaping_enemy:
                 shape_episodes(result["transitions"], result["episodes"], hp_weight=cfg.shaping_hp,
                                enemy_weight=cfg.shaping_enemy, gae_lambda=cfg.gae_lambda)
@@ -223,14 +232,14 @@ def train(cfg: CombatTrainConfig, *, resume: bool = False) -> None:
                       **{k: update.get(k) for k in ("steps", "approx_kl", "clip_fraction", "entropy", "value_loss",
                                                      "policy_loss", "early_stop")},
                       "seconds": time.time() - started})
-            save_atomic({"model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(),
-                        "iteration": iteration, "steps_total": steps_total}, latest)
+            save_atomic(resume_payload(model, optimizer, iteration, steps_total, asdict(cfg), run_record, rng), latest)
             if cfg.panel_every and iteration % cfg.panel_every == 0:
                 log.emit({"event": "panel", "iteration": iteration, **fight_panel(model.eval(), workers, panel_rows)})
             if cfg.game_eval_every and (iteration % cfg.game_eval_every == 0 or iteration == cfg.iterations):
                 path = out / f"iter_{iteration:04d}.pt"
                 save_policy(path, model, template, metadata={"stage": "sts_rl_combat_ppo", "iteration": iteration,
-                                                             "config": asdict(cfg)})
+                                                             "config": asdict(cfg), 'run_record': run_record},
+                            optimizer=optimizer, step=steps_total, rng=rng)
                 if game_workers is None:
                     game_workers = make_workers(cfg.workers, dead_action_filter=True)
                 result = evaluate(model, game_workers, n=cfg.game_eval_n)

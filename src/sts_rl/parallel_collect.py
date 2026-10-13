@@ -96,7 +96,7 @@ class CollectorPool:
         parts = self._scatter("ooc", model, tasks, seed, combat=combat, temperature=temperature, ppo=ppo,
                               credit=credit, gae_lambda=gae_lambda, chunk=chunk,
                               strategic_temperature=strategic_temperature, strategic_cards=strategic_cards)
-        merged: dict[str, Any] = {"kept": [], "game_episodes": [], "faults": 0, "stats": {}}
+        merged: dict[str, Any] = {"kept": [], "game_episodes": [], "faults": 0, 'fault_records': [], "stats": {}}
         for part in parts:
             # Unpickled observations are new objects: re-bind the encoding identity
             # that update_ppo checks against id(observation).
@@ -107,6 +107,7 @@ class CollectorPool:
             merged["kept"] += part["kept"]
             merged["game_episodes"] += part["game_episodes"]
             merged["faults"] += part["faults"]
+            merged['fault_records'] += part['fault_records']
             for key, values in part["stats"].items():
                 merged["stats"].setdefault(key, []).extend(values)
         return merged

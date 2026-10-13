@@ -1,0 +1,2049 @@
+{
+  "schema": "sts_rpc_fault_v1",
+  "task": {
+    "seed": 6000000009,
+    "kind": "run",
+    "prefix": [],
+    "expected_public_hash": null,
+    "ooc_previews": [],
+    "horizon": 4096,
+    "max_act": 3,
+    "battle_simulations": 200,
+    "ascension": 0,
+    "seek_combat": false,
+    "expected_provenance": null,
+    "task_version": "sts_curriculum_v1",
+    "split": "train"
+  },
+  "worker_class": "CurriculumWorker",
+  "worker_config": {
+    "gamma": 1.0,
+    "reward_mode": "progress",
+    "terminal_hp_weight": 0.0,
+    "progress_floor_weight": 0.05,
+    "goal_act_clear": true,
+    "fast_observations": true,
+    "fast_replay": true,
+    "build_dir": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/external/sts_lightspeed_rl/build"
+  },
+  "timeout": 10.0,
+  "run_record": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/repro_verification/20261014_v3/split/records/launch-1791933801256272000-cf3cd362/launch.json",
+  "successful_rpcs": [
+    {
+      "method": "reset",
+      "args": [
+        {
+          "seed": 6000000009,
+          "kind": "run",
+          "prefix": [],
+          "expected_public_hash": null,
+          "ooc_previews": [],
+          "horizon": 4096,
+          "max_act": 3,
+          "battle_simulations": 200,
+          "ascension": 0,
+          "seek_combat": false,
+          "expected_provenance": null,
+          "task_version": "sts_curriculum_v1",
+          "split": "train"
+        }
+      ],
+      "public_hash": "a8782b579065f2e0398234402d539a38f34af41f7a552a50d38355749da6a66e"
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        4
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        5
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ],
+      "public_hash": "63d667bf3c417beafaab134fa5437a3251df39b56e7c25e0579e53076057c496"
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        4
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        4
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        4
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        10
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        8
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        5
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        9
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        11
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        6
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ],
+      "public_hash": "5b171db8a973c270de9959c1ed1ff455619eb289ec8dc74e5a94c575383fb8a4"
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        2
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        10
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        9
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        4
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        3
+      ],
+      "public_hash": "bd714fc3e36955146316d384602818bf398cb99acd3f3b722b2918240f18e4fa"
+    },
+    {
+      "method": "step",
+      "args": [
+        0
+      ]
+    },
+    {
+      "method": "step",
+      "args": [
+        1
+      ]
+    }
+  ],
+  "attempted_rpc": {
+    "method": "step",
+    "args": [
+      0
+    ]
+  },
+  "exception": {
+    "type": "SimulatorError",
+    "message": "SimulatorError: Simulator reported undefined behavior; trajectory is invalid",
+    "child": {
+      "type": "SimulatorError",
+      "message": "Simulator reported undefined behavior; trajectory is invalid",
+      "traceback": "Traceback (most recent call last):\n  File \"/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/src/sts_policy/workers.py\", line 199, in _serve\n    connection.send((\"ok\", getattr(episode, method)(*args)))\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/src/sts_policy/workers.py\", line 138, in step\n    observation, _, terminated, truncated, info = self.episode.step(action)\n                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/src/sts_env/env.py\", line 130, in step\n    observation = self._observe()\n                  ^^^^^^^^^^^^^^^\n  File \"/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/src/sts_env/env.py\", line 74, in _observe\n    raise SimulatorError(\"Simulator reported undefined behavior; trajectory is invalid\")\nsts_env.env.SimulatorError: Simulator reported undefined behavior; trajectory is invalid\n"
+    }
+  },
+  "native_pid": 59075,
+  "native_exitcode_before_cleanup": null,
+  "last_observation": {
+    "state": {
+      "ascension": 0,
+      "act": 2,
+      "floor": 21,
+      "screen_state": "ScreenState.BATTLE",
+      "room": "Room.MONSTER",
+      "outcome": "GameOutcome.UNDECIDED",
+      "cur_hp": 67,
+      "max_hp": 79,
+      "gold": 68,
+      "phase": "combat",
+      "undefined_behavior_evoked": false,
+      "done": false,
+      "combat": {
+        "turn": 0,
+        "input_state": "InputState.PLAYER_NORMAL",
+        "battle_outcome": "BattleOutcome.UNDECIDED",
+        "player_cur_hp": 67,
+        "player_max_hp": 79,
+        "player_block": 0,
+        "player_energy": 1,
+        "player_energy_per_turn": 4,
+        "undefined_behavior_evoked": false,
+        "enemies": [
+          {
+            "index": 0,
+            "name": "LOOTER",
+            "cur_hp": 42,
+            "max_hp": 45,
+            "block": 0,
+            "intent": "LOOTER_MUG",
+            "alive": true,
+            "intent_damage": 11,
+            "intent_hits": 1,
+            "strength": 1,
+            "vulnerable": 0,
+            "weak": 0,
+            "poison": 0,
+            "powers": {
+              "Thievery": 15
+            }
+          },
+          {
+            "index": 1,
+            "name": "MUGGER",
+            "cur_hp": 36,
+            "max_hp": 48,
+            "block": 0,
+            "intent": "MUGGER_MUG",
+            "alive": true,
+            "intent_damage": 11,
+            "intent_hits": 1,
+            "strength": 1,
+            "vulnerable": 0,
+            "weak": 0,
+            "poison": 0,
+            "powers": {
+              "Thievery": 15
+            }
+          }
+        ],
+        "recent_actions": [
+          "play Inflame [Power] (cost 1)",
+          "play Inflame [Power] (cost 1)",
+          "play Dropkick [Attack] (cost 1) -> MUGGER (deal 9)",
+          "drink potion Colorless Potion",
+          "select card for DISCOVERY: Discovery [Skill] (cost 1)"
+        ],
+        "player": {
+          "cur_hp": 67,
+          "max_hp": 79,
+          "block": 0,
+          "energy": 1,
+          "energy_per_turn": 4,
+          "card_draw_per_turn": 5,
+          "orb_slots": 0,
+          "gold": 68,
+          "stance": "NEUTRAL",
+          "turn": 0,
+          "cards_played_this_turn": 3,
+          "attacks_played_this_turn": 1,
+          "skills_played_this_turn": 0,
+          "cards_discarded_this_turn": 0,
+          "powers": {
+            "Strength": 4
+          }
+        },
+        "cards": {
+          "order_semantics": "hand is indexed; draw/discard/exhaust are unordered aggregates",
+          "turn": 0,
+          "cards_played_this_turn": 3,
+          "attacks_played_this_turn": 1,
+          "skills_played_this_turn": 0,
+          "cards_discarded_this_turn": 0,
+          "energy": 1,
+          "energy_per_turn": 4,
+          "hand": [
+            {
+              "name": "Reaper",
+              "label": "Reaper [Attack] (cost 2)",
+              "type": "Attack",
+              "upgrade_count": 0,
+              "cost": 2,
+              "cost_for_turn": 2,
+              "free_to_play_once": false,
+              "retain": false,
+              "index": 0
+            },
+            {
+              "name": "Perfected Strike",
+              "label": "Perfected Strike [Attack] (cost 2)",
+              "type": "Attack",
+              "upgrade_count": 0,
+              "cost": 2,
+              "cost_for_turn": 2,
+              "free_to_play_once": false,
+              "retain": false,
+              "index": 1
+            },
+            {
+              "name": "Discovery",
+              "label": "Discovery [Skill] (cost 0, base 1)",
+              "type": "Skill",
+              "upgrade_count": 0,
+              "cost": 1,
+              "cost_for_turn": 0,
+              "free_to_play_once": false,
+              "retain": false,
+              "index": 2
+            }
+          ],
+          "draw": [
+            {
+              "name": "Bash",
+              "label": "Bash [Attack] (cost 2)",
+              "type": "Attack",
+              "upgrade_count": 0,
+              "cost": 2,
+              "cost_for_turn": 2,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            },
+            {
+              "name": "Body Slam",
+              "label": "Body Slam [Attack] (cost 1)",
+              "type": "Attack",
+              "upgrade_count": 0,
+              "cost": 1,
+              "cost_for_turn": 1,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            },
+            {
+              "name": "Clothesline",
+              "label": "Clothesline [Attack] (cost 2)",
+              "type": "Attack",
+              "upgrade_count": 0,
+              "cost": 2,
+              "cost_for_turn": 2,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            },
+            {
+              "name": "Combust",
+              "label": "Combust [Power] (cost 1)",
+              "type": "Power",
+              "upgrade_count": 0,
+              "cost": 1,
+              "cost_for_turn": 1,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            },
+            {
+              "name": "Entrench",
+              "label": "Entrench [Skill] (cost 2)",
+              "type": "Skill",
+              "upgrade_count": 0,
+              "cost": 2,
+              "cost_for_turn": 2,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            },
+            {
+              "name": "Perfected Strike",
+              "label": "Perfected Strike [Attack] (cost 2)",
+              "type": "Attack",
+              "upgrade_count": 0,
+              "cost": 2,
+              "cost_for_turn": 2,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            },
+            {
+              "name": "Rupture",
+              "label": "Rupture [Power] (cost 1)",
+              "type": "Power",
+              "upgrade_count": 0,
+              "cost": 1,
+              "cost_for_turn": 1,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            },
+            {
+              "name": "Shockwave",
+              "label": "Shockwave [Skill] (cost 2)",
+              "type": "Skill",
+              "upgrade_count": 0,
+              "cost": 2,
+              "cost_for_turn": 2,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            },
+            {
+              "name": "Shrug It Off",
+              "label": "Shrug It Off [Skill] (cost 1)",
+              "type": "Skill",
+              "upgrade_count": 0,
+              "cost": 1,
+              "cost_for_turn": 1,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 2
+            },
+            {
+              "name": "Warcry",
+              "label": "Warcry [Skill] (cost 0)",
+              "type": "Skill",
+              "upgrade_count": 0,
+              "cost": 0,
+              "cost_for_turn": 0,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            },
+            {
+              "name": "Wild Strike",
+              "label": "Wild Strike [Attack] (cost 1)",
+              "type": "Attack",
+              "upgrade_count": 0,
+              "cost": 1,
+              "cost_for_turn": 1,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            }
+          ],
+          "discard": [
+            {
+              "name": "Dropkick",
+              "label": "Dropkick [Attack] (cost 1)",
+              "type": "Attack",
+              "upgrade_count": 0,
+              "cost": 1,
+              "cost_for_turn": 1,
+              "free_to_play_once": false,
+              "retain": false,
+              "count": 1
+            }
+          ],
+          "exhaust": []
+        },
+        "relics": [
+          {
+            "name": "Pandoras Box",
+            "counter": 0,
+            "counter_is_live": false
+          },
+          {
+            "name": "Mercury Hourglass",
+            "counter": 0,
+            "counter_is_live": false
+          },
+          {
+            "name": "Kunai",
+            "counter": 0,
+            "counter_is_live": false
+          },
+          {
+            "name": "Art Of War",
+            "counter": 0,
+            "counter_is_live": false
+          },
+          {
+            "name": "Golden Idol",
+            "counter": 0,
+            "counter_is_live": false
+          },
+          {
+            "name": "Philosophers Stone",
+            "counter": 0,
+            "counter_is_live": false
+          }
+        ],
+        "potions": {
+          "capacity": 3,
+          "occupied": 1,
+          "slots": [
+            {
+              "index": 0,
+              "empty": true,
+              "name": null
+            },
+            {
+              "index": 1,
+              "empty": false,
+              "name": "Cultist Potion"
+            },
+            {
+              "index": 2,
+              "empty": true,
+              "name": null
+            }
+          ]
+        }
+      },
+      "observation_version": "sts_env_public_v1"
+    },
+    "text": "Battle turn 0\nPlayer HP: 67/79, block: 0, energy: 1/4\nTurn counters: cards played 3, attacks 1, skills 0, discarded 0\nStance: NEUTRAL\nPlayer resources: draw per turn 5, orb slots 0\nPlayer powers: Strength 4\nEnemies:\n  [0] LOOTER HP 42/45, block 0, intent LOOTER_MUG (deal 11), Strength 1, Thievery 15 (also: steals gold from you)\n  [1] MUGGER HP 36/48, block 0, intent MUGGER_MUG (deal 11), Strength 1, Thievery 15 (also: steals gold from you)\nHand:\n  [0] Reaper [Attack] (cost 2)\n  [1] Perfected Strike [Attack] (cost 2)\n  [2] Discovery [Skill] (cost 0)\nPiles: draw 12, discard 1, exhaust 0\nDraw pile contents (unordered): Bash [Attack] (cost 2), Body Slam [Attack] (cost 1), Clothesline [Attack] (cost 2), Combust [Power] (cost 1), Entrench [Skill] (cost 2), Perfected Strike [Attack] (cost 2), Rupture [Power] (cost 1), Shockwave [Skill] (cost 2), Shrug It Off [Skill] (cost 1) x2, Warcry [Skill] (cost 0), Wild Strike [Attack] (cost 1)\nDiscard pile contents (unordered): Dropkick [Attack] (cost 1)\nExhaust pile contents (unordered): none\nRelics: Pandoras Box, Mercury Hourglass, Kunai, Art Of War, Golden Idol, Philosophers Stone\nPotions (capacity 3): [0] empty, [1] Cultist Potion, [2] empty\nRecent actions this turn: play Inflame [Power] (cost 1) -> play Inflame [Power] (cost 1) -> play Dropkick [Attack] (cost 1) -> MUGGER (deal 9) -> drink potion Colorless Potion -> select card for DISCOVERY: Discovery [Skill] (cost 1)\nAscension: 0\nIncoming attack damage this turn: 22 (before your Block) (this total already includes each attacker's Strength, Weak, and Vulnerable -- do not add those again)\nIncoming attack arithmetic only: max(0, shown incoming 22 - current Block 0 - Metallicize 0) = 22. This calculation omits Plated Armor, Burn, Combust, and all other end-turn effects; it does not predict HP loss.\nFixed-cost attack arithmetic: largest sum of shown Attack damage within current energy 1, holding current costs and shown damage fixed: 0. This does not simulate an action sequence or determine whether an enemy can be defeated this turn. Card draw, energy generation or refunds, other card effects, potions, target allocation, and subsequent changes to costs, damage, or defenses are outside this calculation. Attacks excluded from this sum: Reaper, Perfected Strike.\nOne response executes one legal action, not a whole turn. After that action resolves, you receive the updated state and another choice if combat still needs a decision. You can play multiple cards in the same turn, one action per response, while they remain legal. Choosing end turn starts end-of-turn effects and the enemy phase; some card or enemy effects can also end your turn.\nEnergy A/B means A energy available now and B normal energy recharge per turn; B is not a cap. At the start of your turn, energy resets to B, except Ice Cream retains unused energy and adds B; other effects can add energy. Ordinary Block is removed at the start of your turn; Barricade or Blur preserves it, otherwise Calipers removes 15 instead. Unless an effect retains them, remaining hand cards are discarded at end of turn (Ethereal cards Exhaust); you normally draw the displayed draw-per-turn amount for the next turn. Listed player powers omit zero values: absent Strength or Dexterity means zero. A shown intent describes the upcoming enemy phase.\nCard rules below describe the named instance: + means upgraded. Rule damage/Block are unmodified unless explicitly calculated; inline deal N already includes current attack modifiers. Battle turns start at 0.\n\n\n\n-- KEY (effects/statuses; numbers are shown next to each above) --\n  Combust: at end of turn, lose 1 HP and deal that much damage to all enemies; its number is the per-turn amount.\n  Dexterity: adds its value to the Block gained from cards; its number is a persistent value.\n  Ritual: at the end of its turn, gains that much Strength; its number is the per-turn amount.\n  Rupture: whenever you lose HP from a card, gain that much Strength; its number is a persistent value.\n  Strength: adds its value to the damage of each attack, can be negative (already reflected in the shown deal N); its number is a persistent value.\n  Thievery: when this enemy's stealing attack lands, it steals that much gold; its number is a persistent value.\n  Vulnerable: the affected creature takes 50% more damage from attacks (already reflected in the shown deal N); its number is turns remaining.\n  Weak: the affected creature deals 25% less attack damage (already reflected in the shown deal N); its number is turns remaining.\n  Reaper: Deal 4 damage to ALL enemies; heal HP equal to unblocked damage dealt. Exhaust.\n  Perfected Strike: Deal 6 damage, plus 2 more for each card with 'Strike' in its name.\n  Discovery: Choose 1 of 3 random cards to add to your hand (costs 0 this turn). Exhaust.\n  Bash: Deal 8 damage. Apply 2 Vulnerable.\n  Body Slam: Deal damage equal to your current Block.\n  Clothesline: Deal 12 damage. Apply 2 Weak.\n  Combust: At end of turn, lose 1 HP and deal 5 damage to all enemies (a Power).\n  Entrench: Double your current Block.\n  Rupture: Power: whenever you lose HP from a card, gain 1 Strength.\n  Shockwave: Apply 3 Weak and 3 Vulnerable to ALL enemies. Exhaust.\n  Shrug It Off: Gain 8 Block. Draw 1 card.\n  Warcry: Draw 1 cards. Put a card from your hand on top of your draw pile. Exhaust.\n  Wild Strike: Deal 12 damage. Shuffle a Wound into your draw pile.\n  Dropkick: Deal 5 damage. If the enemy is Vulnerable, gain 1 energy and draw 1 card.\n  Pandoras Box: On pickup, remove all starter Strike/Defend cards and replace each with a random card.\n  Mercury Hourglass: At the start of combat, deal 3 damage to ALL enemies.\n  Kunai: Every 3rd Attack you play in a turn grants 1 Dexterity.\n  Art Of War: If you play no Attacks during a turn, gain 1 extra energy next turn.\n  Golden Idol: Enemies drop 25% more gold.\n  Philosophers Stone: Gain 1 extra energy each combat; enemies gain 1 Strength at combat start.\n  Cultist Potion: Gain 1 Ritual (gain Strength at the end of each of your turns).",
+    "phase": "combat",
+    "legal_actions": [
+      {
+        "index": 0,
+        "description": "play Discovery [Skill] (cost 0)"
+      },
+      {
+        "index": 1,
+        "description": "drink potion Cultist Potion"
+      },
+      {
+        "index": 2,
+        "description": "end turn"
+      }
+    ]
+  },
+  "last_info": {
+    "python_interface_sha256": "1fa75a1d3d7de01ceae2ba0461f8ce3cae4051e8e6ba94ff3ff1897a9af02205",
+    "runtime_python_version": "3.12.13",
+    "mode": "full",
+    "world_seed": 6000000009,
+    "environment_version": "0.1.1",
+    "observation_version": "sts_env_public_v1",
+    "native_steps": 0,
+    "steps": 194,
+    "outcome": "GameOutcome.UNDECIDED",
+    "termination_reason": "",
+    "ooc_seed": 6000000009,
+    "ooc_effective_seed": 1705032713,
+    "native_provenance": {
+      "upstream_commit": "7476a81954020087da31d41d16fddf475746ec2d",
+      "pybind11_tag": "v2.13.6",
+      "patch_sha256": "77fddbd67c82bebcc4ff31eea6bb0f6d25e8216e44825d6459f184f47756ce16",
+      "backend_api": 1,
+      "rl_panel_patch_sha256": "944ff2ecd06c0a7677e220f5319d4692986f33262597636beff9ade56e33b351",
+      "module_file": "slaythespire.cpython-312-darwin.so",
+      "module_sha256": "e59e02b5f5ca51b61cbb707c9a2d6631eb24fcda7e563799ac2e6c5001fd2fb1",
+      "python_cache_tag": "cpython-312",
+      "python_version": "3.12.13",
+      "platform": "macosx-11.0-arm64",
+      "json_commit": "0b345b20c888f7dc8888485768e4bf9a6be29de0",
+      "cmake_version": "cmake version 3.31.6",
+      "variant": "sts_rl_panel"
+    },
+    "executed_action": {
+      "index": 1,
+      "bits": 1073741825,
+      "description": "select card for DISCOVERY: Discovery [Skill] (cost 1)"
+    },
+    "task_version": "sts_curriculum_v1",
+    "task_kind": "run",
+    "task_steps": 194,
+    "task_outcome": "",
+    "task_start_prefix": [],
+    "task_start_ooc_previews": [],
+    "action_prefix": [
+      3,
+      0,
+      2,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      2,
+      0,
+      0,
+      0,
+      0,
+      2,
+      0,
+      0,
+      1,
+      1,
+      1,
+      0,
+      3,
+      1,
+      0,
+      0,
+      2,
+      1,
+      0,
+      0,
+      0,
+      3,
+      3,
+      0,
+      0,
+      0,
+      0,
+      2,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0,
+      1,
+      2,
+      0,
+      3,
+      0,
+      3,
+      0,
+      4,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1,
+      3,
+      1,
+      5,
+      0,
+      1,
+      1,
+      0,
+      2,
+      0,
+      2,
+      1,
+      0,
+      2,
+      2,
+      2,
+      0,
+      4,
+      0,
+      4,
+      2,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      4,
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      3,
+      0,
+      0,
+      2,
+      0,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      10,
+      8,
+      5,
+      1,
+      0,
+      0,
+      2,
+      0,
+      9,
+      11,
+      6,
+      0,
+      0,
+      0,
+      1,
+      3,
+      1,
+      1,
+      0,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      2,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      3,
+      0,
+      2,
+      0,
+      1,
+      1,
+      0,
+      0,
+      3,
+      0,
+      0,
+      2,
+      2,
+      2,
+      0,
+      0,
+      3,
+      1,
+      0,
+      3,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      3,
+      2,
+      0,
+      0,
+      2,
+      2,
+      2,
+      0,
+      0,
+      0,
+      0,
+      10,
+      9,
+      4,
+      1,
+      1,
+      0,
+      0,
+      0,
+      3,
+      0,
+      1
+    ],
+    "ooc_previews": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "split": "train",
+    "hp_cost": 13.0,
+    "reward_version": "sts_curriculum_reward_v2",
+    "reward_settings": {
+      "mode": "progress",
+      "gamma": 1.0,
+      "progress_floor_weight": 0.05,
+      "terminal_hp_weight": 0.0,
+      "goal_act_clear": true
+    },
+    "reward_components": {
+      "terminal": 0.0,
+      "potential": 0.0,
+      "progress": 0.0,
+      "terminal_hp": 0.0
+    }
+  },
+  "last_public_hash": "297d810f874427e55ff41fef454665ca2b6f4a6b527860f1d43e3e9dbd5d4786",
+  "native_provenance": {
+    "upstream_commit": "7476a81954020087da31d41d16fddf475746ec2d",
+    "pybind11_tag": "v2.13.6",
+    "patch_sha256": "77fddbd67c82bebcc4ff31eea6bb0f6d25e8216e44825d6459f184f47756ce16",
+    "backend_api": 1,
+    "rl_panel_patch_sha256": "944ff2ecd06c0a7677e220f5319d4692986f33262597636beff9ade56e33b351",
+    "module_file": "slaythespire.cpython-312-darwin.so",
+    "module_sha256": "e59e02b5f5ca51b61cbb707c9a2d6631eb24fcda7e563799ac2e6c5001fd2fb1",
+    "python_cache_tag": "cpython-312",
+    "python_version": "3.12.13",
+    "platform": "macosx-11.0-arm64",
+    "json_commit": "0b345b20c888f7dc8888485768e4bf9a6be29de0",
+    "cmake_version": "cmake version 3.31.6",
+    "variant": "sts_rl_panel"
+  },
+  "python_interface_sha256": "1fa75a1d3d7de01ceae2ba0461f8ce3cae4051e8e6ba94ff3ff1897a9af02205",
+  "runtime_python_version": "3.12.13",
+  "rpc_history_sha256": "c7add1f42bd3335752871a57af47cec7ab588e88f5b50a0d348859180fa75261",
+  "replay_scope": "Exact calls, including teacher/search queries; reset-internal prefixes are in task."
+}

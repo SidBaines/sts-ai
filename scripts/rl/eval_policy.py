@@ -14,6 +14,9 @@ import torch  # noqa: E402
 from sts_rl.common import EVAL_WORLD_START, ORIGINAL_CHECKPOINT, close_workers, load_policy, make_workers  # noqa: E402
 from sts_rl.evaluate import evaluate, paired  # noqa: E402
 
+from sts_rl.recording import begin_run
+from sts_env.env import SimulatorError
+
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
@@ -38,6 +41,9 @@ def main() -> None:
     p.add_argument("--collectors", type=int, default=1, help=">1: parallel collector processes")
     p.add_argument("--baseline", help="eval JSON to pair against")
     args = p.parse_args()
+    if Path(args.output).exists():
+        p.error('Output already contains results; choose a fresh output')
+    begin_run(str(args.output)+'.record', vars(args), args.checkpoint, inputs=[args.baseline] if args.baseline else [])
     torch.set_num_threads(1)
     model, _ = load_policy(args.checkpoint)
     elite_above = args.elite_above

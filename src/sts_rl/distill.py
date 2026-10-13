@@ -20,6 +20,7 @@ import torch
 from sts_policy.model_agent import cached_public_collator, forward_policy
 
 from .common import ORIGINAL_CHECKPOINT, JsonlLog, load_policy, save_policy
+from .recording import begin_run
 
 
 @dataclass(frozen=True)
@@ -83,8 +84,11 @@ def soft_target(record: dict[str, Any], tau: float) -> list[float] | None:
 
 def distill(cfg: DistillConfig) -> dict[str, Any]:
     out = Path(cfg.out)
+    if (out/'distilled.pt').exists() or (out/'log.jsonl').exists():
+        raise ValueError('Distillation output contains history; choose a fresh output')
     out.mkdir(parents=True, exist_ok=True)
     log = JsonlLog(out / "log.jsonl")
+    run_record = begin_run(out, asdict(cfg), cfg.checkpoint, inputs=[cfg.records])
     torch.set_num_threads(cfg.threads)
     torch.manual_seed(cfg.seed)
     rng = random.Random(cfg.seed)
@@ -112,7 +116,7 @@ def distill(cfg: DistillConfig) -> dict[str, Any]:
     split = lambda xs: ([x for x in xs if x["seed"] not in val_seeds], [x for x in xs if x["seed"] in val_seeds])
     lab_train, lab_val = split(labelled)
     reh_train, reh_val = split(rehearsal)
-    log.emit({"event": "start", "config": asdict(cfg), "labelled": len(labelled), "rehearsal": len(rehearsal),
+    log.emit({"event": "start", "config": asdict(cfg), 'run_record': run_record, "labelled": len(labelled), "rehearsal": len(rehearsal),
               "train": [len(lab_train), len(reh_train)], "val": [len(lab_val), len(reh_val)],
               "by_type": {t: sum(r["type"] == t for r in labelled) for t in types}})
     all_obs = [r["obs"] for r in labelled + rehearsal]
@@ -185,6 +189,7 @@ def distill(cfg: DistillConfig) -> dict[str, Any]:
     if not all(torch.equal(v, state[k]) for k, v in combat_before.items()):
         raise RuntimeError(f"{frozen_head} head changed during {cfg.head} distillation")
     path = out / "distilled.pt"
-    save_policy(path, student, template, metadata={"stage": "sts_rl_distill", "config": asdict(cfg)})
+    save_policy(path, student, template, metadata={"stage": "sts_rl_distill", "config": asdict(cfg),
+                                                 'run_record': run_record}, optimizer=optimizer, step=steps, rng=rng)
     log.emit({"event": "done", "checkpoint": str(path)})
     return {"checkpoint": str(path)}

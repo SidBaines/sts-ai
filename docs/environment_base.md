@@ -165,3 +165,7 @@ Version 0.1.0 passed all local release gates on 11 October 2026.
 [The release verification record](release_v0.1.0.md) records the 191-test suite,
 CLI/replay, privacy, timeout, vectorization and packaging checks. The immutable `env-v0.1.0` tag identifies
 the tested source; no historical training results are claimed for this release.
+
+## Experiment fault evidence
+
+The RL adapter now preserves replayable simulator RPC failures and keeps them outside game-loss accounting; see [training records and fault replay](rl_recording_and_fault_replay.md). This changes private experiment records, not the core observation/CLI trace schemas or released native patch. A captured Act-2 Discovery failure reproduces on frozen 0.1.1 and passes the former failure point with the separate 0.1.2 Discovery maintenance candidate. The old flag denotes unsupported Discovery, not a diagnosed memory error. Other native faults remain possible, so isolation and finite operation deadlines remain required. No release tag or historical study binary was changed.

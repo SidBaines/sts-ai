@@ -10,10 +10,13 @@ import operator
 import os
 import threading
 import time
+import traceback
+from pathlib import Path
 from typing import Any
 
 from sts_env.env import SimulatorError, SimulatorTimeout, _Episode
 from sts_policy.curriculum import TASK_VERSION, REWARD_VERSION, TaskSpec, player_hp, public_hash, reward_components, validate_provenance, world_split
+from sts_policy.faults import digest, serializable, write_fault
 
 
 class CurriculumEpisode:
@@ -195,7 +198,8 @@ def _serve(connection: Any, config: dict[str, Any]) -> None:
             try:
                 connection.send(("ok", getattr(episode, method)(*args)))
             except Exception as exc:
-                connection.send(("error", {"type": type(exc).__name__, "message": str(exc)}))
+                connection.send(("error", {"type": type(exc).__name__, "message": str(exc),
+                                            "traceback": traceback.format_exc()}))
                 # Fail closed: native corruption cannot contaminate another task.
                 break
     except (EOFError, BrokenPipeError):
@@ -216,6 +220,12 @@ class CurriculumWorker:
             raise ValueError("timeout must be finite and positive")
         self.config = dict(config or {})
         self.config.setdefault("build_dir", os.environ.get("STS_LIGHTSPEED_BUILD"))
+        self.fault_dir = self.config.pop('fault_dir', os.environ.get('STS_FAULT_DIR',
+            str(Path(__file__).resolve().parents[2] / 'data/simulator_faults')))
+        self.run_record = self.config.pop('run_record', os.environ.get('STS_RUN_RECORD'))
+        self._rpc_history: list[dict[str, Any]] = []
+        self._task: Any = None
+        self.last_fault_path: str | None = None
         self.timeout = timeout
         self._process: Any = None
         self._connection: Any = None
@@ -250,24 +260,81 @@ class CurriculumWorker:
 
     def _call(self, method: str, *args: Any) -> Any:
         with self._lock:
+            if method in {'reset', 'menu', 'encounters', 'panel', 'afterstates'}:
+                self._rpc_history = []
+                self._task = serializable(args[0])
+                self.observation, self.info = None, None
+                self.last_fault_path = None
+            request = {'method': method, 'args': serializable(args)}
             if self._process is None:
                 if method != "reset":
                     raise RuntimeError("reset is required after a native fault")
                 self._launch()
+            child_error = None
             try:
                 self._connection.send((method, args))
                 if not self._connection.poll(self.timeout):
                     raise SimulatorTimeout(f"Curriculum {method} exceeded {self.timeout:g}s")
                 status, value = self._connection.recv()
                 if status != "ok":
+                    child_error = value
                     raise SimulatorError(f"{value['type']}: {value['message']}")
+                if method in {'panel', 'afterstates'} and self._contained_fault(value):
+                    self._record_fault(request, SimulatorError('Panel reported contained fault/undefined behavior'),
+                                       {'returned_diagnostics': value})
+                if self.fault_dir:
+                    event = dict(request)
+                    if method == 'reset' or (method == 'step' and len(self._rpc_history) % 64 == 0):
+                        event['public_hash'] = public_hash(value[0])
+                    elif method == 'teacher_action':
+                        event['result'] = value
+                    self._rpc_history.append(event)
                 return value
             except (EOFError, BrokenPipeError, OSError) as exc:
-                self._kill()
-                raise SimulatorError(f"Native worker exited during {method}") from exc
-            except SimulatorError:
-                self._kill()
+                error = SimulatorError(f"Native worker exited during {method}")
+                try:
+                    self._record_fault(request, error, child_error)
+                finally:
+                    self._kill()
+                raise error from exc
+            except SimulatorError as exc:
+                try:
+                    self._record_fault(request, exc, child_error)
+                finally:
+                    self._kill()
                 raise
+
+    @staticmethod
+    def _contained_fault(value):
+        if isinstance(value, list):
+            return any(CurriculumWorker._contained_fault(v) for v in value)
+        if isinstance(value, dict):
+            return bool(value.get('fault') or value.get('ub')) or any(
+                CurriculumWorker._contained_fault(v) for v in value.values() if isinstance(v, (list, dict)))
+        return False
+
+    def _record_fault(self, request, error, child_error):
+        if not self.fault_dir:
+            return
+        from sts_env.provenance import interface_identity
+        from sts_env._backend.lightspeed_import import native_metadata
+        try:
+            native = native_metadata(self.config.get('build_dir'))
+        except RuntimeError as exc:
+            native = {'unavailable': str(exc)}
+        process = self._process
+        self.last_fault_path = write_fault(self.fault_dir, {
+            'task': self._task, 'worker_class': type(self).__name__, 'worker_config': self.config,
+            'timeout': self.timeout, 'run_record': self.run_record,
+            'successful_rpcs': self._rpc_history, 'attempted_rpc': request,
+            'exception': {'type': type(error).__name__, 'message': str(error), 'child': child_error},
+            'native_pid': process.pid if process else None,
+            'native_exitcode_before_cleanup': process.exitcode if process else None,
+            'last_observation': self.observation, 'last_info': self.info,
+            'last_public_hash': public_hash(self.observation) if self.observation else None,
+            'native_provenance': native, **interface_identity(),
+            'rpc_history_sha256': digest(self._rpc_history),
+            'replay_scope': 'Exact calls, including teacher/search queries; reset-internal prefixes are in task.'})
 
     def reset(self, spec: TaskSpec | dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
         observation, info = self._call("reset", spec)

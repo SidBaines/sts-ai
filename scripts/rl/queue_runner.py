@@ -28,6 +28,7 @@ QUEUE = RUNS / "queue.json"
 LOCK = RUNS / "queue.lock"
 STATUS = RUNS / "runner_status.json"
 STALL_MINUTES = 40
+LAUNCHED: dict[int, subprocess.Popen] = {}
 ENV = {"PYTHONPATH": str(ROOT / "src"),
        "STS_LIGHTSPEED_BUILD": str(ROOT / "external" / "sts_lightspeed_rl" / "build")}
 
@@ -88,17 +89,28 @@ def last_activity(run: dict) -> tuple[float, bool]:
 
 
 def launch(run: dict) -> int:
+    sys.path.insert(0, str(ROOT/'src'))
+    from sts_rl.recording import begin_run
     out = RUNS / run["name"]
     out.mkdir(parents=True, exist_ok=True)
+    cmd = run['cmd']
+    checkpoint = cmd[cmd.index('--checkpoint')+1] if '--checkpoint' in cmd else None
+    inputs = [cmd[cmd.index(flag)+1] for flag in ['--bank', '--records', '--baseline', '--teacher'] if flag in cmd]
+    build = next((word.split('=',1)[1] for word in cmd if word.startswith('STS_LIGHTSPEED_BUILD=')), ENV['STS_LIGHTSPEED_BUILD'])
+    run['launch_record'] = begin_run(out, {'queue_name':run['name'], 'cmd':cmd, 'lane':run.get('lane','main')},
+                                     checkpoint, inputs, build_dir=build)
     stdout = (out / "stdout.log").open("a")
+    log = run_log(run)
+    run['log_start_bytes'] = log.stat().st_size if log.exists() else 0
     proc = subprocess.Popen(run["cmd"], cwd=ROOT, env={**os.environ, **ENV}, start_new_session=True,
                             stdin=subprocess.DEVNULL, stdout=stdout, stderr=subprocess.STDOUT)
+    LAUNCHED[proc.pid] = proc
+    stdout.close()
     return proc.pid
 
 
 def runner() -> None:
     caffeinate = None
-    children: dict[int, subprocess.Popen] = {}
     while True:
         battery = on_battery()
         with Locked():
@@ -116,20 +128,30 @@ def runner() -> None:
                 # reap if exited
                 finished = False
                 try:
-                    wpid, code = os.waitpid(pid, os.WNOHANG)
+                    if pid in LAUNCHED:
+                        code = LAUNCHED[pid].poll()
+                        wpid = pid if code is not None else 0
+                    else:
+                        wpid, status = os.waitpid(pid, os.WNOHANG)
+                        code = os.waitstatus_to_exitcode(status) if wpid else None
                     if wpid == pid:
                         finished = True
-                        run["returncode"] = os.waitstatus_to_exitcode(code)
+                        run["returncode"] = code
+                        LAUNCHED.pop(pid, None)
                 except ChildProcessError:
                     finished = not alive(pid)
                     run.setdefault("returncode", None)
                 if finished:
                     log = run_log(run)
-                    done = log.exists() and '"event": "done"' in log.read_text()[-2000:]
+                    done = False
+                    if log.exists():
+                        with log.open('rb') as source:
+                            source.seek(max(run.get('log_start_bytes',0), log.stat().st_size-2000))
+                            done = b'"event": "done"' in source.read()
                     code = run.get("returncode")
                     # Non-trainer jobs (evals) write no log.jsonl; a runner restarted since
                     # launch cannot reap its predecessor's children, so code may be unknown.
-                    status = "done" if done or code == 0 else ("exited" if code is None and not log.exists() else "failed")
+                    status = "done" if code == 0 or (code is None and done) else ("exited" if code is None and not log.exists() else "failed")
                     run.update(status=status, ended=time.time())
                     continue
                 if battery and run["status"] == "running":

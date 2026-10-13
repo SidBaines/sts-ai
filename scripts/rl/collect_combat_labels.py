@@ -31,6 +31,9 @@ from sts_policy.model_agent import collate_public, forward_policy  # noqa: E402
 from sts_rl.common import ORIGINAL_CHECKPOINT, WORKER_CONFIG, FilteringWorker, load_policy, train_tasks  # noqa: E402
 from sts_rl.panel import PanelWorker  # noqa: E402
 
+from sts_rl.recording import begin_run
+from sts_env.env import SimulatorError
+
 LOCK = threading.Lock()
 
 
@@ -48,6 +51,9 @@ def main() -> None:
     p.add_argument("--boss-only", action="store_true", help="label only boss fights")
     p.add_argument("--record-dir", required=True)
     args = p.parse_args()
+    if any(Path(args.record_dir).glob('shard_*.jsonl')):
+        p.error('Label output already contains results; choose a fresh output')
+    begin_run(args.record_dir, vars(args), args.checkpoint)
     torch.set_num_threads(1)
     model, _ = load_policy(args.checkpoint)
     model.eval()
@@ -70,6 +76,7 @@ def main() -> None:
                 if task is None:
                     return out
                 started, labelled = time.time(), 0
+                world_rows = []
                 try:
                     obs, info = game.submit("reset", task).result()
                     terminated = truncated = False
@@ -93,16 +100,21 @@ def main() -> None:
                                 search = inner.search_votes_public if args.public else inner.search_votes
                                 votes = search(args.simulations, seeds, task.seed % 100000 + labelled)
                                 if votes:  # public search abstains on draw-index card selection
-                                    shard.write(json.dumps({"type": "combat", "seed": task.seed, "obs": obs,
-                                                            "votes": votes, "policy_index": chosen["index"]}) + "\n")
+                                    world_rows.append({"type": "combat", "seed": task.seed, "obs": obs,
+                                                       "votes": votes, "policy_index": chosen["index"]})
                                     labelled += 1
                             elif rng.random() < args.rehearsal_rate:
-                                shard.write(json.dumps({"type": "rehearsal", "seed": task.seed, "obs": obs}) + "\n")
+                                world_rows.append({"type": "rehearsal", "seed": task.seed, "obs": obs})
                         obs, _, terminated, truncated, info = game.submit("step", int(chosen["index"])).result()
                     rec = {"seed": task.seed, "floor": obs.get("state", {}).get("floor"), "labelled": labelled,
                            "seconds": time.time() - started}
+                    for row in world_rows:
+                        shard.write(json.dumps(row)+'\n')
                 except Exception as exc:
-                    rec = {"seed": task.seed, "fault": f"{type(exc).__name__}: {exc}"[:200]}
+                    if not isinstance(exc, SimulatorError):
+                        raise
+                    rec = {"seed": task.seed, "fault": f"{type(exc).__name__}: {exc}"[:200],
+                           'discarded_rows':len(world_rows), 'fault_record_path':inner.last_fault_path}
                 shard.flush()
                 with LOCK:
                     with (record_dir / "progress.jsonl").open("a") as fh:

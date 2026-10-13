@@ -29,6 +29,7 @@ from sts_policy.rollout_training import collect_rollouts, update_ppo
 from .common import (save_atomic, EVAL_WORLD_START, ORIGINAL_CHECKPOINT, TRAIN_WORLD_START, JsonlLog, close_workers,
                      load_policy, make_workers, phase_forward, save_policy, train_tasks)
 from .evaluate import evaluate, paired
+from .recording import begin_run, resume_payload, restore_rng, write_collection, require_fresh_or_resume
 
 
 @dataclass(frozen=True)
@@ -174,6 +175,7 @@ def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Seq
     kept: list[list[Any]] = []
     game_episodes: list[dict[str, Any]] = []
     faults = 0
+    fault_records = []
     stats_acc: dict[str, list[tuple[float, int]]] = {}
     for chunk_start in range(0, len(tasks), chunk):
         result = collect_rollouts(model, workers, tasks[chunk_start:chunk_start + chunk],
@@ -193,11 +195,12 @@ def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Seq
         kept += new
         for key, value in behaviour_stats(episodes).items():
             stats_acc.setdefault(key, []).append((value, len(episodes)))
-        game_episodes += [{k: e.get(k) for k in ("floor", "task_outcome")} for e in result["episodes"]]
+        game_episodes += result['episodes']
+        fault_records += result['faults']
         faults += len(result["faults"])
         del result, episodes
         gc.collect()
-    return {"kept": kept, "game_episodes": game_episodes, "faults": faults, "stats": stats_acc}
+    return {"kept": kept, "game_episodes": game_episodes, "faults": faults, 'fault_records': fault_records, "stats": stats_acc}
 
 
 def ooc_parameter_blocks(model: torch.nn.Module) -> dict[str, list[str]]:
@@ -247,6 +250,7 @@ def gradient_cosine(model: torch.nn.Module, forward, kept: Sequence[Sequence[Any
 
 def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
     out = Path(cfg.out)
+    require_fresh_or_resume(out, resume)
     out.mkdir(parents=True, exist_ok=True)
     log = JsonlLog(out / "log.jsonl")
     torch.set_num_threads(cfg.threads)
@@ -260,6 +264,9 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
     optimizer = torch.optim.AdamW(trainable, lr=cfg.lr)
     start_iteration, steps_total = 1, 0
     latest = out / "latest.pt"
+    run_record = begin_run(out, {**asdict(cfg), 'resume': resume},
+                           latest if resume and latest.exists() else cfg.checkpoint,
+                           inputs=[cfg.baseline] if cfg.baseline else [])
     if resume and latest.exists():
         state = torch.load(latest, map_location="cpu", weights_only=False)
         model.load_state_dict(state["model_state"])
@@ -269,13 +276,14 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
         for group in optimizer.param_groups:
             group["lr"] = cfg.lr
         start_iteration, steps_total = state["iteration"] + 1, state["steps_total"]
+        rng_restored = restore_rng(state, rng)
         log.emit({"event": "resume", "iteration": state["iteration"], "saved_lr": saved_lr, "lr": cfg.lr,
-                  "config": asdict(cfg)})
+                  "config": asdict(cfg), 'run_record': run_record, 'rng_restored': rng_restored})
         if not (out / "config.json").exists():  # a branch seeded from another run's latest.pt
             (out / "config.json").write_text(json.dumps(asdict(cfg), indent=1))
     else:
         (out / "config.json").write_text(json.dumps(asdict(cfg), indent=1))
-        log.emit({"event": "start", "config": asdict(cfg)})
+        log.emit({"event": "start", "config": asdict(cfg), 'run_record': run_record})
     forward = phase_forward(combat=cfg.combat, temperature=cfg.ooc_temperature,
                             strategic_temperature=cfg.strategic_temperature, strategic_cards=cfg.strategic_cards)
     ppo = PPOConfig(gamma=1.0, gae_lambda=cfg.gae_lambda, clip_ratio=cfg.clip, entropy_weight=cfg.entropy,
@@ -324,6 +332,10 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 batch = collect_ooc_batch(model, workers, tasks, forward=forward, ppo=ppo, credit=cfg.credit,
                                           gae_lambda=cfg.gae_lambda, chunk=cfg.collect_chunk)
             kept, game_episodes, faults, stats_acc = batch["kept"], batch["game_episodes"], batch["faults"], batch["stats"]
+            collection = out / f'collection_{iteration:04d}.json.gz'
+            write_collection(collection, {'schema':'sts_training_collection_v1', 'run_record':run_record,
+                'iteration':iteration, 'tasks':[task.to_dict() for task in tasks], 'episodes':game_episodes,
+                'faults':batch['fault_records']})
             del batch
             collect_seconds = time.time() - started
             flat = [t for ep in kept for t in ep]
@@ -369,11 +381,11 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             log.emit(record)
             del kept, flat
             gc.collect()
-            save_atomic({"model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(),
-                        "iteration": iteration, "steps_total": steps_total}, latest)
+            save_atomic(resume_payload(model, optimizer, iteration, steps_total, asdict(cfg), run_record, rng), latest)
             if cfg.eval_every and (iteration % cfg.eval_every == 0 or iteration == cfg.iterations):
                 save_policy(out / f"iter_{iteration:04d}.pt", model, template,
-                            metadata={"stage": "sts_rl_ooc_ppo", "iteration": iteration, "config": asdict(cfg)})
+                            metadata={"stage": "sts_rl_ooc_ppo", "iteration": iteration, "config": asdict(cfg),
+                                      'run_record': run_record}, optimizer=optimizer, step=steps_total, rng=rng)
                 run_eval(iteration)
     finally:
         close_workers(workers)

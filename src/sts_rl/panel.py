@@ -14,6 +14,7 @@ from __future__ import annotations
 from concurrent.futures import Future
 import multiprocessing
 import os
+import traceback
 from typing import Any, Sequence
 
 from sts_policy.curriculum import TaskSpec
@@ -211,7 +212,8 @@ def _serve_panel(connection: Any, config: dict[str, Any]) -> None:
             try:
                 connection.send(("ok", getattr(episode, method)(*args)))
             except Exception as exc:
-                connection.send(("error", {"type": type(exc).__name__, "message": str(exc)}))
+                connection.send(("error", {"type": type(exc).__name__, "message": str(exc),
+                                            "traceback": traceback.format_exc()}))
                 break
     except (EOFError, BrokenPipeError):
         pass

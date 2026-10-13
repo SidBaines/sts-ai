@@ -146,8 +146,12 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         resets += 1
 
     def fault(slot: int, error: Exception, *, stage: str, wait_seconds: float) -> None:
+        from .faults import FaultRecordingError
+        if isinstance(error, FaultRecordingError):
+            raise error
         nonlocal failed_steps
         entry = active.pop(slot)
+        worker = getattr(workers[slot], 'worker', workers[slot])
         failed_steps += len(entry["trajectory"])
         timings["fault_wait_seconds"] += wait_seconds
         faults.append({"world_seed": entry["task"].seed, "error": type(error).__name__,
@@ -157,6 +161,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                        "task_id": task_identity(entry["task"]),
                        "message": str(error), "excluded_transitions": len(entry["trajectory"]),
                        "task_kind": entry["task"].kind, **_episode_public_metrics(entry, faulted=True)})
+        faults[-1]['fault_record_path'] = getattr(worker, 'last_fault_path', None)
 
     def finish(slot: int, info: dict[str, Any], budget_truncation: bool = False) -> None:
         entry = active.pop(slot)
@@ -180,6 +185,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                          "termination_reason": "collector_budget" if budget_truncation else info.get("termination_reason", ""),
                          "outcome": info.get("task_outcome") or info.get("outcome", ""),
                          "task_outcome": info.get("task_outcome", ""),
+                         'action_prefix': info.get('action_prefix'), 'ooc_previews': info.get('ooc_previews'),
                          "hp_cost": info.get("hp_cost"), "floor": state.get("floor", state.get("floor_num")),
                          "act": state.get("act", state.get("act_num")), "split": info.get("split"),
                          "native_steps": info.get("native_steps"), "fault": False,

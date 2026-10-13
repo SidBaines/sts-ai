@@ -23,6 +23,9 @@ from sts_policy.model_agent import collate_public, forward_policy  # noqa: E402
 from sts_policy.workers import CurriculumWorker  # noqa: E402
 from sts_rl.common import WORKER_CONFIG, FilteringWorker, load_policy, train_tasks  # noqa: E402
 
+from sts_rl.recording import begin_run
+from sts_env.env import SimulatorError
+
 LOCK = threading.Lock()
 
 
@@ -35,6 +38,9 @@ def main() -> None:
     p.add_argument("--rooms", default="BOSS,ELITE")
     p.add_argument("--output", required=True)
     args = p.parse_args()
+    if Path(args.output).exists():
+        p.error('Output already contains results; choose a fresh output')
+    begin_run(str(args.output)+'.record', vars(args), args.checkpoint)
     torch.set_num_threads(1)
     model, _ = load_policy(args.checkpoint)
     model.eval()
@@ -57,6 +63,7 @@ def main() -> None:
                 try:
                     obs, info = game.submit("reset", task).result()
                     actions, previous_phase, open_fight = [], "out_of_combat", None
+                    world_rows = []
                     terminated = truncated = False
                     while not (terminated or truncated):
                         state = obs.get("state", {})
@@ -69,9 +76,7 @@ def main() -> None:
                                               "hp": state.get("cur_hp"), "max_hp": state.get("max_hp")}
                         if obs.get("phase") != "combat" and previous_phase == "combat" and open_fight:
                             open_fight["won"] = True
-                            with LOCK:
-                                sink.write(json.dumps(open_fight) + "\n")
-                            count += 1
+                            world_rows.append(open_fight)
                             open_fight = None
                         previous_phase = obs.get("phase")
                         with LOCK, torch.no_grad():
@@ -81,18 +86,24 @@ def main() -> None:
                         actions.append(action)
                     if open_fight:  # the run ended inside this fight
                         open_fight["won"] = info.get("task_outcome") in ("victory", "act_clear")
-                        with LOCK:
-                            sink.write(json.dumps(open_fight) + "\n")
-                        count += 1
+                        world_rows.append(open_fight)
                     with LOCK:
+                        for row in world_rows:
+                            sink.write(json.dumps(row)+'\n')
                         sink.flush()
+                    count += len(world_rows)
                 except Exception as exc:
+                    if not isinstance(exc, SimulatorError):
+                        raise
                     print("fault", task.seed, type(exc).__name__, str(exc)[:100], flush=True)
         finally:
             game.close()
 
-    with ThreadPoolExecutor(args.threads) as ex:
-        total = sum(ex.map(play, range(args.threads)))
+    try:
+        with ThreadPoolExecutor(args.threads) as ex:
+            total = sum(ex.map(play, range(args.threads)))
+    finally:
+        sink.close()
     print(json.dumps({"fights": total}))
 
 

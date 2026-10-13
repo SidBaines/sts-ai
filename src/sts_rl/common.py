@@ -69,17 +69,33 @@ def load_policy(path: str | Path) -> tuple[torch.nn.Module, dict[str, Any]]:
 
 def save_policy(path: str | Path, model: torch.nn.Module, template: dict[str, Any], *,
                 metadata: dict[str, Any], optimizer: torch.optim.Optimizer | None = None,
-                step: int = 0) -> None:
+                step: int = 0, rng: Any = None) -> None:
     """Full loadable checkpoint (same format as sts_policy), atomic replace."""
     payload = dict(template)
     payload["model_state"] = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
     payload["optimizer_state"] = optimizer.state_dict() if optimizer is not None else None
     payload["step"] = step
-    payload["metadata"] = {**template.get("metadata", {}), **metadata}
+    from .recording import capture_rng, file_identity
+    inherited = template.get('metadata', {})
+    payload['metadata'] = {'encoder_version': inherited.get('encoder_version', 'public_candidate_v2'),
+                           'historical_parent_metadata': inherited, **metadata}
+    parent = metadata.get('config', {}).get('checkpoint')
+    if parent:
+        payload['metadata']['parent_policy_checkpoint'] = file_identity(parent)
+    payload['rng_state'] = capture_rng(rng)
+    if 'iteration' in metadata:
+        payload['iteration'] = metadata['iteration']
+        payload['steps_total'] = step
+    payload['python_rng'] = payload['rng_state']['python']
+    payload['torch_rng'] = payload['rng_state']['torch']
+    payload['mps_rng'] = payload['rng_state']['mps']
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + f".tmp-{os.getpid()}")
-    torch.save(payload, temporary)
+    with temporary.open('wb') as output:
+        torch.save(payload, output)
+        output.flush()
+        os.fsync(output.fileno())
     os.replace(temporary, destination)
 
 
@@ -88,7 +104,10 @@ def save_atomic(obj: Any, path: str | Path) -> None:
     cancel, stall watchdog) can never leave a truncated resume checkpoint."""
     destination = Path(path)
     temporary = destination.with_suffix(destination.suffix + f".tmp-{os.getpid()}")
-    torch.save(obj, temporary)
+    with temporary.open('wb') as output:
+        torch.save(obj, output)
+        output.flush()
+        os.fsync(output.fileno())
     os.replace(temporary, destination)
 
 

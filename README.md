@@ -1,6 +1,6 @@
 # Slay the Spire Environment
 
-Current experiment status: both longer RL runs and their monitor are paused for review. Start with the [committed experiment handoff](docs/experiment_handoff.md) for the full history, exact artifacts, unresolved learning issues and current authority. The unused allocation does not authorize an automatic restart.
+Current experiment status: the 13 October RL-debug study completed its round-2 extension to update 32. Start with [RL findings](docs/rl_findings_2026-10-13.md) and [training records and fault replay](docs/rl_recording_and_fault_replay.md). The older longer-curriculum runs and their monitor remain paused; their [handoff](docs/experiment_handoff.md) preserves their separate history and allocation. No automatic restart is authorized.
 
 A maintained environment base for custom agents, LLM adapters, and reinforcement
 learning experiments. The Python core has no runtime dependencies. Game logic

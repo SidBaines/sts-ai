@@ -28,6 +28,9 @@ from sts_rl.common import (BOSS_FLOORS, EVAL_WORLD_START, WIN_OUTCOMES, WORKER_C
 from sts_rl.evaluate import finish_evaluation, paired  # noqa: E402
 from sts_rl.panel import PanelWorker  # noqa: E402
 
+from sts_rl.recording import begin_run
+from sts_env.env import SimulatorError
+
 LOCK = threading.Lock()
 
 
@@ -44,6 +47,9 @@ def main() -> None:
     p.add_argument("--baseline")
     p.add_argument("--output", required=True)
     args = p.parse_args()
+    if Path(args.output).exists():
+        p.error('Output already contains results; choose a fresh output')
+    begin_run(str(args.output)+'.record', vars(args), args.checkpoint, inputs=[args.baseline] if args.baseline else [])
     torch.set_num_threads(1)
     model, _ = load_policy(args.checkpoint)
     model.eval()
@@ -87,7 +93,7 @@ def main() -> None:
                     for boss in BOSS_FLOORS:
                         rec[f"boss{boss}_hp"] = boss_hp.get(boss)
                     records.append(rec)
-                except Exception:
+                except SimulatorError:
                     faults += 1
                     game.close()
                     inner = PanelWorker(config=WORKER_CONFIG, timeout=1800.0)

@@ -28,6 +28,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from sts_policy.model_agent import collate_public, forward_policy  # noqa: E402
 from sts_rl.common import hp_fraction, load_policy, make_workers, train_tasks  # noqa: E402
 
+from sts_rl.recording import begin_run
+from sts_env.env import SimulatorError
+
 LOCK = threading.Lock()
 
 
@@ -42,6 +45,9 @@ def main() -> None:
     p.add_argument("--threads", type=int, default=8)
     p.add_argument("--output", required=True)
     args = p.parse_args()
+    if any(Path(args.output).glob('shard_*.jsonl')) or (Path(args.output)/'summary.json').exists():
+        p.error('Output already contains results; choose a fresh output')
+    begin_run(args.output, vars(args), args.checkpoint)
     torch.set_num_threads(1)
     model, _ = load_policy(args.checkpoint)
     model.eval()
@@ -91,7 +97,9 @@ def main() -> None:
                     for row in rows:
                         sink.write(json.dumps(row) + "\n")
                     counts["games"] += 1
-                except Exception as exc:  # simulator fault: drop the whole game
+                except Exception as exc:
+                    if not isinstance(exc, SimulatorError):
+                        raise  # simulator fault: drop the whole game
                     counts["faults"] += 1
                     worker.close()
                     worker = make_workers(1, dead_action_filter=True)[0]
