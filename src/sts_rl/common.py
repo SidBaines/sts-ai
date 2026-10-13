@@ -74,6 +74,15 @@ def save_policy(path: str | Path, model: torch.nn.Module, template: dict[str, An
     os.replace(temporary, destination)
 
 
+def save_atomic(obj: Any, path: str | Path) -> None:
+    """torch.save via a temporary file and os.replace: a kill mid-write (queue
+    cancel, stall watchdog) can never leave a truncated resume checkpoint."""
+    destination = Path(path)
+    temporary = destination.with_suffix(destination.suffix + f".tmp-{os.getpid()}")
+    torch.save(obj, temporary)
+    os.replace(temporary, destination)
+
+
 # --- Dead-action removal --------------------------------------------------------
 # Act 4 keys cannot help when max_act == 3 (the run ends at the Act 3 boss), and
 # PPO drifted into them. Removing them from the menu the policy sees is purely a

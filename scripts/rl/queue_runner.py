@@ -108,7 +108,11 @@ def runner() -> None:
                 if finished:
                     log = RUNS / run["name"] / "log.jsonl"
                     done = log.exists() and '"event": "done"' in log.read_text()[-2000:]
-                    run.update(status="done" if done else "failed", ended=time.time())
+                    code = run.get("returncode")
+                    # Non-trainer jobs (evals) write no log.jsonl; a runner restarted since
+                    # launch cannot reap its predecessor's children, so code may be unknown.
+                    status = "done" if done or code == 0 else ("exited" if code is None and not log.exists() else "failed")
+                    run.update(status=status, ended=time.time())
                     continue
                 if battery and run["status"] == "running":
                     os.killpg(pid, signal.SIGSTOP)

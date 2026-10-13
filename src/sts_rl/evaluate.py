@@ -56,23 +56,26 @@ def summarize(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     return out
 
 
-@torch.no_grad()
-def evaluate(model: torch.nn.Module, workers: Sequence[Any], *, n: int = 1024,
-             world_start: int = EVAL_WORLD_START, mode: str = "greedy",
-             max_seconds: float = 3600., chunk: int = 256) -> dict[str, Any]:
-    """mode: greedy (deployment), sample (training-time), greedy_combat (OOC sampled)."""
-    model.eval()
+def eval_forward(mode: str):
     # "greedy" is an exact argmax (first index wins exact ties), so evaluation is
-    # reproducible at a fixed worker count. Logit-scaling "greedy" is NOT: exact
+    # reproducible at any worker count. Logit-scaling "greedy" is NOT: exact
     # ties (duplicate card copies on select screens) then break randomly and the
     # run diverges chaotically.
-    forward = {"greedy": forward_policy,
-               "sample": phase_forward(),
-               "greedy_combat": phase_forward(combat="greedy")}[mode]
+    return {"greedy": forward_policy,
+            "sample": phase_forward(),
+            "greedy_combat": phase_forward(combat="greedy")}[mode]
+
+
+@torch.no_grad()
+def evaluate_tasks(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequence[Any], *,
+                   mode: str = "greedy", max_seconds: float = 3600.,
+                   chunk: int = 256) -> tuple[list[dict[str, Any]], int, float]:
+    """Per-world records for ``tasks``: (records, faults, elapsed collector seconds)."""
+    model.eval()
+    forward = eval_forward(mode)
     # Chunked: collect_rollouts keeps every transition (full observations) until it
     # returns, so evaluating 1,024 games at once held several GB. Each chunk is
     # reduced to per-world records immediately and then released.
-    tasks = train_tasks(world_start, n)
     records, faults, elapsed = [], 0, 0.0
     for start in range(0, len(tasks), chunk):
         result = collect_rollouts(model, workers, tasks[start:start + chunk], collate=collate_public,
@@ -87,9 +90,32 @@ def evaluate(model: torch.nn.Module, workers: Sequence[Any], *, n: int = 1024,
         elapsed += result["elapsed_seconds"]
         del result, by_seed
         gc.collect()
+    return records, faults, elapsed
+
+
+def finish_evaluation(records: list[dict[str, Any]], faults: int, elapsed: float, *, mode: str,
+                      world_start: int) -> dict[str, Any]:
+    records = sorted(records, key=lambda r: r["seed"])
     summary = summarize(records)
     summary.update(faults=faults, mode=mode, world_start=world_start, elapsed=elapsed)
     return {"summary": summary, "records": records}
+
+
+def evaluate(model: torch.nn.Module, workers: Sequence[Any], *, n: int = 1024,
+             world_start: int = EVAL_WORLD_START, mode: str = "greedy",
+             max_seconds: float = 3600., chunk: int = 256) -> dict[str, Any]:
+    """mode: greedy (deployment), sample (training-time), greedy_combat (OOC sampled).
+
+    ``workers`` may also be a CollectorPool (sts_rl.parallel_collect), which
+    splits the worlds across collector processes; records are identical."""
+    tasks = train_tasks(world_start, n)
+    if hasattr(workers, "evaluate_tasks"):
+        records, faults, elapsed = workers.evaluate_tasks(model, tasks, mode=mode, max_seconds=max_seconds,
+                                                          chunk=chunk)
+    else:
+        records, faults, elapsed = evaluate_tasks(model, workers, tasks, mode=mode, max_seconds=max_seconds,
+                                                  chunk=chunk)
+    return finish_evaluation(records, faults, elapsed, mode=mode, world_start=world_start)
 
 
 def paired(a: Sequence[dict[str, Any]], b: Sequence[dict[str, Any]], *, bootstrap: int = 2000) -> dict[str, Any]:

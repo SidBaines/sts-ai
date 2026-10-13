@@ -26,7 +26,7 @@ from sts_policy.model_agent import collate_public, forward_policy
 from sts_policy.rollout_training import collect_rollouts, update_ppo
 from sts_policy.workers import CurriculumWorker
 
-from .common import JsonlLog, close_workers, load_policy, make_workers, save_policy
+from .common import save_atomic, JsonlLog, close_workers, load_policy, make_workers, save_policy
 from .evaluate import evaluate, paired
 
 
@@ -163,7 +163,7 @@ def train(cfg: CombatTrainConfig, *, resume: bool = False) -> None:
                       **{k: update.get(k) for k in ("steps", "approx_kl", "clip_fraction", "entropy", "value_loss",
                                                      "policy_loss", "early_stop")},
                       "seconds": time.time() - started})
-            torch.save({"model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(),
+            save_atomic({"model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(),
                         "iteration": iteration, "steps_total": steps_total}, latest)
             if cfg.panel_every and iteration % cfg.panel_every == 0:
                 log.emit({"event": "panel", "iteration": iteration, **fight_panel(model.eval(), workers, panel_rows)})

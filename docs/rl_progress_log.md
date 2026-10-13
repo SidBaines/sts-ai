@@ -12,7 +12,49 @@ runs on battery and resumes on AC).
 Reference point for everything below: the original composite (`joint_act3_0030.pt`),
 greedy, dead-action filter, 1,014 valid TRAIN-eval worlds (seeds from 5e9):
 **29.27 ± 0.26 mean floor**, Act 1 boss pass 88.1%, Act 2 boss reach 48.9% / pass
-23.4%, 1 win.---
+23.4%, 1 win.
+
+---
+
+## 2026-10-13 15:50 BST — OOC PPO at +2.55 floors; combat boss RL stopped (hurts full games); update-phase memory fixed
+
+- **`ooc_main_s1` update 24: 31.77 ± 0.27 mean floor, paired +2.55 (95% CI
+  [2.00, 3.08]) vs the original.** It is still climbing.
+
+  | Update | Paired gain (floors) | Wins / ~1,016 | Act 2 boss pass | Act 3 boss reach |
+  | --- | --- | --- | --- | --- |
+  | 4 | +0.24 | 3 | 21.1% | 4.3% |
+  | 8 | +1.14 | 6 | 21.8% | 4.3% |
+  | 12 | +1.57 | 10 | 26.4% | 6.8% |
+  | 16 | +1.75 | 10 | 27.7% | 7.4% |
+  | 24 | **+2.55** | 8 | 27.0% | 6.7% |
+
+  Act 2 boss *reach* rose from 49% to 64%. An independent 4-worker re-evaluation
+  of update 24 gave a bit-identical 31.774, so determinism holds.
+- **Combat boss RL (v2, lr 3e-4) stopped at update 26: it hurts full games.**
+  - Full-game paired results vs its start: **−0.51 ± 0.22** at update 10 and
+    **−0.87 ± 0.23** at update 20.
+  - Paired deaths per ~1,016 games, start vs update 10: Act 1 boss **98 → 137**.
+    At update 20, Act 2 hallway (which includes Act 2 elites) went 318 → 352.
+  - The 120-per-group held-out panel showed "+5–9 points on Act 2 elites", but
+    that was within noise. It cannot resolve a 4-point Act 1 boss drop.
+  - **The fight bank replays faithfully:** 300 bank fights replayed under the
+    generating checkpoint reproduce the in-run outcome 300/300. So the panel is
+    not biased; it is too small. The training also degraded a group it trained
+    on (Act 1 boss, 10% of the mix).
+  - Lessons for any combat v3:
+    - include hallway fights and a stronger anchor;
+    - use a panel of ≥500 per group;
+    - judge only by full-game paired evaluations.
+  - v1 at lr 1e-4 was +0.29 ± 0.20 at update 10, a weak positive.
+- **Spliced check queued:** OOC update 24 + combat v1@10 vs OOC update 24 alone,
+  1,024 paired worlds (`data/rl_runs/combos/`).
+- **Memory:** after the earlier fix, the OOC trainer still spiked **2 → 12.7 GB
+  during the PPO update**. A 4,096-row minibatch of padded OOC menus runs a
+  single forward/backward. `update_ppo(micro_batch=1024)` now accumulates the
+  same gradient in chunks (regression-tested against the full minibatch; KL
+  guard preserved). The trainer was restarted from update 25 on this code
+  (`ooc_main_s1_ext3`). 473 unit tests pass. Committed `dbc3f9e`.
 
 ## 2026-10-13 15:15 BST — Memory incident fixed (it crashed Chrome); runs resumed
 

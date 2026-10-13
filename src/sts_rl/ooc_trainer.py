@@ -26,7 +26,7 @@ from sts_policy.losses import PPOConfig, generalized_advantages, masked_distribu
 from sts_policy.model_agent import cached_public_collator, collate_public
 from sts_policy.rollout_training import collect_rollouts, update_ppo
 
-from .common import (EVAL_WORLD_START, ORIGINAL_CHECKPOINT, TRAIN_WORLD_START, JsonlLog, close_workers,
+from .common import (save_atomic, EVAL_WORLD_START, ORIGINAL_CHECKPOINT, TRAIN_WORLD_START, JsonlLog, close_workers,
                      load_policy, make_workers, phase_forward, save_policy, train_tasks)
 from .evaluate import evaluate, paired
 
@@ -59,6 +59,8 @@ class OOCTrainConfig:
     health_every: int = 1
     collect_chunk: int = 128
     micro_batch: int = 1024         # PPO forward/backward chunk (same update, bounded activation memory)
+    collectors: int = 1             # >1: data-parallel collector processes (workers split between them)
+    update_threads: int = 0         # torch threads for the PPO update (0: same as threads)
     threads: int = 2
     notes: str = ""
 
@@ -154,6 +156,44 @@ def behaviour_stats(episodes: Sequence[Sequence[Any]]) -> dict[str, float]:
             "fights_per_run": float(np.mean(fights)) if fights else 0.0}
 
 
+def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequence[Any], *, forward,
+                      ppo: PPOConfig, credit: str, gae_lambda: float, chunk: int) -> dict[str, Any]:
+    """Sample ``tasks`` and keep only OOC choice transitions with PPO targets.
+
+    Chunked: keep only OOC choice transitions (with their encodings) and small
+    per-episode stats; drop combat transitions and full observation dicts per
+    chunk. Holding all ~270k transitions of a 768-game batch plus an evaluation
+    pushed the process past 20 GB.
+    """
+    kept: list[list[Any]] = []
+    game_episodes: list[dict[str, Any]] = []
+    faults = 0
+    stats_acc: dict[str, list[tuple[float, int]]] = {}
+    for chunk_start in range(0, len(tasks), chunk):
+        result = collect_rollouts(model, workers, tasks[chunk_start:chunk_start + chunk],
+                                  collate=collate_public, forward=forward, config=ppo, max_seconds=3600,
+                                  deterministic=False, deferred_bootstrap=True)
+        episodes = split_episodes(result["transitions"])
+        new = macro_ooc_transitions(episodes, gae_lambda) if credit == "macro" else micro_ooc_transitions(episodes)
+        # Kept transitions already carry their encodings; PPO only needs the
+        # menu and phase from the observation. Slim the dict in place (its
+        # identity is checked against the cached encoding).
+        for ep in new:
+            for t in ep:
+                obs = t.observation
+                if "text" in obs:
+                    obs.pop("text")
+                    obs["state"] = {}
+        kept += new
+        for key, value in behaviour_stats(episodes).items():
+            stats_acc.setdefault(key, []).append((value, len(episodes)))
+        game_episodes += [{k: e.get(k) for k in ("floor", "task_outcome")} for e in result["episodes"]]
+        faults += len(result["faults"])
+        del result, episodes
+        gc.collect()
+    return {"kept": kept, "game_episodes": game_episodes, "faults": faults, "stats": stats_acc}
+
+
 def ooc_parameter_blocks(model: torch.nn.Module) -> dict[str, list[str]]:
     blocks: dict[str, list[str]] = {}
     for name, _ in model.named_parameters():
@@ -230,10 +270,18 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
     baseline_records = json.loads(Path(cfg.baseline).read_text())["records"] if cfg.baseline else None
     combat_keys = [k for k in start_state if k.startswith("combat.")]
     blocks = ooc_parameter_blocks(model)
-    workers = make_workers(cfg.workers, dead_action_filter=cfg.dead_action_filter)
+    pool = None
+    if cfg.collectors > 1:
+        from .parallel_collect import CollectorPool
+        pool = CollectorPool(cfg.collectors, workers=cfg.workers, checkpoint=cfg.checkpoint,
+                             dead_action_filter=cfg.dead_action_filter)
+        workers: list[Any] = []
+    else:
+        workers = make_workers(cfg.workers, dead_action_filter=cfg.dead_action_filter)
 
     def run_eval(iteration: int) -> None:
-        result = evaluate(model, workers, n=cfg.eval_n, world_start=cfg.eval_world_start)
+        result = evaluate(model, pool if pool is not None else workers, n=cfg.eval_n,
+                          world_start=cfg.eval_world_start)
         (out / f"eval_{iteration:04d}.json").write_text(json.dumps(result))
         record = {"event": "eval", "iteration": iteration, **result["summary"]}
         if baseline_records is not None:
@@ -248,36 +296,15 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             model.eval()
             world_start = cfg.train_world_start + cfg.seed * 500_000_000 + iteration * 10_000_000
             tasks = train_tasks(world_start, cfg.games)
-            # Chunked collection: keep only OOC choice transitions (with their
-            # encodings) and small per-episode stats; drop combat transitions and
-            # full observation dicts per chunk. Holding all ~270k transitions of a
-            # 768-game batch plus an evaluation pushed the process past 20 GB.
-            kept: list[list[Any]] = []
-            game_episodes: list[dict[str, Any]] = []
-            faults = 0
-            stats_acc: dict[str, list[float]] = {}
-            for chunk_start in range(0, len(tasks), cfg.collect_chunk):
-                result = collect_rollouts(model, workers, tasks[chunk_start:chunk_start + cfg.collect_chunk],
-                                          collate=collate_public, forward=forward, config=ppo, max_seconds=3600,
-                                          deterministic=False, deferred_bootstrap=True)
-                episodes = split_episodes(result["transitions"])
-                kept += (macro_ooc_transitions(episodes, cfg.gae_lambda) if cfg.credit == "macro"
-                         else micro_ooc_transitions(episodes))
-                for key, value in behaviour_stats(episodes).items():
-                    stats_acc.setdefault(key, []).append((value, len(episodes)))
-                # Kept transitions already carry their encodings; PPO only needs the
-                # menu and phase from the observation. Slim the dict in place (its
-                # identity is checked against the cached encoding).
-                for ep in kept:
-                    for t in ep:
-                        obs = t.observation
-                        if "text" in obs:
-                            obs.pop("text")
-                            obs["state"] = {}
-                game_episodes += [{k: e.get(k) for k in ("floor", "task_outcome")} for e in result["episodes"]]
-                faults += len(result["faults"])
-                del result, episodes
-                gc.collect()
+            if pool is not None:
+                batch = pool.collect_ooc(model, tasks, combat=cfg.combat, temperature=cfg.ooc_temperature,
+                                         ppo=ppo, credit=cfg.credit, gae_lambda=cfg.gae_lambda,
+                                         chunk=cfg.collect_chunk, seed=cfg.seed * 100_000 + iteration)
+            else:
+                batch = collect_ooc_batch(model, workers, tasks, forward=forward, ppo=ppo, credit=cfg.credit,
+                                          gae_lambda=cfg.gae_lambda, chunk=cfg.collect_chunk)
+            kept, game_episodes, faults, stats_acc = batch["kept"], batch["game_episodes"], batch["faults"], batch["stats"]
+            del batch
             collect_seconds = time.time() - started
             flat = [t for ep in kept for t in ep]
             # Kept observations were slimmed above, so a missing sampling-time encoding
@@ -295,11 +322,16 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 "ooc_choice_transitions": len(flat), "collect_seconds": collect_seconds,
                 "adv_raw_std": float(np.std([t.advantage for t in flat])) if flat else 0.0,
                 **behaviour}
+            update_started = time.time()
+            if cfg.update_threads:
+                torch.set_num_threads(cfg.update_threads)
             if cfg.health_every and iteration % cfg.health_every == 0:
                 record["grad_cosine_half"] = gradient_cosine(model, forward, kept, rng=rng, chunk=cfg.micro_batch)
             update = update_ppo(model, flat, collate=collate_public, forward=forward, config=ppo, device="cpu",
                                 seed=cfg.seed * 1000 + iteration, optimizer=optimizer,
                                 micro_batch=cfg.micro_batch)
+            torch.set_num_threads(cfg.threads)
+            record["update_seconds"] = time.time() - update_started
             optimizer = update.pop("optimizer")
             steps_total += update["steps"]
             record.update({k: update.get(k) for k in ("steps", "approx_kl", "clip_fraction", "entropy", "value_loss",
@@ -317,7 +349,7 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             log.emit(record)
             del kept, flat
             gc.collect()
-            torch.save({"model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(),
+            save_atomic({"model_state": model.state_dict(), "optimizer_state": optimizer.state_dict(),
                         "iteration": iteration, "steps_total": steps_total}, latest)
             if cfg.eval_every and (iteration % cfg.eval_every == 0 or iteration == cfg.iterations):
                 save_policy(out / f"iter_{iteration:04d}.pt", model, template,
@@ -325,4 +357,6 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 run_eval(iteration)
     finally:
         close_workers(workers)
+        if pool is not None:
+            pool.close()
     log.emit({"event": "done"})
