@@ -103,6 +103,36 @@ explore strategic options. Exploration is the lever.
 
 ---
 
+## 2026-10-13 21:00 BST — Combat headroom at the Act 2 boss: search wins 44% vs greedy 27.5% (privileged upper bound)
+
+- **Act 2 boss fights from the distilled-agent bank.** Each decision is the
+  plurality vote of native search over 8 shuffled draw orders × 1,000
+  simulations:
+
+  | Fights | Greedy combat head | Search | Flipped to win | Flipped to loss |
+  | --- | --- | --- | --- | --- |
+  | 120 | 27.5% | **44.2%** | 27 | 7 |
+
+  - Sign test p ≈ 0.001.
+  - **0.13 s per decision**: cheap.
+  - 40 fights at 4 × 200 simulations gave 30% vs 25%. More search helps.
+- **Caveat: this is privileged.** The native wrapper re-seeds only the
+  searcher's own RNG ("cannot touch the battle RNGs"). Its simulations use the
+  true enemy-AI and card-randomness streams; only the draw pile is shuffled.
+  So 44% is an upper bound, not a deployable agent.
+- **Still:** about 30% of lost Act 2 boss fights are winnable by better play
+  from the same starting state. Combat is a real lever for wins.
+- **Next:**
+  1. Add public-information search: reseed all battle RNG streams per sample
+     in the clone (new binding in `patches/sts_lightspeed_rl_panel.patch`; the
+     study patch stays unchanged).
+  2. Measure its boss win rate.
+  3. If it holds up, use it at test time in boss fights and/or as an
+     expert-iteration teacher for the combat head.
+- Discovery-from-scratch at update 12: smith rate ~3–4%, no discovery.
+
+---
+
 ## 2026-10-13 20:56 BST — Win set: λ = 1.0 gives +0.87 floors (tight); elite-seeking keeps trading floors for wins
 
 4,096-world win set (TRAIN seeds from 6e9), paired vs the distilled agent:
