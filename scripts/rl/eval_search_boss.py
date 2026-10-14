@@ -123,9 +123,9 @@ def main() -> None:
     if not records:
         raise RuntimeError('No valid search evaluation worlds; inspect progress/fault records')
     result = finish_evaluation(records, sum(f for _, f in parts), time.time() - started,
-                               mode=f"greedy+public_search[{args.rooms}]", world_start=args.world_start)
+                               mode=f"greedy+canonical_rng_resampled_native_search[{args.rooms}]", world_start=args.world_start)
     result["summary"].update(checkpoint=args.checkpoint, simulations=args.simulations, samples=args.samples)
-    result['summary'].update(requested=args.n,unstarted=args.n-completed[0],cohort_completed=completed[0]==args.n)
+    result['summary'].update(requested=args.n,unstarted=args.n-completed[0],cohort_completed=completed[0]==args.n,search_protocol='canonical_rng_resampled_native_v2',inference_protocol='single_public_observation_argmax_v1')
     if args.baseline:
         result["paired"] = paired(json.loads(Path(args.baseline).read_text())["records"], records)
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
