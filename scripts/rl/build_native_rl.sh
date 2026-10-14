@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build the sts_rl native module: pinned upstream + unchanged study patch
-# (patches/sts_lightspeed_python_api.patch, 0.1.1) + patches/sts_lightspeed_rl_panel.patch.
+# Build the sts_rl native module: pinned upstream + versioned environment patch
+# (patches/sts_lightspeed_python_api.patch) + patches/sts_lightspeed_rl_panel.patch.
 # Uses an isolated .venv-native for cmake so no frozen venv is modified.
 # Output: external/sts_lightspeed_rl/${BUILD_DIR:-build} (point STS_LIGHTSPEED_BUILD at it).
 # Set BUILD_DIR to build beside a module that running jobs have loaded: overwriting a
@@ -21,7 +21,7 @@ if [[ ! -d "$S/.git" ]]; then
   git -C "$S/pybind11" fetch -q --depth 1 origin "refs/tags/v2.13.6:refs/tags/v2.13.6"
   git -C "$S/pybind11" checkout -q --detach v2.13.6
   git -C "$S" add -A bindings include src
-  git -C "$S" -c user.email=rl@local -c user.name=sts_rl commit -q -m "study patch 0.1.1"
+  git -C "$S" -c user.email=rl@local -c user.name=sts_rl commit -q -m "versioned environment patch"
   git -C "$S" apply "$ROOT/patches/sts_lightspeed_rl_panel.patch"
 fi
 "$ROOT/.venv-native/bin/python" -m cmake -S "$S" -B "$B" -DCMAKE_BUILD_TYPE=Release \

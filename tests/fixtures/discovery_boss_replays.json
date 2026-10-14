@@ -1,0 +1,1500 @@
+[
+  {
+    "seed": 401491,
+    "original_successful_steps": 168,
+    "original_action_trace_sha256": "87d3f0c2b66eae5b3f87a061b86f4b4e1678cecd7db21276302d3f3b803b6eb2",
+    "actions": [
+      [
+        3,
+        "event option 3: Obtain a random boss relic. / Lose your starter relic."
+      ],
+      [
+        0,
+        "choose map node x=0 room=MONSTER"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> RED_LOUSE (deal 8)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        2,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> RED_LOUSE (deal 6)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> GREEN_LOUSE (deal 4)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> GREEN_LOUSE (deal 4)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> GREEN_LOUSE (deal 8)"
+      ],
+      [
+        0,
+        "take gold 14g"
+      ],
+      [
+        0,
+        "take card Anger [Attack, Common]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=0 room=SHOP"
+      ],
+      [
+        8,
+        "buy potion Regen Potion for 77g"
+      ],
+      [
+        1,
+        "leave shop"
+      ],
+      [
+        0,
+        "choose map node x=1 room=EVENT"
+      ],
+      [
+        0,
+        "event option 0: Golden Idol: take Golden Idol; then choose its consequence"
+      ],
+      [
+        2,
+        "event option 4: Golden Idol: lose 6 maximum HP"
+      ],
+      [
+        0,
+        "choose map node x=0 room=MONSTER"
+      ],
+      [
+        1,
+        "play Bash [Attack] (cost 2) -> SPIKE_SLIME_S (deal 8)"
+      ],
+      [
+        3,
+        "play Strike [Attack] (cost 1) -> SPIKE_SLIME_S (deal 9)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> ACID_SLIME_M (deal 6)"
+      ],
+      [
+        0,
+        "play Anger [Attack] (cost 0) -> ACID_SLIME_M (deal 6)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> ACID_SLIME_M (deal 4)"
+      ],
+      [
+        2,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> ACID_SLIME_M (deal 8)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> ACID_SLIME_M (deal 9)"
+      ],
+      [
+        0,
+        "take gold 15g"
+      ],
+      [
+        4,
+        "take potion Distilled Chaos"
+      ],
+      [
+        0,
+        "take card Clash [Attack, Common]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=0 room=EVENT"
+      ],
+      [
+        0,
+        "event option 0: Golden Shrine: gain 100 gold"
+      ],
+      [
+        0,
+        "choose map node x=0 room=ELITE"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> GREMLIN_NOB (deal 8)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 9)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 9)"
+      ],
+      [
+        2,
+        "end turn"
+      ],
+      [
+        2,
+        "drink potion Regen Potion"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 9)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Clash [Attack] (cost 0) -> GREMLIN_NOB (deal 21)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Anger [Attack] (cost 0) -> GREMLIN_NOB (deal 6)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 6)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 6)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 6)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> GREMLIN_NOB (deal 8)"
+      ],
+      [
+        0,
+        "take gold 35g"
+      ],
+      [
+        4,
+        "take relic Tungsten Rod"
+      ],
+      [
+        0,
+        "take card Whirlwind [Attack, Uncommon]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=1 room=MONSTER"
+      ],
+      [
+        0,
+        "play Whirlwind [Attack] (cost X)"
+      ],
+      [
+        0,
+        "play Anger [Attack] (cost 0) -> CULTIST (deal 6)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> CULTIST (deal 8)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> CULTIST (deal 9)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> CULTIST (deal 9)"
+      ],
+      [
+        0,
+        "take gold 13g"
+      ],
+      [
+        1,
+        "take card Power Through [Skill, Uncommon]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=0 room=REST"
+      ],
+      [
+        0,
+        "rest (heal 30% of max HP)"
+      ],
+      [
+        0,
+        "choose map node x=1 room=TREASURE"
+      ],
+      [
+        0,
+        "open chest"
+      ],
+      [
+        0,
+        "take relic Bottled Flame"
+      ],
+      [
+        8,
+        "select card index 8: Whirlwind [Attack, Uncommon]"
+      ],
+      [
+        0,
+        "choose map node x=1 room=MONSTER"
+      ],
+      [
+        0,
+        "play Whirlwind [Attack] (cost X)"
+      ],
+      [
+        0,
+        "drink potion Distilled Chaos"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        2,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        2,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> RED_SLAVER (deal 9)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> RED_SLAVER (deal 9)"
+      ],
+      [
+        0,
+        "play Anger [Attack] (cost 0) -> RED_SLAVER (deal 9)"
+      ],
+      [
+        0,
+        "take gold 16g"
+      ],
+      [
+        2,
+        "take card Cleave [Attack, Common]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=2 room=MONSTER"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> SNEAKY_GREMLIN (deal 8)"
+      ],
+      [
+        2,
+        "play Anger [Attack] (cost 0) -> SNEAKY_GREMLIN (deal 9)"
+      ],
+      [
+        2,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Cleave [Attack] (cost 1)"
+      ],
+      [
+        0,
+        "play Whirlwind [Attack] (cost X)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Power Through [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> FAT_GREMLIN (deal 4)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> FAT_GREMLIN (deal 4)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Clash [Attack] (cost 0) -> MAD_GREMLIN [enemy 1] (deal 10)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> MAD_GREMLIN [enemy 1] (deal 4)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> MAD_GREMLIN (deal 8)"
+      ],
+      [
+        0,
+        "play Anger [Attack] (cost 0) -> MAD_GREMLIN (deal 9)"
+      ],
+      [
+        0,
+        "take gold 21g"
+      ],
+      [
+        4,
+        "take potion Essence Of Steel"
+      ],
+      [
+        0,
+        "take card Evolve [Power, Uncommon]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=2 room=MONSTER"
+      ],
+      [
+        4,
+        "drink potion Essence Of Steel"
+      ],
+      [
+        3,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Evolve [Power] (cost 1)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> RED_SLAVER (deal 6)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> RED_SLAVER (deal 6)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> RED_SLAVER (deal 8)"
+      ],
+      [
+        2,
+        "play Strike [Attack] (cost 1) -> RED_SLAVER (deal 9)"
+      ],
+      [
+        0,
+        "play Cleave [Attack] (cost 1) (deal 12)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> RED_SLAVER (deal 6)"
+      ],
+      [
+        0,
+        "take gold 21g"
+      ],
+      [
+        4,
+        "take potion Gamblers Brew"
+      ],
+      [
+        2,
+        "take card Wild Strike [Attack, Common]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        1,
+        "choose map node x=2 room=EVENT"
+      ],
+      [
+        1,
+        "play Bash [Attack] (cost 2) -> BLUE_SLAVER (deal 8)"
+      ],
+      [
+        3,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Whirlwind [Attack] (cost X)"
+      ],
+      [
+        0,
+        "drink potion Gamblers Brew"
+      ],
+      [
+        0,
+        "keep current hand (discard no cards)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Power Through [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Anger [Attack] (cost 0) -> BLUE_SLAVER (deal 6)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        2,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Wild Strike [Attack] (cost 1) -> BLUE_SLAVER (deal 12)"
+      ],
+      [
+        0,
+        "play Cleave [Attack] (cost 1) (deal 8)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> BLUE_SLAVER (deal 6)"
+      ],
+      [
+        0,
+        "take gold 24g"
+      ],
+      [
+        4,
+        "take potion Colorless Potion"
+      ],
+      [
+        0,
+        "take card Anger [Attack, Common]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=3 room=EVENT"
+      ],
+      [
+        0,
+        "open chest"
+      ],
+      [
+        0,
+        "take relic Shuriken"
+      ],
+      [
+        1,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=2 room=REST"
+      ],
+      [
+        0,
+        "rest (heal 30% of max HP)"
+      ],
+      [
+        0,
+        "choose map node x=0 advance to boss"
+      ],
+      [
+        3,
+        "drink potion Colorless Potion"
+      ],
+      [
+        1,
+        "select card for DISCOVERY: Discovery [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Discovery [Skill] (cost 0)"
+      ]
+    ]
+  },
+  {
+    "seed": 400594,
+    "original_successful_steps": 201,
+    "original_action_trace_sha256": "d2bd3ddd9154aac8859b1156a24665aa1b8a235482f009536a80ae8f82d18d07",
+    "actions": [
+      [
+        3,
+        "event option 3: Obtain a random boss relic. / Lose your starter relic."
+      ],
+      [
+        2,
+        "take relic Old Coin"
+      ],
+      [
+        0,
+        "take relic Blood Vial"
+      ],
+      [
+        0,
+        "take relic Sundial"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        1,
+        "choose map node x=2 room=MONSTER"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> JAW_WORM (deal 8)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> JAW_WORM (deal 9)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> JAW_WORM (deal 9)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        2,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        2,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> JAW_WORM (deal 6)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> JAW_WORM (deal 6)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> JAW_WORM (deal 6)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> JAW_WORM (deal 8)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> JAW_WORM (deal 9)"
+      ],
+      [
+        0,
+        "take gold 14g"
+      ],
+      [
+        2,
+        "take card Shrug It Off [Skill, Common]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=2 room=EVENT"
+      ],
+      [
+        0,
+        "event option 0: The Cleric: pay 35 gold and heal 20 HP"
+      ],
+      [
+        0,
+        "choose map node x=2 room=MONSTER"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> RED_LOUSE [enemy 1] (deal 8)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> RED_LOUSE [enemy 1] (deal 9)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> RED_LOUSE (deal 6)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> RED_LOUSE (deal 6)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> RED_LOUSE (deal 6)"
+      ],
+      [
+        0,
+        "take gold 17g"
+      ],
+      [
+        1,
+        "take card Metallicize [Power, Uncommon]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=2 room=EVENT"
+      ],
+      [
+        1,
+        "event option 1: The Ssssserpent: leave"
+      ],
+      [
+        0,
+        "choose map node x=2 room=MONSTER"
+      ],
+      [
+        1,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        3,
+        "play Strike [Attack] (cost 1) -> SPIKE_SLIME_S (deal 6)"
+      ],
+      [
+        0,
+        "play Metallicize [Power] (cost 1)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Bash [Attack] (cost 2) -> SPIKE_SLIME_S (deal 8)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> ACID_SLIME_M (deal 6)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> ACID_SLIME_M (deal 4)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> ACID_SLIME_M (deal 4)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Bash [Attack] (cost 2) -> ACID_SLIME_M (deal 8)"
+      ],
+      [
+        2,
+        "play Strike [Attack] (cost 1) -> ACID_SLIME_M (deal 9)"
+      ],
+      [
+        0,
+        "take gold 13g"
+      ],
+      [
+        4,
+        "take potion Distilled Chaos"
+      ],
+      [
+        1,
+        "take card Clash [Attack, Common]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=3 room=ELITE"
+      ],
+      [
+        1,
+        "play Bash [Attack] (cost 2) -> LAGAVULIN (deal 8)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> LAGAVULIN (deal 9)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> LAGAVULIN (deal 9)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> LAGAVULIN (deal 9)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> LAGAVULIN (deal 9)"
+      ],
+      [
+        0,
+        "drink potion Distilled Chaos"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> LAGAVULIN (deal 6)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> LAGAVULIN (deal 8)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> LAGAVULIN (deal 9)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> LAGAVULIN (deal 10)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> LAGAVULIN (deal 7)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> LAGAVULIN (deal 7)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Clash [Attack] (cost 0) -> LAGAVULIN (deal 19)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> LAGAVULIN (deal 7)"
+      ],
+      [
+        0,
+        "take gold 29g"
+      ],
+      [
+        4,
+        "take relic Shovel"
+      ],
+      [
+        1,
+        "take card Feel No Pain [Power, Uncommon]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        1,
+        "choose map node x=3 room=EVENT"
+      ],
+      [
+        1,
+        "event option 1: Scrap Ooze: leave"
+      ],
+      [
+        0,
+        "choose map node x=3 room=MONSTER"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Clash [Attack] (cost 0) -> LOOTER (deal 14)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> LOOTER (deal 6)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> LOOTER (deal 6)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> LOOTER (deal 8)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Metallicize [Power] (cost 1)"
+      ],
+      [
+        1,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Feel No Pain [Power] (cost 1)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> LOOTER (deal 8)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> LOOTER (deal 9)"
+      ],
+      [
+        0,
+        "take gold 13g"
+      ],
+      [
+        0,
+        "take gold 45g"
+      ],
+      [
+        2,
+        "take card Wild Strike [Attack, Common]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=3 room=TREASURE"
+      ],
+      [
+        0,
+        "open chest"
+      ],
+      [
+        0,
+        "take relic Torii"
+      ],
+      [
+        1,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=3 room=ELITE"
+      ],
+      [
+        0,
+        "play Metallicize [Power] (cost 1)"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> GREMLIN_NOB (deal 8)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Wild Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 18)"
+      ],
+      [
+        0,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 9)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 6)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 6)"
+      ],
+      [
+        0,
+        "play Feel No Pain [Power] (cost 1)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> GREMLIN_NOB (deal 8)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 9)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Wild Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 18)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> GREMLIN_NOB (deal 9)"
+      ],
+      [
+        0,
+        "take gold 33g"
+      ],
+      [
+        5,
+        "take potion Flex Potion"
+      ],
+      [
+        4,
+        "take relic Meat On The Bone"
+      ],
+      [
+        2,
+        "take card Juggernaut [Power, Rare]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=4 room=REST"
+      ],
+      [
+        0,
+        "rest (heal 30% of max HP)"
+      ],
+      [
+        2,
+        "choose map node x=5 room=EVENT"
+      ],
+      [
+        1,
+        "event option 1: Shining Light: leave"
+      ],
+      [
+        0,
+        "choose map node x=6 room=MONSTER"
+      ],
+      [
+        7,
+        "drink potion Flex Potion"
+      ],
+      [
+        2,
+        "play Wild Strike [Attack] (cost 1) -> LOOTER (deal 17)"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> LOOTER (deal 13)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> LOOTER (deal 9)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> LOOTER (deal 9)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Metallicize [Power] (cost 1)"
+      ],
+      [
+        1,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Feel No Pain [Power] (cost 1)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        1,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Juggernaut [Power] (cost 2)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> SPIKE_SLIME_M (deal 6)"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> SPIKE_SLIME_M (deal 6)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Bash [Attack] (cost 2) -> SPIKE_SLIME_M (deal 8)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> SPIKE_SLIME_M (deal 9)"
+      ],
+      [
+        0,
+        "take gold 19g"
+      ],
+      [
+        0,
+        "take gold 15g"
+      ],
+      [
+        4,
+        "take potion Colorless Potion"
+      ],
+      [
+        1,
+        "take card Shrug It Off [Skill, Common]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=6 room=MONSTER"
+      ],
+      [
+        0,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Metallicize [Power] (cost 1)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        3,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Juggernaut [Power] (cost 2)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        7,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        4,
+        "play Wild Strike [Attack] (cost 1) -> FUNGI_BEAST (deal 9)"
+      ],
+      [
+        2,
+        "play Strike [Attack] (cost 1) -> FUNGI_BEAST (deal 4)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Strike [Attack] (cost 1) -> ACID_SLIME_M (deal 6)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> ACID_SLIME_M (deal 6)"
+      ],
+      [
+        0,
+        "play Defend [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "take gold 15g"
+      ],
+      [
+        1,
+        "take card Anger [Attack, Common]"
+      ],
+      [
+        0,
+        "skip rewards / proceed"
+      ],
+      [
+        0,
+        "choose map node x=5 room=REST"
+      ],
+      [
+        0,
+        "rest (heal 30% of max HP)"
+      ],
+      [
+        0,
+        "choose map node x=0 advance to boss"
+      ],
+      [
+        0,
+        "play Juggernaut [Power] (cost 2)"
+      ],
+      [
+        0,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        0,
+        "play Anger [Attack] (cost 0) -> SLIME_BOSS (deal 6)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        0,
+        "play Metallicize [Power] (cost 1)"
+      ],
+      [
+        0,
+        "play Shrug It Off [Skill] (cost 1)"
+      ],
+      [
+        1,
+        "play Strike [Attack] (cost 1) -> SLIME_BOSS (deal 6)"
+      ],
+      [
+        1,
+        "end turn"
+      ],
+      [
+        1,
+        "play Bash [Attack] (cost 2) -> SLIME_BOSS (deal 8)"
+      ],
+      [
+        1,
+        "play Wild Strike [Attack] (cost 1) -> SLIME_BOSS (deal 18)"
+      ],
+      [
+        0,
+        "drink potion Colorless Potion"
+      ],
+      [
+        0,
+        "select card for DISCOVERY: Jack of All Trades [Skill] (cost 0)"
+      ],
+      [
+        0,
+        "play Jack of All Trades [Skill] (cost 0)"
+      ],
+      [
+        0,
+        "end turn"
+      ],
+      [
+        0,
+        "play Feel No Pain [Power] (cost 1)"
+      ],
+      [
+        0,
+        "play Discovery [Skill] (cost 1)"
+      ]
+    ]
+  }
+]
