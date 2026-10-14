@@ -2,6 +2,8 @@
 
 Current experiment status: the latest [overnight study](docs/rl_overnight_2026-10-14.md) completes both OOC training pilots and corrected search DEV panels. Fresh confirmation gives boss-plus-elite native search 333/4,096 wins versus learned 213. The broader hallway-search pilot gives 98/512; the requested boss-head ablation is complete. Learned weights remain round-2 update 20, with no new trained actor promoted. The [13 October findings](docs/rl_findings_2026-10-13.md) and [training records and fault replay](docs/rl_recording_and_fault_replay.md) preserve the previous round and reproducibility audit. Older longer-curriculum runs and their monitor remain paused; their [handoff](docs/experiment_handoff.md) preserves the separate history and allocation.
 
+See the [full training review](docs/training_review_2026-10-14.md) for the principal setups, their settings, lineage, results and evidence limits.
+
 A maintained environment base for custom agents, LLM adapters, and reinforcement
 learning experiments. The Python core has no runtime dependencies. Game logic
 comes from a pinned, patched [sts_lightspeed](https://github.com/gamerpuppy/sts_lightspeed)
