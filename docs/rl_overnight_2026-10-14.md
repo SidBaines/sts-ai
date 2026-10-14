@@ -24,6 +24,16 @@ New training worlds begin at 20,000,000,000, with per-seed/per-iteration offsets
 
 Initial OOC recipe: frozen combat, OOC macro credit, gamma 1, lambda 1, 768 games/update, learning rate 3e-4, three epochs, 4,096-row minibatches, 1,024-row microbatches, zero entropy bonus, KL guard .05, full Acts 1–3, progress reward +.05/floor and terminal +/-1. Each new condition gets a fresh output and declared optimizer initialization. Keep learned-only policy evaluation exact argmax. Evaluate meaningful choices and whole-game outcomes, not only proxy losses.
 
+## 14 October 07:48 London Corrected teacher data smoke accepted; conditional pilot queued
+
+The completed 512-world TRAIN bank is losslessly flattened with all 7,770 tasks, expected public hashes, source/native provenance and frozen-policy outcomes retained. Flattened SHA256 `409aaa43826f79932b3ac33285a89d4ce4d00c08e53804fd5e2ecf219e27822c`; its companion receipt hashes each source gzip. It remains separate from DEV and the live reserved confirmation.
+
+A four-fight corrected teacher smoke (one each Act-2/3 boss and elite) completes with no faults/cuts/unstarted tasks. Both policy and teacher win three, an execution check only. All baseline outcomes equal the source bank, paired initial public hashes match, and all 108 labels contain legal vote indices with exactly 24 votes, from states actually visited while the teacher plays. No model is trained. Receipt `backend014_expert_smoke_acceptance.json`.
+
+A fixed 128-fight pilot is queued with 32 distinct source worlds per room/act group, samples24 x simulations1,000, two threads/nice10 and 2,400-second budget. Four groups remain separate because worlds can recur across groups; fight outcomes are conditional, not full-game competence. If the corrected teacher does not show a useful advantage, do not distil these labels merely because collection succeeded. Outputs in isolated `data/canonical_20261014/expert/late128`.
+
+The completed corrected DEV evaluations are now locally preserved in `data/reproducibility/overnight_corrected_evals_20261014.zip`, 5,013,054 bytes, SHA256 `798eafb4d1ff652a967eaba37ed5a006f48bd8a4ec10f30cfdc9622ed57102f2`; all 28 unique objects verify across 51 files. Live confirmation is excluded.
+
 ## 14 October 07:43 London Selected condition frozen; fresh confirmation underway
 
 Freeze receipt `backend014_confirmation_freeze.json` records the exact parent SHA `3d135d9bd53b92b5a5eb3dcc8bf26458140e282ee8ea63d9aaaf6ca3c2f222bb`, native SHA `936734a2289e20971abdbe7ae2f703d2d82f4e357a4e2b8590817d9a96f81a04`, all relevant source hashes and actual scientific settings before confirmation opens. Receipt SHA256 is `87979497f32837538642f8f22684708c6ad49f193a9a08b52e9c72f9a0f94c74`. Selected search uses Acts 2–3 BOSS/ELITE, 24 samples x 1,000 simulations, public-hash sampling seeds, a 60-second query bound and single-observation policy fallback. Neither actor weights nor search settings will be tuned from confirmation.
