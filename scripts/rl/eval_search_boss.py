@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""Full-game evaluation of a search-augmented agent: greedy policy everywhere,
-public-information search votes for combat decisions in BOSS rooms.
+"""Full-game canonical RNG-resampled native-search evaluation.
 
-Public search (PanelWorker.search_votes_public) re-seeds every battle RNG stream
-and shuffles the draw order in each sampled copy, so it does not foresee hidden
-randomness. Needs the RL build with BattleContext.copy/reseed_rngs
-(STS_LIGHTSPEED_BUILD=external/sts_lightspeed_rl/build_pub). Records match
-sts_rl.evaluate (seed, floor, win, steps, boss*_hp), so compare_evals.py pairs them.
+Boss/elite search reseeds battle RNGs, canonicalizes unordered pile groups and
+uses public-observation-derived sampling seeds. Other latent native fields are
+not certified public-state-only; report this as its own simulator condition.
 """
 from __future__ import annotations
 
@@ -23,6 +20,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
+from sts_policy.curriculum import public_hash
 from sts_policy.model_agent import collate_public, forward_policy  # noqa: E402
 from sts_rl.common import (BOSS_FLOORS, EVAL_WORLD_START, WIN_OUTCOMES, WORKER_CONFIG, FilteringWorker,  # noqa: E402
                            JsonlLog, load_policy, train_tasks)
@@ -90,7 +88,7 @@ def main() -> None:
                         if (obs.get("phase") == "combat" and room in rooms and len(legal) > 1
                                 and int(state.get("act") or 1) >= args.min_act):
                             votes = inner.search_votes_public(args.simulations, list(range(1, args.samples + 1)),
-                                                              task.seed % 100_000 + steps)
+                                                              int(public_hash(obs)[:8], 16))
                         if votes:
                             action = max(votes.items(), key=lambda kv: kv[1])[0]
                         else:  # policy (also the fallback when search abstains)

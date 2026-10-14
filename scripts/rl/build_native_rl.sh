@@ -7,7 +7,7 @@
 # loaded dylib in place on macOS can kill those processes.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-S="$ROOT/external/sts_lightspeed_rl"
+S="${STS_RL_SOURCE:-$ROOT/external/sts_lightspeed_rl}"
 B="$S/${BUILD_DIR:-build013_clean}"
 PY="${PYTHON:-/Users/sidbaines/.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/bin/python3.12}"
 PIN=7476a81954020087da31d41d16fddf475746ec2d

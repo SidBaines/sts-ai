@@ -297,6 +297,10 @@ class FilteringWorker:
         self.save_potions_above = save_potions_above
         self.avoid_boss_relics = tuple(avoid_boss_relics)
 
+    @property
+    def last_fault_path(self):
+        return getattr(self.worker, 'last_fault_path', None)
+
     def _map(self, observation: dict[str, Any]) -> dict[str, Any]:
         # Menu filters run before slimming: they read structured state and relic text.
         if self.forced_play:
