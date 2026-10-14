@@ -73,12 +73,12 @@ def main():
                         done=cut=False;steps=0
                         while not (done or cut):
                             if len(obs['legal_actions'])>1:
-                                votes=expert.search_votes_public(args.simulations,list(range(1,args.samples+1)),spec.seed%100000+steps)
+                                votes=expert.search_votes_public(args.simulations,list(range(1,args.samples+1)),int(public_hash(obs)[:8],16))
                             else:votes={}
                             if votes:
                                 action=max(votes.items(),key=lambda kv:kv[1])[0]
                                 labels.append({'type':'combat','seed':spec.seed,'obs':obs,'votes':votes,
-                                               'teacher_played':True,'teacher_protocol':'public_search_played_fight_v1'})
+                                               'teacher_played':True,'teacher_protocol':'canonical_rng_resampled_search_played_fight_v2'})
                             else:action=choose(obs)
                             obs,_,done,cut,info=expert.step(action);steps+=1
                         if cut:raise RuntimeError('Expert fight censored; no labels accepted')
@@ -103,7 +103,7 @@ def main():
                         'expert_wins':sum(r['expert_win'] for r in valid),
                         'base_only':sum(r['base_win'] and not r['expert_win'] for r in valid),
                         'expert_only':sum(r['expert_win'] and not r['base_win'] for r in valid)}
-    report={'schema':'public_search_played_fight_v1','run_record':run_record,'requested':len(picked),
+    report={'schema':'canonical_rng_resampled_search_played_fight_v2','run_record':run_record,'requested':len(picked),
             'completed':len(results),'unstarted':len(picked)-len(results),'groups':summary,
             'labels':sum(r.get('labels',0) for r in results),'faults':sum('fault' in r for r in results),'fights':results}
     (out/'summary.json').write_text(json.dumps(report,indent=2)+'\n')

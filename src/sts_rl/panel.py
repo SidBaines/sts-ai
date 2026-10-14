@@ -101,6 +101,8 @@ class PanelEpisode(CurriculumEpisode):
                 if "draw_order_seed" in str(exc):
                     return {}
                 raise
+            if not result.get("provenance", {}).get("hidden_pile_order_canonicalized"):
+                raise RuntimeError("Canonical search requires the 0.1.4 sampling patch")
             index = int(env.display_index_for_bits(int(result["bits"])))
             votes[index] = votes.get(index, 0) + 1
         return votes
