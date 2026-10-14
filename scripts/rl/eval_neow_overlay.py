@@ -29,6 +29,8 @@ def main():
 
     class Worker:
         def __init__(self,inner):self.worker=inner;self.restricted=0
+        @property
+        def last_fault_path(self):return getattr(self.worker.worker,'last_fault_path',None)
         def map(self,result):
             obs=result[0]
             if obs.get('phase')!='combat' and obs.get('state',{}).get('floor')==0:

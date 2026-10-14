@@ -34,6 +34,15 @@ def main():
         condition={k:cfg.get(k) for k in ['checkpoint','samples','simulations','rooms','min_act']}
         condition['checkpoint_sha256']=launch['parent_checkpoint']['sha256']
         condition['native_sha256']=launch['native']['module_sha256']
+        condition['runtime']=launch['runtime']
+        critical={}
+        for source in launch['source_files']:
+            relative=str(Path(source['path']).relative_to(launch['cwd']))
+            if relative.startswith('src/') or relative=='scripts/rl/eval_search_boss.py':
+                critical[relative]=source['sha256']
+        if 'scripts/rl/eval_search_boss.py' not in critical or 'src/sts_env/env.py' not in critical:
+            raise ValueError('Missing critical search/environment source identities')
+        condition['critical_source_sha256']=critical
         conditions.append(condition)
         elapsed+=summary['elapsed']
         for row in data['records']:
