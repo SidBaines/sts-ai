@@ -50,3 +50,6 @@ scratch/
 # Shared local runtime symlink
 .venv
 .venv-native/
+
+# Owned build-runtime symlink
+.venv-native
