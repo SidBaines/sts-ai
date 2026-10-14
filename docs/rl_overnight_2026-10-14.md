@@ -6,7 +6,7 @@ The user authorized continued local training and experiments until an explicit s
 
 The first accepted experimental backend was a separately identified environment 0.1.2 condition: the validated clean-base Ironclad Discovery maintenance patch plus the existing public-search bindings, rebuilt in this worktree. The old backend remains available. This is an intentional trajectory boundary, so all policy comparisons will be rerun together on the new backend before comparing gains.
 
-The incumbent is round-2 OOC update 12 (historical larger-panel 154/4,036 valid wins); update 20 is a candidate (57/1,015 on a reused smaller panel, not confirmed). Combat parameters remain frozen initially. The fresh 0.1.2 comparison selected update 20 provisionally (194/4,096 versus 139/4,096), but a confirmed shop defect requires a new 0.1.3 baseline before training.
+The incumbent is round-2 OOC update 12 (historical larger-panel 154/4,036 valid wins); update 20 is a candidate (57/1,015 on a reused smaller panel, not confirmed). Combat parameters remain frozen initially. A clean 128-world/2,051-fight source bank is complete; nine sampled start groups pass fresh-worker replay checks. On corrected 0.1.3, the matched 4,096-world baseline confirms update 20: 220 wins (5.37%) versus 146 (3.56%), with zero faults. The OOC control is flat at its first DEV quality gate (51 versus 57 matched wins); the bounded card-exploration comparison is queued. Public search remains separate, and clean teacher utility is not yet established.
 
 ## Protocol and work order
 
@@ -19,6 +19,58 @@ The incumbent is round-2 OOC update 12 (historical larger-panel 154/4,036 valid 
 New training worlds begin at 20,000,000,000, with per-seed/per-iteration offsets recorded by the trainer. New label collection begins at 30,000,000,000. A separate confirmation cohort starting at 5,900,000,000 is reserved for a frozen selected candidate and will not be used for pilot selection. The prior 5e9 and 6e9 cohorts remain historical development data. The old curriculum final cohorts remain closed.
 
 Initial OOC recipe: frozen combat, OOC macro credit, gamma 1, lambda 1, 768 games/update, learning rate 3e-4, three epochs, 4,096-row minibatches, 1,024-row microbatches, zero entropy bonus, KL guard .05, full Acts 1–3, progress reward +.05/floor and terminal +/-1. Each new condition gets a fresh output and declared optimizer initialization. Keep learned-only policy evaluation exact argmax. Evaluate meaningful choices and whole-game outcomes, not only proxy losses.
+
+## 14 October 02:32 London Bounded control training completes and cohort merge gates checked
+
+The control has finished all eight learning iterations: 6144 valid training games, 514391 OOC choice transitions, 387 retained optimizer updates, and zero faults. Its final greedy DEV evaluation is still pending; training wins are not used for selection. The matched card-temperature-4 run remains queued to start next.
+
+The three skipped extension worlds completed with the exact planned seeds 5800000644/645/646. A real-data merge test reproduced the 512-world pilot metrics while explicitly excluding the three supplemental records from that smaller declared cohort. Negative tests reject a duplicated shard and a missing requested world without producing an output file. The full extension remains live; its final comparison must pass the exact 4,096-world merge gate before any score is claimed.
+
+## 14 October 02:28 London Search pilot result and exact-cohort extension recovery
+
+The 512-world public-search pilot completed all requested worlds without faults or unstarted tasks: 39 wins (7.62%) versus 29 (5.66%) in the exact baseline subset. Paired floor gain is .96, 95% CI [.41,1.53]; discordant wins 11 losses/21 gains, exact p=.110. It is promising but not a decisive win result. A 3,584-world extension at six threads is active, retaining the completed prefix rather than rerunning it.
+
+The first extension command mistakenly typed world start 5800000648 while the computed next start was 5800000644. The job had already launched when the pending-only correction guard caught it. It is preserved rather than killed/restarted: three skipped TRAIN worlds (644,645,646) are queued as an exact supplement, and three extra tail worlds will remain in the artifact but be excluded from the declared 4,096-world panel. The extension plan records both starts. A strict merge checks missing/duplicate worlds, source/checkpoint/native settings and exact baseline coverage before reporting the full comparison. No cohort claim is made until that gate passes.
+
+## 14 October 02:18 London Control quality gate and matched card exploration queued
+
+At iteration four the control records 51/1,024 greedy DEV wins versus 57 for the matched baseline, with zero faults, mean floor 35.615 and paired difference -.001 (95% CI [-.548,.542]). This is flat/noisy evidence, not a gain; the declared eight-iteration pilot continues, and no unchanged extension is authorized by the result.
+
+The matched card-temperature-4 pilot is queued behind it, with the same initial update-20 tensors, seed-7 TRAIN worlds, update shuffles, fresh optimizer and all settings except card-reward sampling/log-probability temperature. Rest/map/shop temperatures and deployed exact argmax remain unchanged. This is the previously declared exploration test, not a branch from a selected new checkpoint.
+
+The clean teacher-played panel completed 64 fights and 1,869 labels without faults/cuts. Act-2 boss wins are 16/40 frozen policy versus 18/40 search (two losses/four gains); Act-3 boss wins are 9/24 each (two losses/two gains). Those small conditional results do not establish a better teacher or new model. Data are preserved under `expert/public64`; no imitation target or combat model is promoted.
+
+## 14 October 02:12 London Teacher-played search trajectory pilot
+
+A four-fight smoke passed exact paired starting-state checks, completed all fights without faults, and saved 165 labels only after valid outcomes. Its tiny 3/4 versus 3/4 outcomes are execution checks, not competence evidence. A 64-fight pilot is now queued: 40 distinct-source-world Act-2 bosses and 24 Act-3 bosses, public search with 24 samples times 1,000 simulations, two threads and a 1,800-second budget. Groups remain separate because source worlds can recur across acts. Labels come from states actually visited while search plays the fight; paired frozen-policy outcomes measure teacher utility before any imitation.
+
+The OOC control has completed three 768-game batches, retaining 144 updates with zero faults. Its fourth-iteration DEV evaluation remains the first learning-quality gate. The public-search full-game pilot is independently active; no small-panel result is used as final validation.
+
+## 14 October 02:06 London First retained learning update verified
+
+The control pilot completed its first 768-game batch with 63,710 valid OOC choice transitions and zero faults, then retained 48 optimizer updates in an atomic resumable checkpoint. Sampling produced 39 training wins and mean floor 34.79; these are training outcomes, not deployment evidence. Collection took 130 seconds and optimization 53 seconds, so the bounded eight-update pilot is progressing at roughly three minutes per iteration. The current RNG/optimizer states and collection receipt are present. Gradient-half cosine is negative (-.43), warning of noisy credit; it is diagnostic rather than a selection endpoint. Greedy DEV evaluations at iterations four and eight will decide whether the continuation helps.
+
+## 14 October 02:04 London Corrected-shop baseline confirms update 20 and learner starts
+
+On exactly 4,096 requested/valid DEV worlds, update 20 wins 220 (5.37%) versus update 12 winning 146 (3.56%), with zero faults in either. Mean floor is 35.65 versus 35.01; paired difference +.643, bootstrap 95% CI [.35,.92]. Discordant wins are 90 versus 164, exact paired p=3.99988e-06. Act 1 clears are 92.58% versus 93.60%, while Act 2 clears improve 31.57% to 35.33%. Full-game wins govern selection; the modest early retention change is recorded rather than hidden. These remain repeated DEV results, not final mastery evidence.
+
+The eight-iteration control learner has genuinely started with its recorded fresh optimizer, exact frozen combat and new TRAIN namespace. Public search remains live, and the validated source bank is complete. The 5.9e9 confirmation cohort remains closed.
+
+## 14 October 02:03 London Clean fight bank completed and replay checked
+
+The corrected-backend source bank completed 128 distinct TRAIN worlds and recorded 2,051 fights: Act 1 661 hallway/150 elite/126 boss, Act 2 625/101/107, Act 3 223/27/31. One start from every room/act group was replayed in two fresh native workers; all nine pairs match public observation hashes, floor and entry HP. This is sampled replay acceptance, not a claim that every bank row has been independently replayed. The bank and checks are `banks/u20_train128.jsonl` and `banks/u20_train128_acceptance.json`.
+
+At this bank-check timestamp the references were finishing; their completed results and the learner launch are recorded in the newer entry above. Public search was live. No outcome-based pilot promotion or confirmation-cohort opening has occurred.
+
+## 14 October 01:57 London Clean combat source bank and exploration measurement
+
+A 128-world learner-reached bank is queued on disjoint TRAIN worlds starting at 41e9, using update 20 under corrected 0.1.3. It records boss, elite and hallway starts with exact action prefixes; the helper quarantines the whole world on a later fault. This prepares representative combat data without reusing old partially faulted labels or privileging the learner policy. It is not combat training.
+
+A static score-only probe on 2,083 reached card-reward observations from the earlier 0.1.2 audit gives update-20 alternative-choice probabilities: temperature 1 mean 4.13%, median 0%; temperature 4 mean 14.48%, median .54%; temperature 8 mean 24.34%, median 10.14%. This measures exploration, not value or game performance. The first matched pilot remains temperature 4; larger exploration is a later hypothesis if needed.
+
+## 14 October 01:51 London Public search pilot queued on corrected shops
+
+A 512-world matched public-search pilot is queued on update 20 using the first subset of the 5.8e9 DEV cohort, 64 hidden-world samples times 1,000 simulations, boss fights in Acts 2–3 only, four worker threads, a 5,400-second total budget and 60-second query bound. It is compared after completion with the corresponding subset of the corrected-backend learned-only baseline. It is a separate search-assisted agent and does not train either network. The full 4,096-world references remain active; the eight-iteration OOC control is queued behind its own reference, so no source/baseline identity is mixed.
 
 ## 14 October 01:48 London Corrected shop backend accepted and learning controls declared
 
