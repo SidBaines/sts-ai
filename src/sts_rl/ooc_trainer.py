@@ -50,6 +50,7 @@ class OOCTrainConfig:
     ooc_temperature: float = 1.0
     strategic_temperature: float = 1.0  # extra OOC temperature on rest/map/shop menus (exploration)
     strategic_cards: bool = False      # also apply it to card-reward menus
+    card_temperature: float = 1.0      # independently soften card-reward choices only
     dead_action_filter: bool = True
     dominated_filter: bool = False  # drop strictly dominated OOC actions (rest at full HP)
     smith_above: float | None = None  # rule overlay: no 'rest' at HP fraction >= this (train + eval)
@@ -285,7 +286,8 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
         (out / "config.json").write_text(json.dumps(asdict(cfg), indent=1))
         log.emit({"event": "start", "config": asdict(cfg), 'run_record': run_record})
     forward = phase_forward(combat=cfg.combat, temperature=cfg.ooc_temperature,
-                            strategic_temperature=cfg.strategic_temperature, strategic_cards=cfg.strategic_cards)
+                            strategic_temperature=cfg.strategic_temperature, strategic_cards=cfg.strategic_cards,
+                            card_temperature=cfg.card_temperature)
     ppo = PPOConfig(gamma=1.0, gae_lambda=cfg.gae_lambda, clip_ratio=cfg.clip, entropy_weight=cfg.entropy,
                     epochs=cfg.epochs, minibatch_size=cfg.minibatch, learning_rate=cfg.lr,
                     kl_guard_before_update=True, target_kl=cfg.target_kl)
@@ -326,6 +328,7 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 batch = pool.collect_ooc(model, tasks, combat=cfg.combat, temperature=cfg.ooc_temperature,
                                          strategic_temperature=cfg.strategic_temperature,
                                          strategic_cards=cfg.strategic_cards,
+                                         card_temperature=cfg.card_temperature,
                                          ppo=ppo, credit=cfg.credit, gae_lambda=cfg.gae_lambda,
                                          chunk=cfg.collect_chunk, seed=cfg.seed * 100_000 + iteration)
             else:

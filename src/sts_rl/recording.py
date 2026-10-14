@@ -37,7 +37,7 @@ def deduplicate_snapshot(path, objects):
     os.chmod(target, 0o444)
 
 
-def begin_run(out, config, checkpoint=None, inputs=(), build_dir=None):
+def begin_run(out, config, checkpoint=None, inputs=(), build_dir=None, preparation=False):
     """Record each start/resume separately; preserve source and native binary bytes."""
     from sts_env._backend.lightspeed_import import native_metadata, default_build_dir
     root = Path(__file__).resolve().parents[2]
@@ -53,13 +53,19 @@ def begin_run(out, config, checkpoint=None, inputs=(), build_dir=None):
         archive.write(root/'pyproject.toml', 'pyproject.toml')
         source_files.append(file_identity(root/'pyproject.toml'))
     build_dir = Path(build_dir or os.environ.get('STS_LIGHTSPEED_BUILD', default_build_dir())).resolve()
-    native = native_metadata(build_dir)
-    shutil.copy2(build_dir/native['module_file'], directory/native['module_file'])
-    shutil.copy2(build_dir/'build_manifest.json', directory/'build_manifest.json')
-    if file_identity(directory/native['module_file'])['sha256'] != native['module_sha256']:
-        raise RuntimeError('Native binary changed while recording launch')
+    try:
+        native = native_metadata(build_dir)
+    except RuntimeError as exc:
+        if not preparation: raise
+        native = {'preparation_only':True,'unavailable':str(exc)}
+    if 'module_file' in native:
+        shutil.copy2(build_dir/native['module_file'], directory/native['module_file'])
+        shutil.copy2(build_dir/'build_manifest.json', directory/'build_manifest.json')
+        if file_identity(directory/native['module_file'])['sha256'] != native['module_sha256']:
+            raise RuntimeError('Native binary changed while recording launch')
     objects = Path(out).resolve().parent / 'record_objects'
-    for path in [directory/'source.zip', directory/native['module_file']]:
+    snapshots=[directory/'source.zip']+([directory/native['module_file']] if 'module_file' in native else [])
+    for path in snapshots:
         deduplicate_snapshot(path, objects)
     files = []
     for item in inputs:

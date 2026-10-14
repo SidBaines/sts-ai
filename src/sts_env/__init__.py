@@ -1,5 +1,5 @@
 """A model-independent Slay the Spire environment."""
 from sts_env.env import SlayTheSpireEnv, SimulatorError, SimulatorTimeout
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __all__ = ["SlayTheSpireEnv", "SimulatorError", "SimulatorTimeout"]

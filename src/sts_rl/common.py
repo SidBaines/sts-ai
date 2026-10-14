@@ -343,7 +343,8 @@ def strategic_rows(actions: torch.Tensor, mask: torch.Tensor, *, cards: bool = F
 
 
 def phase_forward(*, combat: str = "sample", ooc: str = "sample", temperature: float = 1.0,
-                  strategic_temperature: float = 1.0, strategic_cards: bool = False):
+                  strategic_temperature: float = 1.0, strategic_cards: bool = False,
+                  card_temperature: float = 1.0):
     """Forward that makes one or both phases greedy (logit scale 1e4).
 
     Scaling preserves masking and keeps log-probs finite, so the same function
@@ -362,11 +363,24 @@ def phase_forward(*, combat: str = "sample", ooc: str = "sample", temperature: f
         if strategic_temperature != 1.0:
             strategic = strategic_rows(batch[1], mask, cards=strategic_cards) & ~is_combat
             scale = torch.where(strategic, torch.full_like(values, 1.0 / strategic_temperature), scale)
+        if card_temperature != 1.0:
+            cards=((batch[1][...,_FLAG_SKIP_CARD]>.5)&mask).any(-1)&~is_combat
+            scale=torch.where(cards,torch.full_like(values,1.0/card_temperature),scale)
         if combat == "greedy":
             scale = torch.where(is_combat, torch.full_like(values, 1e4), scale)
         if ooc == "greedy":
             scale = torch.where(~is_combat, torch.full_like(values, 1e4), scale)
-        return (logits * scale[:, None]).masked_fill(~mask, -1e9), values, mask
+        logits=(logits * scale[:, None]).masked_fill(~mask,-1e9)
+        if combat=='argmax' or ooc=='argmax':
+            # Exact tie-breaking for a frozen phase, with a one-point categorical
+            # distribution. Historical 'greedy' scaling remains readable.
+            rows=(is_combat if combat=='argmax' else torch.zeros_like(is_combat)) | \
+                 (~is_combat if ooc=='argmax' else torch.zeros_like(is_combat))
+            chosen=logits.argmax(-1)
+            fixed=torch.full_like(logits,-1e9)
+            fixed.scatter_(1,chosen[:,None],0.)
+            logits=torch.where(rows[:,None],fixed,logits)
+        return logits, values, mask
     return forward
 
 

@@ -43,7 +43,8 @@ def _collector_main(conn, checkpoint: str, workers: int, worker_options: dict[st
                     from .ooc_trainer import collect_ooc_batch
                     forward = phase_forward(combat=payload.pop("combat"), temperature=payload.pop("temperature"),
                                             strategic_temperature=payload.pop("strategic_temperature", 1.0),
-                                            strategic_cards=payload.pop("strategic_cards", False))
+                                            strategic_cards=payload.pop("strategic_cards", False),
+                                            card_temperature=payload.pop('card_temperature',1.0))
                     out = collect_ooc_batch(model, pool, payload.pop("tasks"), forward=forward, **payload)
                 elif kind == "eval":
                     from .evaluate import evaluate_tasks
@@ -92,10 +93,12 @@ class CollectorPool:
 
     def collect_ooc(self, model: torch.nn.Module, tasks: Sequence[Any], *, combat: str, temperature: float,
                     ppo: PPOConfig, credit: str, gae_lambda: float, chunk: int, seed: int,
-                    strategic_temperature: float = 1.0, strategic_cards: bool = False) -> dict[str, Any]:
+                    strategic_temperature: float = 1.0, strategic_cards: bool = False,
+                    card_temperature: float = 1.0) -> dict[str, Any]:
         parts = self._scatter("ooc", model, tasks, seed, combat=combat, temperature=temperature, ppo=ppo,
                               credit=credit, gae_lambda=gae_lambda, chunk=chunk,
-                              strategic_temperature=strategic_temperature, strategic_cards=strategic_cards)
+                              strategic_temperature=strategic_temperature, strategic_cards=strategic_cards,
+                              card_temperature=card_temperature)
         merged: dict[str, Any] = {"kept": [], "game_episodes": [], "faults": 0, 'fault_records': [], "stats": {}}
         for part in parts:
             # Unpickled observations are new objects: re-bind the encoding identity

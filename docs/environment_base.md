@@ -169,3 +169,5 @@ the tested source; no historical training results are claimed for this release.
 ## Experiment fault evidence
 
 The RL adapter now preserves replayable simulator RPC failures and keeps them outside game-loss accounting; see [training records and fault replay](rl_recording_and_fault_replay.md). This changes private experiment records, not the core observation/CLI trace schemas or released native patch. A captured Act-2 Discovery failure reproduces on frozen 0.1.1 and passes the former failure point with the separate 0.1.2 Discovery maintenance candidate. The old flag denotes unsupported Discovery, not a diagnosed memory error. Other native faults remain possible, so isolation and finite operation deadlines remain required. No release tag or historical study binary was changed.
+
+The overnight experiment now uses a separately tested 0.1.3 shop-maintenance candidate with observation label `sts_env_public_v2`. [Migration and scope](shop_maintenance_013.md) describe corrected prices and futile-purchase exclusion. Historical releases remain immutable; this is not an adopted clean release or complete simulator fidelity certification.

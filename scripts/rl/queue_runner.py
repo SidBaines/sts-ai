@@ -30,7 +30,7 @@ STATUS = RUNS / "runner_status.json"
 STALL_MINUTES = 40
 LAUNCHED: dict[int, subprocess.Popen] = {}
 ENV = {"PYTHONPATH": str(ROOT / "src"),
-       "STS_LIGHTSPEED_BUILD": str(ROOT / "external" / "sts_lightspeed_rl" / "build")}
+       "STS_LIGHTSPEED_BUILD": str(ROOT / "external" / "sts_lightspeed_rl" / "build013")}
 
 
 class Locked:
@@ -98,7 +98,7 @@ def launch(run: dict) -> int:
     inputs = [cmd[cmd.index(flag)+1] for flag in ['--bank', '--records', '--baseline', '--teacher'] if flag in cmd]
     build = next((word.split('=',1)[1] for word in cmd if word.startswith('STS_LIGHTSPEED_BUILD=')), ENV['STS_LIGHTSPEED_BUILD'])
     run['launch_record'] = begin_run(out, {'queue_name':run['name'], 'cmd':cmd, 'lane':run.get('lane','main')},
-                                     checkpoint, inputs, build_dir=build)
+                                     checkpoint, inputs, build_dir=build, preparation=run.get('preparation',False))
     stdout = (out / "stdout.log").open("a")
     log = run_log(run)
     run['log_start_bytes'] = log.stat().st_size if log.exists() else 0
@@ -180,7 +180,7 @@ def runner() -> None:
                     busy.add(lane)
                     try:
                         run.update(pid=launch(run), status="running", started=time.time())
-                    except OSError as exc:
+                    except (OSError, RuntimeError, ValueError) as exc:
                         run.update(status="failed", ended=time.time(), reason=f"launch: {exc}")
             write_queue(queue)
             active = [r for r in queue["runs"] if r["status"] == "running"]
@@ -206,7 +206,8 @@ def main() -> None:
             queue = read_queue()
             if any(r["name"] == name for r in queue["runs"]):
                 sys.exit(f"run {name} already queued")
-            queue["runs"].append({"name": name, "cmd": cmd, "status": "pending", "added": time.time(), "lane": lane})
+            queue["runs"].append({"name": name, "cmd": cmd, "status": "pending", "added": time.time(), "lane": lane,
+                                  'preparation':'--preparation' in options})
             write_queue(queue)
         print("queued", name)
     elif command == "cancel":

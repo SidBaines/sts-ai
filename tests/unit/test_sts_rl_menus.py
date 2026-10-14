@@ -16,6 +16,27 @@ def menu(*descriptions, phase="out_of_combat", **state):
 
 
 class StrategicRowTests(unittest.TestCase):
+    def test_card_only_temperature_preserves_other_strategic_menus(self):
+        from unittest.mock import patch
+        batch=collate_public([menu('take card Anger','skip card reward'),menu('rest','smith')])
+        logits=torch.tensor([[8.,0.],[8.,0.]])
+        with patch('sts_rl.common.forward_policy',return_value=(logits,torch.zeros(2),batch[2])):
+            out,_,_=phase_forward(card_temperature=4.)(None,batch)
+        torch.testing.assert_close(out[0],logits[0]/4.)
+        torch.testing.assert_close(out[1],logits[1])
+
+    def test_exact_frozen_combat_argmax_does_not_sample_tied_actions_or_change_ooc(self):
+        from sts_policy.losses import masked_distribution
+        from unittest.mock import patch
+        batch=collate_public([menu('play Strike','end turn',phase='combat'),menu('rest','smith')])
+        logits=torch.tensor([[2.,2.],[.2,.7]])
+        values=torch.tensor([0.,0.]);mask=torch.ones(2,2,dtype=torch.bool)
+        with patch('sts_rl.common.forward_policy',return_value=(logits,values,mask)):
+            encoded,returned,_=phase_forward(combat='argmax')(None,batch)
+        torch.testing.assert_close(encoded[1],logits[1])
+        for _ in range(20):self.assertEqual(int(masked_distribution(encoded,mask).sample()[0]),0)
+        torch.testing.assert_close(returned,values)
+
     def test_flags_identify_rest_map_shop_and_optionally_card_menus(self):
         obs = [menu("rest (heal 30% of max HP)", "smith (upgrade a card in your deck)"),
                menu("choose map node x=1 room=MONSTER", "choose map node x=3 room=ELITE"),
