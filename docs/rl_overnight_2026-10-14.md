@@ -2,7 +2,7 @@
 
 ## Current summary
 
-The user authorized continued local training and experiments until an explicit stop in the morning. Work is in `codex/reproducibility-fault-records`; historical campaigns, their budgets, final cohorts and frozen native binaries are preserved. The Mac is on AC power. Each job remains bounded and records source/build/data/checkpoint identities, commands and results. No new final cohort is opened for tuning.
+The user authorized continued local training and experiments until an explicit stop in the morning. The active backend is now the independently repaired 0.1.3 shop condition; learning must use its rebaselined scores. Work is in `codex/reproducibility-fault-records`; historical campaigns, their budgets, final cohorts and frozen native binaries are preserved. The Mac is on AC power. Each job remains bounded and records source/build/data/checkpoint identities, commands and results. No new final cohort is opened for tuning.
 
 The first accepted experimental backend was a separately identified environment 0.1.2 condition: the validated clean-base Ironclad Discovery maintenance patch plus the existing public-search bindings, rebuilt in this worktree. The old backend remains available. This is an intentional trajectory boundary, so all policy comparisons will be rerun together on the new backend before comparing gains.
 
@@ -19,6 +19,12 @@ The incumbent is round-2 OOC update 12 (historical larger-panel 154/4,036 valid 
 New training worlds begin at 20,000,000,000, with per-seed/per-iteration offsets recorded by the trainer. New label collection begins at 30,000,000,000. A separate confirmation cohort starting at 5,900,000,000 is reserved for a frozen selected candidate and will not be used for pilot selection. The prior 5e9 and 6e9 cohorts remain historical development data. The old curriculum final cohorts remain closed.
 
 Initial OOC recipe: frozen combat, OOC macro credit, gamma 1, lambda 1, 768 games/update, learning rate 3e-4, three epochs, 4,096-row minibatches, 1,024-row microbatches, zero entropy bonus, KL guard .05, full Acts 1–3, progress reward +.05/floor and terminal +/-1. Each new condition gets a fresh output and declared optimizer initialization. Keep learned-only policy evaluation exact argmax. Evaluate meaningful choices and whole-game outcomes, not only proxy losses.
+
+## 14 October 01:48 London Corrected shop backend accepted and learning controls declared
+
+The full shop/exploration acceptance suite passes 505 tests (two declared skips), and bounded core smoke passes. The regenerated native patch initially introduced standalone blank context markers that fail repository whitespace checks. They were normalized without changing C++ source; the new isolated `build013_clean` has exactly the same native binary SHA256 as the first 0.1.3 build (`6fd3533107e9ad61...`). Eleven focused mechanics/sampling checks pass again, and fresh/reverse patch checks pass. Both raw and normalized patch identities are preserved in the format receipt.
+
+New full 4,096-world matched baselines for updates 12 and 20 are queued on 0.1.3 / public v2. The planned first learning pilot starts from update 20, uses a fresh AdamW optimizer, exact frozen-combat argmax, lambda 1 macro OOC credit and new TRAIN worlds. It is bounded to eight iterations; a second matched seed-7 pilot will use card-only temperature 4 if the baseline/control are healthy. Neither is a resume of missing historical update-20 optimizer state. The pilot evaluation uses the 5.8e9 DEV cohort; the 5.9e9 confirmation cohort remains closed.
 
 ## 14 October 01:42 London Fresh checkpoint result and shop defect boundary
 

@@ -30,7 +30,7 @@ STATUS = RUNS / "runner_status.json"
 STALL_MINUTES = 40
 LAUNCHED: dict[int, subprocess.Popen] = {}
 ENV = {"PYTHONPATH": str(ROOT / "src"),
-       "STS_LIGHTSPEED_BUILD": str(ROOT / "external" / "sts_lightspeed_rl" / "build013")}
+       "STS_LIGHTSPEED_BUILD": str(ROOT / "external" / "sts_lightspeed_rl" / "build013_clean")}
 
 
 class Locked:
