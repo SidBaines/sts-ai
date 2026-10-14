@@ -26,7 +26,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from sts_policy.losses import PPOConfig, masked_distribution
+from sts_policy.losses import PPOConfig, masked_distribution, masked_kl_divergence
 from sts_policy.model_agent import collate_public, forward_policy
 from sts_policy.rollout_training import collect_rollouts
 from sts_policy.workers import CurriculumWorker
@@ -712,9 +712,7 @@ def drift_metrics(actor, reference, anchors, device):
             batch = batch_rows(rows, device)
             a, _ = getattr(actor, phase)(*batch)
             b, _ = getattr(reference, phase)(*batch)
-            pa = masked_distribution(a, batch[2])
-            pb = masked_distribution(b, batch[2])
-            kl = torch.distributions.kl_divergence(pb, pa).cpu().tolist()
+            kl = masked_kl_divergence(b, a, batch[2]).cpu().tolist()
             changes = (a.argmax(-1) != b.argmax(-1)).cpu().tolist()
             for r, k, ch in zip(rows, kl, changes):
                 values.append((r["act"], k, float(ch)))
@@ -803,11 +801,25 @@ def actor_update(actor, reference, optimizers, rows, anchors, cfg, rng, beta):
                     al, _ = head(*ab)
                     with torch.no_grad():
                         rl, _ = ref(*ab)
-                    kl = torch.distributions.kl_divergence(
-                        masked_distribution(rl, ab[2]), masked_distribution(al, ab[2])
-                    ).mean()
+                    kl = masked_kl_divergence(rl, al, ab[2]).mean()
                     loss = policy + beta * kl - cfg.entropy * entropy
                     if not bool(torch.isfinite(loss)):
+                        diagnostic = {
+                            "phase": phase,
+                            "minibatch": begin,
+                            "microbatch": offset,
+                            "loss_components": {
+                                name: float(value.detach())
+                                if bool(torch.isfinite(value))
+                                else str(float(value.detach()))
+                                for name, value in {
+                                    "policy": policy,
+                                    "anchor_kl": kl,
+                                    "entropy": entropy,
+                                }.items()
+                            },
+                            "anchor_seeds": [r["seed"] for r in sampled],
+                        }
                         raise FloatingPointError("Nonfinite actor loss")
                     weight = len(part) / len(indices)
                     (loss * weight).backward()
