@@ -33,3 +33,8 @@ explicit faults for unsupported classes and invalid offers. The
 replays, semantics regressions, determinism and the intentional provenance
 boundary; [the release record](release_v0.1.2.md) adds the release-branch
 rebuild. The immutable release reference is `env-v0.1.2`.
+
+Release 0.1.3 repairs upstream shop pricing and ineffective potion purchases.
+Shop menus change, so the observation label advances to `sts_env_public_v2`; see
+[the migration record](shop_maintenance_013.md). The immutable release
+reference is `env-v0.1.3`.

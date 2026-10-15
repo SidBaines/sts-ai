@@ -110,7 +110,8 @@ out-of-combat policy is scripted/seeded rather than a planning search.
 ## Migration from the research harness
 
 This clean base uses distribution `slay-the-spire-env`, package `sts_env`, public
-observation contract `sts_env_public_v1`, and trace schema `sts_env_trace_v1`.
+observation contract `sts_env_public_v2` (`sts_env_public_v1` before 0.1.3), and
+trace schema `sts_env_trace_v1`.
 It does not reinterpret the old `sts_ai` DecisionRecord schema. Frozen historical
 traces and their original replay/training tools stay on the LLM workstream (`ws/llm`).
 Port experiments by writing agent/encoder/reward adapters around the new API;
@@ -176,3 +177,13 @@ explicitly, and all environment fault/timeout guards remain active. Discovery
 trajectories intentionally continue beyond their former rejection points. The
 public schemas are unchanged; the release/native/interface identities change.
 Historical experiments and running studies keep their frozen backends.
+
+## Release 0.1.3: shop maintenance
+
+Release 0.1.3 repairs upstream shop pricing and purchase validation: Courier and
+Membership discounts, restock and replacement prices, and potion purchases that
+could not take effect. The public observation label advances to
+`sts_env_public_v2` because shop menus no longer offer ineffective potion
+purchases, so menu indices can differ from 0.1.2. See the
+[migration record](shop_maintenance_013.md) and
+[release record](release_v0.1.3.md).

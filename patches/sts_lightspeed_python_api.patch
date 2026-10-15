@@ -2075,6 +2075,78 @@ index fa10364..0e95174 100644
                  case 5:
                      playerLoseHp(unfavorable ? 5 : 3);
                      regainControl();
+diff --git a/src/game/Shop.cpp b/src/game/Shop.cpp
+index bacf8e7..2625094 100644
+--- a/src/game/Shop.cpp
++++ b/src/game/Shop.cpp
+@@ -3,6 +3,7 @@
+ //
+
+ #include <cmath>
++#include <stdexcept>
+ #include "game/Shop.h"
+ #include "game/GameContext.h"
+ #include "game/Game.h"
+@@ -125,14 +126,19 @@ void Shop::buyRelic(GameContext &gc, int idx) {
+         removeCost = static_cast<int>(std::round(static_cast<float>(removeCost) * MEMBERSHIP_CARD_FACTOR));
+     }
+
++    if (r == RelicId::THE_COURIER) {
++        applyDiscount(COURIER_FACTOR);
++        removeCost = static_cast<int>(std::round(static_cast<float>(removeCost) * COURIER_FACTOR));
++    }
++
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+         relics[idx] = gc.returnRandomRelic(rollRelicTier(gc.merchantRng), true, false);
+-        getNewPrice(gc, getRelicBasePrice(relics[idx]));
++        relicPrice(idx) = getNewPrice(gc, getRelicBasePrice(relics[idx]));
+     } else {
+         relicPrice(idx) = -1;
+     }
+
+-    if (isEggRelic(relics[idx])) {
++    if (isEggRelic(r)) {
+         for (auto &c : cards) {
+             c = gc.previewObtainCard(c);
+         }
+@@ -140,9 +146,10 @@ void Shop::buyRelic(GameContext &gc, int idx) {
+ }
+
+ void Shop::buyPotion(GameContext &gc, int idx) {
+-//    if (gc.hasRelic(RelicId::SOZU)) { // just dont call this with sozu or without enough slots
+-//        return;
+-//    }
++    if (idx < 0 || idx >= 3 || potionPrice(idx) < 0 || gc.gold < potionPrice(idx) ||
++            gc.hasRelic(RelicId::SOZU) || gc.potionCount >= gc.potionCapacity) {
++        throw std::invalid_argument("invalid shop potion purchase");
++    }
+     gc.obtainPotion(potions[idx]);
+     gc.loseGold(potionPrice(idx), true);
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+@@ -198,19 +205,19 @@ int Shop::getNewCardPrice(GameContext &gc, CardRarity rarity, bool colorless) {
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+         price *= 0.8f;
+     }
+-    if (gc.hasRelic(RelicId::THE_COURIER)) {
++    if (gc.hasRelic(RelicId::MEMBERSHIP_CARD)) {
+         price *= 0.5f;
+     }
+     return static_cast<int>(price);
+ }
+
+ int Shop::getNewPrice(GameContext &gc, int basePrice) {
+-    basePrice = static_cast<int>(std::round(gc.merchantRng.random(0.95f, 1.05f)));
++    basePrice = static_cast<int>(std::round(basePrice * gc.merchantRng.random(0.95f, 1.05f)));
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+-        std::round(basePrice * COURIER_FACTOR);
++        basePrice = static_cast<int>(std::round(basePrice * COURIER_FACTOR));
+     }
+     if (gc.hasRelic(RelicId::MEMBERSHIP_CARD)) {
+-        std::round(basePrice * MEMBERSHIP_CARD_FACTOR);
++        basePrice = static_cast<int>(std::round(basePrice * MEMBERSHIP_CARD_FACTOR));
+     }
+     return basePrice;
+ }
 diff --git a/src/sim/search/Action.cpp b/src/sim/search/Action.cpp
 index 551623d..7b4e762 100644
 --- a/src/sim/search/Action.cpp
@@ -2236,10 +2308,30 @@ index 79eccf9..d715863 100644
          }
          ++foundPotions;
 diff --git a/src/sim/search/GameAction.cpp b/src/sim/search/GameAction.cpp
-index 8c977ee..8c4485d 100644
+index 8c977ee..5da7665 100644
 --- a/src/sim/search/GameAction.cpp
 +++ b/src/sim/search/GameAction.cpp
-@@ -574,6 +574,9 @@ std::vector<search::GameAction> getAllRewardActions(const sts::GameContext &gc)
+@@ -229,7 +229,8 @@ bool isValidShopAction(const GameContext &gc, const search::GameAction a) {
+             if (select > 2) {
+                 return false;
+             }
+-            return s.potionPrice(select) != -1 && gc.gold >= s.potionPrice(select);
++            return s.potionPrice(select) != -1 && gc.gold >= s.potionPrice(select) &&
++                   !gc.hasRelic(RelicId::SOZU) && gc.potionCount < gc.potionCapacity;
+
+
+         case search::GameAction::RewardsActionType::RELIC:
+@@ -515,7 +516,8 @@ std::vector<search::GameAction> getAllShopActions(const sts::GameContext &gc) {
+
+     for (int i = 0; i < 3; ++i) {
+         auto price = s.potionPrice(i);
+-        if (price != -1 && gc.gold >= price) {
++        if (price != -1 && gc.gold >= price && !gc.hasRelic(RelicId::SOZU) &&
++                gc.potionCount < gc.potionCapacity) {
+             actions.emplace_back(search::GameAction::RewardsActionType::POTION, i);
+         }
+     }
+@@ -574,6 +576,9 @@ std::vector<search::GameAction> getAllRewardActions(const sts::GameContext &gc)
          for (int x = 0; x < r.cardRewards[i].size(); ++x) {
              actions.emplace_back(search::GameAction::RewardsActionType::CARD, i, x);
          }
