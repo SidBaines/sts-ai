@@ -141,8 +141,9 @@ accepted as skipped integration tests.
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[gym]'
 scripts/build_lightspeed.sh
-STS_REQUIRE_SIMULATOR=1 PYTHONPATH=src .venv/bin/python \
-  -m unittest discover -s tests -t .
+export STS_SEARCH_TEST_FIXTURE="$(scripts/build_test_fixtures.sh)"
+STS_REQUIRE_SIMULATOR=1 STS_REQUIRE_SEARCH_TEST_FIXTURE=1 PYTHONPATH=src \
+  .venv/bin/python -m unittest discover -s tests -t .
 .venv/bin/sts-env doctor
 .venv/bin/sts-env run --agent random --seed 3 --mode ooc \
   --max-act 1 --battle-simulations 50 --output data/release-smoke.jsonl
@@ -187,3 +188,16 @@ could not take effect. The public observation label advances to
 purchases, so menu indices can differ from 0.1.2. See the
 [migration record](shop_maintenance_013.md) and
 [release record](release_v0.1.3.md).
+
+## Release 0.1.4: canonical sampled search
+
+Release 0.1.4 changes only seeded native search queries
+(`search_best_action(..., draw_order_seed=...)`). Before sampling a draw order,
+the query sorts the unordered draw, discard and exhaust piles by public card
+attributes, so a fixed number of sampled worlds no longer starts from the true
+hidden pile order. Returned discard/exhaust selections are mapped back to the
+live card instance. Ordinary execution and unsampled search are unchanged, and
+`sts_env_public_v2` is retained. Neither search mode is a certified public-only
+planner; see the [search record](canonical_search_014.md) and
+[release record](release_v0.1.4.md). `scripts/build_test_fixtures.sh` builds
+the test-only native fixture its regression tests need.

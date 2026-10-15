@@ -38,3 +38,8 @@ Release 0.1.3 repairs upstream shop pricing and ineffective potion purchases.
 Shop menus change, so the observation label advances to `sts_env_public_v2`; see
 [the migration record](shop_maintenance_013.md). The immutable release
 reference is `env-v0.1.3`.
+
+Release 0.1.4 canonicalizes hidden pile order before seeded native search
+samples, so sampled search cannot depend on the true draw order. Ordinary
+execution is unchanged; see [the search record](canonical_search_014.md). The
+immutable release reference is `env-v0.1.4`.
