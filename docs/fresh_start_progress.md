@@ -1,5 +1,17 @@
 # Fresh-start progress — newest first
 
+## 15 October 2026, 22:20 UTC — reviewed adoption committed; model/data tooling under review
+
+Local commits: `99566cd` adopts immutable env-v0.1.5 (independent Claude spec and quality PASS); `c244e83` records the predeclared split/panel/health decisions separately. Unrestricted pure suite passes 488/488 in 5.133 seconds, no skips. Native validation is still pending because the detached pipeline is waiting on battery; no baseline, labels, or training experiments have run. An asynchronous request asks Sid to connect AC, while implementation/reviews continue.
+
+B1 entity implementation passes 27 focused tests in 0.646 seconds. New model has 1,683,714 parameters; the synthetic24entity/8action CPU fixture is .363ms actor/.670ms full forward (one thread). These are plumbing timings, not real collector evidence. Independent Claude specification review is running. The trainer builder is adding batched training arithmetic separately from exact-singleton inference, avoiding one transformer call and GPU synchronization per training row.
+
+C1 collector/panel implementation passes 31 pure tests; native015 replay and unsalted panel parity remain unverified. Follow-up C2 separates repeat-query draw-order/RNG/search seeds, restricts repeats to predeclared TEST worlds, skips forced combat searches, caches power polling and adds owned caffeinate lifecycle/completion receipts. D1 supervised fitting/paired statistics/dashboard implementation is in progress; no PPO/expert-iteration Step D is authorized or running.
+
+Integrity issue surfaced by quality review: inherited research native build helper could stamp stale/core-only sources as the current research binary. Current fresh-clone pipeline explicitly applies/reverse-checks both patches and avoids the risk. Written A2 repair spec requires fail-closed reconstruction/source checks, actual tool/dependency identities, atomic manifests and regression tests. Core/released environment code will remain byte-identical to the tag. Both core and research binaries must receive native tests/smoke, with skipped tests and build-source identity recorded.
+
+All completed A1 builder/review logs and the host unit output are preserved under `data/rl_runs/fresh_start_20261015/agent_records/`. Workstream fast-forward integration is deferred until native adoption gates pass; no push.
+
 ## 15 October 2026, 21:59 UTC — implementation design and first health check
 
 Environment file merge is ready: core and imported core tests match immutable `env-v0.1.5`; workstream/policy code retained. A separate Claude spec review is running. Sandboxed pure suite: 488 cases, 469 passes and 19 permission errors (HTTP binds/process inspection); host/native rerun pending. Native build/verification pipeline is detached with STOP/deadline/disk controls and pauses on battery. It is currently waiting for AC; no simulator experiment has started. Existing CMake 3.31.6/Python 3.12.13 build-tools environment avoids frozen-runtime mutation.
