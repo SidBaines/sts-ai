@@ -207,8 +207,8 @@ learning experiments remain outstanding.
 - `ooc_grpo_v1` is paused at iteration 6 of 12. The historical frozen-protocol evaluation against `base_hybrid` remains outstanding; the September 16-world diagnostic comparison uses a different cohort, search budget, and constrained-output control. See [`ooc_rl_v1_status.md`](ooc_rl_v1_status.md).
 - Format robustness and incomplete OOC information both constrain interpretation of play quality; the v2 RL recipe and versioned forced-action/complete-event interfaces remain unimplemented.
 - An experimental privileged OOC continuation teacher now exists. A validated public-state training dataset, robust hidden-future/continuation targets, and a learned-policy replication remain outstanding.
-- Lagavulin/Sentries labels have not been state-sanity audited; the phantom-power quarantine only covers the Nob files.
+- The Nob-only phantom-power quarantine turned out to be false positives: the flagged powers are burning-elite buffs and relic/potion effects (corrected 2026-10-15).
 - All shared-adapter results are single-seed (seed 1) at a single endpoint (step 6,000).
 - `combat_public_v3` prompts have not yet been used for training.
-- The simulator's uninitialized-memory bugs are unfixed at source: the phantom-power variant, and the hang variant that is state-dependent and therefore not screenable per seed across policies.
+- The simulator's hang variant of the uninitialized-memory bugs is unfixed at source on this branch, and is state-dependent, so not screenable per seed across policies. The supposed phantom-power variant was the burning-elite mechanic.
 - The embargoed 13-window final Nob cohort remains untouched; its operational record is [`configs/competence/nob_fresh_final_cohort_v1.json`](../configs/competence/nob_fresh_final_cohort_v1.json).
