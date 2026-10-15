@@ -4,7 +4,7 @@ User-authorized fresh MacBook run from the original pre-joint champion (round-2 
 
 ## Condition and budget
 
-`configs/joint_sparse_win_v2.json` fixes a 2.5-active-hour allocation including in-run validation/evaluation, within the authorized two-to-three hours. There is no automatic extension. Available disk is about 10 GiB; exact optimizer buffers use lossless gzip level6 and the existing 6 GiB free-space guard remains. Older models/data are not deleted or published. Resource guards can end the run early.
+`configs/joint_sparse_win_v2.json` fixes a two-active-hour allocation including in-run validation/evaluation, within the authorized two-to-three hours. There is no automatic extension. Available disk is about 10 GiB; exact optimizer buffers use lossless gzip level6 and the existing 6 GiB free-space guard remains. Older models/data are not deleted or published. Resource guards can end the run early.
 
 Keep the existing sparse complete-game win1/defeat0 reward, gamma/lambda1, frozen legacy critic tensors, independent public-feature critics, legal-action filtering, phase-specific actor optimizers, LR combat1e-5/OOC3e-5, one actor epoch, clip0.1, entropy0.001, original-policy rehearsal and trust/retention guards. Exploration remains combat T0.25/epsilon0.001 and OOC T0.5/epsilon0.002. New learned critics use AdamW LR3e-4, weight decay0.01 and norm limit1, with a true optimizer step per 256-state minibatch. Per-source-world weights and the existing hash-based whole-world held-out split remain; only fitting worlds receive critic gradients. Collected actor advantages use the critic predictions made before outcomes are observed, and are not recomputed after fitting the same batch.
 
