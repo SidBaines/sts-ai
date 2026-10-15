@@ -1,49 +1,50 @@
-# CLAUDE.md
+# Environment base
 
-## What this project is
+`main` is the reusable Slay the Spire environment, extracted from the
+historical research harness. Read docs/research_plan.md and README.md first.
+Learning strategies live on workstream branches; read WORKSTREAMS.md before
+starting or resuming experiment work.
 
-A research harness for testing **how training-time framing changes what an LLM learns from the same reward signal**. The motivating question: when a model is reinforced along a graded axis like risk-taking, does the *framing* of the training context (e.g. "risk-reward tradeoffs" vs. "adventurous") decide which broader latent trait absorbs the update?
+## Workstreams
 
-The first environment is Slay the Spire via `gamerpuppy/sts_lightspeed`, targeting Qwen3-4B. The current slice is a **hybrid harness**: Python controls out-of-combat decisions (Neow, pathing, rewards, shops, events, card select, campfires) while the built-in Lightspeed search agent resolves combats. Full LLM combat control is a later task.
+- main holds only the environment: core, native patch, CLI, baseline policies
+  and their tests. Experiments, models and training code never land here.
+- Do experiment work on a topic branch cut from the relevant `ws/<name>` branch
+  and merge it back there. A new agent resumes from the `ws/<name>` tip, not
+  from a predecessor's personal branch.
+- An environment bug found in a workstream gets its own pull request to main,
+  with a regression test and a new `env-v*` tag; the workstream then merges
+  that tag rather than carrying a private fix.
+- Keep each workstream's README.md opening paragraph pointing at its current
+  handoff, so WORKSTREAMS.md on main only changes when a workstream starts,
+  stops or moves.
 
-**Source of truth for goals, design commitments, and what to work on next: [`docs/research_plan.md`](docs/research_plan.md).** Read it before starting substantive work — it carries the staged roadmap and the current near-term ordering.
+## Development contracts
 
-## Project status: competence data collection
+- Keep src/sts_env dependency-free; Gymnasium is an optional extra. No model,
+  training, framing, or experimental reward policy belongs in the core.
+- Test before release: PYTHONPATH=src .venv/bin/python -m unittest discover
+  -s tests -t . and the bounded smoke in scripts/run_rollout.py --agent random
+  --seed 3 --max-act 1 --battle-simulations 50. Set STS_REQUIRE_SIMULATOR=1.
+- Run fresh-process determinism/replay checks for changes to execution,
+  observations, seeding, native policies, or the patch. Record intentional changes.
+- Bug fixes need regression tests. Public observation/trace changes require
+  explicit version bumps and migration notes; never modify historical artifacts.
+- Build via scripts/build_lightspeed.sh. Native sources are gitignored; edits
+  must live in patches/sts_lightspeed_python_api.patch. Verify fresh/reverse apply.
+- Never treat simulator failure, undefined behavior, or timeout as a game loss.
+  Default process isolation and finite operation timeouts must remain supported.
+- Update docs/environment_base.md for changes to release status and known limits.
+  Release tags are immutable; subsequent fixes receive new tags.
 
-The harness is still being hardened, but the first replay-validated competence cohorts and search-teacher data have now been frozen. Reproducibility and schema-stability rules are therefore active for any retained competence artifact.
+## Gotchas
 
-## Coding guidelines
-
-### Active now
-
-- **Test before claiming done.** Run `PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -t .` and at least one smoke rollout (`scripts/run_rollout.py --agent random`) before reporting a change as working. Add a regression test for every bug you fix. Tests are tiered: `tests/unit` (pure Python, no build) and `tests/integration` (needs the built simulator, gated by `@requires_simulator`); see [`tests/CLAUDE.md`](tests/CLAUDE.md). Note the `-t .` flag — it's required now that the tiers are packages.
-- **Match the existing style.** Type hints, `@dataclass`, `from __future__ import annotations`, small pure functions. Read the neighbouring code and mirror it rather than introducing new patterns.
-- **Reproducibility is a contract.** Frozen-seed trajectories must not silently change. Anything touching `lightspeed.py` / `rollout.py` / battle resolution must be checked for determinism (same seed + deterministic agent → identical trace across processes), and any intentional change to seed behaviour must be called out.
-- **Schema stability.** `schemas.py` dataclasses define the on-disk JSONL format that training/eval scripts consume. Treat changes as breaking: flag them and note migration impact before editing.
-- **Minimal dependencies.** Core stays dependency-free. New deps go in optional extras (like `[llm]`), pinned, and are raised explicitly — never added silently.
-
-## Keeping docs current
-
-When you surface something **non-obvious** during a session (a gotcha, a hidden invariant, a workaround, a sharp edge), record it before ending the turn. Place it at the right level:
-
-- **Repo-wide** (affects agents working anywhere in the repo) → the Gotchas list below.
-- **Area-specific** (only relevant to one part) → the nearest subfolder `CLAUDE.md` (e.g. [`src/sts_ai/CLAUDE.md`](src/sts_ai/CLAUDE.md), [`scripts/CLAUDE.md`](scripts/CLAUDE.md)) or a README if more appropriate.
-
-When you complete substantive work that changes project status or the next-step ordering, update [`docs/research_plan.md`](docs/research_plan.md) (its status section and near-term steps).
-
-## Pointers
-
-- [`docs/research_plan.md`](docs/research_plan.md) — goals, design commitments, staged roadmap, current priorities.
-- [`README.md`](README.md) — setup, build, and run commands.
-- [`src/sts_ai/CLAUDE.md`](src/sts_ai/CLAUDE.md) — harness internals and area-specific gotchas.
-- [`scripts/CLAUDE.md`](scripts/CLAUDE.md) — CLI entry points and build script.
-- [`docs/throughput_benchmarks.md`](docs/throughput_benchmarks.md) — measured per-model rollout speeds (decisions/sec, time-to-run) for planning experiments.
-
-## Gotchas (repo-wide)
-
-- **Run with `PYTHONPATH=src` and `.venv/bin/python`.** The package isn't installed; imports fail otherwise.
-- **The simulator must be built before any rollout.** Run `scripts/build_lightspeed.sh`. The built module lives in `external/sts_lightspeed/build/` and is located by `lightspeed_import.py`. `external/` and build outputs are gitignored — they are **not present on a fresh clone**.
-- **The Python↔C++ binding is maintained as a patch**, `patches/sts_lightspeed_python_api.patch`, applied to the upstream clone by the build script. To change the binding, **edit the patch and rebuild** — do not edit `external/sts_lightspeed/` directly, as that clone is untracked and your changes won't be versioned. After editing `external/` for a real change, **regenerate the patch — scoped to the source dirs** (`cd external/sts_lightspeed && git diff -- bindings include src > ../../patches/sts_lightspeed_python_api.patch`) and verify it applies to a fresh clone — the build script's apply step is skipped when the binding is already present, so a stale patch won't be caught locally. **Scope it:** a bare `git diff` also captures the `pybind11` **submodule pointer bump** the build script applies (it checks out v2.13.6 separately), and that extra hunk makes `git apply` fail on a fresh clone. Sanity-check the regenerated patch with `git apply --check --reverse` (must report clean) and `grep` it for `pybind11 b/pybind11` (must be absent). A regenerated nested diff can also add literal one-space blank context lines that the *outer* repo flags as trailing whitespace; normalize lines matching exactly `^ $` to empty, then repeat both fresh-apply and reverse-apply checks (`git apply` accepts the normalized form).
-- **The simulator is built in Release, so `assert()` is a no-op.** Any upstream guard written as `assert(false)` does nothing in our builds — an overflow/`while(true)` guard like that will hang instead of bailing. Defensive guards that must fire in production have to **throw**, not assert (see `BattleContext::executeActions` in the patch).
-- **The upstream simulator has uninitialized-memory UB** (default-constructed `GameContext`/`BattleContext` had uninitialized `potions`). Symptoms are build-/layout-dependent (a given seed may crash on one build and hang on another), which breaks naive cross-build reproducibility. If you see a seed behave differently after an unrelated rebuild, suspect UB, not your change. Background: `docs/simulator_issue_handoff.md`.
-- **Native search seeds `0` and `1` are the same RNG stream on libc++.** `BattleScumSearcher2` uses `std::default_random_engine`, whose seed normalization makes 0 alias 1 on this build. Never count both as independent consensus votes; `collect_search_teacher.py` rejects that pair and defaults to empirically distinct seeds `1,2,3`.
+- Isolated scripts need an if __name__ == '__main__' guard (spawn semantics).
+- Native combat search is privileged and uses hidden state. The native OOC
+  policy is scripted/random, not tree search; label those modes accurately.
+- Native RNG streams 0 and 1 alias on libc++; do not count both as independent.
+- Legal action indices refer to the current menu, not a global stable action ID.
+- Installed wheels need STS_LIGHTSPEED_BUILD pointing to a compatible native
+  build; the pure Python wheel does not embed an architecture-specific binary.
+- Source histories remain in Git; clean means experiment-free checkout, not a
+  rewritten history. Never alter unrelated worktrees or the research checkout.

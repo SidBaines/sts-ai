@@ -8,6 +8,7 @@ __pycache__/
 
 # Local environments
 .venv/
+.wheel-venv/
 .venv-mlx/
 venv/
 .env
@@ -32,6 +33,7 @@ data/
 outputs/
 runs/
 checkpoints/
+wandb/
 
 # Model/cache artifacts
 *.safetensors
@@ -40,3 +42,7 @@ checkpoints/
 *.pth
 *.bin
 *.gguf
+
+# Working area for uncommitted session notes, handoffs, and run ops state.
+# Durable findings belong in docs/, not here.
+scratch/

@@ -1,167 +1,189 @@
-# SlayTheSpireAI
+# Slay the Spire Environment
 
-Minimal local harness for de-risking LLM rollouts on `gamerpuppy/sts_lightspeed`.
+A maintained environment base for custom agents, LLM adapters, and reinforcement
+learning experiments. The Python core has no runtime dependencies. Game logic
+comes from a pinned, patched [sts_lightspeed](https://github.com/gamerpuppy/sts_lightspeed)
+C++ simulator, built separately for your Python interpreter.
 
-## Current MVP
+This release supports Ironclad, with Acts 1–3 as the standard experiment scope.
+Act 4 is optional and experimental: its key ownership and burning-elite flags
+are not yet a complete public observation surface. Experiments, model clients, training algorithms,
+and experiment-specific reward shaping belong in adapters or workstream
+branches; see [WORKSTREAMS.md](WORKSTREAMS.md) for the active ones. `main`
+receives tested environment fixes, and each release gets an immutable `env-v*`
+tag; `env-v0.1.1` is the latest.
 
-The current adapter is a hybrid environment:
+## Install and build
 
-- `sts_lightspeed` resolves combats with its built-in search agent.
-- Python controls out-of-combat decisions: Neow, map pathing, rewards, shops, events, card select screens, treasure rooms, and campfires.
-- Rollouts are recorded as structured JSONL decision traces.
-
-This is intentionally narrower than full LLM control of every card-play decision. It gets us fast Act 1 trajectory collection and risk-relevant choices while leaving combat action binding as the next C++ task.
-
-## Setup
-
-**Python ≥3.10 is required** (3.12 recommended). The optional MLX backend for
-Gemma-4 (`mlx-lm`/`mlx ≥0.30.4`) only ships wheels for Python ≥3.10, and the
-simulator below is built against the active `.venv`'s interpreter — so create the
-venv with a 3.10+ interpreter (e.g. `python3.12`).
-
-```bash
-python3.12 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip cmake
-git clone https://github.com/gamerpuppy/sts_lightspeed external/sts_lightspeed
-cd external/sts_lightspeed
-git submodule update --init --recursive
-../../.venv/bin/cmake -S . -B build \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DPython_EXECUTABLE=../../.venv/bin/python \
-  -DPYTHON_EXECUTABLE=../../.venv/bin/python \
-  -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-../../.venv/bin/cmake --build build --target slaythespire -j 8
-```
-
-In this workspace the clone and build have already been done.
-
-## Smoke Rollout
+Use Python 3.10–3.13, Git, CMake, and a C++ compiler. On macOS install the Xcode
+command-line tools; on Linux install your distribution's C++ build tools. From a
+source checkout:
 
 ```bash
-PYTHONPATH=src .venv/bin/python scripts/run_rollout.py --agent first --seed 1 --max-decisions 20
+python3 -m venv .venv
+.venv/bin/python -m pip install -e .
+scripts/build_lightspeed.sh
+.venv/bin/sts-env doctor
 ```
 
-For randomized non-LLM rollouts:
+The build script pins upstream and pybind11, applies the versioned binding and
+bug-fix patch, and builds the native module in `external/sts_lightspeed/build`.
+Use the same interpreter to build and run. The Python package does not bundle a
+native binary. If you install a wheel or keep the simulator elsewhere, set
+`STS_LIGHTSPEED_BUILD` to its build directory.
+
+## Choose who controls each decision
+
+| Mode | Your agent controls | Automatic policy controls |
+| --- | --- | --- |
+| `full` | Combat and out-of-combat decisions | Internal transitions only |
+| `ooc` | Out-of-combat decisions | Combat through native search |
+| `combat` | Combat decisions | Out-of-combat through the native policy |
+
+The flipped hybrid is supported by `combat`. The native out-of-combat policy
+uses scripted choices and seeded random map pathing; it does not perform an
+out-of-combat lookahead search. This distinction matters when comparing results.
+
+## CLI
+
+Run a bounded baseline and save its replayable trace:
 
 ```bash
-PYTHONPATH=src .venv/bin/python scripts/run_rollout.py --agent random --seed 1 --max-decisions 50
+.venv/bin/sts-env run --agent random --seed 3 --mode ooc \
+  --max-act 1 --battle-simulations 50 --output data/smoke.jsonl
+.venv/bin/sts-env inspect data/smoke.jsonl
+.venv/bin/sts-env replay data/smoke.jsonl
 ```
 
-Output defaults to `data/rollouts/rollout_<agent>_<seed>.jsonl`.
-
-## Batch Rollouts
-
-Run a small baseline batch:
+Evaluate a seed set with one trace per seed and a combined `summary.json`:
 
 ```bash
-PYTHONPATH=src .venv/bin/python scripts/run_batch.py \
-  --agent heuristic \
-  --seeds 1,2,3 \
-  --max-decisions 80 \
-  --battle-simulations 500 \
-  --overwrite
+.venv/bin/sts-env evaluate --agent first --seeds 3,4,5 --mode combat \
+  --max-act 1 --output data/baseline
 ```
 
-Summarize generated traces:
+`--seeds 3:6` means seeds 3, 4, and 5. Alternatively use `--seed-file` with a JSON
+list or one integer per line. `--policy-seed` controls the agent RNG independently
+of the world seed. `--max-steps` limits exposed decisions, `--max-act` sets the
+act boundary, and `--step-timeout` bounds native reset/search/step operations.
+Your own model/API agent should implement deadlines for its calls. `--ascension`
+sets difficulty (0–20); `--ooc-seed` separately controls the automatic OOC policy. Existing output
+files are rejected, so evaluations cannot silently overwrite earlier results.
+
+Play manually with `sts-env play --seed 3 --mode full`, or inspect all available
+flags using `sts-env <command> --help`. Built-in agents are `first`, `random`, and
+`native`. `doctor` reports installation and simulator identity without modifying
+the checkout. `replay` re-runs stored actions and checks the recorded public
+observations, rewards, and episode boundaries.
+
+## Plug in an agent
+
+Put `my_agent.py` in an importable directory (for example the working directory):
+
+```python
+class MyAgent:
+    def __init__(self, preference=0):
+        self.preference = preference
+
+    def reset(self, seed):
+        # Optional: reset your own model state or RNG for this episode.
+        pass
+
+    def choose_action(self, observation):
+        # Return the index of an action in this observation's legal menu.
+        return self.preference
+
+
+def make_agent(preference=0):
+    return MyAgent(preference=preference)
+```
 
 ```bash
-PYTHONPATH=src .venv/bin/python scripts/summarize_rollouts.py 'data/rollouts/heuristic/*.jsonl'
+.venv/bin/sts-env run --agent my_agent:make_agent \
+  --agent-config '{"preference": 0}' --seed 3 --mode full \
+  --max-act 1 --output data/custom.jsonl
 ```
 
-For larger baseline batches, use per-seed subprocess isolation so a slow or faulty simulator seed cannot stop the whole batch:
+Factories receive keyword arguments from `--agent-config`. Agents implement
+`choose_action(observation) -> int` and may implement `reset(seed)`. Evaluation
+reuses the loaded agent across seeds when it provides `reset`: that method must
+clear per-episode state and seed your RNG while retaining expensive model
+weights. Without `reset`, evaluation creates a fresh agent for each episode.
+Action
+indices refer to the current legal-action menu; they have no stable meaning
+across different observations. Invalid indices fail explicitly. Wrap your own
+LLM client or learned policy behind this interface; no particular model SDK is
+required by the environment.
 
-```bash
-PYTHONPATH=src .venv/bin/python scripts/run_batch.py \
-  --agent heuristic \
-  --seed-start 1 \
-  --seed-count 50 \
-  --max-decisions 200 \
-  --battle-simulations 500 \
-  --seed-timeout-seconds 60 \
-  --overwrite
+## Python API
+
+```python
+from sts_env import SlayTheSpireEnv
+
+def main():
+    with SlayTheSpireEnv(mode="full", max_act=1) as env:
+        observation, info = env.reset(seed=3)
+        terminated, truncated = info["terminated"], info["truncated"]
+        while not (terminated or truncated):
+            action = 0  # Choose an index from observation["legal_actions"].
+            observation, reward, terminated, truncated, info = env.step(action)
+
+
+if __name__ == "__main__":
+    main()
 ```
 
-If a seed fails or times out, the runner writes `seed_<n>.error.json` next to the partial JSONL trace. The summarizer reads these sidecars and marks rows with `stopped_reason` and `error_type`.
+Observations contain `state` (structured public state), `text` (public text),
+`phase`, and `legal_actions` (public menu index and description).
+`reset` returns `(observation, info)`; `step` returns
+`(observation, reward, terminated, truncated, info)`. The default reward is 1
+on a game victory and 0 otherwise. Defeat terminates the game; the configured
+act/decision limits truncate it. Supply `reward_fn` in your own adapter for
+other rewards, and record that choice with experiment results.
 
-## Optional Local LLM Agent
+Use the observation as policy input. Diagnostic `info` can contain privileged
+simulator details such as raw executed-action bits, which can encode hidden draw
+positions; do not feed that diagnostic metadata to your model. The Gymnasium
+wrapper's `info["observation"]` contains the safe public observation.
 
-The `mlx` agent is wired as an optional adapter and requires MLX-LM:
+For Gymnasium integration, install `.venv/bin/python -m pip install -e '.[gym]'`
+and import `GymnasiumEnv` from `sts_env.gymnasium`. Its fixed `Discrete(2048)` action space uses
+an `action_mask` to mark the current valid menu indices (configure `max_actions`
+for larger menus). Observations are dictionaries with `features` (15 numeric
+values) and `action_mask`; the full public observation is retained
+in `info["observation"]`. `GymnasiumEnv.FEATURE_NAMES` gives the feature order.
 
-```bash
-.venv/bin/python -m pip install -e '.[llm]'
-PYTHONPATH=src .venv/bin/python scripts/run_rollout.py \
-  --agent mlx \
-  --model mlx-community/Qwen3-4B-4bit \
-  --seed 1
-```
+The compact encoder summarizes HP, gold, progress, and basic combat counts. It
+omits card identities, enemy powers/intents, event offers, and map structure; it
+is a baseline input rather than a complete game-state encoding. Supply a richer
+encoder in your experiment wrapper for serious learning. Algorithms should respect
+the mask, and action meanings vary with the current menu. Selecting a padded,
+masked slot inside the fixed Gymnasium action space produces an explicit no-op
+with reward zero (`info["invalid_action"] = True`); `invalid_action_reward` can
+be configured. The Gymnasium decision limit counts all attempted steps so these
+no-ops cannot create an unbounded episode. The dependency-free core rejects
+invalid action indices. Raw native action bits are excluded from policy
+observations because they can reveal hidden simulator positions. Python scripts
+using worker isolation need the
+`if __name__ == "__main__"` guard shown above.
 
-The default MLX agent disables Qwen3 thinking mode for the first rollout stage because it gives much more reliable structured JSON actions. Use `--thinking` for explicit reasoning-mode experiments after the no-thinking path is stable.
+## Reproducibility and faults
 
-> **`--max-tokens` must be large for any reasoning/thinking run (default is 4096).** A small cap (e.g. 256) truncates the model mid-thought, so it never emits the closing JSON. After retries are exhausted the invalid response is recorded and the rollout stops with `agent_invalid` before any fallback action is executed. Raising the cap is free for no-thinking models (generation stops at EOS, ~60–90 tokens). The eval report's `invalid_rate` / `completion_tokens` columns surface this immediately.
+Record the release tag, world and policy seeds, mode, search settings, simulator
+identity, and agent/model identity for every experiment. The environment records
+a hash of its Python interface files plus the exact runtime Python version;
+replay rejects changed environment source even when its version label stays the
+same. Record your own agent/model code and checkpoint identity separately. CLI traces retain the
+configuration and public decision sequence for replay. Reproducibility is
+validated within the same native build; identical traces across different
+platforms or compiler builds are not promised.
 
-Current working policy:
-
-- no-thinking mode for high-throughput Qwen baseline rollouts;
-- thinking mode (`--thinking`) for a smaller comparison arm — keep the large `--max-tokens` so reasoning can finish *and* emit JSON.
-
-The first implementation priority is to verify simulator throughput and action parsing before committing to full-parameter local training.
-
-## Interactive Rollout Studio
-
-A FastAPI backend + offline browser UI for interactively driving agents and
-diagnosing failure modes. Runs fully offline once an MLX model is cached.
-
-```bash
-.venv/bin/python -m pip install -e '.[app,llm]'   # app=FastAPI backend, llm=MLX model
-scripts/build_lightspeed.sh                        # the simulator must be built first
-PYTHONPATH=src .venv/bin/python scripts/interactive_app.py
-# then open http://127.0.0.1:8000
-```
-
-Options: `--host` / `--port` (default `127.0.0.1:8000`), `--cache-dir`
-(default `data/interactive`), `--model-backend {mlx,vllm}` (default `mlx`),
-`--model <id-or-local-path>` (default: the agent's `mlx-community/Qwen3-4B-4bit`;
-point at a local path for offline use).
-
-**What you can do**
-
-- **New session** at any world seed, ascension, and combat mode. Combats are
-  **steppable** (`combat_control="llm"`, default — you see every card play) or
-  **auto-resolved** by the search agent (`search`).
-- **Sample N decisions per turn** from any method — `user` (click a legal action),
-  `model` (the LLM), `heuristic`, `random`, `first`. "Sample (no commit)" previews
-  K candidate decisions with their reasoning before you commit one.
-- **Stream the model** live: watch its reasoning/thinking tokens arrive over SSE,
-  with a cancel button.
-- **View and edit the LLM framing + prompt.** The *Framing* tab edits the
-  framing string (the study's independent variable) — byte-identical to the batch
-  harness prompt. The *Advanced* tab edits the whole prompt template. Both support
-  a live preview and save/load of named templates (under `<cache-dir>/templates/`).
-- **Branch** from any past decision to explore alternatives; the session tree is
-  shown on the left and is clickable. Use the decision scrubber to step back
-  through committed decisions (read-only) and "Branch from this decision" to fork.
-- **Save / load.** Sessions auto-save after every decision and survive restarts.
-
-**How branching works.** The C++ game state has no binary snapshot, so loading or
-branching a position **replays the recorded action sequence** into a fresh
-simulator (no model calls during replay). Replay reproduces the frontier exactly
-in both combat modes. Live sessions stay warm in memory, so you only pay replay
-cost on load/branch, never per step. A late-game branch in `search` mode re-runs
-each combat's search, so it can take a few seconds.
-
-Every session is cached under `data/interactive/<id>/` as a canonical
-`decisions.jsonl` (+ a `meta.json` and a `session.json` lineage sidecar), so
-`summarize_rollouts.py` / `compute_risk_proxies.py` / `compare_models.py` /
-`visualize_rollout.py` all work on Studio output unchanged.
-
-> Note (v1): committing a *sampled model candidate* records it as a `user`
-> choice (it replays the chosen action, not the model's reasoning). To commit a
-> genuine model decision, use **Step** or **Stream**.
-
-Backend and core logic live in the unit-tested `sts_ai.interactive` package — see
-[`src/sts_ai/interactive/CLAUDE.md`](src/sts_ai/interactive/CLAUDE.md) for internals
-and gotchas.
-
-## Simulator Fault Policy
-
-The local `sts_lightspeed` patch is strict about invalid battle actions and unknown potion enum values. These now raise Python-visible exceptions instead of silently mutating state or flooding stderr. Batch rollouts record those as error sidecars; timeout mode isolates each seed in a subprocess so native hangs or very slow searches are contained.
+Native calls run in an isolated worker with a timeout. A stalled or crashed
+simulator raises `SimulatorTimeout` or `SimulatorError`; it must not be counted as
+a normal loss or silently retried under a different seed. The simulator patch
+contains defensive fixes, but timeout isolation remains necessary for upstream
+native faults. Known upstream undefined-memory and phantom-power failures are
+not certified as eliminated in every reachable state. Timeouts, native errors,
+and reported undefined-behaviour flags are contained; unflagged state corruption
+can still escape those checks. The [environment contract and release checks](docs/environment_base.md)
+explain the interface boundaries and verification procedure.

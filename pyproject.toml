@@ -1,34 +1,28 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "slay-the-spire-ai"
-version = "0.1.0"
-description = "Local research harness for LLM policies in sts_lightspeed."
-requires-python = ">=3.10"  # mlx (Gemma-4) needs >=3.10; sim is built against the venv interpreter
+name = "slay-the-spire-env"
+version = "0.1.1"
+description = "A reproducible Slay the Spire environment for custom agents and reinforcement learning."
+readme = "README.md"
+license-files = ["THIRD_PARTY_NOTICES.md"]
+requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
-llm = ["mlx-lm==0.31.3"]
-# 0.31.3 fixes gemma-4-E4B loading: 0.31.2's gemma4_text decoder instantiated
-# k/v/k_norm for the 18 KV-shared layers (which the checkpoint omits), so load()
-# died with "Missing 54 parameters". 0.31.3 guards them with `has_kv`. Verified
-# on-Mac: mlx-community/gemma-4-e4b-it-bf16 loads (~3s) and generates.
-train-mlx = ["mlx-lm==0.31.3"]
-# CUDA LoRA training. trl/peft/accelerate/datasets only -- do NOT pin transformers
-# or torch here (they are owned by the [vllm] extra; pinning them risks a conflict
-# with vllm==0.23.0). Exact versions MUST be verified/locked on the CUDA pod
-# against the vllm-pulled torch before relying on this.
-# VERIFIED 2026-06-19 on a CUDA-13 H100: trl 1.6.0 coexists with the vllm-pulled
-# transformers 5.12.1 + torch 2.11+cu130 and exposes assistant_only_loss. The old
-# trl<0.15 pin resolved to 0.14, which lacks assistant_only_loss (TypeError at
-# SFTConfig). NOTE trl>=0.20 renamed SFTConfig max_seq_length -> max_length
-# (train_trl.py now uses max_length to match).
-train-cuda = ["trl>=1.6,<2", "peft>=0.13", "accelerate>=1.0", "datasets>=3.0", "wandb>=0.16"]
-vllm = ["vllm==0.23.0"]
-viz = ["streamlit==1.40.2"]
-# Interactive Rollout Studio backend (src/sts_ai/interactive, scripts/interactive_app.py).
-# Pure-Python; plain uvicorn (no [standard] extra) to stay minimal/offline. SSE uses
-# starlette's StreamingResponse and static files are served via FileResponse, so no
-# sse-starlette/aiofiles are needed. Pair with [llm] for the local MLX model backend.
-app = ["fastapi==0.138.1", "uvicorn==0.49.0"]
+gym = ["gymnasium==1.4.0"]
+
+[project.scripts]
+sts-env = "sts_env.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sts_env*"]
+
+[tool.setuptools.package-data]
+"sts_env._backend" = ["native_manifest.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

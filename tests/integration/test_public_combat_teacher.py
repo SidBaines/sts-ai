@@ -4,9 +4,7 @@ from __future__ import annotations
 import re
 import unittest
 
-from sts_ai.lightspeed import LightspeedHybridEnv
-from sts_ai.local_tasks import base, get_task
-from sts_ai.local_tasks.runner import replay_task_start, resolve_task_replay_action
+from sts_env._backend.lightspeed import LightspeedHybridEnv
 
 from tests.support import requires_simulator
 
@@ -212,64 +210,6 @@ class PublicCombatObservationTest(unittest.TestCase):
         self.assertGreater(int(env.bc.turn), start_turn)
         self.assertIn("Recent actions this turn: none", env.describe_state())
 
-    def test_bitfield_only_corruption_power_is_public(self):
-        manifest = base.load_manifest(
-            "data/local_curricula/gremlin_nob/manifests/source.validated_v1.json"
-        )
-        window = next(
-            item for item in manifest["windows"] if int(item["world_seed"]) == 74
-        )
-        task = get_task("gremlin_nob")
-        env = LightspeedHybridEnv(
-            world_seed=74,
-            max_act=1,
-            combat_control="llm",
-            combat_observation="combat_public_v1",
-        )
-        replay_task_start(env, window, task)
-
-        found = False
-        for record in base.source_records_for_window(manifest, window):
-            env.advance_to_decision()
-            selected = record["selected_action"]
-            index = resolve_task_replay_action(env, selected)
-            live_description = env.legal_actions()[index].description
-            env.step(index)
-            if live_description.startswith("play Corruption"):
-                found = True
-                self.assertIn("Player powers: Corruption 1", env.describe_state())
-                self.assertEqual(env.public_combat_player()["powers"]["Corruption"], 1)
-                break
-        self.assertTrue(found, "seed 74 source window never played Corruption")
-
-    def test_targeted_potion_keeps_same_name_enemy_slots_distinct(self):
-        manifest = base.load_manifest(
-            "data/local_curricula/sentries/manifests/source.validated_v1.json"
-        )
-        window = next(
-            item for item in manifest["windows"] if int(item["world_seed"]) == 118
-        )
-        env = LightspeedHybridEnv(
-            world_seed=118,
-            max_act=1,
-            combat_control="llm",
-            combat_observation="combat_public_v1",
-        )
-        replay_task_start(env, window, get_task("sentries"))
-
-        weak_targets = [
-            action.description
-            for action in env.legal_actions()
-            if action.description.startswith("drink potion Weak Potion -> SENTRY")
-        ]
-        self.assertEqual(
-            weak_targets,
-            [
-                "drink potion Weak Potion -> SENTRY [enemy 0]",
-                "drink potion Weak Potion -> SENTRY [enemy 1]",
-                "drink potion Weak Potion -> SENTRY [enemy 2]",
-            ],
-        )
 
     def test_secret_technique_candidates_are_public_sorted_and_structured(self):
         env = LightspeedHybridEnv(
