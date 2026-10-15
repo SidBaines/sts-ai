@@ -4,7 +4,7 @@ This is the `ws/nonllm` workstream branch: the environment plus the non-LLM
 policy and RL code. Start new work on a topic branch from `ws/nonllm`; the
 maintained environment base is on `main` (see `CLAUDE.md`).
 
-**Active study: fresh start (running; deadline 16 October 08:00 UTC).** See the [current progress and predeclared gate rules](docs/fresh_start_progress.md). Work on branch `nonllm/fresh-start` in worktree `.claude/worktrees/nonllm-fresh-start` of the main checkout, following [the fresh-start plan](docs/fresh_start_plan_2026-10-15.md). The study adopts environment 0.1.5 and trains new structured-encoder models for combat and out-of-combat play, warm-started from teachers, with a training setup that can move the policy. Steps A–C are approved (about 10 hours of compute); stop at Gate C and report before step D. The reasoning is in [next-study options](docs/next_study_options_2026-10-15.md).
+**Active study: fresh start (running; deadline 16 October 08:00 UTC).** See the [current progress and predeclared gate rules](docs/fresh_start_progress.md). Work on branch `nonllm/fresh-start` in worktree `.claude/worktrees/nonllm-fresh-start` of the main checkout, following [the fresh-start plan](docs/fresh_start_plan_2026-10-15.md). This study uses a frozen `.venv`: never install into it; run native builds with `PYTHON="$PWD/.venv-native/bin/python"`, the existing separate build-tools runtime. The study adopts environment 0.1.5 and trains new structured-encoder models for combat and out-of-combat play, warm-started from teachers, with a training setup that can move the policy. Steps A–C are approved (about 10 hours of compute); stop at Gate C and report before step D. The reasoning is in [next-study options](docs/next_study_options_2026-10-15.md).
 
 Current research handoff: [15 October joint RL handoff](docs/handoff/joint_sparse_win_20261015.md). The fresh two-hour joint sparse-win run is complete: 19 accepted rounds, no simulator faults or KL failures, and final greedy 62/1,024 versus original 58/1,024, an inconclusive difference. No actor was promoted. Training is stopped and its monitor is paused; discuss a new condition before starting more training. Read the [completed results](docs/joint_sparse_win_v2_results_2026-10-15.md) and [critic trace diagnosis](docs/joint_critic_trace_diagnosis_2026-10-15.md).
 
@@ -18,11 +18,11 @@ comes from a pinned, patched [sts_lightspeed](https://github.com/gamerpuppy/sts_
 C++ simulator, built separately for your Python interpreter.
 
 This release supports Ironclad, with Acts 1–3 as the standard experiment scope.
-Act 4 is optional and experimental: its key ownership and burning-elite flags
-are not yet a complete public observation surface. Experiments, model clients, training algorithms,
-and experiment-specific reward shaping belong in adapters or branches created
-from a release tag. The `environment-base` branch receives environment fixes;
-`env-v0.1.0` identifies the first tested release.
+Act 4 is optional and experimental. Experiments, model clients, training algorithms,
+and experiment-specific reward shaping belong in adapters or workstream
+branches; see [WORKSTREAMS.md](WORKSTREAMS.md) for the active ones. `main`
+receives tested environment fixes, and each release gets an immutable `env-v*`
+tag; `env-v0.1.5` is the latest.
 
 On the `codex/nonllm-curriculum` experiment branch, the optional non-LLM adapter trains and runs candidate-action policies. See [agent and training usage](docs/nonllm_agent_usage.md), the [latest-first experiment summary](docs/nonllm_summary.md), and the [detailed curriculum plan](docs/nonllm_curriculum_plan.md). Active native-assisted experiments use the corrected `env-v0.1.1` backend; the original release remains available.
 
@@ -41,7 +41,10 @@ scripts/build_lightspeed.sh
 
 The build script pins upstream and pybind11, applies the versioned binding and
 bug-fix patch, and builds the native module in `external/sts_lightspeed/build`.
-Use the same interpreter to build and run. The Python package does not bundle a
+Use the same interpreter to build and run. The build script may install its pinned
+CMake package into the interpreter selected by `PYTHON`. Use this checkout's own
+isolated `.venv`; any `PYTHON` override should point there. Do not borrow an
+active or frozen experiment runtime for a build. The Python package does not bundle a
 native binary. If you install a wheel or keep the simulator elsewhere, set
 `STS_LIGHTSPEED_BUILD` to its build directory.
 
@@ -151,7 +154,10 @@ Observations contain `state` (structured public state), `text` (public text),
 `reset` returns `(observation, info)`; `step` returns
 `(observation, reward, terminated, truncated, info)`. The default reward is 1
 on a game victory and 0 otherwise. Defeat terminates the game; the configured
-act/decision limits truncate it. Supply `reward_fn` in your own adapter for
+act/decision limits truncate it. At the default `max_act=3`, beating the Act 3
+boss counts as a victory even when the run holds all three keys (the game would
+continue to Act 4); `info["outcome"]` then reports `PLAYER_VICTORY` while the
+observation keeps the native outcome. Supply `reward_fn` in your own adapter for
 other rewards, and record that choice with experiment results.
 
 Use the observation as policy input. Diagnostic `info` can contain privileged

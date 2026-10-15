@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "slay-the-spire-env"
-version = "0.1.4"
+version = "0.1.5"
 description = "A reproducible Slay the Spire environment for custom agents and reinforcement learning."
 readme = "README.md"
 license-files = ["THIRD_PARTY_NOTICES.md"]

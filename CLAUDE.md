@@ -17,9 +17,10 @@ options; docs/research_plan.md holds the longer history.
   `patches/sts_lightspeed_python_api.patch`) go to `main` as their own pull
   request with a new `env-v*` tag; this workstream then merges that tag.
   Research-only native helpers stay in `patches/sts_lightspeed_rl_panel.patch`.
-- This branch currently runs environment 0.1.4 (observation `sts_env_public_v2`)
-  plus the research overlay. `main` has released 0.1.5; adopting it changes
-  menus, observations and some game logic, so it needs fresh baselines.
+- This branch adopts environment 0.1.5 (observation `sts_env_public_v3`)
+  plus the research overlay. `main`'s current release is `env-v0.1.5`; it changes
+  menus, observations and some game logic, so fresh baselines are required.
+  See `docs/fresh_start_merge_notes.md` for adoption verification and build status.
 - Models, datasets, checkpoints, the frozen runtime and native builds are
   gitignored and live in other local worktrees. The current handoff lists their
   absolute paths; preserve them, and never delete a worktree without an
@@ -63,6 +64,7 @@ not establish that an experiment is healthy or learning.
 - Native combat search is privileged and uses hidden state. The native OOC
   policy is scripted/random, not tree search; label those modes accurately.
 - Native RNG streams 0 and 1 alias on libc++; do not count both as independent.
+- `undefinedBehaviorEvoked` can mark unsupported behavior as well as faults. Discovery is certified only for Ironclad's pool; see `docs/discovery_fix.md`.
 - Legal action indices refer to the current menu, not a global stable action ID.
 - Installed wheels need STS_LIGHTSPEED_BUILD pointing to a compatible native
   build; the pure Python wheel does not embed an architecture-specific binary.

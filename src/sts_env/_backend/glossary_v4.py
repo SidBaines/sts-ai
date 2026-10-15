@@ -120,7 +120,7 @@ def _card_definition(display_name: str, relic_names: list[str]) -> str | None:
     return definition
 
 
-def _build_key(state_text: str, statuses: set[str]) -> str:
+def _build_key(state_text: str, statuses: set[str], legal_actions: list[dict]) -> str:
     relic_names = legacy._relic_names(state_text)
     # A future relic trigger must be understandable before its power is active.
     # For example, the Incense Burner counter forecasts Intangible even when
@@ -149,6 +149,7 @@ def _build_key(state_text: str, statuses: set[str]) -> str:
         definition = legacy.potion_definition(name)
         if definition:
             definitions.append(definition)
+    definitions.extend(legacy._card_flag_definitions(state_text, legal_actions))
     if not definitions:
         return ""
     return legacy._KEY_HEADER + "\n" + "\n".join(f"  {line}" for line in definitions)
@@ -211,4 +212,4 @@ def augment(
     if selection_note:
         notes.append(selection_note)
     notes.extend((_INTERACTION_NOTE, _CARD_VALUE_LEGEND))
-    return "\n".join(out_lines + notes) + _build_key(state_text, statuses)
+    return "\n".join(out_lines + notes) + _build_key(state_text, statuses, legal_actions)

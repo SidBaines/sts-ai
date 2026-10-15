@@ -4,6 +4,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+# Fiend Fire exhausts the other hand cards; its shown total cannot be added to
+# those same cards by the fixed-cost knapsack.
+HAND_DEPENDENT_ATTACKS = frozenset({"Fiend Fire", "Fiend Fire+"})
+
+
 # (display label, current integer cost or None for X/unusable, shown total damage,
 # hand multiplicity).  Damage is deliberately supplied by the simulator-facing
 # layer; this module does not reproduce card damage rules.

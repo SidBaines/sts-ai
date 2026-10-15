@@ -9,6 +9,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from sts_env import cli
+from sts_env.env import SlayTheSpireEnv
+from tests.unit.test_environment_base import FakeBackend
 
 
 def observation(step: int) -> dict:
@@ -162,6 +164,26 @@ class CliTests(unittest.TestCase):
         self.assertEqual(summary["mean_reward"], 0.5)
         self.assertTrue((output / "seed-3.jsonl").exists())
         self.assertTrue((output / "seed-4.jsonl").exists())
+
+    def test_evaluation_counts_keyed_act3_win_as_victory(self) -> None:
+        output = self.directory / "keyed-victory"
+        with patch("sts_env.env._make_backend", return_value=FakeBackend(cutoff=True, act=3)):
+            with patch.object(cli, "make_env", side_effect=lambda config: SlayTheSpireEnv(isolated=False, **config)):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    status = cli.main(["evaluate", "--agent", "first", "--seeds", "3",
+                                       "--max-act", "3", "--output", str(output)])
+        self.assertEqual(status, 0)
+        report = json.loads((output / "summary.json").read_text())
+        self.assertEqual(report["mean_reward"], 1.0)
+        self.assertEqual(report["statuses"]["terminated"], 1)
+        self.assertEqual(report["statuses"]["truncated"], 0)
+        self.assertEqual(report["outcomes"], {"GameOutcome.PLAYER_VICTORY": 1})
+        episode = report["episodes"][0]
+        self.assertEqual(episode["info"]["termination_reason"], "victory")
+        records = cli.read_trace(output / "seed-3.jsonl")
+        step = next(record for record in records if record["type"] == "step")
+        self.assertEqual((step["reward"], step["terminated"], step["truncated"]),
+                         (1.0, True, False))
 
     def test_evaluation_reuses_models_only_with_episode_reset_contract(self) -> None:
         class Policy:

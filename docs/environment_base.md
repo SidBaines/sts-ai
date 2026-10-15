@@ -1,10 +1,10 @@
 # Environment base: contract and maintenance
 
-This branch extracts the reusable Slay the Spire environment from the original
-research harness. Its scope is game state, legal actions, stepping, baseline
-policies, build provenance, replay, and an agent CLI. Model clients, datasets,
-training recipes, framing prompts, and historical experimental artifacts remain
-on the research branch.
+`main` holds the reusable Slay the Spire environment, extracted from the
+original research harness. Its scope is game state, legal actions, stepping,
+baseline policies, build provenance, replay, and an agent CLI. Model clients,
+datasets, training recipes, framing prompts, and historical experimental
+artifacts remain on workstream branches; see [WORKSTREAMS.md](../WORKSTREAMS.md).
 
 ## Interface commitments
 
@@ -35,11 +35,9 @@ through a supplied reward function is an adapter choice, not an environment
 default. Event option descriptions are derived from the pinned simulator's actual
 handlers. Common Act 1 events are described, and dynamic visible HP amounts,
 selected cards, and trade offers are public fields. Uncovered options explicitly
-say their effects are unavailable. This release does not claim full event or
-vanilla-game fidelity: for example, upstream Mushrooms and Mysterious Sphere
-alternative choices award gold, Mausoleum does not award a relic, and Woman in
-Blue does not charge for potions. These are simulator behaviours, recorded
-explicitly instead of silently describing different mechanics.
+say their effects are unavailable. Release 0.1.5 fixed the upstream Mushrooms,
+Mysterious Sphere, Mausoleum, Woman in Blue and Designer In-Spire deviations;
+the release does not claim full event or vanilla-game fidelity.
 
 The optional Gymnasium observation has two fields: `features` (15 compact
 numeric features) and `action_mask` (a fixed menu mask). It omits strategic
@@ -92,11 +90,28 @@ research artifacts retain their prior behaviour. New releases record the native
 patch identity and reject incompatible build/replay provenance.
 
 The initial character is Ironclad and Acts 1–3 are the standard scope. Optional
-Act 4 is experimental: key ownership and burning-elite flags are not yet fully
-represented in public observations. Native timeout/error isolation and reported
+Act 4 is experimental. Run state reports key ownership and the map marks each
+act's burning elite. Native timeout/error isolation and reported
 undefined-behaviour flags do not certify all reachable game states as free of
-upstream undefined-memory or phantom-power bugs. Unflagged corrupted states may
-still evade detection.
+upstream undefined-memory bugs. Unflagged corrupted states may still evade
+detection.
+
+Known open faults and limits as of 0.1.5 (see [the 0.1.5 record](release_v0.1.5.md)
+for what was fixed):
+
+- Combat menus still merge copies of a card that differ only in base cost (same
+  cost for this turn). This is rare.
+- Out-of-combat potion descriptions state nominal amounts (as rest sites do),
+  ignoring Mark of the Bloom. Toy Ornithopter's potion heal is not implemented.
+- The simulator's monster Intangible also caps potion and other non-attack
+  damage at 1, and its enemy Thorns triggers only on unblocked hits; both are
+  unverified against the game. Enemy Poison and Lock On (Silent and Defect
+  mechanics) are unimplemented and unreachable for Ironclad.
+- Angry follows our reading of the game (attack damage that gets through Block),
+  not a check against decompiled source.
+- If the Mausoleum's relic is Ceramic Fish and it also adds Writhe, the game
+  gives 9 gold and the simulator does not.
+- Key ownership is in structured state only, not in the observation text.
 
 The clean interface additionally exposes the complete visible OOC map routes
 and individual card-reward skip choices. These observation/menu improvements,
@@ -110,9 +125,10 @@ out-of-combat policy is scripted/seeded rather than a planning search.
 ## Migration from the research harness
 
 This clean base uses distribution `slay-the-spire-env`, package `sts_env`, public
-observation contract `sts_env_public_v1`, and trace schema `sts_env_trace_v1`.
+observation contract `sts_env_public_v2` (`sts_env_public_v1` before 0.1.3), and
+trace schema `sts_env_trace_v1`.
 It does not reinterpret the old `sts_ai` DecisionRecord schema. Frozen historical
-traces and their original replay/training tools stay on the research branch.
+traces and their original replay/training tools stay on the LLM workstream (`ws/llm`).
 Port experiments by writing agent/encoder/reward adapters around the new API;
 record this new interface identity when collecting new data. The internal
 legacy combat renderers are implementation details, not a compatibility promise
@@ -120,8 +136,8 @@ for old training inputs.
 
 ## Maintenance workflow
 
-Start new experiments from an immutable release tag. Keep fixes on
-`environment-base`, test them there, and publish a new release tag instead of
+Start new experiments from an immutable release tag. Land fixes on `main`
+through pull requests, test them there, and publish a new release tag instead of
 moving old tags. Experiments deliberately merge or cherry-pick later fixes and
 record the version used. Do not use an existing tag to represent new code.
 
@@ -140,8 +156,9 @@ accepted as skipped integration tests.
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[gym]'
 scripts/build_lightspeed.sh
-STS_REQUIRE_SIMULATOR=1 PYTHONPATH=src .venv/bin/python \
-  -m unittest discover -s tests -t .
+export STS_SEARCH_TEST_FIXTURE="$(scripts/build_test_fixtures.sh)"
+STS_REQUIRE_SIMULATOR=1 STS_REQUIRE_SEARCH_TEST_FIXTURE=1 PYTHONPATH=src \
+  .venv/bin/python -m unittest discover -s tests -t .
 .venv/bin/sts-env doctor
 .venv/bin/sts-env run --agent random --seed 3 --mode ooc \
   --max-act 1 --battle-simulations 50 --output data/release-smoke.jsonl
@@ -166,30 +183,47 @@ Version 0.1.0 passed all local release gates on 11 October 2026.
 CLI/replay, privacy, timeout, vectorization and packaging checks. The immutable `env-v0.1.0` tag identifies
 the tested source; no historical training results are claimed for this release.
 
-## Experiment fault evidence
+## Release 0.1.2: Discovery
 
-The RL adapter now preserves replayable simulator RPC failures and keeps them outside game-loss accounting; see [training records and fault replay](rl_recording_and_fault_replay.md). This changes private experiment records, not the core observation/CLI trace schemas or released native patch. A captured Act-2 Discovery failure reproduces on frozen 0.1.1 and passes the former failure point with the separate 0.1.2 Discovery maintenance candidate. The old flag denotes unsupported Discovery, not a diagnosed memory error. Other native faults remain possible, so isolation and finite operation deadlines remain required. No release tag or historical study binary was changed.
+Release 0.1.2 adds validated Ironclad Discovery support; see the
+[repair and verification record](discovery_fix.md). The old native fault flag
+unconditionally marked Discovery as unsupported. It does not diagnose memory
+UB. Unsupported class-card generation and invalid Discovery offers still fail
+explicitly, and all environment fault/timeout guards remain active. Discovery
+trajectories intentionally continue beyond their former rejection points. The
+public schemas are unchanged; the release/native/interface identities change.
+Historical experiments and running studies keep their frozen backends.
 
-The overnight experiment now uses a separately tested 0.1.3 shop-maintenance candidate with observation label `sts_env_public_v2`. [Migration and scope](shop_maintenance_013.md) describe corrected prices and futile-purchase exclusion. Historical releases remain immutable; this is not an adopted clean release or complete simulator fidelity certification.
+## Release 0.1.3: shop maintenance
 
-## Unreleased 0.1.4 canonical sampling candidate
+Release 0.1.3 repairs upstream shop pricing and purchase validation: Courier and
+Membership discounts, restock and replacement prices, and potion purchases that
+could not take effect. The public observation label advances to
+`sts_env_public_v2` because shop menus no longer offer ineffective potion
+purchases, so menu indices can differ from 0.1.2. See the
+[migration record](shop_maintenance_013.md) and
+[release record](release_v0.1.3.md).
 
-The native teacher query now sorts unordered draw/discard/exhaust piles by public
-card attributes before a requested seeded draw-order intervention. This prevents
-fixed finite sampling from starting from the live hidden pile ordering. Normal
-execution and unsampled privileged search are unchanged; public observation v2
-and trace container versions remain unchanged. Native/interface identities change,
-so old artifacts retain their original source and binaries. No release tag is
-created or moved. Actual API hidden-permutation, non-mutation, fresh-process and
-ordinary-rollout equivalence checks are required before adopting the candidate.
+## Release 0.1.4: canonical sampled search
 
-Canonical pile ordering and RNG reseeding do not certify every latent native
-field as reconstructible from public state/history. Describe this as canonical
-RNG-resampled native search, with that scope, rather than an independently
-certified public-state-only agent. The experiment adapter derives sampling seeds
-from the public observation hash instead of the private world seed. The test-only
-hidden-pile mutation extension is not a production environment or policy API.
+Release 0.1.4 changes only seeded native search queries
+(`search_best_action(..., draw_order_seed=...)`). Before sampling a draw order,
+the query sorts the unordered draw, discard and exhaust piles by public card
+attributes, so a fixed number of sampled worlds no longer starts from the true
+hidden pile order. Returned discard/exhaust selections are mapped back to the
+live card instance. Ordinary execution and unsampled search are unchanged, and
+`sts_env_public_v2` is retained. Neither search mode is a certified public-only
+planner; see the [search record](canonical_search_014.md) and
+[release record](release_v0.1.4.md). `scripts/build_test_fixtures.sh` builds
+the test-only native fixture its regression tests need.
 
-The build script can reuse already populated pinned dependencies with
-`STS_OFFLINE_DEPS=1`; it verifies their identities and refuses mismatches. It does
-not install or modify the frozen experiment runtime.
+## Release 0.1.5: known-fault fixes
+
+Release 0.1.5 fixes the open faults listed for 0.1.4 and further simulator
+divergences found while checking them: free-once/retained card text, live combat
+HP and gold, out-of-combat potion actions and the potion fall-through, the
+burning-elite marker and key ownership, keyed Act 3 wins, complete opt-in damage
+annotations, glossary corrections, five event bugs, and Curiosity, Intangible,
+Lagavulin, Flight and Angry combat logic. The observation label advances to
+`sts_env_public_v3`. See [the release record](release_v0.1.5.md) for the full
+list, migration notes and seed-behaviour changes.

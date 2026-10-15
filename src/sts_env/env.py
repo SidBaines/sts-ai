@@ -8,8 +8,10 @@ import operator
 import os
 from typing import Any, Callable
 
-ENVIRONMENT_VERSION = "0.1.3"
-OBSERVATION_VERSION = "sts_env_public_v2"
+from sts_env._backend.glossary import BURNING_ELITE_MARKER
+
+ENVIRONMENT_VERSION = "0.1.5"
+OBSERVATION_VERSION = "sts_env_public_v3"
 
 
 class SimulatorError(RuntimeError):
@@ -82,7 +84,8 @@ class _Episode:
             lines = [f"Visible act map: current row {graph['cur_y']}; coordinates (x,y)."]
             for node in sorted(graph["nodes"], key=lambda n: (n["y"], n["x"])):
                 destinations = ", ".join(f"({x},{node['y'] + 1})" for x in node["edges"]) or "act boss"
-                lines.append(f"({node['x']},{node['y']}) {node['room']} -> {destinations}")
+                marker = f" {BURNING_ELITE_MARKER}" if node.get("burning_elite") else ""
+                lines.append(f"({node['x']},{node['y']}) {node['room']}{marker} -> {destinations}")
             text += "\n\n-- VISIBLE ROUTES --\n" + "\n".join(lines)
         return {"state": state, "text": text, "phase": self.env.phase(),
                 "legal_actions": [{"index": action.index, "description": action.description}
@@ -94,7 +97,12 @@ class _Episode:
         terminal = outcome in {"PLAYER_VICTORY", "PLAYER_LOSS"}
         if terminal:
             return True, False, "victory" if outcome == "PLAYER_VICTORY" else "defeat"
-        if int(state.get("act", 0)) > self.config["max_act"]:
+        act = int(state.get("act", 0))
+        # With all three keys the native Act 3 boss victory enters Act 4 instead
+        # of setting PLAYER_VICTORY. It still wins an episode scoped to Act 3.
+        if self.config["max_act"] == 3 and act == 4:
+            return True, False, "victory"
+        if act > self.config["max_act"]:
             return False, True, "max_act"
         if self.steps >= self.config["max_steps"]:
             return False, True, "max_steps"
@@ -103,11 +111,16 @@ class _Episode:
         return False, False, ""
 
     def _info(self, observation: dict[str, Any], reason: str) -> dict[str, Any]:
+        # info["outcome"] is the episode outcome. After the keyed Act 3 victory
+        # transition it reports PLAYER_VICTORY while observation["state"]["outcome"]
+        # (the native value) is still UNDECIDED.
+        outcome = ("GameOutcome.PLAYER_VICTORY" if reason == "victory"
+                   else observation["state"].get("outcome", ""))
         return {**self.interface_identity, "mode": self.config["mode"], "world_seed": self.seed,
                 "environment_version": ENVIRONMENT_VERSION,
                 "observation_version": OBSERVATION_VERSION,
                 "native_steps": self.native_steps, "steps": self.steps,
-                "outcome": observation["state"].get("outcome", ""),
+                "outcome": outcome,
                 "termination_reason": reason, "ooc_seed": self._seed_native,
                 "ooc_effective_seed": self._seed_native & 0xFFFFFFFF,
                 "native_provenance": deepcopy(getattr(self.env, "native_provenance", {}))}

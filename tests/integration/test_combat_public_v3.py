@@ -20,10 +20,10 @@ from tests.support import requires_simulator
 
 
 _HAND_ATTACK_RE = re.compile(
-    r"^\s*\[\d+\]\s+(.*?)\s+\[Attack\]\s+\(cost\s+(\S+)\)$"
+    r"^\s*\[\d+\]\s+(.*?)\s+\[Attack\]\s+\(cost\s+([^\s,)]+)[^)]*\)$"
 )
 _ACTION_ATTACK_RE = re.compile(
-    r"^play\s+(.*?)\s+\[Attack\]\s+\(cost\s+(\S+)\).*?"
+    r"^play\s+(.*?)\s+\[Attack\]\s+\(cost\s+([^\s,)]+)[^)]*\).*?"
     r"(?:\(deal\s+(\d+)[^)]*\))?$"
 )
 _PLAYER_RE = re.compile(r"^Player HP:.*?block:\s*(-?\d+), energy:\s*(-?\d+)/")

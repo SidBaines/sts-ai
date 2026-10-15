@@ -2,10 +2,10 @@ name: Environment
 
 on:
   push:
-    branches: [environment-base]
+    branches: [main]
     tags: ['env-v*']
   pull_request:
-    branches: [environment-base]
+    branches: [main]
 
 jobs:
   verify:
@@ -27,10 +27,13 @@ jobs:
           .venv/bin/python -m pip install -e '.[gym]'
       - name: Build pinned simulator
         run: scripts/build_lightspeed.sh
+      - name: Build test-only search fixture
+        run: echo "STS_SEARCH_TEST_FIXTURE=$(scripts/build_test_fixtures.sh)" >> "$GITHUB_ENV"
       - name: Test including required native integration
         env:
           PYTHONPATH: src
           STS_REQUIRE_SIMULATOR: '1'
+          STS_REQUIRE_SEARCH_TEST_FIXTURE: '1'
         run: .venv/bin/python -m unittest discover -s tests -t .
       - name: Bounded rollout and replay
         run: |

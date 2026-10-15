@@ -16,8 +16,9 @@ class Action:
 
 
 class FakeBackend:
-    def __init__(self, *, outcome="UNDECIDED", cutoff=False, automatic_death=False):
+    def __init__(self, *, outcome="UNDECIDED", cutoff=False, automatic_death=False, act=1):
         self.outcome, self.cutoff = outcome, cutoff
+        self.act = act
         self.automatic_death = automatic_death
         self.steps = 0
         self.native_steps = 0
@@ -32,7 +33,7 @@ class FakeBackend:
         return self.outcome != "UNDECIDED" or (self.cutoff and self.steps > 0)
     def summary(self):
         return {"world_seed": 123, "outcome": "GameOutcome." + self.outcome,
-                "act": 2 if self.cutoff and self.steps else 1,
+                "act": self.act + 1 if self.cutoff and self.steps else self.act,
                 "cur_hp": 80, "max_hp": 80, "undefined_behavior_evoked": self.undefined}
     def legal_actions(self):
         return [Action()]
@@ -111,6 +112,36 @@ class EnvironmentTests(unittest.TestCase):
         _, reward, terminated, truncated, info = env.step(0)
         self.assertEqual((reward, terminated, truncated), (0, False, True))
         self.assertEqual(info["termination_reason"], "max_act")
+
+    def test_status_at_act_boundaries(self):
+        for max_act, act, outcome, expected in (
+            (1, 2, "UNDECIDED", (False, True, "max_act")),
+            (2, 3, "UNDECIDED", (False, True, "max_act")),
+            (3, 3, "UNDECIDED", (False, False, "")),
+            (3, 4, "UNDECIDED", (True, False, "victory")),
+            (4, 4, "UNDECIDED", (False, False, "")),
+            (4, 5, "UNDECIDED", (False, True, "max_act")),
+            (3, 4, "PLAYER_LOSS", (True, False, "defeat")),
+            (3, 3, "PLAYER_VICTORY", (True, False, "victory")),
+        ):
+            with self.subTest(max_act=max_act, act=act, outcome=outcome):
+                env, _ = self.make(max_act=max_act)
+                env.reset(seed=3)
+                observation = {"state": {"act": act, "outcome": "GameOutcome." + outcome},
+                               "legal_actions": [Action()] if not any(expected[:2]) else []}
+                self.assertEqual(env._episode._status(observation), expected)
+
+    def test_keyed_act3_victory_has_sparse_reward_and_episode_outcome(self):
+        env, _ = self.make(FakeBackend(cutoff=True, act=3), max_act=3, max_steps=1)
+        env.reset(seed=3)
+        observation, reward, terminated, truncated, info = env.step(0)
+        self.assertEqual((reward, terminated, truncated), (1.0, True, False))
+        self.assertEqual(info["termination_reason"], "victory")
+        self.assertEqual(info["outcome"], "GameOutcome.PLAYER_VICTORY")
+        self.assertEqual(observation["state"]["outcome"], "GameOutcome.UNDECIDED")
+        self.assertEqual(observation["legal_actions"], [])
+        with self.assertRaises(RuntimeError):
+            env.step(0)
 
     def test_reverse_hybrid_advances_native_ooc_and_exposes_combat(self):
         env, backend = self.make(mode="combat")
@@ -205,6 +236,19 @@ class EnvironmentTests(unittest.TestCase):
         self.assertIn("(0,0) MONSTER -> (1,1)", obs["text"])
         obs["state"]["map"]["nodes"].clear()
         self.assertEqual(len(graph["nodes"]), 1)
+
+    def test_visible_routes_mark_only_the_burning_elite(self):
+        backend = FakeBackend()
+        graph = {"cur_y": 4, "burning_elite": {"x": 1, "y": 5}, "nodes": [
+            {"x": 1, "y": 5, "room": "ELITE", "edges": [1], "burning_elite": True},
+            {"x": 2, "y": 5, "room": "ELITE", "edges": [2], "burning_elite": False},
+        ]}
+        backend.map_graph = lambda: graph
+        env, _ = self.make(backend)
+        observation, _ = env.reset(seed=3)
+        self.assertIn("(1,5) ELITE (burning: Emerald Key) -> (1,6)", observation["text"])
+        self.assertIn("(2,5) ELITE -> (2,6)", observation["text"])
+        self.assertEqual(observation["state"]["map"], graph)
 
     def test_native_seed_effective_width_is_recorded(self):
         env, _ = self.make(ooc_seed=2**32 + 7)
