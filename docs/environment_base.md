@@ -1,10 +1,10 @@
 # Environment base: contract and maintenance
 
-This branch extracts the reusable Slay the Spire environment from the original
-research harness. Its scope is game state, legal actions, stepping, baseline
-policies, build provenance, replay, and an agent CLI. Model clients, datasets,
-training recipes, framing prompts, and historical experimental artifacts remain
-on the research branch.
+`main` holds the reusable Slay the Spire environment, extracted from the
+original research harness. Its scope is game state, legal actions, stepping,
+baseline policies, build provenance, replay, and an agent CLI. Model clients,
+datasets, training recipes, framing prompts, and historical experimental
+artifacts remain on workstream branches; see [WORKSTREAMS.md](../WORKSTREAMS.md).
 
 ## Interface commitments
 
@@ -112,7 +112,7 @@ out-of-combat policy is scripted/seeded rather than a planning search.
 This clean base uses distribution `slay-the-spire-env`, package `sts_env`, public
 observation contract `sts_env_public_v1`, and trace schema `sts_env_trace_v1`.
 It does not reinterpret the old `sts_ai` DecisionRecord schema. Frozen historical
-traces and their original replay/training tools stay on the research branch.
+traces and their original replay/training tools stay on the LLM workstream (`ws/llm`).
 Port experiments by writing agent/encoder/reward adapters around the new API;
 record this new interface identity when collecting new data. The internal
 legacy combat renderers are implementation details, not a compatibility promise
@@ -120,8 +120,8 @@ for old training inputs.
 
 ## Maintenance workflow
 
-Start new experiments from an immutable release tag. Keep fixes on
-`environment-base`, test them there, and publish a new release tag instead of
+Start new experiments from an immutable release tag. Land fixes on `main`
+through pull requests, test them there, and publish a new release tag instead of
 moving old tags. Experiments deliberately merge or cherry-pick later fixes and
 record the version used. Do not use an existing tag to represent new code.
 

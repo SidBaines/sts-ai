@@ -2,10 +2,11 @@ name: Environment
 
 on:
   push:
-    branches: [environment-base]
+    # environment-base stays until open PRs targeting it are retargeted to main.
+    branches: [main, environment-base]
     tags: ['env-v*']
   pull_request:
-    branches: [environment-base]
+    branches: [main, environment-base]
 
 jobs:
   verify:

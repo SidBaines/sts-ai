@@ -8,9 +8,10 @@ C++ simulator, built separately for your Python interpreter.
 This release supports Ironclad, with Acts 1–3 as the standard experiment scope.
 Act 4 is optional and experimental: its key ownership and burning-elite flags
 are not yet a complete public observation surface. Experiments, model clients, training algorithms,
-and experiment-specific reward shaping belong in adapters or branches created
-from a release tag. The `environment-base` branch receives environment fixes;
-`env-v0.1.0` identifies the first tested release.
+and experiment-specific reward shaping belong in adapters or workstream
+branches; see [WORKSTREAMS.md](WORKSTREAMS.md) for the active ones. `main`
+receives tested environment fixes, and each release gets an immutable `env-v*`
+tag; `env-v0.1.1` is the latest.
 
 ## Install and build
 

@@ -1,9 +1,10 @@
 # Environment base goals and status
 
-The `environment-base` branch is the reusable environment release, extracted
-from the research harness. Its source of truth is
-[the environment contract and maintenance plan](environment_base.md). Historical
-research goals, experiments, and artifacts remain on the original research branch.
+`main` is the reusable environment release, extracted from the research
+harness. Its source of truth is
+[the environment contract and maintenance plan](environment_base.md). Research
+goals, experiments, and artifacts live on workstream branches; see
+[WORKSTREAMS.md](../WORKSTREAMS.md).
 
 Release 0.1.0 passed all local gates on 11 October 2026: a dependency-free
 stepping API, optional Gymnasium wrapper, three control modes, custom-agent CLI,

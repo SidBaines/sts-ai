@@ -1,4 +1,4 @@
-include README.md CLAUDE.md THIRD_PARTY_NOTICES.md
+include README.md CLAUDE.md WORKSTREAMS.md THIRD_PARTY_NOTICES.md
 recursive-include patches *.patch
 include scripts/build_lightspeed.sh
 include scripts/native_build_manifest.py

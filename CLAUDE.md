@@ -1,8 +1,23 @@
 # Environment base
 
-This branch is the reusable Slay the Spire environment, extracted from the
+`main` is the reusable Slay the Spire environment, extracted from the
 historical research harness. Read docs/research_plan.md and README.md first.
-The original experiments remain on their research branches.
+Learning strategies live on workstream branches; read WORKSTREAMS.md before
+starting or resuming experiment work.
+
+## Workstreams
+
+- main holds only the environment: core, native patch, CLI, baseline policies
+  and their tests. Experiments, models and training code never land here.
+- Do experiment work on a topic branch cut from the relevant `ws/<name>` branch
+  and merge it back there. A new agent resumes from the `ws/<name>` tip, not
+  from a predecessor's personal branch.
+- An environment bug found in a workstream gets its own pull request to main,
+  with a regression test and a new `env-v*` tag; the workstream then merges
+  that tag rather than carrying a private fix.
+- Keep each workstream's README.md opening paragraph pointing at its current
+  handoff, so WORKSTREAMS.md on main only changes when a workstream starts,
+  stops or moves.
 
 ## Development contracts
 
