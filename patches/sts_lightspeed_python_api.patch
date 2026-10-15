@@ -1872,8 +1872,55 @@ index ffa449b..711bb31 100644
 
          void stepOutOfCombatPolicy(GameContext &gc);
          void cardSelectPolicy(GameContext &gc);
+diff --git a/src/combat/Actions.cpp b/src/combat/Actions.cpp
+index 93db96f..e8360ec 100644
+--- a/src/combat/Actions.cpp
++++ b/src/combat/Actions.cpp
+@@ -5,6 +5,9 @@
+ #include "combat/Actions.h"
+ #include "combat/BattleContext.h"
+ #include "game/Game.h"
++#include "constants/CardPools.h"
++
++#include <stdexcept>
+
+ using namespace sts;
+
+@@ -564,7 +567,31 @@ Action Actions::PutRandomCardsInDrawPile(CardType type, int count) {
+ Action Actions::DiscoveryAction(CardType type, int amount) {
+     return {[=] (BattleContext &bc) {
+         bc.haveUsedDiscoveryAction = true;
+-        bc.openDiscoveryScreen(sts::generateDiscoveryCards(bc.cardRandomRng, bc.player.cc, type), amount);
++        // INVALID denotes the Discovery card's untyped class pool. Upstream
++        // marked every use as undefined, although the Ironclad implementation
++        // supplies a complete selection path. Other class pools remain missing.
++        if (type == CardType::INVALID && bc.player.cc != CharacterClass::IRONCLAD) {
++            bc.undefinedBehaviorEvoked = true;
++            throw std::runtime_error("Discovery class-card generation only supports Ironclad");
++        }
++        const auto offers = sts::generateDiscoveryCards(bc.cardRandomRng, bc.player.cc, type);
++        if (type == CardType::INVALID) {
++            for (int i = 0; i < 3; ++i) {
++                bool inSupportedPool = false;
++                for (int j = 0; j < CombatCardPool::getPoolSize(bc.player.cc); ++j) {
++                    inSupportedPool |= offers[i] == CombatCardPool::getCardAt(bc.player.cc, j);
++                }
++                bool duplicate = false;
++                for (int j = 0; j < i; ++j) {
++                    duplicate |= offers[i] == offers[j];
++                }
++                if (!inSupportedPool || offers[i] == CardId::INVALID || duplicate) {
++                    bc.undefinedBehaviorEvoked = true;
++                    throw std::runtime_error("Discovery produced invalid class-card offers");
++                }
++            }
++        }
++        bc.openDiscoveryScreen(offers, amount);
+     }};
+ }
+
 diff --git a/src/combat/BattleContext.cpp b/src/combat/BattleContext.cpp
-index 965faef..b5860ef 100644
+index 965faef..1d88da6 100644
 --- a/src/combat/BattleContext.cpp
 +++ b/src/combat/BattleContext.cpp
 @@ -6,12 +6,52 @@
@@ -1968,6 +2015,15 @@ index 965faef..b5860ef 100644
          }
 
          if (inputState != InputState::EXECUTING_ACTIONS) {
+@@ -1283,7 +1335,7 @@ void BattleContext::useSkillCard() {
+             break;
+
+         case CardId::DISCOVERY:
+-            undefinedBehaviorEvoked = true;
++            // DiscoveryAction validates the supported pool before opening its menu.
+             addToBot(Actions::DiscoveryAction(CardType::INVALID, 1));
+             break;
+
 @@ -2232,13 +2284,17 @@ void BattleContext::obtainPotion(Potion p) {
  }
 

@@ -165,3 +165,14 @@ Version 0.1.0 passed all local release gates on 11 October 2026.
 [The release verification record](release_v0.1.0.md) records the 191-test suite,
 CLI/replay, privacy, timeout, vectorization and packaging checks. The immutable `env-v0.1.0` tag identifies
 the tested source; no historical training results are claimed for this release.
+
+## Discovery maintenance candidate
+
+The 0.1.2 candidate adds validated Ironclad Discovery support; see the
+[repair and verification record](discovery_fix.md). The old native fault flag
+unconditionally marked Discovery as unsupported. It does not diagnose memory
+UB. Unsupported class-card generation and invalid Discovery offers still fail
+explicitly, and all environment fault/timeout guards remain active. Discovery
+trajectories intentionally continue beyond their former rejection points. The
+public schemas are unchanged; the release/native/interface identities change.
+Historical experiments and running studies keep their frozen backends.
