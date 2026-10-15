@@ -64,6 +64,12 @@ class JointConfig:
     combat_lr: float = 1e-5
     ooc_lr: float = 3e-5
     critic_lr: float = 3e-4
+    critic_minibatch: int = 0  # zero preserves the historical recipe for replay
+    critic_init: str | None = None
+    critic_fresh_games: int = 0
+    critic_fresh_start: int = 60_020_000_000
+    critic_health: bool = False
+    buffer_compresslevel: int = 1
     clip: float = 0.1
     entropy: float = 0.001
     anchor_beta: float = 0.1
@@ -145,6 +151,16 @@ class JointConfig:
             raise ValueError("CPU/MPS only")
         if self.max_games < self.games or self.max_games >= 7000:
             raise ValueError("Batch cap would overlap seed spacing")
+        if (
+            self.critic_minibatch < 0
+            or self.critic_fresh_games < 0
+            or not 1 <= self.buffer_compresslevel <= 9
+        ):
+            raise ValueError("Invalid critic/storage settings")
+        if self.critic_fresh_games and not self.critic_init:
+            raise ValueError("Fresh critic validation requires warm initialization")
+        if self.critic_minibatch and not self.critic_init:
+            raise ValueError("New critic recipe requires recorded warm initialization")
         if self.minibatch < self.microbatch or self.eval_every < 1:
             raise ValueError("Invalid update schedule")
 
@@ -946,7 +962,30 @@ def likelihood_error(actor, rows, cfg):
     return error
 
 
-def critic_update(critics, optimizer, rows, cfg):
+def critic_update(critics, optimizer, rows, cfg, history=None, iteration=0):
+    if cfg.critic_minibatch:
+        from . import critic_training as ct
+
+        data = ct.pack(critics, rows, batch_rows)
+        before = ct.metrics(critics, data)
+        update = ct.fit(
+            critics, optimizer, data, cfg.critic_minibatch, cfg.seed + iteration
+        )
+        fitted = ct.metrics(critics, data, "fit")
+        if history is not None:
+            history.append(ct.subset(data, data["held"]))
+            del history[:-4]
+            held = ct.metrics(critics, ct.combine(history), "all")
+        else:
+            held = ct.metrics(critics, data)
+        return {
+            **update,
+            "behavior_held_calibration": before,
+            "fit_calibration": fitted,
+            "held_calibration": held,
+            "health": ct.health(held, fitted),
+        }
+
     selected = []
     for phase in PHASES:
         byworld = defaultdict(list)
@@ -1115,7 +1154,9 @@ def save_run(
     payload["adaptive_state"] = adaptive or {}
     payload["metadata"] = {
         "encoder_version": "public_candidate_v2",
-        "stage": "joint_sparse_win_v1",
+        "stage": "joint_sparse_win_v2"
+        if cfg.critic_minibatch
+        else "joint_sparse_win_v1",
         "config": asdict(cfg),
         "run_record": record,
         "anchors": file_identity(Path(cfg.out) / "anchors.pt")
@@ -1125,14 +1166,17 @@ def save_run(
         "historical_parent_metadata": template.get("metadata", {}),
         "reward_contract": "Complete game win1/loss0; gamma/lambda1, invalid worlds quarantined; no shaping/native search.",
         "critic_contract": "Independent public win critics; legacy actor critic parameters frozen.",
+        "critic_initialization": file_identity(cfg.critic_init)
+        if cfg.critic_init
+        else None,
     }
     save_atomic(payload, path)
 
 
-def save_buffer(payload, path):
+def save_buffer(payload, path, compresslevel=1):
     path = Path(path)
     temporary = path.with_suffix(path.suffix + ".tmp")
-    with gzip.open(temporary, "wb", compresslevel=1) as f:
+    with gzip.open(temporary, "wb", compresslevel=compresslevel) as f:
         torch.save(payload, f)
     os.replace(temporary, path)
 
@@ -1204,7 +1248,12 @@ def run(cfg, resume=False):
     np.random.seed(cfg.seed)
     random.seed(cfg.seed)
     rng = random.Random(cfg.seed)
-    record = begin_run(out, asdict(cfg), cfg.checkpoint)
+    record = begin_run(
+        out,
+        asdict(cfg),
+        cfg.checkpoint,
+        inputs=[cfg.critic_init] if cfg.critic_init else [],
+    )
     attempt = record["sha256"][:12]
     if not (out / "config.json").exists():
         (out / "config.json").write_text(json.dumps(asdict(cfg), indent=2) + "\n")
@@ -1229,6 +1278,19 @@ def run(cfg, resume=False):
     critic_optimizer = torch.optim.AdamW(
         critics.parameters(), lr=cfg.critic_lr, weight_decay=0.01
     )
+    if cfg.critic_init and not resume:
+        warm = torch.load(cfg.critic_init, map_location="cpu", weights_only=False)
+        if (
+            warm["warm_record"]["actor_checkpoint"]["sha256"]
+            != file_identity(cfg.checkpoint)["sha256"]
+        ):
+            raise ValueError("Warm critics belong to a different actor parent")
+        critics.load_state_dict(warm["critic_state"])
+        critic_optimizer.load_state_dict(warm["critic_optimizer_state"])
+        if any(group["lr"] != cfg.critic_lr for group in critic_optimizer.param_groups):
+            raise ValueError("Warm critic learning rate mismatch")
+    critic_history = []
+    critic_bad_windows = 0
     iteration = actor_steps = 0
     used = 0.0
     beta = cfg.anchor_beta
@@ -1241,6 +1303,7 @@ def run(cfg, resume=False):
         )
         adaptive = payload.get("adaptive_state", {})
         beta = adaptive.get("beta", beta)
+        critic_bad_windows = adaptive.get("critic_bad_windows", 0)
         insufficient = adaptive.get("insufficient", 0)
         rejections = adaptive.get("rejections", 0)
         last_best_used = adaptive.get("last_best_used", 0.0)
@@ -1315,6 +1378,7 @@ def run(cfg, resume=False):
                 "insufficient": insufficient,
                 "rejections": rejections,
                 "last_best_used": last_best_used,
+                "critic_bad_windows": critic_bad_windows,
             },
         )
         log.emit(
@@ -1402,6 +1466,56 @@ def run(cfg, resume=False):
             )
         else:
             anchors = torch.load(out / "anchors.pt", weights_only=False)
+        if (
+            cfg.critic_fresh_games
+            and not (out / "critic_fresh_validation.json").exists()
+        ):
+            from . import critic_training as ct
+
+            status("critic_fresh_validation")
+            tasks = train_tasks(cfg.critic_fresh_start, cfg.critic_fresh_games)
+            validation = pool.collect(
+                actor, critics, tasks, "train", cfg.seed + 90000, progress
+            )
+            if validation["faults"] or any(
+                e["classification"] not in ("win", "loss")
+                for e in validation["episodes"]
+            ):
+                raise ValueError("Invalid fresh critic validation")
+            data = ct.pack(critics, validation["rows"], batch_rows)
+            held = ct.metrics(critics, data, "all")
+            assessment = ct.health(held)
+            report = {
+                "metrics": held,
+                "health": assessment,
+                "summary": summary_episodes(
+                    validation["episodes"], validation["faults"], len(tasks)
+                ),
+                "actor_sha256": identity_state(actor),
+                "critic_sha256": identity_state(critics),
+                "source_record": record,
+            }
+            (out / "critic_fresh_validation.json").write_text(
+                json.dumps(report, indent=2) + "\n"
+            )
+            write_collection(
+                out / "critic_fresh_receipt.json.gz",
+                {
+                    "tasks": [t.to_dict() for t in tasks],
+                    "episodes": validation["episodes"],
+                    "faults": validation["faults"],
+                },
+            )
+            save_buffer(
+                data, out / "critic_fresh_features.pt.gz", cfg.buffer_compresslevel
+            )
+            log.emit({"event": "critic_validation", "iteration": 0, **report})
+            if assessment["urgent"]:
+                raise ValueError(
+                    "Fresh critic predictions failed health checks before actor training"
+                )
+            del validation, data
+            gc.collect()
         save(out / "latest.pt")
         if not (out / "champion.pt").exists():
             save(out / "champion.pt")
@@ -1529,6 +1643,7 @@ def run(cfg, resume=False):
                     "source_record": record,
                 },
                 out / f"buffer_{iteration:04d}_{attempt}.pt.gz",
+                cfg.buffer_compresslevel,
             )
             status("updating")
             start = time.monotonic()
@@ -1537,7 +1652,36 @@ def run(cfg, resume=False):
             )
             for p in PHASES:
                 assert oldcritics[p] == identity_state(getattr(actor, p).critic)
-            critic = critic_update(critics, critic_optimizer, rows, cfg)
+            critic = critic_update(
+                critics, critic_optimizer, rows, cfg, critic_history, iteration
+            )
+            if cfg.critic_health:
+                assessment = critic["health"]
+                enough = any(
+                    m["worlds"] >= 64 and m["positive_worlds"] >= 8
+                    for k, m in critic["held_calibration"].items()
+                    if k.endswith("act0")
+                )
+                if enough:
+                    critic_bad_windows = (
+                        critic_bad_windows + 1 if assessment["urgent"] else 0
+                    )
+                for warning in assessment["warnings"]:
+                    log.emit({"event": "alert", "iteration": iteration, **warning})
+                health_state = {
+                    "iteration": iteration,
+                    "updated": time.time(),
+                    "bad_windows": critic_bad_windows,
+                    "health": assessment,
+                    "held_calibration": critic["held_calibration"],
+                    "fit_calibration": critic["fit_calibration"],
+                }
+                temporary = out / "health.tmp"
+                temporary.write_text(json.dumps(health_state))
+                temporary.replace(out / "health.json")
+                log.emit(
+                    {"event": "critic_health", "iteration": iteration, **health_state}
+                )
             actor_steps += update["retained_steps"]
             rejections = 0 if update["accepted"] else rejections + 1
             if any(m["kl_mean"] > 0.015 for m in update["drift"].values()):
@@ -1583,6 +1727,9 @@ def run(cfg, resume=False):
             )
             del rows, result
             gc.collect()
+            if cfg.critic_health and critic_bad_windows >= 3:
+                reason = "critic_learning_health_guard"
+                break
             if rejections >= 2:
                 reason = "persistent_update_rejection"
                 break

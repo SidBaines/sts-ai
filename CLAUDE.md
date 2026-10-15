@@ -4,6 +4,16 @@ This branch is the reusable Slay the Spire environment, extracted from the
 historical research harness. Read docs/research_plan.md and README.md first.
 The original experiments remain on their research branches.
 
+## Active experiment monitoring
+
+Actively monitor experiments and training runs: emit and interpret metrics that
+show whether the work is progressing as intended, and investigate problems early.
+This is about useful feedback and judgment, not accumulating smoke tests or pilots.
+Discuss consequential changes with Sid when he is available; when working
+unattended in goal mode, proactively diagnose and make safe, in-scope adjustments,
+preserving results and recording changes. A dashboard or live process alone does
+not establish that an experiment is healthy or learning.
+
 ## Development contracts
 
 - Keep src/sts_env dependency-free; Gymnasium is an optional extra. No model,

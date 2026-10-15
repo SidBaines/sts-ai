@@ -142,7 +142,13 @@ class Telemetry:
             series = []
             keys = set()
             for e in events:
-                if e.get("event") not in ("collection", "update", "evaluation"):
+                if e.get("event") not in (
+                    "collection",
+                    "update",
+                    "evaluation",
+                    "critic_health",
+                    "critic_validation",
+                ):
                     continue
                 metrics = flatten(
                     {
@@ -199,6 +205,10 @@ class Telemetry:
             queue = read_json(ROOT / "data/rl_runs/runner_status.json", {})
             return {
                 "status": status,
+                "learning_health": read_json(self.out / "health.json", {}),
+                "critic_fresh_validation": read_json(
+                    self.out / "critic_fresh_validation.json", {}
+                ),
                 "budget": budget,
                 "queue_power": {
                     "on_battery": queue.get("on_battery"),
