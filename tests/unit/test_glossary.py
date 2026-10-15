@@ -467,6 +467,14 @@ class MapRenderTest(unittest.TestCase):
         self.assertIn("Room types --", out)
         self.assertIn("Your choices (match x= to the LEGAL ACTIONS):", out)
 
+    def test_burning_elite_legend_states_cost_and_reward(self):
+        self.assertIn(
+            "Elite (burning: Emerald Key): an elite whose enemies start with one "
+            "random extra buff (Strength, +25% max HP, Metallicize or Regen); "
+            "winning it also offers the Emerald Key;",
+            self._render(),
+        )
+
     def test_per_choice_reachable_composition_differs(self):
         out = self._render()
         x0 = next(ln for ln in out.splitlines() if ln.startswith("  x=0:"))
@@ -510,6 +518,15 @@ class MapRenderTest(unittest.TestCase):
         out = augment(self.STATE, self.ACTIONS, "out_of_combat")
         self.assertNotIn("Your choices (match x=", out)
         self.assertNotIn("\nMap:\n", out)
+
+    def test_burning_elite_is_marked_in_downstream_branch_counts(self):
+        graph = {**self.GRAPH, "nodes": [dict(node) for node in self.GRAPH["nodes"]]}
+        graph["nodes"][2]["burning_elite"] = True
+        out = augment(self.STATE, self.ACTIONS, "out_of_combat", map_graph=graph)
+        x0 = next(line for line in out.splitlines() if line.startswith("  x=0:"))
+        x1 = next(line for line in out.splitlines() if line.startswith("  x=1:"))
+        self.assertIn("you can reach: 1 Elite (burning: Emerald Key), 1 Rest site.", x0)
+        self.assertNotIn("burning", x1)
 
 
 if __name__ == "__main__":

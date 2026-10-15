@@ -5,6 +5,8 @@ from copy import deepcopy
 import unittest
 from unittest.mock import patch
 
+from tests.unit.test_environment_base import FakeBackend
+
 
 class FakeEnv:
     def __init__(self, **kwargs):
@@ -56,6 +58,22 @@ class MaskedActionTests(unittest.TestCase):
         self.assertEqual(env.env.calls, [0])
         self.assertNotIn("executed_action", info)
         self.assertEqual(info["action_attempts"], 2)
+
+    def test_keyed_act3_victory_survives_wrapper_decision_limit(self):
+        from sts_env.gymnasium import GymnasiumEnv
+
+        with patch("sts_env.env._make_backend", return_value=FakeBackend(cutoff=True, act=3)):
+            env = GymnasiumEnv(max_act=3, max_steps=1, isolated=False)
+            self.addCleanup(env.close)
+            env.reset(seed=3)
+            observation, reward, terminated, truncated, info = env.step(0)
+        self.assertEqual((reward, terminated, truncated), (1.0, True, False))
+        self.assertEqual(info["termination_reason"], "victory")
+        self.assertEqual(info["outcome"], "GameOutcome.PLAYER_VICTORY")
+        self.assertEqual((info["terminated"], info["truncated"]), (True, False))
+        self.assertFalse(observation["action_mask"].any())
+        with self.assertRaises(RuntimeError):
+            env.step(0)
 
     def test_out_of_fixed_space_remains_invalid(self):
         env = self.make_env()

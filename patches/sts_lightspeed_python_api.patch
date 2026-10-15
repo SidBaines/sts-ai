@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..0b03c36 100644
+index a9afe35..c01ae40 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1499 @@
+@@ -9,24 +9,1503 @@
 
  #include <sstream>
  #include <algorithm>
@@ -678,6 +678,10 @@ index a9afe35..0b03c36 100644
 +                } else {
 +                    const auto &node = gc.map->getNode(a.getIdx1(), gc.curMapNodeY + 1);
 +                    os << " room=" << roomStrings[static_cast<int>(node.room)];
++                }
++                if (gc.curMapNodeY < 14 && a.getIdx1() == gc.map->burningEliteX
++                    && gc.curMapNodeY + 1 == gc.map->burningEliteY) {
++                    os << " (burning: Emerald Key)";
 +                }
 +            }
 +            break;
@@ -1502,7 +1506,7 @@ index a9afe35..0b03c36 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -39,7 +1514,232 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -39,7 +1518,232 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("boss_simulation_multiplier", &search::ScumSearchAgent2::bossSimulationMultiplier, "bonus multiplier to the simulation count for boss fights")
          .def_readwrite("pause_on_card_reward", &search::ScumSearchAgent2::pauseOnCardReward, "causes the agent to pause so as to cede control to the user when it encounters a card reward choice")
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
@@ -1736,7 +1740,7 @@ index a9afe35..0b03c36 100644
 
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
-@@ -55,6 +1755,14 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1759,14 @@ PYBIND11_MODULE(slaythespire, m) {
               [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
               "add a card to the deck"
          )
@@ -1751,12 +1755,19 @@ index a9afe35..0b03c36 100644
          .def("remove_card",
              [](GameContext &gc, int idx) {
                  if (idx < 0 || idx >= gc.deck.size()) {
-@@ -75,6 +1783,43 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +1787,59 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
 +    gameContext.def("legal_actions", &search::GameAction::getAllActionsInState)
 +        .def("describe_state", &describeGameState)
++        .def("keys", [](const GameContext &gc) {
++            pybind11::dict result;
++            result["ruby"] = gc.hasKey(Key::RUBY_KEY);
++            result["emerald"] = gc.hasKey(Key::EMERALD_KEY);
++            result["sapphire"] = gc.hasKey(Key::SAPPHIRE_KEY);
++            return result;
++        }, "public key ownership: {ruby: bool, emerald: bool, sapphire: bool}")
 +        .def("map_graph", [](const GameContext &gc) {
 +            // Structured act map for the MAP_SCREEN. Python (sts_ai.glossary) walks
 +            // this DAG to render a neutral per-choice path summary, replacing the
@@ -1766,8 +1777,15 @@ index a9afe35..0b03c36 100644
 +            // (room != NONE/INVALID) are returned.
 +            pybind11::dict result;
 +            result["cur_y"] = gc.curMapNodeY;
++            result["burning_elite"] = pybind11::none();
 +            pybind11::list nodes;
 +            if (gc.map != nullptr) {
++                if (gc.map->burningEliteX >= 0 && gc.map->burningEliteY >= 0) {
++                    pybind11::dict burningElite;
++                    burningElite["x"] = gc.map->burningEliteX;
++                    burningElite["y"] = gc.map->burningEliteY;
++                    result["burning_elite"] = burningElite;
++                }
 +                for (int y = 0; y < 15; ++y) {
 +                    for (int x = 0; x < 7; ++x) {
 +                        const auto &n = gc.map->getNode(x, y);
@@ -1778,6 +1796,7 @@ index a9afe35..0b03c36 100644
 +                        d["x"] = x;
 +                        d["y"] = y;
 +                        d["room"] = std::string(roomStrings[static_cast<int>(n.room)]);
++                        d["burning_elite"] = x == gc.map->burningEliteX && y == gc.map->burningEliteY;
 +                        pybind11::list edges;
 +                        for (int e = 0; e < n.edgeCount; ++e) {
 +                            edges.append(n.edges[e]);
@@ -1789,13 +1808,14 @@ index a9afe35..0b03c36 100644
 +            }
 +            result["nodes"] = nodes;
 +            return result;
-+        }, "structured act map: {cur_y, nodes:[{x, y, room, edges (child x-indices "
++        }, "structured act map: {cur_y, burning_elite: {x, y} or None, "
++           "nodes:[{x, y, room, burning_elite: bool, edges (child x-indices "
 +           "in row y+1)}]}; existing nodes only. Empty nodes list when not on a map.");
 +
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -84,7 +1829,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -84,7 +1849,8 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("cur_map_node_x", &GameContext::curMapNodeX)
          .def_readwrite("cur_map_node_y", &GameContext::curMapNodeY)
          .def_readwrite("cur_room", &GameContext::curRoom)
@@ -1805,7 +1825,7 @@ index a9afe35..0b03c36 100644
          .def_readwrite("boss", &GameContext::boss)
 
          .def_readwrite("cur_hp", &GameContext::curHp)
-@@ -836,5 +2582,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +2602,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
