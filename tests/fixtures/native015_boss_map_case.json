@@ -1,0 +1,116 @@
+{
+  "observation": {
+    "legal_actions": [
+      {
+        "description": "choose map node x=0 advance to boss",
+        "index": 0
+      },
+      {
+        "description": "discard potion Regen Potion (slot 0)",
+        "index": 1
+      },
+      {
+        "description": "discard potion Dexterity Potion (slot 1)",
+        "index": 2
+      }
+    ],
+    "phase": "out_of_combat",
+    "state": {
+      "act": 1,
+      "ascension": 0,
+      "cur_hp": 63,
+      "done": false,
+      "floor": 15,
+      "gold": 39,
+      "keys": {
+        "emerald": false,
+        "ruby": false,
+        "sapphire": false
+      },
+      "map": {
+        "burning_elite": {
+          "x": 5,
+          "y": 9
+        },
+        "cur_y": 14,
+        "nodes": [
+          {"burning_elite": false, "edges": [2], "room": "MONSTER", "x": 2, "y": 0},
+          {"burning_elite": false, "edges": [3], "room": "MONSTER", "x": 3, "y": 0},
+          {"burning_elite": false, "edges": [5], "room": "MONSTER", "x": 4, "y": 0},
+          {"burning_elite": false, "edges": [6], "room": "MONSTER", "x": 5, "y": 0},
+          {"burning_elite": false, "edges": [2], "room": "MONSTER", "x": 2, "y": 1},
+          {"burning_elite": false, "edges": [2], "room": "MONSTER", "x": 3, "y": 1},
+          {"burning_elite": false, "edges": [5], "room": "EVENT", "x": 5, "y": 1},
+          {"burning_elite": false, "edges": [6], "room": "MONSTER", "x": 6, "y": 1},
+          {"burning_elite": false, "edges": [2, 3], "room": "MONSTER", "x": 2, "y": 2},
+          {"burning_elite": false, "edges": [4], "room": "EVENT", "x": 5, "y": 2},
+          {"burning_elite": false, "edges": [5, 6], "room": "MONSTER", "x": 6, "y": 2},
+          {"burning_elite": false, "edges": [1], "room": "EVENT", "x": 2, "y": 3},
+          {"burning_elite": false, "edges": [4], "room": "MONSTER", "x": 3, "y": 3},
+          {"burning_elite": false, "edges": [5], "room": "EVENT", "x": 4, "y": 3},
+          {"burning_elite": false, "edges": [5], "room": "EVENT", "x": 5, "y": 3},
+          {"burning_elite": false, "edges": [5, 6], "room": "MONSTER", "x": 6, "y": 3},
+          {"burning_elite": false, "edges": [2], "room": "EVENT", "x": 1, "y": 4},
+          {"burning_elite": false, "edges": [3], "room": "MONSTER", "x": 4, "y": 4},
+          {"burning_elite": false, "edges": [4, 5], "room": "MONSTER", "x": 5, "y": 4},
+          {"burning_elite": false, "edges": [5], "room": "EVENT", "x": 6, "y": 4},
+          {"burning_elite": false, "edges": [1], "room": "REST", "x": 2, "y": 5},
+          {"burning_elite": false, "edges": [2], "room": "ELITE", "x": 3, "y": 5},
+          {"burning_elite": false, "edges": [5], "room": "ELITE", "x": 4, "y": 5},
+          {"burning_elite": false, "edges": [5, 6], "room": "REST", "x": 5, "y": 5},
+          {"burning_elite": false, "edges": [1], "room": "MONSTER", "x": 1, "y": 6},
+          {"burning_elite": false, "edges": [3], "room": "REST", "x": 2, "y": 6},
+          {"burning_elite": false, "edges": [5], "room": "MONSTER", "x": 5, "y": 6},
+          {"burning_elite": false, "edges": [5], "room": "EVENT", "x": 6, "y": 6},
+          {"burning_elite": false, "edges": [1], "room": "REST", "x": 1, "y": 7},
+          {"burning_elite": false, "edges": [3], "room": "MONSTER", "x": 3, "y": 7},
+          {"burning_elite": false, "edges": [5, 6], "room": "EVENT", "x": 5, "y": 7},
+          {"burning_elite": false, "edges": [0], "room": "TREASURE", "x": 1, "y": 8},
+          {"burning_elite": false, "edges": [2], "room": "TREASURE", "x": 3, "y": 8},
+          {"burning_elite": false, "edges": [4, 5], "room": "TREASURE", "x": 5, "y": 8},
+          {"burning_elite": false, "edges": [5], "room": "TREASURE", "x": 6, "y": 8},
+          {"burning_elite": false, "edges": [0], "room": "SHOP", "x": 0, "y": 9},
+          {"burning_elite": false, "edges": [3], "room": "REST", "x": 2, "y": 9},
+          {"burning_elite": false, "edges": [3], "room": "MONSTER", "x": 4, "y": 9},
+          {"burning_elite": true, "edges": [4, 5, 6], "room": "ELITE", "x": 5, "y": 9},
+          {"burning_elite": false, "edges": [0], "room": "EVENT", "x": 0, "y": 10},
+          {"burning_elite": false, "edges": [2, 3], "room": "MONSTER", "x": 3, "y": 10},
+          {"burning_elite": false, "edges": [4], "room": "EVENT", "x": 4, "y": 10},
+          {"burning_elite": false, "edges": [4], "room": "MONSTER", "x": 5, "y": 10},
+          {"burning_elite": false, "edges": [6], "room": "REST", "x": 6, "y": 10},
+          {"burning_elite": false, "edges": [1], "room": "MONSTER", "x": 0, "y": 11},
+          {"burning_elite": false, "edges": [3], "room": "MONSTER", "x": 2, "y": 11},
+          {"burning_elite": false, "edges": [3], "room": "ELITE", "x": 3, "y": 11},
+          {"burning_elite": false, "edges": [4], "room": "MONSTER", "x": 4, "y": 11},
+          {"burning_elite": false, "edges": [6], "room": "EVENT", "x": 6, "y": 11},
+          {"burning_elite": false, "edges": [1], "room": "MONSTER", "x": 1, "y": 12},
+          {"burning_elite": false, "edges": [3, 4], "room": "MONSTER", "x": 3, "y": 12},
+          {"burning_elite": false, "edges": [4], "room": "ELITE", "x": 4, "y": 12},
+          {"burning_elite": false, "edges": [6], "room": "SHOP", "x": 6, "y": 12},
+          {"burning_elite": false, "edges": [0], "room": "SHOP", "x": 1, "y": 13},
+          {"burning_elite": false, "edges": [2], "room": "MONSTER", "x": 3, "y": 13},
+          {"burning_elite": false, "edges": [3], "room": "EVENT", "x": 4, "y": 13},
+          {"burning_elite": false, "edges": [6], "room": "MONSTER", "x": 6, "y": 13},
+          {"burning_elite": false, "edges": [3], "room": "REST", "x": 0, "y": 14},
+          {"burning_elite": false, "edges": [3], "room": "REST", "x": 2, "y": 14},
+          {"burning_elite": false, "edges": [3], "room": "REST", "x": 3, "y": 14},
+          {"burning_elite": false, "edges": [3], "room": "REST", "x": 6, "y": 14}
+        ]
+      },
+      "max_hp": 80,
+      "observation_version": "sts_env_public_v3",
+      "outcome": "GameOutcome.UNDECIDED",
+      "phase": "out_of_combat",
+      "room": "Room.REST",
+      "screen_state": "ScreenState.MAP_SCREEN",
+      "undefined_behavior_evoked": false
+    },
+    "text": "Act 1, floor 15, screen MAP_SCREEN, room REST, end-of-act boss Slime Boss\nYour HP: 63/80, gold: 39\nDeck: (16): {Strike,Strike,Strike,Strike,Strike,Defend,Defend,Defend,Defend,Bash,Perfected Strike,Iron Wave,Flex,Uppercut,Spot Weakness,Wild Strike,}\nRelics: {Runic Pyramid:0,Golden Idol:0,Ceramic Fish:0,Self Forming Clay:0,Blood Vial:0,}\nPotions: Regen Potion, Dexterity Potion\nMap:\nRoom types -- Monster: a normal combat; Elite: a harder combat that always drops a relic; Elite (burning: Emerald Key): an elite whose enemies start with one random extra buff (Strength, +25% max HP, Metallicize or Regen); winning it also offers the Emerald Key; Rest site: a campfire (rest to heal, or upgrade a card); Shop: spend gold on cards/relics/potions; Treasure: a chest with a relic; Unknown (?): contents are revealed only when you enter.\nYou choose one room to enter next; every path leads to the end-of-act boss shown above. The counts below are rooms reachable on at least one path from each choice (you will not necessarily pass through all of them).\nYour choices (match x= to the LEGAL ACTIONS):\n  x=0: advance to the act boss.\n\n-- KEY (effects/statuses; numbers are shown next to each above) --\n  Runic Pyramid: You no longer discard your hand at the end of your turn.\n  Golden Idol: Enemies drop 25% more gold.\n  Ceramic Fish: Whenever you add a card to your deck, gain 9 gold.\n  Self Forming Clay: Whenever you lose HP in combat, gain 3 Block next turn.\n  Blood Vial: At the start of combat, heal 2 HP.\n  Regen Potion: Gain 5 Regen (heal a decreasing amount at the end of each turn).\n  Dexterity Potion: Gain 2 Dexterity.\n\n-- VISIBLE ROUTES --\nVisible act map: current row 14; coordinates (x,y).\n(2,0) MONSTER -> (2,1)\n(3,0) MONSTER -> (3,1)\n(4,0) MONSTER -> (5,1)\n(5,0) MONSTER -> (6,1)\n(2,1) MONSTER -> (2,2)\n(3,1) MONSTER -> (2,2)\n(5,1) EVENT -> (5,2)\n(6,1) MONSTER -> (6,2)\n(2,2) MONSTER -> (2,3), (3,3)\n(5,2) EVENT -> (4,3)\n(6,2) MONSTER -> (5,3), (6,3)\n(2,3) EVENT -> (1,4)\n(3,3) MONSTER -> (4,4)\n(4,3) EVENT -> (5,4)\n(5,3) EVENT -> (5,4)\n(6,3) MONSTER -> (5,4), (6,4)\n(1,4) EVENT -> (2,5)\n(4,4) MONSTER -> (3,5)\n(5,4) MONSTER -> (4,5), (5,5)\n(6,4) EVENT -> (5,5)\n(2,5) REST -> (1,6)\n(3,5) ELITE -> (2,6)\n(4,5) ELITE -> (5,6)\n(5,5) REST -> (5,6), (6,6)\n(1,6) MONSTER -> (1,7)\n(2,6) REST -> (3,7)\n(5,6) MONSTER -> (5,7)\n(6,6) EVENT -> (5,7)\n(1,7) REST -> (1,8)\n(3,7) MONSTER -> (3,8)\n(5,7) EVENT -> (5,8), (6,8)\n(1,8) TREASURE -> (0,9)\n(3,8) TREASURE -> (2,9)\n(5,8) TREASURE -> (4,9), (5,9)\n(6,8) TREASURE -> (5,9)\n(0,9) SHOP -> (0,10)\n(2,9) REST -> (3,10)\n(4,9) MONSTER -> (3,10)\n(5,9) ELITE (burning: Emerald Key) -> (4,10), (5,10), (6,10)\n(0,10) EVENT -> (0,11)\n(3,10) MONSTER -> (2,11), (3,11)\n(4,10) EVENT -> (4,11)\n(5,10) MONSTER -> (4,11)\n(6,10) REST -> (6,11)\n(0,11) MONSTER -> (1,12)\n(2,11) MONSTER -> (3,12)\n(3,11) ELITE -> (3,12)\n(4,11) MONSTER -> (4,12)\n(6,11) EVENT -> (6,12)\n(1,12) MONSTER -> (1,13)\n(3,12) MONSTER -> (3,13), (4,13)\n(4,12) ELITE -> (4,13)\n(6,12) SHOP -> (6,13)\n(1,13) SHOP -> (0,14)\n(3,13) MONSTER -> (2,14)\n(4,13) EVENT -> (3,14)\n(6,13) MONSTER -> (6,14)\n(0,14) REST -> (3,15)\n(2,14) REST -> (3,15)\n(3,14) REST -> (3,15)\n(6,14) REST -> (3,15)"
+  },
+  "public_hash": "59967f716465d45fb64f5077a4d3f6899d1f6f532447c345d77f83fd83d0b837",
+  "source": {
+    "world_seed": 93000000000,
+    "row": 136,
+    "native_module_sha256": "6351c58c3c5a17275e8036145ea53c41c71cc711afe0167159a3273ac5723428"
+  }
+}

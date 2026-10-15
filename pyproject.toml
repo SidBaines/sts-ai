@@ -24,6 +24,7 @@ where = ["src"]
 include = ["sts_env*", "sts_policy*"]
 
 [tool.setuptools.package-data]
+sts_policy = ["entity_vocabulary.json"]
 "sts_env._backend" = ["native_manifest.json"]
 
 [tool.pytest.ini_options]
