@@ -4,7 +4,9 @@
 
 **The joint RL run is complete, training is stopped, and its monitor is paused. No further training condition is authorized.** Sid requested this write-up and a code/docs push before handing off to a fresh agent and discussing next steps. Do not resume older paused studies, recycle their budgets or interpret proposals below as launch instructions. No new chat was created automatically.
 
-Use `/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI`, branch `codex/joint-sparse-win-rl`, remote `git@github.com:SidBaines/sts-ai.git`. This is an existing managed research worktree. Read `CLAUDE.md`; `AGENTS.md` resolves to it. Keep experiment logic outside `src/sts_env` and preserve unrelated checkouts.
+Start new work on a topic branch from `ws/nonllm`, remote `git@github.com:SidBaines/sts-ai.git`; it contains this handoff plus later work (training speedups and these entry docs). Read `CLAUDE.md`; `AGENTS.md` resolves to it. Then read [next-study options](../next_study_options_2026-10-15.md), written after this handoff. Keep experiment logic outside `src/sts_env` and preserve unrelated checkouts.
+
+This study ran in `/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI` (branch `codex/joint-sparse-win-rl`, now behind `ws/nonllm`). That worktree still holds the run's gitignored data, so relative `data/...` paths below refer to it. Keep it, but don't commit new work there.
 
 Read these in order:
 

@@ -1,5 +1,12 @@
 # Non-LLM curriculum research goals and current state
 
+**Current state (15 October 2026):** the sections below are the history up to
+12 October. Later work is the OOC macro-credit, distillation and search studies
+(see the [training review](training_review_2026-10-14.md)) and the completed joint
+sparse-win run (see the [15 October handoff](handoff/joint_sparse_win_20261015.md)).
+Start from the [next-study options](next_study_options_2026-10-15.md); no training
+is authorized until Sid chooses the next study.
+
 The first local campaign is **complete**. Work is isolated on `codex/nonllm-curriculum`; the original `astra-6sep` checkout is preserved. Signed environment releases `env-v0.1.0` and corrected `env-v0.1.1` remain immutable. Core stays dependency-free; PyTorch/NumPy and Gymnasium are optional extras.
 
 The [curriculum plan](nonllm_curriculum_plan.md) considers action representations, architecture/method alternatives, hyperparameters and bounded selection. Executed stages include supervised candidate policies, combat DAgger/PPO, corrected-native OOC PPO and joint full-control Acts 1–3 PPO. Separate 2.3M candidate heads are trained together in the final composite. Scope is Ironclad, ascension0, ordinary Acts1–3.

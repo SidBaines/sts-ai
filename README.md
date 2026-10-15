@@ -1,4 +1,10 @@
-# Slay the Spire Environment
+# Slay the Spire Environment: non-LLM RL workstream
+
+This is the `ws/nonllm` workstream branch: the environment plus the non-LLM
+policy and RL code. Start new work on a topic branch from `ws/nonllm`; the
+maintained environment base is on `main` (see `CLAUDE.md`).
+
+**Next step: choose the next study.** [Next-study options, 15 October](docs/next_study_options_2026-10-15.md) reviews why the joint run could not have learned, where games are lost, and the most promising directions. It also lists the decisions needed before training: which study, whether to adopt environment 0.1.5, and backups. No training is authorized until Sid chooses.
 
 Current research handoff: [15 October joint RL handoff](docs/handoff/joint_sparse_win_20261015.md). The fresh two-hour joint sparse-win run is complete: 19 accepted rounds, no simulator faults or KL failures, and final greedy 62/1,024 versus original 58/1,024, an inconclusive difference. No actor was promoted. Training is stopped and its monitor is paused; discuss a new condition before starting more training. Read the [completed results](docs/joint_sparse_win_v2_results_2026-10-15.md) and [critic trace diagnosis](docs/joint_critic_trace_diagnosis_2026-10-15.md).
 

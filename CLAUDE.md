@@ -1,8 +1,31 @@
-# Environment base
+# Non-LLM RL workstream (`ws/nonllm`)
 
-This branch is the reusable Slay the Spire environment, extracted from the
-historical research harness. Read docs/research_plan.md and README.md first.
-The original experiments remain on their research branches.
+This branch is the non-LLM reinforcement-learning workstream: candidate-scoring
+policy networks (`src/sts_policy`), PPO, distillation and native-search
+experiments (`src/sts_rl`, `scripts/rl`). It is built on a copy of the Slay the
+Spire environment (`src/sts_env` plus the native patch). The maintained
+environment base lives on `main`; see WORKSTREAMS.md there. Start with the
+README's opening paragraph, which links the current handoff and the next-study
+options; docs/research_plan.md holds the longer history.
+
+## Workstream conventions
+
+- Do new work on a topic branch cut from `ws/nonllm`, and merge it back into
+  `ws/nonllm` when done. Resume from the `ws/nonllm` tip, not from an earlier
+  agent's branch.
+- Don't fix the environment here. Environment bugs (`src/sts_env`,
+  `patches/sts_lightspeed_python_api.patch`) go to `main` as their own pull
+  request with a new `env-v*` tag; this workstream then merges that tag.
+  Research-only native helpers stay in `patches/sts_lightspeed_rl_panel.patch`.
+- This branch currently runs environment 0.1.4 (observation `sts_env_public_v2`)
+  plus the research overlay. `main` has released 0.1.5; adopting it changes
+  menus, observations and some game logic, so it needs fresh baselines.
+- Models, datasets, checkpoints, the frozen runtime and native builds are
+  gitignored and live in other local worktrees. The current handoff lists their
+  absolute paths; preserve them, and never delete a worktree without an
+  approved preservation plan.
+- Keep the README opening paragraph pointing at the current handoff whenever
+  the workstream's state changes.
 
 ## Active experiment monitoring
 
@@ -25,12 +48,14 @@ not establish that an experiment is healthy or learning.
   observations, seeding, native policies, or the patch. Record intentional changes.
 - Bug fixes need regression tests. Public observation/trace changes require
   explicit version bumps and migration notes; never modify historical artifacts.
-- Build via scripts/build_lightspeed.sh. Native sources are gitignored; edits
-  must live in patches/sts_lightspeed_python_api.patch. Verify fresh/reverse apply.
+- Build via scripts/build_lightspeed.sh (research builds: scripts/rl/build_native_rl.sh).
+  Native sources are gitignored, so native edits must live in a patch: environment
+  fixes go to main (see above), research-only helpers in
+  patches/sts_lightspeed_rl_panel.patch. Verify fresh/reverse apply.
 - Never treat simulator failure, undefined behavior, or timeout as a game loss.
   Default process isolation and finite operation timeouts must remain supported.
-- Update docs/environment_base.md for changes to release status and known limits.
-  Release tags are immutable; subsequent fixes receive new tags.
+- Environment release status and known limits are maintained on main's
+  docs/environment_base.md. Release tags are immutable.
 
 ## Gotchas
 
