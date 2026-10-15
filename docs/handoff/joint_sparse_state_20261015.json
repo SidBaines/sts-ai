@@ -1,0 +1,217 @@
+{
+  "schema": "joint_sparse_handoff_v1",
+  "created_utc": "2026-10-15T13:02:06.329579+00:00",
+  "created_london": "2026-10-15T14:02:06.329680+01:00",
+  "workspace": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI",
+  "branch": "codex/joint-sparse-win-rl",
+  "head_before_handoff_commit": "38a339c2098672e18da98f15faeefa57d149dbfa",
+  "git_common_dir": "/Users/sidbaines/Documents/SlayTheSpireAI/.git",
+  "remote": "git@github.com:SidBaines/sts-ai.git",
+  "authorization": "Write up/commit/push handoff; no next training condition authorized. Models/data archives remain local.",
+  "frozen_training_commit": "ed7b10279b4724fd267b374cc505b6b705cc0438",
+  "training_source_files_verified": 248,
+  "training_source_mismatches": [],
+  "critical_files": {
+    "original_actor": {
+      "path": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/slay-spire-rl-debug-da6d22/data/rl_runs/ooc_r2_lam1/iter_0020.pt",
+      "bytes": 18425301,
+      "sha256": "3d135d9bd53b92b5a5eb3dcc8bf26458140e282ee8ea63d9aaaf6ca3c2f222bb"
+    },
+    "warm_critic": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_critic_warm_v2_20261015/warm.pt",
+      "bytes": 1416205,
+      "sha256": "4714d4f621477d616b4a25910878eb8dc1687e4606903aa5c520a5c0a342874c"
+    },
+    "warm_feature_cache": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_critic_diagnosis_repaired_20261015/public_critic_features.npz",
+      "bytes": 66268138,
+      "sha256": "95b6308f4f93d5450a9b457f668f6712111bfb1d8a61a69daf7243d0b0608a04"
+    },
+    "warm_initial_critic": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_sparse_win_20261014/before_0001_1827aab1b142.pt",
+      "bytes": 18910139,
+      "sha256": "633eb64b4eb16928ac8aff1f804fe5b1538de56f4b48f9d39959ca04173062dd"
+    },
+    "latest": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_sparse_win_v2_20261015/latest.pt",
+      "bytes": 52439367,
+      "sha256": "090c4aee5c082279ba119fa0b1e081e8c3638ad2f5948165ae8a2efaa03c875b"
+    },
+    "champion": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_sparse_win_v2_20261015/champion.pt",
+      "bytes": 19842063,
+      "sha256": "44d69a37e4b969902932f15e91d6beb97aba8723c0cfc189c507131d52b6d94f"
+    },
+    "final_evaluated": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_sparse_win_v2_20261015/evaluated_0019_10314e5b32af.pt",
+      "bytes": 52439367,
+      "sha256": "4177999fd89cb072737494ceef26b2b28cf42b3bc8e1ffecee8aeb8d0dc31e67"
+    },
+    "launch_record": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_sparse_win_v2_20261015/records/launch-1792060673753433000-86c22f02/launch.json",
+      "bytes": 59712,
+      "sha256": "10314e5b32af7ebd548ff1808c6576681dc0781ccca7fd1856a86d9a488b197a"
+    },
+    "native": {
+      "path": "/Users/sidbaines/.codex/worktrees/public-search-canonical/SlayTheSpireAI/external/sts_lightspeed_rl_v2/build014_canonical/slaythespire.cpython-312-darwin.so",
+      "bytes": 1106208,
+      "sha256": "936734a2289e20971abdbe7ae2f703d2d82f4e357a4e2b8590817d9a96f81a04"
+    },
+    "native_archive": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_sparse_win_v2_20261015/records/launch-1792060673753433000-86c22f02/slaythespire.cpython-312-darwin.so",
+      "bytes": 1106208,
+      "sha256": "936734a2289e20971abdbe7ae2f703d2d82f4e357a4e2b8590817d9a96f81a04"
+    },
+    "final_review": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_sparse_win_v2_20261015/final_review.json",
+      "bytes": 26156,
+      "sha256": "b4beeb66eca202de47f0499c0ed52f00928aa4ee8a8b9acb4592d79bc2500363"
+    },
+    "config": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_sparse_win_v2_20261015/config.json",
+      "bytes": 1356,
+      "sha256": "71664c762c0880b5dfe2faa94658de172a2aa7345cca1f5d8f7141bb8e2df90e"
+    },
+    "warm_report": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_critic_warm_v2_20261015/report.json",
+      "bytes": 13733,
+      "sha256": "2c9f7e653563988560f5abef365ff2f89c0f5d9ad3187a18503ca690b276798f"
+    },
+    "test_acceptance": {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_sparse_v2_validation_20261015/acceptance.json",
+      "bytes": 973,
+      "sha256": "307edc5c4abe75bda5ace81a66670e233a42f02b7f420803ad58bfc1afbffc8a"
+    }
+  },
+  "runtime": {
+    "venv_link": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/.venv",
+    "venv_realpath": "/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv",
+    "python": "3.12.13",
+    "torch": "2.14.0",
+    "numpy": "2.5.4",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "native_build_dir": "/Users/sidbaines/.codex/worktrees/public-search-canonical/SlayTheSpireAI/external/sts_lightspeed_rl_v2/build014_canonical",
+    "native_identity": {
+      "upstream_commit": "7476a81954020087da31d41d16fddf475746ec2d",
+      "pybind11_tag": "v2.13.6",
+      "patch_sha256": "335fcc360e0d986416af4c282dfe636aed94123bc085af844d316c2b13c561c4",
+      "backend_api": 1,
+      "rl_panel_patch_sha256": "f2b8e3f6e6f94ed2cc4cf6a10a5948617f890592aeceffcd68ef576317d79a4a",
+      "module_file": "slaythespire.cpython-312-darwin.so",
+      "module_sha256": "936734a2289e20971abdbe7ae2f703d2d82f4e357a4e2b8590817d9a96f81a04",
+      "python_cache_tag": "cpython-312",
+      "python_version": "3.12.13",
+      "platform": "macosx-11.0-arm64",
+      "json_commit": "0b345b20c888f7dc8888485768e4bf9a6be29de0",
+      "cmake_version": "cmake version 3.31.6",
+      "variant": "sts_rl_panel"
+    }
+  },
+  "run_status": {
+    "stage": "stopped",
+    "iteration": 19,
+    "actor_steps": 1248,
+    "used_seconds": 7153.0765588330105,
+    "remaining_seconds": 46.923441166989505,
+    "updated": 1792067828.067957,
+    "pid": 14232,
+    "reason": "budget_complete"
+  },
+  "budget": {
+    "used_seconds": 7154.080145874992,
+    "limit_seconds": 7200,
+    "excluded_heartbeat_gaps": 0,
+    "updated": 1792067828.433692
+  },
+  "runner_status": {
+    "heartbeat": 1792069324.446903,
+    "pid": 76744,
+    "on_battery": false,
+    "active": [],
+    "caffeinated": false
+  },
+  "queue_job": [
+    {
+      "name": "joint_sparse_win_v2_20261015",
+      "status": "done",
+      "pid": 14232,
+      "started": 1792060673.385634,
+      "returncode": 0,
+      "ended": 1792067836.8057852
+    }
+  ],
+  "automations": [
+    {
+      "id": "joint-sparse-win-v2-learning-review",
+      "name": "Joint sparse-win v2 learning review",
+      "status": "PAUSED",
+      "rrule": "FREQ=MINUTELY;INTERVAL=10"
+    },
+    {
+      "id": "slay-the-spire-local-rl-progress",
+      "name": "Slay the Spire local RL progress",
+      "status": "PAUSED",
+      "rrule": "FREQ=MINUTELY;INTERVAL=30"
+    }
+  ],
+  "artifact_counts": {
+    "buffer_*.pt.gz": 19,
+    "before_*.pt": 19,
+    "collection_*.json.gz": 19,
+    "evaluation_*.json.gz": 10,
+    "evaluated_*.pt": 10,
+    "monitor_reviews/*.json": 11
+  },
+  "run_receipts_and_monitor": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/rl_runs/joint_sparse_win_v2_20261015",
+  "historical_local_archives": [
+    {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/reproducibility/overnight_canonical_teacher_20261014.zip",
+      "bytes": 42673087,
+      "verification": "Presence/size checked at handoff; previous receipts describe original verification. Not rehashed or re-archived in this docs-only handoff."
+    },
+    {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/reproducibility/overnight_completed_20261014.zip",
+      "bytes": 251597231,
+      "verification": "Presence/size checked at handoff; previous receipts describe original verification. Not rehashed or re-archived in this docs-only handoff."
+    },
+    {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/reproducibility/overnight_corrected_evals_20261014.zip",
+      "bytes": 5013054,
+      "verification": "Presence/size checked at handoff; previous receipts describe original verification. Not rehashed or re-archived in this docs-only handoff."
+    },
+    {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/reproducibility/overnight_imitation_completed_20261014.zip",
+      "bytes": 81446376,
+      "verification": "Presence/size checked at handoff; previous receipts describe original verification. Not rehashed or re-archived in this docs-only handoff."
+    },
+    {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/reproducibility/pipeline_20261014.zip",
+      "bytes": 4530650879,
+      "verification": "Presence/size checked at handoff; previous receipts describe original verification. Not rehashed or re-archived in this docs-only handoff."
+    },
+    {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/reproducibility/requested_review_20261014.zip",
+      "bytes": 387957008,
+      "verification": "Presence/size checked at handoff; previous receipts describe original verification. Not rehashed or re-archived in this docs-only handoff."
+    },
+    {
+      "path": "/Users/sidbaines/.codex/worktrees/4a3c/SlayTheSpireAI/data/reproducibility/verification_20261014.zip",
+      "bytes": 6927782,
+      "verification": "Presence/size checked at handoff; previous receipts describe original verification. Not rehashed or re-archived in this docs-only handoff."
+    }
+  ],
+  "archive_limitations": "No off-machine backup established; old pipeline archive predates joint runs. Git push excludes these artifacts. Preserve owning/donor worktrees.",
+  "dashboards": {
+    "latest": "http://127.0.0.1:8794/",
+    "old_pilot": "http://127.0.0.1:8793/",
+    "state": "Read-only services; process files are historical IDs, not independent liveness proof."
+  },
+  "entry_documents": [
+    "docs/handoff/joint_sparse_win_20261015.md",
+    "docs/joint_sparse_win_v2_results_2026-10-15.md",
+    "docs/joint_critic_trace_diagnosis_2026-10-15.md",
+    "docs/joint_kl_critic_diagnosis_2026-10-15.md",
+    "docs/training_review_2026-10-14.md"
+  ],
+  "handoff_validation": "Critical hashes, 19 buffer/collection pairs, matching frozen training source/native, stopped run and paused automations verified. No new games/training, no broad tests rerun for docs-only handoff."
+}
