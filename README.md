@@ -6,12 +6,11 @@ comes from a pinned, patched [sts_lightspeed](https://github.com/gamerpuppy/sts_
 C++ simulator, built separately for your Python interpreter.
 
 This release supports Ironclad, with Acts 1–3 as the standard experiment scope.
-Act 4 is optional and experimental: its key ownership and burning-elite flags
-are not yet a complete public observation surface. Experiments, model clients, training algorithms,
+Act 4 is optional and experimental. Experiments, model clients, training algorithms,
 and experiment-specific reward shaping belong in adapters or workstream
 branches; see [WORKSTREAMS.md](WORKSTREAMS.md) for the active ones. `main`
 receives tested environment fixes, and each release gets an immutable `env-v*`
-tag; `env-v0.1.4` is the latest.
+tag; `env-v0.1.5` is the latest.
 
 ## Install and build
 
@@ -141,7 +140,10 @@ Observations contain `state` (structured public state), `text` (public text),
 `reset` returns `(observation, info)`; `step` returns
 `(observation, reward, terminated, truncated, info)`. The default reward is 1
 on a game victory and 0 otherwise. Defeat terminates the game; the configured
-act/decision limits truncate it. Supply `reward_fn` in your own adapter for
+act/decision limits truncate it. At the default `max_act=3`, beating the Act 3
+boss counts as a victory even when the run holds all three keys (the game would
+continue to Act 4); `info["outcome"]` then reports `PLAYER_VICTORY` while the
+observation keeps the native outcome. Supply `reward_fn` in your own adapter for
 other rewards, and record that choice with experiment results.
 
 Use the observation as policy input. Diagnostic `info` can contain privileged

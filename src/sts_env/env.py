@@ -10,8 +10,8 @@ from typing import Any, Callable
 
 from sts_env._backend.glossary import BURNING_ELITE_MARKER
 
-ENVIRONMENT_VERSION = "0.1.4"
-OBSERVATION_VERSION = "sts_env_public_v2"
+ENVIRONMENT_VERSION = "0.1.5"
+OBSERVATION_VERSION = "sts_env_public_v3"
 
 
 class SimulatorError(RuntimeError):

@@ -27,14 +27,13 @@ its current handoff.
 
 ## Environment releases and open faults
 
-Releases 0.1.2 (Discovery), 0.1.3 (shop maintenance, `sts_env_public_v2`) and
-0.1.4 (canonical sampled search) carry the non-LLM workstream's environment
-changes to `main`, with identical native patches. `ws/nonllm` has not merged
-`env-v0.1.4` yet. Its own build differs only in a research-only overlay patch,
-and its traces label the environment `0.1.3` where the release says `0.1.4`.
+Releases 0.1.2–0.1.4 carried the non-LLM workstream's environment changes to
+`main` with identical native patches. Release 0.1.5 then fixed the remaining
+known faults (see `docs/release_v0.1.5.md`). Neither workstream has adopted
+0.1.5 yet; `ws/nonllm` runs on the 0.1.4 patch plus a research-only overlay, and
+`ws/llm` still uses its pre-extraction harness.
 
-Known faults that are still open, such as combat menu de-duplication and the
-unmarked burning elite, are listed in
+Remaining known limits are listed in
 [the environment contract](docs/environment_base.md).
 
 ## Archived and superseded references

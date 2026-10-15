@@ -43,3 +43,9 @@ Release 0.1.4 canonicalizes hidden pile order before seeded native search
 samples, so sampled search cannot depend on the true draw order. Ordinary
 execution is unchanged; see [the search record](canonical_search_014.md). The
 immutable release reference is `env-v0.1.4`.
+
+Release 0.1.5 fixes the remaining known environment faults after checking each
+against the real game (the 0.1.4 "phantom powers" were the burning elite's
+buff). It changes menus, observation text and some game logic, so the
+observation label advances to `sts_env_public_v3`; see [the release
+record](release_v0.1.5.md). The immutable release reference is `env-v0.1.5`.
