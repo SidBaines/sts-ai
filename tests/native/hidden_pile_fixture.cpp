@@ -9,6 +9,32 @@ PYBIND11_MODULE(sts_hidden_pile_fixture,m) {
     m.def("copy",[](const sts::BattleContext &bc) {
         return sts::BattleContext(bc);
     });
+    m.def("damage_annotations_copy",[](const sts::BattleContext &bc, int energy,
+                                       int strength, int weak,
+                                       const std::vector<int> &vulnerable,
+                                       bool sameName) {
+        if (energy < 0 || strength < 0 || weak < 0
+                || vulnerable.size() != static_cast<std::size_t>(bc.monsters.monsterCount)
+                || std::any_of(vulnerable.begin(), vulnerable.end(), [](int n) { return n < 0; })) {
+            throw std::runtime_error("invalid damage annotation fixture parameters");
+        }
+        sts::BattleContext result(bc);
+        result.player.energy = energy;
+        result.player.setStatusValueNoChecks<::PlayerStatus::STRENGTH>(strength);
+        result.player.debuff<::PlayerStatus::WEAK>(weak, false);
+        for (int i = 0; i < result.monsters.monsterCount; ++i) {
+            auto &monster = result.monsters.arr[i];
+            if (sameName) monster.id = result.monsters.arr[0].id;
+            // Prevent overkill and reactive powers (e.g. Curl Up) from hiding
+            // the pre-block damage that these tests compare with the annotation.
+            monster.curHp = monster.maxHp = 500;
+            monster.block = 0;
+            monster.statusBits = 0;
+            monster.setStatus<sts::MonsterStatus::VULNERABLE>(vulnerable[i]);
+            monster.setHasStatus<sts::MonsterStatus::VULNERABLE>(vulnerable[i] > 0);
+        }
+        return result;
+    });
     m.def("hand_flags_copy",[](const sts::BattleContext &bc, int handIdx,
                                 bool freeOnce, bool retain) {
         if (handIdx < 0 || handIdx >= bc.cards.cardsInHand) {

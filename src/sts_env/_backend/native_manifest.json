@@ -1,6 +1,6 @@
 {
   "upstream_commit": "7476a81954020087da31d41d16fddf475746ec2d",
   "pybind11_tag": "v2.13.6",
-  "patch_sha256": "46a27af34dc8afa60c260bc518ce6bb6ad435bd41e7b30e8ad8470d73f0ae4c1",
+  "patch_sha256": "2d080620c6540e064c09d0daa1f4e8d022245a70f32a7108e2de56004f9a500e",
   "backend_api": 1
 }

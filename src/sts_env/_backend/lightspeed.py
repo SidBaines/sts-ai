@@ -7,7 +7,12 @@ from typing import Any
 
 from sts_env._backend.lightspeed_import import import_lightspeed, native_metadata
 from sts_env._backend.schemas import LegalAction
-from sts_env._backend.turn_math import HandAttack, TurnMathInputs, turn_math_lines
+from sts_env._backend.turn_math import (
+    HAND_DEPENDENT_ATTACKS,
+    HandAttack,
+    TurnMathInputs,
+    turn_math_lines,
+)
 
 
 _PUBLIC_COMBAT_OBSERVATIONS = (
@@ -298,6 +303,8 @@ class LightspeedHybridEnv:
                 if str(card.get("type")) != "Attack":
                     continue
                 name = str(card.get("name", ""))
+                if name in HAND_DEPENDENT_ATTACKS:
+                    continue
                 cost_for_turn = int(card.get("cost_for_turn", -1))
                 cost_label = "X" if cost_for_turn < 0 else str(cost_for_turn)
                 prefix = f"play {name} [Attack] (cost {cost_label}"

@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..b148bc2 100644
+index a9afe35..c044115 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1529 @@
+@@ -9,24 +9,1575 @@
 
  #include <sstream>
  #include <algorithm>
@@ -93,15 +93,30 @@ index a9afe35..b148bc2 100644
 +
 +// Number of times an attack hits the annotated enemy. The engine encodes this
 +// inline in BattleContext::useAttackCard (no table), so we mirror it here — the static
-+// twin of Cards::getBaseDamage. Default 1. Ironclad-scoped; keep in sync with the
-+// card pool. Sword Boomerang is only annotated when its random targeting is
-+// deterministic because exactly one monster is alive.
++// twin of Cards::getBaseDamage. The static table defaults to 1; the context overload
++// below handles Whirlwind and Fiend Fire. Ironclad-scoped; keep in sync with the card
++// pool. With multiple enemies, Sword Boomerang's count is shared across random
++// targets, so its per-target annotation reports only the damage per hit.
 +int getHitCount(CardId id, bool upgraded) {
 +    switch (id) {
 +        case CardId::TWIN_STRIKE:     return 2;
 +        case CardId::PUMMEL:          return upgraded ? 5 : 4;
 +        case CardId::SWORD_BOOMERANG: return upgraded ? 4 : 3;
 +        default:                      return 1;
++    }
++}
++
++int getHitCount(const BattleContext &bc, const CardInstance &card) {
++    switch (card.getId()) {
++        case CardId::WHIRLWIND:
++            // Action::execute queues current energy; WhirlwindAction adds
++            // Chemical X even when the card is free to play once.
++            return bc.player.energy + (bc.player.hasRelic<RelicId::CHEMICAL_X>() ? 2 : 0);
++        case CardId::FIEND_FIRE:
++            // The played card leaves the hand before FiendFireAction counts it.
++            return bc.cards.cardsInHand - 1;
++        default:
++            return getHitCount(card.getId(), card.isUpgraded());
 +    }
 +}
 +
@@ -125,11 +140,13 @@ index a9afe35..b148bc2 100644
 +// Base damage for the targeted special-formula cards that the computed-damage
 +// opt-in supports. These expressions deliberately mirror BattleContext::useAttackCard
 +// before passing through calculateCardDamage, including Heavy Blade's additional
-+// Strength applications. FIEND_FIRE remains unsupported because its hit count is
-+// determined by the hand after card-play triggers resolve.
++// Strength applications. Fiend Fire's base is per hit; its hand-dependent hit
++// count is handled by the context overload of getHitCount.
 +int getSpecialDamageBase(const BattleContext &bc, const CardInstance &card) {
 +    const bool upgraded = card.isUpgraded();
 +    switch (card.getId()) {
++        case CardId::FIEND_FIRE:
++            return upgraded ? 10 : 7;
 +        case CardId::BODY_SLAM:
 +            return bc.player.block;
 +        case CardId::HEAVY_BLADE:
@@ -147,7 +164,7 @@ index a9afe35..b148bc2 100644
 +    }
 +}
 +
-+// Base damage for every non-X, untargeted ATTACK implemented by the Ironclad
++// Base damage for every untargeted ATTACK implemented by the Ironclad
 +// BattleContext::useAttackCard path. The engine folds Vigor into the queued base,
 +// then removes the status before the queued action calculates damage. An annotation
 +// is computed before card use, so calculateCardDamage sees the live Vigor and these
@@ -161,6 +178,7 @@ index a9afe35..b148bc2 100644
 +        case CardId::REAPER:             return upgraded ? 5 : 4;
 +        case CardId::SWORD_BOOMERANG:    return 3;
 +        case CardId::THUNDERCLAP:        return upgraded ? 7 : 4;
++        case CardId::WHIRLWIND:          return upgraded ? 8 : 5;
 +        default:                         return -1;
 +    }
 +}
@@ -969,6 +987,77 @@ index a9afe35..b148bc2 100644
 +    return os.str();
 +}
 +
++// Keep same-name living enemies distinct in card/potion targets and damage
++// lists, so Python's display de-dup preserves each legal target. Public parsers
++// tolerate the " [enemy i]" suffix.
++void appendEnemyLabel(std::ostream &os, const BattleContext &bc, int idx) {
++    const std::string name = bc.monsters.arr[idx].getName();
++    os << name;
++    int sameNameAlive = 0;
++    for (int mi = 0; mi < bc.monsters.monsterCount; ++mi) {
++        if (bc.monsters.arr[mi].isAlive()
++                && std::string(bc.monsters.arr[mi].getName()) == name) {
++            ++sameNameAlive;
++        }
++    }
++    if (sameNameAlive > 1) {
++        os << " [enemy " << idx << "]";
++    }
++}
++
++// Sim-computed attack damage (target-correct, pre-block, multi-hit aware).
++// Existing targeted, table-based annotations remain unconditional for byte
++// compatibility. The opt-in additionally covers supported special formulas,
++// Fiend Fire and untargeted attacks, including Whirlwind (the only X-cost attack
++// implemented by useAttackCard). Sword Boomerang's random hits show per-hit
++// damage for each possible target, not a total for each enemy. Values describe
++// current public modifiers, before Block and card-play triggers that may change
++// them or Fiend Fire's hand size; they do not predict reactive hit effects.
++// Scalar format: "(deal total = per xN)" (or "(deal total)"). Whirlwind and
++// Fiend Fire always print "= per xN", including x0 and x1.
++// Multiple targets: "(deal per target: name: total; name: total = per xN)".
++// Random targets: "(deal per random hit, N hits total: name: per; name: per)".
++// Names may carry " [enemy i]" to disambiguate living enemies with the same name.
++// The nonnumeric prefixes prevent scalar _DEAL_RE consumers in lightspeed.py,
++// combat_public_v4.py and glossary.py, and _ACTION_ATTACK_RE in
++// tests/integration/test_combat_public_v3.py, from reading a per-target value as
++// the whole attack's damage.
++void appendComputedDamage(
++        std::ostream &os, const BattleContext &bc, const CardInstance &card,
++        int base, int dealTarget, const std::vector<int> &dealTargets) {
++    const int hits = getHitCount(bc, card);
++    const bool dynamicHits = card.getId() == CardId::WHIRLWIND
++        || card.getId() == CardId::FIEND_FIRE;
++    const bool randomTargets = card.getId() == CardId::SWORD_BOOMERANG
++        && dealTargets.size() > 1;
++    const auto appendDamage = [&](int target) {
++        const int per = bc.calculateCardDamage(card, target, base);
++        if (!randomTargets && (hits > 1 || dynamicHits)) {
++            os << (per * hits) << " = " << per << " x" << hits;
++        } else {
++            os << per;
++        }
++    };
++    if (dealTargets.size() > 1) {
++        if (randomTargets) {
++            os << " (deal per random hit, " << hits << " hits total: ";
++        } else {
++            os << " (deal per target: ";
++        }
++        for (std::size_t i = 0; i < dealTargets.size(); ++i) {
++            if (i > 0) os << "; ";
++            const int target = dealTargets[i];
++            appendEnemyLabel(os, bc, target);
++            os << ": ";
++            appendDamage(target);
++        }
++    } else {
++        os << " (deal ";
++        appendDamage(dealTarget);
++    }
++    os << ")";
++}
++
 +// Human-/model-facing description of a single combat action. Mirrors the campfire
 +// enrichment principle: spell out card/potion/target names rather than bare
 +// indices. Card-select actions delegate to the engine's printDesc.
@@ -988,34 +1077,15 @@ index a9afe35..b148bc2 100644
 +            if (c.requiresTarget()) {
 +                const int target = a.getTargetIdx();
 +                if (target >= 0 && target < bc.monsters.monsterCount) {
-+                    os << " -> " << bc.monsters.arr[target].getName();
-+                    // Disambiguate when another LIVING enemy shares this name (e.g. 3
-+                    // Sentries, split slimes): append the enemy slot index [i] so the
-+                    // model can target a specific one and identical-name targets are no
-+                    // longer rendered identically. Format " [enemy i]"; the Python
-+                    // de-dup and rollout_view/_PLAY_RE parsing tolerate this suffix.
-+                    const std::string targetName = bc.monsters.arr[target].getName();
-+                    int sameNameAlive = 0;
-+                    for (int mi = 0; mi < bc.monsters.monsterCount; ++mi) {
-+                        if (bc.monsters.arr[mi].isAlive()
-+                                && std::string(bc.monsters.arr[mi].getName()) == targetName) {
-+                            ++sameNameAlive;
-+                        }
-+                    }
-+                    if (sameNameAlive > 1) {
-+                        os << " [enemy " << target << "]";
-+                    }
++                    os << " -> ";
++                    appendEnemyLabel(os, bc, target);
 +                    dealTarget = target;
 +                }
 +            }
-+            // Sim-computed attack damage (target-correct, pre-block, multi-hit aware).
-+            // Existing targeted, table-based annotations remain unconditional for
-+            // byte compatibility. The opt-in additionally covers supported special
-+            // formulas and untargeted attacks when a sole living enemy makes their
-+            // target deterministic. X-cost and Fiend Fire remain unannotated. If
-+            // this trailing format changes, update _PLAY_RE in rollout_view.py.
 +            int base = -1;
-+            if (c.getType() == CardType::ATTACK && !c.isXCost()) {
++            std::vector<int> dealTargets;
++            if (c.getType() == CardType::ATTACK && (!c.isXCost()
++                    || (includeComputedDamage && c.getId() == CardId::WHIRLWIND))) {
 +                if (dealTarget >= 0) {
 +                    // v2's unconditional static-table annotations for Ritual Dagger
 +                    // and Mind Blast are known pre-existing defects preserved for
@@ -1030,30 +1100,19 @@ index a9afe35..b148bc2 100644
 +                        base = getSpecialDamageBase(bc, c);
 +                    }
 +                } else if (includeComputedDamage && !c.requiresTarget()) {
-+                    int livingTarget = -1;
-+                    int livingCount = 0;
 +                    for (int mi = 0; mi < bc.monsters.monsterCount; ++mi) {
 +                        if (!bc.monsters.arr[mi].isDeadOrEscaped()) {
-+                            livingTarget = mi;
-+                            ++livingCount;
++                            dealTargets.push_back(mi);
 +                        }
 +                    }
-+                    if (livingCount == 1) {
-+                        dealTarget = livingTarget;
-+                        base = getUntargetedDamageBase(c);
++                    if (dealTargets.size() == 1) {
++                        dealTarget = dealTargets.front();
 +                    }
++                    base = getUntargetedDamageBase(c);
 +                }
 +            }
-+            if (dealTarget >= 0 && base >= 0) {
-+                const int per = bc.calculateCardDamage(c, dealTarget, base);
-+                const int hits = getHitCount(c.getId(), c.isUpgraded());
-+                os << " (deal ";
-+                if (hits > 1) {
-+                    os << (per * hits) << " = " << per << " x" << hits;
-+                } else {
-+                    os << per;
-+                }
-+                os << ")";
++            if (base >= 0 && (dealTarget >= 0 || !dealTargets.empty())) {
++                appendComputedDamage(os, bc, c, base, dealTarget, dealTargets);
 +            }
 +            break;
 +        }
@@ -1069,21 +1128,8 @@ index a9afe35..b148bc2 100644
 +            } else {
 +                os << "drink potion " << safePotionName(p);
 +                if (potionRequiresTarget(p) && target >= 0 && target < bc.monsters.monsterCount) {
-+                    os << " -> " << bc.monsters.arr[target].getName();
-+                    // As for targeted cards, keep same-name living enemies distinct.
-+                    // Otherwise the Python display de-dup silently removes legal
-+                    // potion targets in fights such as the three Sentries.
-+                    const std::string targetName = bc.monsters.arr[target].getName();
-+                    int sameNameAlive = 0;
-+                    for (int mi = 0; mi < bc.monsters.monsterCount; ++mi) {
-+                        if (bc.monsters.arr[mi].isAlive()
-+                                && std::string(bc.monsters.arr[mi].getName()) == targetName) {
-+                            ++sameNameAlive;
-+                        }
-+                    }
-+                    if (sameNameAlive > 1) {
-+                        os << " [enemy " << target << "]";
-+                    }
++                    os << " -> ";
++                    appendEnemyLabel(os, bc, target);
 +                }
 +            }
 +            break;
@@ -1532,7 +1578,7 @@ index a9afe35..b148bc2 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -39,7 +1544,232 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -39,7 +1590,232 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("boss_simulation_multiplier", &search::ScumSearchAgent2::bossSimulationMultiplier, "bonus multiplier to the simulation count for boss fights")
          .def_readwrite("pause_on_card_reward", &search::ScumSearchAgent2::pauseOnCardReward, "causes the agent to pause so as to cede control to the user when it encounters a card reward choice")
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
@@ -1766,7 +1812,7 @@ index a9afe35..b148bc2 100644
 
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
-@@ -55,6 +1785,14 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1831,14 @@ PYBIND11_MODULE(slaythespire, m) {
               [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
               "add a card to the deck"
          )
@@ -1781,7 +1827,7 @@ index a9afe35..b148bc2 100644
          .def("remove_card",
              [](GameContext &gc, int idx) {
                  if (idx < 0 || idx >= gc.deck.size()) {
-@@ -75,6 +1813,60 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +1859,60 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
@@ -1842,7 +1888,7 @@ index a9afe35..b148bc2 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -84,7 +1876,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -84,7 +1922,8 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("cur_map_node_x", &GameContext::curMapNodeX)
          .def_readwrite("cur_map_node_y", &GameContext::curMapNodeY)
          .def_readwrite("cur_room", &GameContext::curRoom)
@@ -1852,7 +1898,7 @@ index a9afe35..b148bc2 100644
          .def_readwrite("boss", &GameContext::boss)
 
          .def_readwrite("cur_hp", &GameContext::curHp)
-@@ -836,5 +2629,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +2675,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
