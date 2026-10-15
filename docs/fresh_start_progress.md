@@ -1,6 +1,18 @@
 # Fresh-start progress — newest first
 
-## 15 October 2026, 21:52 UTC — launch decisions, before experiments
+## 15 October 2026, 21:59 UTC — implementation design and first health check
+
+Environment file merge is ready: core and imported core tests match immutable `env-v0.1.5`; workstream/policy code retained. A separate Claude spec review is running. Sandboxed pure suite: 488 cases, 469 passes and 19 permission errors (HTTP binds/process inspection); host/native rerun pending. Native build/verification pipeline is detached with STOP/deadline/disk controls and pauses on battery. It is currently waiting for AC; no simulator experiment has started. Existing CMake 3.31.6/Python 3.12.13 build-tools environment avoids frozen-runtime mutation.
+
+Independent Codex implementation worktrees: `codex/fresh-entities` at `/private/tmp/sts-fresh-20261015/entities`, `codex/fresh-collection` at `/private/tmp/sts-fresh-20261015/collection`. Written specs/logs/status files are under `/private/tmp/sts-fresh-20261015/`; preserve their outputs until integrated and locally recorded. Orchestrator handles Git metadata writes because builder sandboxes cannot write the common Git directory.
+
+Predeclared label split: SHA256(`fresh-start-split-v1:<world>`) modulo 10; 0–1 test, 2 validation, 3–9 fit. All states from a world share a split. Validation selects checkpoints/hyperparameters; test worlds only score final candidates. Fit learning-curve subsets are nested/interleaved; both encoders share exact full fit/validation/test row identities. All collection worlds remain disjoint from DEV/probe/panel/confirmation namespaces. G1 uncertainty clusters by source world, including all states/resamples.
+
+Fight-panel correction in design: replay last OOC state, execute recorded room-entry action without advancing to battle initialization, and copy the resulting GameContext. Salt that pre-initialization context. This retains actual entry floor/HP/room/relic effects; copying the preceding map context and choosing an encounter directly could omit them. Verify unsalted first-combat public hashes before accepting a panel.
+
+Resource check (before training): 48 GiB physical memory, about 45 GiB free disk. Swap is already about 15.4 GiB from existing applications; no study training has run. Query reports 80% system memory free/available and no current swapouts; do not kill unrelated processes. Use bounded process-tree RSS and throughput checks to choose concurrency.
+
+## 15 October 2026, 21:50 UTC — launch decisions, before experiments
 
 Study branch `nonllm/fresh-start`, worktree `/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start`; initial source `2ed7f41`, based on `ws/nonllm` `31b6379`.
 
