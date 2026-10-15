@@ -193,3 +193,14 @@ hidden-pile mutation extension is not a production environment or policy API.
 The build script can reuse already populated pinned dependencies with
 `STS_OFFLINE_DEPS=1`; it verifies their identities and refuses mismatches. It does
 not install or modify the frozen experiment runtime.
+
+## Joint adapter execution improvements
+
+The joint PPO adapter has opt-in lean evaluation and lossless packed choice
+storage, with a measured CPU collector layout. [Implementation, correctness and
+performance evidence](joint_training_speedups.md) describe the execution settings
+and internal buffer migration. Core observations, CLI traces, native binaries and
+release tags are unchanged. Historical source/config/native resume checks remain
+strict. The existing controller does not checkpoint its rolling critic-health
+validation window; resumed health-stop decisions are not certified equivalent to
+an uninterrupted run.

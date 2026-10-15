@@ -182,6 +182,19 @@ class CompositeActorCritic(torch.nn.Module):
         values = values.index_copy(0, combat_rows, combat_values).index_copy(0, ooc_rows, ooc_values)
         return logits, values
 
+    def actor_logits(self, state, actions, mask):
+        """Preserve forward's phase partition and batch shapes exactly."""
+        phase = state[:, 7] > .5
+        combat = phase.nonzero(as_tuple=True)[0]
+        if combat.numel() == len(state) or combat.numel() == 0:
+            head = self.combat if combat.numel() else self.ooc
+            return head.actor_logits(state, actions, mask)
+        ooc = (~phase).nonzero(as_tuple=True)[0]
+        a = self.combat.actor_logits(state[combat], actions[combat], mask[combat])
+        b = self.ooc.actor_logits(state[ooc], actions[ooc], mask[ooc])
+        logits = a.new_empty((len(state), actions.shape[1]))
+        return logits.index_copy(0, combat, a).index_copy(0, ooc, b)
+
 
 def make_agent(checkpoint: str | None = None, device: str = "cpu", deterministic: bool = True,
                seed: int = 0, combat_checkpoint: str | None = None,

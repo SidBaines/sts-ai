@@ -46,6 +46,13 @@ class CandidateActorCritic(nn.Module):
                                     nn.SiLU(), nn.Linear(width, 1))
 
     def forward(self, state: torch.Tensor, actions: torch.Tensor, mask: torch.Tensor):
+        return self._forward(state, actions, mask, actor_only=False)
+
+    def actor_logits(self, state, actions, mask):
+        """Identical actor arithmetic without the unused legacy critic."""
+        return self._forward(state, actions, mask, actor_only=True)[0]
+
+    def _forward(self, state, actions, mask, *, actor_only):
         if state.ndim != 2 or actions.ndim != 3 or mask.shape != actions.shape[:2]:
             raise ValueError("Expected state[B,D], actions[B,N,A], mask[B,N]")
         state_embedding = self.state_encoder(state)
@@ -60,7 +67,8 @@ class CandidateActorCritic(nn.Module):
             critic_features.append(context)
         logits = self.scorer(torch.cat(score_features, -1)).squeeze(-1)
         logits = logits.masked_fill(~mask, -1e9)
-        value = self.critic(torch.cat(critic_features, -1)).squeeze(-1)
+        value = (state.new_zeros(len(state)) if actor_only else
+                 self.critic(torch.cat(critic_features, -1)).squeeze(-1))
         return logits, value
 
     def metadata(self) -> dict:

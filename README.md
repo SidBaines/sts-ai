@@ -2,6 +2,8 @@
 
 Current research handoff: [15 October joint RL handoff](docs/handoff/joint_sparse_win_20261015.md). The fresh two-hour joint sparse-win run is complete: 19 accepted rounds, no simulator faults or KL failures, and final greedy 62/1,024 versus original 58/1,024, an inconclusive difference. No actor was promoted. Training is stopped and its monitor is paused; discuss a new condition before starting more training. Read the [completed results](docs/joint_sparse_win_v2_results_2026-10-15.md) and [critic trace diagnosis](docs/joint_critic_trace_diagnosis_2026-10-15.md).
 
+The optional joint adapter now has [tested collection and evaluation speedups](docs/joint_training_speedups.md) and an opt-in fast configuration. Bounded performance fixtures use separate outputs from the completed study.
+
 Earlier work: the [training review](docs/training_review_2026-10-14.md) covers principal setups, lineage and results. The [overnight study](docs/rl_overnight_2026-10-14.md) includes corrected search confirmation and the boss-head ablation. The [KL repair and critic audit](docs/joint_kl_critic_diagnosis_2026-10-15.md) explains the first joint pilot's rejection/underfitting failures. [Training records and fault replay](docs/rl_recording_and_fault_replay.md) preserve reproducibility guarantees and limits. Older longer-curriculum studies remain paused; their [12 October handoff](docs/experiment_handoff.md) is historical and names a different worktree. Models/data/native binaries remain local, not in Git; preserve their recorded paths.
 
 A maintained environment base for custom agents, LLM adapters, and reinforcement

@@ -99,13 +99,27 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                      max_seconds: float = 120., deterministic: bool = False,
                      teacher_simulations: int | None = None,
                      deferred_bootstrap: bool = False, reuse_encodings: bool = True,
-                     capture_continuations: bool = False) -> dict[str, Any]:
+                     capture_continuations: bool = False,
+                     episode_sink_factory: Callable[[], Any] | None = None,
+                     actor_only: bool = False) -> dict[str, Any]:
     """The actor is frozen throughout collection; failures quarantine whole episodes.
 
     Worker operations execute concurrently. A collector budget truncation uses
     the actual next state's value. The sampling batch is transferred to CPU only
     once, never separately for each environment/action candidate.
+
+    An optional sparse-return sink consumes temporary Transitions via record(t)
+    and returns episode data via finish(episode). It must retain only what its
+    objective needs. No trajectory/GAE is retained in this mode; faults discard
+    the whole sink. This requires deferred bootstrap, without teachers or
+    continuation capture. actor_only additionally skips categorical/value work
+    for deterministic evaluation and must be paired with a sink.
     """
+    streaming = episode_sink_factory is not None
+    if streaming and (not deferred_bootstrap or teacher_simulations is not None or capture_continuations):
+        raise ValueError("Episode sinks require deferred sparse collection without teachers/continuations")
+    if actor_only and (not deterministic or not streaming):
+        raise ValueError("Actor-only collection requires deterministic episode sinks")
     from .model_agent import collate_public, collate_public_with_encodings
     retain_encodings = reuse_encodings and collate is collate_public
     model.eval()
@@ -116,6 +130,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
     labels: list[dict[str, Any]] = []
     continuations: list[dict[str, Any]] = []
     episodes, faults = [], []
+    episode_data = []
+    retained_count, retained_bytes = 0, 0
     failed_steps, resets = 0, 0
     timings = {"reset_wait_seconds": 0., "step_wait_seconds": 0., "teacher_wait_seconds": 0.,
                "policy_seconds": 0., "bootstrap_seconds": 0., "fault_wait_seconds": 0.}
@@ -143,6 +159,9 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                         "trajectory": [], "labels": [], "continuations": [], "obs": None, "last_info": {},
                         "reward": 0., "steps": 0, "action_trace": hashlib.sha256(),
                         "start_public_state": None, "max_act_reached": None}
+        if streaming:
+            active[slot].update(sink=episode_sink_factory(), retained_count=0, retained_bytes=0,
+                                last_terminated=False, last_truncated=False)
         resets += 1
 
     def fault(slot: int, error: Exception, *, stage: str, wait_seconds: float) -> None:
@@ -152,18 +171,20 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         nonlocal failed_steps
         entry = active.pop(slot)
         worker = getattr(workers[slot], 'worker', workers[slot])
-        failed_steps += len(entry["trajectory"])
+        excluded = entry["steps"] if streaming else len(entry["trajectory"])
+        failed_steps += excluded
         timings["fault_wait_seconds"] += wait_seconds
         faults.append({"world_seed": entry["task"].seed, "error": type(error).__name__,
                        "fault_stage": stage, "wait_seconds": wait_seconds,
                        "action_trace_sha256": entry["action_trace"].hexdigest(),
                        "attempted_action_index": entry.get("sample", (None, None))[1],
                        "task_id": task_identity(entry["task"]),
-                       "message": str(error), "excluded_transitions": len(entry["trajectory"]),
+                       "message": str(error), "excluded_transitions": excluded,
                        "task_kind": entry["task"].kind, **_episode_public_metrics(entry, faulted=True)})
         faults[-1]['fault_record_path'] = getattr(worker, 'last_fault_path', None)
 
     def finish(slot: int, info: dict[str, Any], budget_truncation: bool = False) -> None:
+        nonlocal retained_count, retained_bytes
         entry = active.pop(slot)
         info = {**entry["last_info"], **info}
         trajectory = entry["trajectory"]
@@ -171,14 +192,15 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
             raise RuntimeError("Cannot finalize a trajectory with a missing next-state value")
         if budget_truncation and trajectory and not trajectory[-1].terminated:
             trajectory[-1].truncated = True
-        _set_advantages(trajectory, config)
+        if not streaming:
+            _set_advantages(trajectory, config)
         transitions.extend(trajectory)
         labels.extend(entry["labels"])
         if (capture_continuations and not budget_truncation and trajectory and
                 trajectory[-1].terminated and not trajectory[-1].truncated):
             continuations.extend(entry["continuations"])
         state = entry["obs"].get("state", {}) if entry["obs"] is not None else {}
-        episodes.append({"world_seed": entry["task"].seed, "task_kind": entry["task"].kind,
+        episode = {"world_seed": entry["task"].seed, "task_kind": entry["task"].kind,
                          "task_id": task_identity(entry["task"]),
                          "action_trace_sha256": entry["action_trace"].hexdigest(),
                          "reward": entry["reward"], "steps": entry["steps"],
@@ -192,9 +214,14 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                          "native_provenance": info.get("native_provenance"),
                          "reward_version": info.get("reward_version"),
                          "reward_settings": info.get("reward_settings"),
-                         "terminated": bool(trajectory and trajectory[-1].terminated),
-                         "truncated": budget_truncation or bool(trajectory and trajectory[-1].truncated),
-                         **_episode_public_metrics(entry)})
+                         "terminated": entry["last_terminated"] if streaming else bool(trajectory and trajectory[-1].terminated),
+                         "truncated": budget_truncation or (entry["last_truncated"] if streaming else bool(trajectory and trajectory[-1].truncated)),
+                         **_episode_public_metrics(entry)}
+        if streaming:
+            episode_data.append(entry["sink"].finish(episode))
+            retained_count += entry["retained_count"]
+            retained_bytes += entry["retained_bytes"]
+        episodes.append(episode)
 
     for slot in range(len(workers)):
         start(slot)
@@ -241,15 +268,21 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         else:
             policy_batch, actor_encodings = collate(observations, device), [None] * len(observations)
         logits, values, mask = forward(model, policy_batch)
-        distribution = masked_distribution(logits, mask)
-        positions = logits.masked_fill(~mask, -1e9).argmax(-1) if deterministic else distribution.sample()
-        log_probs = distribution.log_prob(positions)
+        if actor_only:
+            if logits.shape != mask.shape or mask.dtype != torch.bool or not bool(mask.any(-1).all()) or not bool(torch.isfinite(logits[mask]).all()):
+                raise ValueError("Invalid actor-only legal logits/mask")
+            positions = logits.masked_fill(~mask, -1e9).argmax(-1)
+            log_probs = values = logits.new_zeros(len(logits))
+        else:
+            distribution = masked_distribution(logits, mask)
+            positions = logits.masked_fill(~mask, -1e9).argmax(-1) if deterministic else distribution.sample()
+            log_probs = distribution.log_prob(positions)
         # Single packed device transfer for action/logp/value (action IDs < 2^24).
         packed = torch.stack((positions.float(), log_probs, values), dim=-1).cpu().tolist()
         timings["policy_seconds"] += time.monotonic() - policy_started
         forward_counts["actor_batches"] += 1
         forward_counts["actor_observations"] += len(observations)
-        if deferred_bootstrap:
+        if deferred_bootstrap and not streaming:
             for slot, (_, _, value) in zip(slots, packed):
                 if active[slot].get("awaiting_bootstrap"):
                     active[slot]["trajectory"][-1].next_value = float(value)
@@ -288,7 +321,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 fault(slot, error, stage="step", wait_seconds=time.monotonic() - wait_started)
         if results:
             next_slots = list(results)
-            bootstrap_slots = ([slot for slot in next_slots if results[slot][3] and not results[slot][2]]
+            bootstrap_slots = ([] if streaming else
+                               [slot for slot in next_slots if results[slot][3] and not results[slot][2]]
                                if deferred_bootstrap else next_slots)
             explicit_values = dict(zip(bootstrap_slots,
                 bootstrap_values([results[slot][0] for slot in bootstrap_slots])))
@@ -306,13 +340,23 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
                 action_record = {"phase": old_observation.get("phase"),
                                  "action": old_observation["legal_actions"][position]}
                 entry["action_trace"].update((json.dumps(action_record, sort_keys=True, separators=(",", ":")) + "\n").encode())
-                entry["trajectory"].append(Transition(old_observation, position, action, log_prob, value,
+                transition = Transition(old_observation, position, action, log_prob, value,
                                                        [True] * len(old_observation["legal_actions"]),
                                                        float(reward), bool(terminated), bool(truncated),
                                                        0. if terminated else float(explicit_values.get(slot, 0.)), entry["task"].seed,
                                                        encoded_observation=entry.pop("sample_encoding"),
-                                                       encoding_observation_id=id(old_observation) if retain_encodings else None))
-                entry["awaiting_bootstrap"] = deferred_bootstrap and not (terminated or truncated)
+                                                       encoding_observation_id=id(old_observation) if retain_encodings else None)
+                if streaming:
+                    entry["sink"].record(transition)
+                    encoded = transition.encoded_observation
+                    if encoded is not None:
+                        entry["retained_count"] += 1
+                        entry["retained_bytes"] += (encoded.state_features.nbytes + encoded.action_features.nbytes
+                                                    + encoded.action_indices.nbytes)
+                    entry["last_terminated"], entry["last_truncated"] = bool(terminated), bool(truncated)
+                else:
+                    entry["trajectory"].append(transition)
+                entry["awaiting_bootstrap"] = deferred_bootstrap and not streaming and not (terminated or truncated)
                 entry["reward"] += float(reward)
                 entry["steps"] += 1
                 entry["obs"] = observation
@@ -333,6 +377,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
     cohort_completed = (resets == requested and len(episodes) + len(faults) == requested
                         and all(episode["termination_reason"] != "collector_budget" for episode in episodes))
     return {**({"continuations": continuations} if capture_continuations else {}),
+            **({"episode_data": episode_data} if streaming else {}),
             "transitions": transitions, "teacher_records": labels, "episodes": episodes,
             "requested_tasks": requested, "unstarted_tasks": requested - resets,
             "cohort_completed": cohort_completed,
@@ -341,8 +386,8 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
             "elapsed_seconds": time.monotonic() - started,
             "timings": timings,
             "forward_counts": forward_counts, "deferred_bootstrap": deferred_bootstrap,
-            "retained_encodings": sum(t.encoded_observation is not None for t in transitions),
-            "retained_encoding_bytes": sum(t.encoded_observation.state_features.nbytes +
+            "retained_encodings": retained_count if streaming else sum(t.encoded_observation is not None for t in transitions),
+            "retained_encoding_bytes": retained_bytes if streaming else sum(t.encoded_observation.state_features.nbytes +
                 t.encoded_observation.action_features.nbytes + t.encoded_observation.action_indices.nbytes
                 for t in transitions if t.encoded_observation is not None),
             "discount_unit": "one_external_decision; native_combat_is_one_macro_transition"}

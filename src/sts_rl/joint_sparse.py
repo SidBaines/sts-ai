@@ -46,6 +46,7 @@ from .recording import (
     restore_rng,
     write_collection,
 )
+from .packed_rows import PackedRows, concatenate_rows
 
 PHASES = ("combat", "ooc")
 
@@ -59,6 +60,8 @@ class JointConfig:
     max_games: int = 1536
     min_wins: int = 4
     collectors: int = 2
+    collection_backend: str = "legacy"
+    evaluation_backend: str = "legacy"
     workers: int = 6
     chunk: int = 16
     combat_lr: float = 1e-5
@@ -101,6 +104,8 @@ class JointConfig:
     min_disk_gib: float = 6.0
 
     def validate(self):
+        if self.collection_backend not in ("legacy", "compact") or self.evaluation_backend not in ("legacy", "lean"):
+            raise ValueError("Unknown collection/evaluation backend")
         if (
             min(
                 self.hours,
@@ -298,6 +303,12 @@ def actor_forward(actor, critics, cfg, deterministic=False):
     return forward
 
 
+def evaluation_forward(model, batch):
+    """Exact greedy actor logits; neither value head participates in eval."""
+    logits = model.actor_logits(*batch)
+    return logits, logits.new_zeros(len(logits)), batch[2]
+
+
 def classify_episode(episode):
     if episode.get("truncated") or not episode.get("terminated"):
         return "censored"
@@ -306,6 +317,72 @@ def classify_episode(episode):
     if episode.get("task_outcome") == "defeat":
         return "loss"
     return "invalid"
+
+
+class SparseEpisodeSink:
+    """Keep one world's numeric choices, never its full observation history.
+
+    Until finish, outcomes are unknown and all rows remain quarantinable. Only
+    genuine wins/losses contribute choices, boss entries and optimization rows,
+    matching compact_chunk. Censored/fault worlds never leak partial samples.
+    """
+    def __init__(self, keep_rows=True):
+        self.keep_rows = keep_rows
+        self.rows = []
+        self.counts, self.choices, self.buckets = Counter(), Counter(), Counter()
+        self.boss_entries = {}
+
+    def record(self, t):
+        phase = "combat" if t.observation.get("phase") == "combat" else "ooc"
+        state = t.observation.get("state", {})
+        act = int(state.get("act") or 0)
+        room = str(state.get("room", "")).rsplit(".", 1)[-1]
+        if phase == "combat" and room == "BOSS":
+            self.boss_entries.setdefault(str(act), {"hp": state.get("cur_hp"), "floor": state.get("floor")})
+        if len(t.behavior_mask) <= 1:
+            return
+        from .ooc_trainer import _label
+        label = t.observation["legal_actions"][t.action_position]["description"]
+        self.choices[phase + ":" + _label(label)] += 1
+        self.counts[phase] += 1
+        self.buckets[f"{phase}:act{act}"] += 1
+        if self.keep_rows:
+            e = t.encoded_observation
+            if e is None or e.action_indices[t.action_position] != t.action_index:
+                raise ValueError("Missing encoding or stored action/menu mismatch")
+            self.rows.append({"state": e.state_features, "actions": e.action_features,
+                              "position": t.action_position, "logp": t.behavior_log_prob,
+                              "value": t.behavior_value, "return": 0., "advantage": 0.,
+                              "seed": t.world_seed, "phase": phase, "act": act,
+                              "room": room, "floor": state.get("floor"), "action_index": t.action_index})
+
+    def finish(self, episode):
+        outcome = classify_episode(episode)
+        valid = outcome in ("win", "loss")
+        win = float(outcome == "win")
+        if valid and abs(episode["reward"] - win) > 1e-6:
+            raise ValueError("Reward contract violated")
+        episode.update(dataset="train", classification=outcome,
+                       binary_return=win if valid else None,
+                       decision_counts=dict(self.buckets) if valid else {},
+                       boss_entries=self.boss_entries if valid else {})
+        if not valid:
+            return {"rows": [], "counts": {}, "choices": {}, "buckets": {}}
+        for row in self.rows:
+            row["return"], row["advantage"] = win, win - row["value"]
+        return {"rows": self.rows, "counts": dict(self.counts),
+                "choices": dict(self.choices), "buckets": dict(self.buckets)}
+
+
+def compact_stream_chunk(result):
+    rows = PackedRows.from_rows([r for e in result["episode_data"] for r in e["rows"]])
+    counters = [Counter(), Counter(), Counter()]
+    for e in result["episode_data"]:
+        for counter, key in zip(counters, ("counts", "choices", "buckets")):
+            counter.update(e[key])
+    # Reuse the legacy fail-closed programming-error check without transitions.
+    compact_chunk({"episodes": [], "transitions": [], "faults": result["faults"]})
+    return rows, result["episodes"], *(dict(c) for c in counters)
 
 
 def compact_chunk(result, keep_rows=True):
@@ -415,7 +492,7 @@ def _collector(conn, checkpoint, cfg_dict, workers, index):
                 actor.eval()
                 critics.eval()
                 torch.manual_seed(request["seed"])
-                rows = []
+                row_parts = []
                 episodes = []
                 faults = []
                 counts = Counter()
@@ -423,6 +500,10 @@ def _collector(conn, checkpoint, cfg_dict, workers, index):
                 buckets = Counter()
                 start = time.monotonic()
                 encoding_bytes = 0
+                timings = Counter()
+                forward_counts = Counter()
+                lean = request["kind"] == "eval" and cfg.evaluation_backend == "lean"
+                streaming = lean or cfg.collection_backend == "compact"
                 for offset in range(0, len(request["tasks"]), cfg.chunk):
                     chunk = request["tasks"][offset : offset + cfg.chunk]
                     r = collect_rollouts(
@@ -430,24 +511,30 @@ def _collector(conn, checkpoint, cfg_dict, workers, index):
                         pool,
                         chunk,
                         collate=collate_public,
-                        forward=actor_forward(
+                        forward=evaluation_forward if lean else actor_forward(
                             actor, critics, cfg, request["kind"] != "train"
                         ),
                         config=PPOConfig(gamma=1.0, gae_lambda=1.0),
                         max_seconds=cfg.collection_seconds,
                         deterministic=request["kind"] != "train",
                         deferred_bootstrap=True,
+                        reuse_encodings=not lean,
+                        episode_sink_factory=(lambda: SparseEpisodeSink(request["kind"] != "eval")) if streaming else None,
+                        actor_only=lean,
                     )
-                    compact, eps, c, ch, b = compact_chunk(
-                        r, keep_rows=request["kind"] != "eval"
-                    )
-                    rows.extend(compact)
+                    if streaming:
+                        compact, eps, c, ch, b = compact_stream_chunk(r)
+                    else:
+                        compact, eps, c, ch, b = compact_chunk(r, keep_rows=request["kind"] != "eval")
+                    row_parts.append(compact)
                     episodes.extend(eps)
                     faults.extend(r["faults"])
                     counts.update(c)
                     choices.update(ch)
                     buckets.update(b)
                     encoding_bytes += r["retained_encoding_bytes"]
+                    timings.update(r["timings"])
+                    forward_counts.update(r["forward_counts"])
                     write_collection(
                         Path(cfg.out) / f"progress_receipt_{index}.json.gz",
                         {
@@ -492,7 +579,7 @@ def _collector(conn, checkpoint, cfg_dict, workers, index):
                     (
                         "ok",
                         {
-                            "rows": rows,
+                            "rows": concatenate_rows(row_parts),
                             "episodes": episodes,
                             "faults": faults,
                             "counts": dict(counts),
@@ -500,6 +587,8 @@ def _collector(conn, checkpoint, cfg_dict, workers, index):
                             "buckets": dict(buckets),
                             "elapsed": time.monotonic() - start,
                             "encoding_bytes": encoding_bytes,
+                            "timings": dict(timings),
+                            "forward_counts": dict(forward_counts),
                         },
                     )
                 )
@@ -518,12 +607,15 @@ class SparseCollectors:
         ctx = mp.get_context("spawn")
         self.conns = []
         self.procs = []
-        n = collectors or cfg.collectors
-        per = max(1, math.ceil((workers or cfg.workers) / n))
+        n = cfg.collectors if collectors is None else collectors
+        if n < 1 or (workers is not None and workers < 1):
+            raise ValueError("Positive collector/worker counts required")
+        total = max(n, workers if workers is not None else cfg.workers)
+        self.worker_counts = [total // n + int(i < total % n) for i in range(n)]
         for i in range(n):
             parent, child = ctx.Pipe()
             proc = ctx.Process(
-                target=_collector, args=(child, cfg.checkpoint, asdict(cfg), per, i)
+                target=_collector, args=(child, cfg.checkpoint, asdict(cfg), self.worker_counts[i], i)
             )
             proc.start()
             child.close()
@@ -544,6 +636,8 @@ class SparseCollectors:
                 "critic_sha256": identity_state(critics),
                 "collector_seeds": [seed * 1009 + i for i in range(len(self.conns))],
                 "assignment": "tasks[i::collectors], fixed chunks",
+                "worker_counts": self.worker_counts,
+                "result_order": "collector index, then local episode completion" if self.cfg.collection_backend == "compact" else "legacy collector completion order",
                 "config": asdict(self.cfg),
             },
         )
@@ -560,7 +654,7 @@ class SparseCollectors:
                 }
             )
         waiting = set(range(len(self.conns)))
-        parts = []
+        parts = {}
         last = {i: time.monotonic() for i in waiting}
         completed = {i: 0 for i in waiting}
         while waiting:
@@ -586,7 +680,7 @@ class SparseCollectors:
                     elif status == "error":
                         raise RuntimeError(data)
                     else:
-                        parts.append(data)
+                        parts[i] = data
                         waiting.remove(i)
         out = {
             "rows": [],
@@ -595,16 +689,24 @@ class SparseCollectors:
             "counts": Counter(),
             "choices": Counter(),
             "buckets": Counter(),
-            "elapsed": max(p["elapsed"] for p in parts),
+            "elapsed": max(p["elapsed"] for p in parts.values()),
             "encoding_bytes": 0,
+            "timings": Counter(),
+            "forward_counts": Counter(),
+            "collector_seconds": {i: p["elapsed"] for i, p in parts.items()},
         }
-        for p in parts:
-            for key in ["rows", "episodes", "faults"]:
+        order = sorted(parts) if self.cfg.collection_backend == "compact" else list(parts)
+        out["rows"] = concatenate_rows([parts[i]["rows"] for i in order])
+        for i in order:
+            p = parts[i]
+            for key in ["episodes", "faults"]:
                 out[key].extend(p[key])
             for key in ["counts", "choices", "buckets"]:
                 out[key].update(p[key])
             out["encoding_bytes"] += p["encoding_bytes"]
-        for key in ["counts", "choices", "buckets"]:
+            out["timings"].update(p["timings"])
+            out["forward_counts"].update(p["forward_counts"])
+        for key in ["counts", "choices", "buckets", "timings", "forward_counts"]:
             out[key] = dict(out[key])
         if len(out["episodes"]) + len(out["faults"]) != len(tasks):
             raise ValueError("Requested/accounted cohort mismatch")
@@ -1183,6 +1285,7 @@ def save_buffer(payload, path, compresslevel=1):
 
 def build_anchors(rows, limit, seed):
     rng = random.Random(seed)
+    packed = isinstance(rows, PackedRows)
     rows = list(rows)
     rng.shuffle(rows)
     counts = Counter()
@@ -1190,7 +1293,8 @@ def build_anchors(rows, limit, seed):
     for r in rows:
         key = (r["phase"], r["act"])
         if counts[key] < limit:
-            out.append(r)
+            # Selected views must not keep an entire packed collection alive.
+            out.append({**r, "state": r["state"].copy(), "actions": r["actions"].copy()} if packed else r)
             counts[key] += 1
     if any(counts[p, a] < 16 for p in PHASES for a in [1, 2, 3]):
         raise ValueError(
@@ -1560,12 +1664,14 @@ def run(cfg, resume=False):
                     progress,
                 )
                 tasks += extra_tasks
-                rows += extra["rows"]
+                rows = concatenate_rows([rows, extra["rows"]])
                 result["episodes"] += extra["episodes"]
                 result["faults"] += extra["faults"]
                 for key in ("counts", "choices", "buckets"):
                     result[key] = dict(Counter(result[key]) + Counter(extra[key]))
                 result["encoding_bytes"] += extra["encoding_bytes"]
+                for key in ("timings", "forward_counts"):
+                    result[key] = dict(Counter(result[key]) + Counter(extra[key]))
                 summary = summary_episodes(
                     result["episodes"], result["faults"], len(tasks)
                 )
@@ -1599,6 +1705,10 @@ def run(cfg, resume=False):
                     / 2**30,
                     "disk_free_gib": shutil.disk_usage(out).free / 2**30,
                     "encoded_bytes": result["encoding_bytes"],
+                    "collector_timings_sum": result["timings"],
+                    "forward_counts": result["forward_counts"],
+                    "row_storage": PackedRows.format if isinstance(rows, PackedRows) else "legacy_rows",
+                    "row_numeric_bytes": rows.nbytes if isinstance(rows, PackedRows) else None,
                 }
             )
             if (
