@@ -1,4 +1,4 @@
-// Test-only mutation of scratch native copies; never installed as a policy API.
+// Test-only helpers return modified native copies; never installed as a policy API.
 #include <algorithm>
 #include <stdexcept>
 #include <pybind11/pybind11.h>
@@ -11,6 +11,16 @@ PYBIND11_MODULE(sts_hidden_pile_fixture,m) {
                                    sts::MonsterEncounter encounter) {
         sts::GameContext result(gc);
         result.info.encounter = encounter;
+        return result;
+    });
+    m.def("monster_hp_copy",[](const sts::BattleContext &bc, int targetIdx, int hp) {
+        if (targetIdx < 0 || targetIdx >= bc.monsters.monsterCount
+                || hp <= 0 || hp > bc.monsters.arr[targetIdx].maxHp
+                || bc.monsters.arr[targetIdx].curHp <= 0) {
+            throw std::runtime_error("invalid monster HP setup");
+        }
+        sts::BattleContext result(bc);
+        result.monsters.arr[targetIdx].curHp = hp;
         return result;
     });
     m.def("combat_hit_setup_copy",[](const sts::BattleContext &bc, int targetIdx,

@@ -2097,7 +2097,7 @@ index 93db96f..e8360ec 100644
  }
 
 diff --git a/src/combat/BattleContext.cpp b/src/combat/BattleContext.cpp
-index 965faef..1d88da6 100644
+index 965faef..3e74311 100644
 --- a/src/combat/BattleContext.cpp
 +++ b/src/combat/BattleContext.cpp
 @@ -6,12 +6,52 @@
@@ -2201,7 +2201,31 @@ index 965faef..1d88da6 100644
              addToBot(Actions::DiscoveryAction(CardType::INVALID, 1));
              break;
 
-@@ -2232,13 +2284,17 @@ void BattleContext::obtainPotion(Potion p) {
+@@ -1875,10 +1927,19 @@ void BattleContext::onUsePowerCard() {
+         mummifiedHandOnUsePower();
+     }
+
+-//    auto &m = monsters.optionMap[2];
+-//    if (m.hasStatusInternal<MS::CURIOSITY>()) {
+-//        m.buff<MS::STRENGTH>(m.getStatus<MS::CURIOSITY>());
+-//    }
++    for (int i = 0; i < monsters.monsterCount; ++i) {
++        const auto &m = monsters.arr[i];
++        if (m.hasStatus<MS::CURIOSITY>()) {
++            const auto amount = m.getStatus<MS::CURIOSITY>();
++            addToBot({[i, amount] (BattleContext &bc) {
++                // Earlier actions (e.g. Panache) can kill or half-kill the holder.
++                auto &holder = bc.monsters.arr[i];
++                if (!holder.isDeadOrEscaped()) {
++                    holder.buff<MS::STRENGTH>(amount);
++                }
++            }});
++        }
++    }
+ }
+
+ void BattleContext::onUseStatusOrCurseCard() {
+@@ -2232,13 +2293,17 @@ void BattleContext::obtainPotion(Potion p) {
  }
 
  void BattleContext::discardPotion(int idx) {
@@ -2220,7 +2244,7 @@ index 965faef..1d88da6 100644
      discardPotion(idx);
 
      // todo - dont need to add to bot because always will have nothing in actionQueue?
-@@ -2429,9 +2485,7 @@ void BattleContext::drinkPotion(int idx, int target) {
+@@ -2429,9 +2494,7 @@ void BattleContext::drinkPotion(int idx, int target) {
          case Potion::EMPTY_POTION_SLOT:
          case Potion::FAIRY_POTION:
          default:
@@ -2231,6 +2255,15 @@ index 965faef..1d88da6 100644
      }
 
  }
+@@ -2735,7 +2798,7 @@ int BattleContext::calculateCardDamage(const CardInstance &card, int targetIdx,
+     }
+
+     if (monster.hasStatus<MS::INTANGIBLE>()) {
+-        damage = std::max(damage, 1.0f);
++        damage = std::min(damage, 1.0f);
+     }
+
+     return std::max(0, static_cast<int>(damage));
 diff --git a/src/combat/Monster.cpp b/src/combat/Monster.cpp
 index 95c005d..dc66ce3 100644
 --- a/src/combat/Monster.cpp
@@ -2267,6 +2300,21 @@ index 95c005d..dc66ce3 100644
      if (hadBlock && block == 0 && bc.player.hasRelic<RelicId::HAND_DRILL>()) {
          bc.addToBot(Actions::DebuffEnemy<MS::VULNERABLE>(idx, 2, false) );
      }
+diff --git a/src/combat/MonsterSpecific.cpp b/src/combat/MonsterSpecific.cpp
+index f6f6c4a..2ea9d3b 100644
+--- a/src/combat/MonsterSpecific.cpp
++++ b/src/combat/MonsterSpecific.cpp
+@@ -887,6 +887,10 @@ void Monster::takeTurn(BattleContext &bc) {     // todo, maybe for monsters that
+
+         case MMID::LAGAVULIN_SLEEP:
+             if (bc.turn == 2 || !hasStatus<MS::ASLEEP>()) {
++                if (hasStatus<MS::ASLEEP>()) {
++                    setHasStatus<MS::ASLEEP>(false);
++                    decrementStatus<MS::METALLICIZE>(8);
++                }
+                 setMove(MMID::LAGAVULIN_ATTACK);
+             } else {
+                 setMove(MMID::LAGAVULIN_SLEEP);
 diff --git a/src/game/GameContext.cpp b/src/game/GameContext.cpp
 index fa10364..e0643d9 100644
 --- a/src/game/GameContext.cpp

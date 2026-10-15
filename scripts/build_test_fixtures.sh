@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
-# Build the test-only native fixture used by
-# tests/integration/test_canonical_search_sampling.py and
-# tests/integration/test_combat_card_flags.py. It creates scratch BattleContext
-# copies with reordered hidden piles or hand flags; it is never installed as an
-# environment or policy API. Run scripts/build_lightspeed.sh first, so the
-# source tree holds the patched headers. Prints the fixture path; export it as
-# STS_SEARCH_TEST_FIXTURE (and STS_REQUIRE_SEARCH_TEST_FIXTURE=1 to fail
-# instead of skipping when it is missing).
+# Build the test-only native fixture used by integration tests that call
+# tests.support.load_search_test_fixture(). Helpers return modified scratch
+# native copies; the fixture is never installed as an environment or policy API.
+# Run scripts/build_lightspeed.sh first, so the source tree holds the patched
+# headers. Prints the fixture path; export it as STS_SEARCH_TEST_FIXTURE
+# (and STS_REQUIRE_SEARCH_TEST_FIXTURE=1 to fail instead of skipping when missing).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
