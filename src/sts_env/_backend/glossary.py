@@ -945,9 +945,14 @@ def _build_key(
 # tradeoff, both its cost and its reward are stated -- so the description adds no
 # strategic steer (pathing is itself a measured risk proxy; the base prompt must
 # present facts only).
+# Must match the native map-action suffix in patches/sts_lightspeed_python_api.patch;
+# tests/integration/test_burning_elite.py pins the two together.
+BURNING_ELITE_MARKER = "(burning: Emerald Key)"
+
 _ROOM_DISPLAY = {
     "MONSTER": "Monster",
     "ELITE": "Elite",
+    "ELITE_BURNING": f"Elite {BURNING_ELITE_MARKER}",
     "REST": "Rest site",
     "SHOP": "Shop",
     "TREASURE": "Treasure",
@@ -956,10 +961,13 @@ _ROOM_DISPLAY = {
     "BOSS_TREASURE": "Treasure",
 }
 # Canonical ordering for the reachable-room counts, for deterministic output.
-_ROOM_ORDER = ["ELITE", "MONSTER", "REST", "SHOP", "TREASURE", "EVENT"]
+_ROOM_ORDER = ["ELITE", "ELITE_BURNING", "MONSTER", "REST", "SHOP", "TREASURE", "EVENT"]
 _ROOM_LEGEND = (
     "Room types -- Monster: a normal combat; Elite: a harder combat that always "
-    "drops a relic; Rest site: a campfire (rest to heal, or upgrade a card); "
+    f"drops a relic; Elite {BURNING_ELITE_MARKER}: an elite whose enemies start "
+    "with one random extra buff (Strength, +25% max HP, Metallicize or Regen); "
+    "winning it also offers the Emerald Key; "
+    "Rest site: a campfire (rest to heal, or upgrade a card); "
     "Shop: spend gold on cards/relics/potions; Treasure: a chest with a relic; "
     "Unknown (?): contents are revealed only when you enter."
 )
@@ -1005,12 +1013,14 @@ def _format_counts(counts: dict[str, int]) -> str:
 def _render_map(map_graph: dict, legal_actions: list[dict]) -> str:
     """Render the act map as a neutral per-choice path summary, or '' if there is
     nothing to show. `map_graph` is GameContext.map_graph()'s structured DAG
-    ({cur_y, nodes:[{x, y, room, edges}]})."""
+    ({cur_y, burning_elite: {x, y} or None,
+    nodes:[{x, y, room, edges, burning_elite: bool}]}). Burning nodes render as
+    Elite (burning: Emerald Key), including in downstream room counts."""
     rooms: dict[tuple[int, int], str] = {}
     edges: dict[tuple[int, int], list[int]] = {}
     for node in map_graph.get("nodes") or ():
         key = (int(node["x"]), int(node["y"]))
-        rooms[key] = str(node["room"])
+        rooms[key] = "ELITE_BURNING" if node.get("burning_elite") else str(node["room"])
         edges[key] = [int(e) for e in node.get("edges", ())]
 
     cur_y = int(map_graph.get("cur_y", -1))

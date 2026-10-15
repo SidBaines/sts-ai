@@ -438,9 +438,10 @@ class LightspeedHybridEnv:
         )
 
     def map_graph(self) -> dict[str, Any] | None:
-        """Structured act map for the current MAP_SCREEN decision, else None.
+        """Structured act map during out-of-combat decisions, else None.
 
-        Returns ``{"cur_y": int, "nodes": [{"x", "y", "room", "edges"}]}`` from the
+        Returns ``{cur_y, burning_elite: {x, y} | None,
+        nodes: [{x, y, room, burning_elite: bool, edges}]}`` from the
         binding (the DAG `sts_env._backend.glossary` renders into a neutral per-choice path
         summary). The visible map persists across all out-of-combat decisions.
         """
@@ -492,6 +493,7 @@ class LightspeedHybridEnv:
             "cur_hp": int(player["cur_hp"] if player is not None else self.gc.cur_hp),
             "max_hp": int(player["max_hp"] if player is not None else self.gc.max_hp),
             "gold": int(player["gold"] if player is not None else self.gc.gold),
+            "keys": dict(self.gc.keys()),
             "phase": self.phase(),
             "combat_observation": self.combat_observation,
             # Latched across the run (see __init__); also OR in the live battle so an
