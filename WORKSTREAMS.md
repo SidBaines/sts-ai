@@ -33,8 +33,8 @@ changes to `main`, with identical native patches. `ws/nonllm` has not merged
 `env-v0.1.4` yet. Its own build differs only in a research-only overlay patch,
 and its traces label the environment `0.1.3` where the release says `0.1.4`.
 
-Known faults that are still open, such as phantom powers and combat menu
-de-duplication, are listed in
+Known faults that are still open, such as combat menu de-duplication and the
+unmarked burning elite, are listed in
 [the environment contract](docs/environment_base.md).
 
 ## Archived and superseded references

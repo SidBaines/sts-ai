@@ -95,15 +95,19 @@ The initial character is Ironclad and Acts 1–3 are the standard scope. Optiona
 Act 4 is experimental: key ownership and burning-elite flags are not yet fully
 represented in public observations. Native timeout/error isolation and reported
 undefined-behaviour flags do not certify all reachable game states as free of
-upstream undefined-memory or phantom-power bugs. Unflagged corrupted states may
-still evade detection.
+upstream undefined-memory bugs. Unflagged corrupted states may still evade
+detection.
 
 Known open faults as of 0.1.4, in addition to the event deviations above:
 
-- Phantom powers: monsters or the player can carry impossible powers from
-  earlier state, for example Gremlin Nob with Metallicize. The root cause is not
-  found, the native undefined-behaviour flag does not catch it, and this
-  environment has no detector yet.
+- The burning elite is not marked in the public map observation, although the
+  game shows it on the map. Each act has one, in Acts 1-3 regardless of
+  `max_act`: defeating it offers the Emerald Key, and it starts with one random
+  buff from the map RNG (Strength act, +25% max HP, Metallicize 2*act+2 or
+  Regen 2*act+1; `MonsterGroup::applyEmeraldEliteBuff`). The buff itself is
+  visible in the enemy's powers or HP. Earlier research mistook these buffs (a
+  Gremlin Nob with Metallicize 4 or Regen 3) for memory corruption, called
+  "phantom powers"; replaying the recorded worlds shows they are this mechanic.
 - Combat menus de-duplicate actions by description, so a free-to-play-once card
   merges with an ordinary copy of the same card and cannot be chosen separately.
 - Out-of-combat potion use and discard are missing from legal menus, and native
