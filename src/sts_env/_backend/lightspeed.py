@@ -245,6 +245,9 @@ class LightspeedHybridEnv:
 
     def describe_state(self) -> str:
         if self.bc is not None:
+            # Combat text reads HP/max HP, potions and (public modes) relic
+            # counters from BattleContext and shows no gold. GameContext's
+            # header is a battle-entry snapshot, so it is not used here.
             public = self.combat_observation in _PUBLIC_COMBAT_OBSERVATIONS
             state = str(
                 self.bc.describe_state(
@@ -467,17 +470,21 @@ class LightspeedHybridEnv:
         return selected
 
     def summary(self) -> dict[str, Any]:
+        player = dict(self.bc.public_player()) if self.bc is not None else None
         data: dict[str, Any] = {
             "world_seed": self.world_seed,
             "ascension": self.ascension,
+            # Progress and run outcome change only at battle boundaries, when
+            # exit_battle writes back to GameContext. Resources can change at any
+            # combat decision (damage/healing, Feed/Fruit Juice, gold theft/gain).
             "act": int(self.gc.act),
             "floor": int(self.gc.floor_num),
             "screen_state": str(self.gc.screen_state),
             "room": str(self.gc.cur_room),
             "outcome": str(self.gc.outcome),
-            "cur_hp": int(self.gc.cur_hp),
-            "max_hp": int(self.gc.max_hp),
-            "gold": int(self.gc.gold),
+            "cur_hp": int(player["cur_hp"] if player is not None else self.gc.cur_hp),
+            "max_hp": int(player["max_hp"] if player is not None else self.gc.max_hp),
+            "gold": int(player["gold"] if player is not None else self.gc.gold),
             "phase": self.phase(),
             "combat_observation": self.combat_observation,
             # Latched across the run (see __init__); also OR in the live battle so an
@@ -510,7 +517,7 @@ class LightspeedHybridEnv:
                 data["combat"].update(
                     {
                         "recent_actions": list(self._combat_recent_actions),
-                        "player": dict(self.bc.public_player()),
+                        "player": player,
                         "cards": dict(
                             self.bc.public_cards(
                                 include_card_type=(
