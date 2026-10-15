@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-# Describe the pinned simulator's implemented effects, not assumed vanilla-game
-# mechanics. In particular Mushrooms/Mausoleum/Woman in Blue differ upstream.
+# Descriptions reflect the pinned simulator's implemented effects, not assumed
+# vanilla-game mechanics; these include the event fixes carried by
+# patches/sts_lightspeed_python_api.patch.
 _STATIC: dict[str, dict[int, str]] = {
     "OMINOUS_FORGE": {0: "upgrade a card", 1: "gain Warped Tongs and the Pain curse", 2: "leave"},
     "PLEADING_VAGRANT": {0: "pay 85 gold for a random relic", 1: "gain a random relic and the Shame curse", 2: "leave"},
@@ -21,7 +22,7 @@ _STATIC: dict[str, dict[int, str]] = {
     "MASKED_BANDITS": {0: "give up all your gold", 1: "fight the Masked Bandits; victory rewards include Red Mask"},
     "MINDBLOOM": {0: "fight a random Act 1 boss for a rare relic and combat rewards", 1: "upgrade all upgradeable cards and gain Mark of the Bloom (prevents healing)", 2: "gain 999 gold and two Normality curses", 3: "heal to full HP and gain the Doubt curse"},
     "HYPNOTIZING_COLORED_MUSHROOMS": {0: "fight the Mushrooms; victory rewards include Odd Mushroom"},
-    "MYSTERIOUS_SPHERE": {0: "fight the Mysterious Sphere encounter for a rare relic and combat rewards"},
+    "MYSTERIOUS_SPHERE": {0: "fight the Mysterious Sphere encounter for a rare relic and combat rewards", 1: "leave"},
     "THE_NEST": {1: "take 6 damage and gain Ritual Dagger"},
     "NLOTH": {2: "leave"},
     "NOTE_FOR_YOURSELF": {0: "obtain the stored card and choose a card to remove", 1: "leave"},
@@ -35,7 +36,7 @@ _STATIC: dict[str, dict[int, str]] = {
     "THE_LIBRARY": {0: "choose one card from 20 offered cards"},
     "THE_MAUSOLEUM": {1: "leave"},
     "THE_MOAI_HEAD": {1: "give up Golden Idol and gain 333 gold", 2: "leave"},
-    "THE_WOMAN_IN_BLUE": {0: "receive one random potion (upstream simulator does not charge gold)", 1: "receive two random potions (upstream simulator does not charge gold)", 2: "receive three random potions (upstream simulator does not charge gold)"},
+    "THE_WOMAN_IN_BLUE": {0: "pay 20 gold for one random potion", 1: "pay 30 gold for two random potions", 2: "pay 40 gold for three random potions"},
     "TOMB_OF_LORD_RED_MASK": {0: "gain 222 gold", 1: "give up all gold and gain Red Mask", 2: "leave"},
     "TRANSMORGRIFIER": {0: "transform a card", 1: "leave"},
     "UPGRADE_SHRINE": {0: "upgrade a card", 1: "leave"},
@@ -69,7 +70,7 @@ def describe_event_action(event: dict[str, Any], index: int, *, ascension: int,
     elif name == "DESIGNER_IN_SPIRE":
         description = {
             0: f"pay {50 if unfavorable else 40} gold to upgrade a card",
-            1: "upgrade two random cards (upstream simulator does not charge gold)",
+            1: f"pay {50 if unfavorable else 40} gold to upgrade two random cards",
             2: f"pay {75 if unfavorable else 60} gold to remove a card",
             3: f"pay {75 if unfavorable else 60} gold to transform two random cards",
             4: f"pay {110 if unfavorable else 90} gold to remove a card, then upgrade a random card",
@@ -93,8 +94,8 @@ def describe_event_action(event: dict[str, Any], index: int, *, ascension: int,
         description = {0: f"lose {hp0} HP and gain 90 gold", 1: f"lose {hp1} HP and gain a random uncommon colorless card", 2: f"lose {hp2} HP and gain a random potion", 3: "leave; lose 6 HP"}.get(index)
     elif name == "THE_SSSSSERPENT" and index == 0:
         description = f"gain {150 if unfavorable else 175} gold and the Doubt curse"
-    elif name in {"HYPNOTIZING_COLORED_MUSHROOMS", "MYSTERIOUS_SPHERE"} and index == 1:
-        description = f"gain {50 if unfavorable else 99} gold and leave (implemented simulator effect)"
+    elif name == "HYPNOTIZING_COLORED_MUSHROOMS" and index == 1:
+        description = f"heal {max_hp // 4} HP and gain the Parasite curse"
     elif name == "THE_NEST" and index == 0:
         description = f"gain {50 if unfavorable else 99} gold"
     elif name == "NLOTH" and index in {0, 1}:
@@ -109,7 +110,8 @@ def describe_event_action(event: dict[str, Any], index: int, *, ascension: int,
     elif name == "THE_LIBRARY" and index == 1:
         description = f"heal {hp0} HP"
     elif name == "THE_MAUSOLEUM" and index == 0:
-        description = f"open the coffin; {100 if unfavorable else 50}% chance of Writhe (upstream simulator does not grant a relic)"
+        description = ("open the coffin; gain a random relic and the Writhe curse" if unfavorable
+                       else "open the coffin; gain a random relic and 50% chance of the Writhe curse")
     elif name == "THE_MOAI_HEAD" and index == 0:
         description = f"lose {hp0} maximum HP and heal to full"
     elif name == "THE_WOMAN_IN_BLUE" and index == 3:

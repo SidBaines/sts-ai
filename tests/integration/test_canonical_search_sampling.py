@@ -1,23 +1,14 @@
 """Actual native API regression on public-equivalent hidden-pile variants."""
-import importlib.util
-import os
-from pathlib import Path
 import unittest
 from sts_env._backend.lightspeed import LightspeedHybridEnv
 from tests.integration.test_public_combat_teacher import _advance_to_first_combat
-from tests.support import requires_simulator
+from tests.support import load_search_test_fixture, requires_simulator
 
 @requires_simulator
 class CanonicalSearchSamplingTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        path=os.environ.get('STS_SEARCH_TEST_FIXTURE')
-        if not path:
-            if os.environ.get('STS_REQUIRE_SEARCH_TEST_FIXTURE')=='1':
-                raise RuntimeError('Canonical search regression fixture is required')
-            raise unittest.SkipTest('Build the test-only hidden-pile fixture for this regression')
-        spec=importlib.util.spec_from_file_location('sts_hidden_pile_fixture',path)
-        cls.fixture=importlib.util.module_from_spec(spec);spec.loader.exec_module(cls.fixture)
+        cls.fixture = load_search_test_fixture()
 
     def public(self,bc):
         return {'text':bc.describe_state(public_state=True,include_card_type=True),

@@ -13,7 +13,11 @@ import re
 from typing import Any
 
 from sts_env._backend.schemas import LegalAction
-from sts_env._backend.turn_math import HandAttack, TurnMathInputs
+from sts_env._backend.turn_math import (
+    HAND_DEPENDENT_ATTACKS,
+    HandAttack,
+    TurnMathInputs,
+)
 from sts_env._backend.turn_math_v4 import turn_math_lines
 
 
@@ -119,9 +123,12 @@ class CombatPublicV4Env:
                 if str(card.get("type")) != "Attack":
                     continue
                 name = str(card.get("name", ""))
+                if name in HAND_DEPENDENT_ATTACKS:
+                    continue
                 cost_for_turn = int(card.get("cost_for_turn", -1))
                 cost_label = "X" if cost_for_turn < 0 else str(cost_for_turn)
-                if description.startswith(f"play {name} [Attack] (cost {cost_label})"):
+                prefix = f"play {name} [Attack] (cost {cost_label}"
+                if re.match(re.escape(prefix) + r"[,)]", description):
                     key = (name, cost_for_turn)
                     shown_damage[key] = max(shown_damage.get(key, 0), int(match.group(1)))
         grouped: Counter[tuple[str, int, bool]] = Counter()

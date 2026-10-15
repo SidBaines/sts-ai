@@ -54,7 +54,7 @@ STATUS_DB: dict[str, tuple[str, str]] = {
     "Poison": ("at the start of its turn the creature loses that much HP, then Poison drops by 1", "per_turn"),
     "Ritual": ("at the end of its turn, gains that much Strength", "per_turn"),
     "Metallicize": ("gain that much Block at the end of each turn", "per_turn"),
-    "Plated Armor": ("gain that much Block at end of turn; drops by 1 when you take unblocked attack damage", "per_turn"),
+    "Plated Armor": ("its holder gains that much Block at end of turn; drops by 1 when its holder takes unblocked attack damage", "per_turn"),
     "Regen": ("heal that much HP at the end of each turn", "per_turn"),
     "Thorns": ("when attacked, deal that much damage back to the attacker", "per_turn"),
     "Flame Barrier": ("this turn, deal that much damage to any enemy that attacks you", "per_turn"),
@@ -78,13 +78,13 @@ STATUS_DB: dict[str, tuple[str, str]] = {
     "Enrage": ("whenever you play a Skill, this enemy gains that much Strength", "magnitude"),
     "Curl Up": ("the first time this enemy takes attack damage, it gains that much Block (once)", "magnitude"),
     "Malleable": ("each time this enemy takes attack damage it gains that much Block, and the amount then grows by 1 (resets at end of round)", "magnitude"),
-    "Mode Shift": ("after this enemy takes that much more attack damage it shifts to a defensive stance (gains Block, stops attacking); the number is the remaining threshold", "magnitude"),
-    "Angry": ("each time this enemy takes attack damage, it gains that much Strength", "magnitude"),
-    "Flight": ("this enemy's attack damage is halved; each hit you land drops this by 1, and at 0 it is briefly stunned; the number is the stacks remaining", "magnitude"),
+    "Mode Shift": ("after this enemy loses that much more HP it gains 20 Block and switches to Defensive Mode (gains Sharp Hide, then attacks with Roll Attack and Twin Slam before returning to its normal pattern); the number is the remaining threshold", "magnitude"),
+    "Angry": ("each time an attack deals unblocked damage to this enemy, it gains that much Strength", "magnitude"),
+    "Flight": ("this enemy takes 50% less damage from attacks (already reflected in the shown deal N); unblocked attack hits remove 1 stack; at 0 its intent becomes Stunned; while stacks remain, they reset to 3 (4 at ascension 17+) at the start of its turn", "magnitude"),
     "Sharp Hide": ("whenever you play an Attack, you take that much damage", "magnitude"),
     "Asleep": ("this enemy is asleep and will not attack until it wakes (after a few turns, or when it takes damage)", "magnitude"),
     "Spore Cloud": ("when this enemy dies, you gain that much Vulnerable", "magnitude"),
-    "Time Warp": ("after you play 12 cards this turn, this enemy takes an extra turn and gains Strength; the number counts cards played", "magnitude"),
+    "Time Warp": ("every 12 cards you play, your turn immediately ends and this enemy gains 2 Strength; the counter carries across turns and resets to 0 when triggered; the number counts cards played", "magnitude"),
     "Painful Stabs": ("whenever this enemy deals unblocked attack damage, it adds a Wound to your discard pile", "magnitude"),
     "Block Return": ("a simulator status counter reserved for returning Block; current combat logic does not otherwise consume it", "magnitude"),
     "Choked": ("a one-turn enemy status represented by the simulator; current combat logic clears it at the enemy's next turn without applying another effect", "countdown"),
@@ -93,11 +93,11 @@ STATUS_DB: dict[str, tuple[str, str]] = {
     "Mark": ("a Pressure Points damage marker; its number is the accumulated mark", "magnitude"),
     "Shackled": ("temporary Strength loss that is restored by this amount at the end of the enemy's turn", "magnitude"),
     "Beat Of Death": ("whenever you play a card, you take that much damage", "magnitude"),
-    "Curiosity": ("marks the Awakened One's Power-play Strength mechanic; the current simulator records the amount but does not apply the trigger", "magnitude"),
+    "Curiosity": ("whenever you play a Power card, this enemy gains that much Strength", "magnitude"),
     "Fading": ("this enemy dies when this many remaining attack turns count down to zero", "countdown"),
     "Generic Strength Up": ("at the end of each round, this enemy gains that much Strength", "per_turn"),
     "Slow": ("this turn, each card already played makes this enemy take 10% more attack damage; the number is cards played into Slow", "magnitude"),
-    "Thievery": ("when this enemy's stealing attack lands, it steals that much gold", "magnitude"),
+    "Thievery": ("when this enemy uses a stealing attack, it steals up to that much gold even if the attack is fully blocked", "magnitude"),
     "Invincible": ("caps total HP loss this enemy can take this turn to the displayed remaining amount; it refreshes next turn", "magnitude"),
     "Reactive": ("after taking unblocked attack damage, this enemy rerolls its intent; the counter tracks queued rerolls", "magnitude"),
     "Minion": ("this summoned enemy can disappear when its leader dies and is treated as a minion for kill rewards", "magnitude"),
@@ -353,7 +353,7 @@ INTENT_DB: dict[str, str] = {
     "MUGGER_ESCAPE": "escapes from combat (leaves with any stolen gold)",
     # Byrd
     "BYRD_CAW": "buffs itself: gains 1 Strength",
-    "BYRD_FLY": "gains Flight; unblocked damage reduces Flight, and at 0 Flight it becomes stunned",
+    "BYRD_FLY": "buffs itself: gains 3 Flight (4 at ascension 17+), halving attack damage it takes; each hit dealing unblocked attack damage removes 1 stack, and at 0 its intent becomes Stunned",
     "BYRD_STUNNED": "stunned; does nothing this turn",
     # Centurion and Mystic
     "CENTURION_DEFEND": "grants 15 Block to the Mystic if it is alive",
@@ -622,7 +622,7 @@ _ENEMY_LINE_RE = re.compile(r"^\s*\[\d+\]\s+\S.*\bHP\s+\d+/\d+")
 _INTENT_RE = re.compile(r"\bintent\s+(\S+)")
 _CARD_TYPE_TAG = r"(?:\s+\[(?:Attack|Skill|Power|Curse|Status)\])?"
 _HAND_CARD_RE = re.compile(
-    rf"^\s*\[\d+\]\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+\S+?\)\s*$"
+    rf"^\s*\[\d+\]\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+[^)]*\)\s*$"
 )
 _PUBLIC_PILE_LINE_RE = re.compile(
     r"^(?:Draw|Discard|Exhaust) pile contents \(unordered\):\s*(.*)$"
@@ -701,6 +701,22 @@ def _hand_card_names(state_text: str) -> list[str]:
             if name not in names:
                 names.append(name)
     return names
+
+
+def _card_flag_definitions(state_text: str, legal_actions: list[dict]) -> list[str]:
+    """Explain flags shown in hand cards or current play-action cost blocks."""
+    labels = [line for line in state_text.splitlines() if _HAND_CARD_RE.match(line)]
+    labels.extend(str(action.get("description", "")) for action in legal_actions
+                  if str(action.get("description", "")).startswith("play "))
+    flags: set[str] = set()
+    for label in labels:
+        match = re.search(r"\(cost\s+([^)]*)\)", label)
+        if match:
+            flags.update(part.strip() for part in match.group(1).split(",")[1:])
+    return [f"{name}: {effect}" for name, effect in (
+        ("free once", "playing this card costs no energy this time"),
+        ("retained", "this card stays in hand at end of turn"),
+    ) if name in flags]
 
 
 def _public_pile_card_names(state_text: str) -> list[str]:
@@ -886,6 +902,7 @@ def _build_key(
     card_names: list[str],
     relic_names: list[str] = (),
     potion_names: list[str] = (),
+    card_flag_definitions: Optional[list[str]] = None,
 ) -> str:
     lines: list[str] = []
     for name in sorted(status_names):
@@ -904,6 +921,7 @@ def _build_key(
         definition = potion_definition(name)
         if definition:
             lines.append(f"  {definition}")
+    lines.extend(f"  {definition}" for definition in card_flag_definitions or ())
     if not lines:
         return ""
     return _KEY_HEADER + "\n" + "\n".join(lines)
@@ -927,9 +945,14 @@ def _build_key(
 # tradeoff, both its cost and its reward are stated -- so the description adds no
 # strategic steer (pathing is itself a measured risk proxy; the base prompt must
 # present facts only).
+# Must match the native map-action suffix in patches/sts_lightspeed_python_api.patch;
+# tests/integration/test_burning_elite.py pins the two together.
+BURNING_ELITE_MARKER = "(burning: Emerald Key)"
+
 _ROOM_DISPLAY = {
     "MONSTER": "Monster",
     "ELITE": "Elite",
+    "ELITE_BURNING": f"Elite {BURNING_ELITE_MARKER}",
     "REST": "Rest site",
     "SHOP": "Shop",
     "TREASURE": "Treasure",
@@ -938,10 +961,13 @@ _ROOM_DISPLAY = {
     "BOSS_TREASURE": "Treasure",
 }
 # Canonical ordering for the reachable-room counts, for deterministic output.
-_ROOM_ORDER = ["ELITE", "MONSTER", "REST", "SHOP", "TREASURE", "EVENT"]
+_ROOM_ORDER = ["ELITE", "ELITE_BURNING", "MONSTER", "REST", "SHOP", "TREASURE", "EVENT"]
 _ROOM_LEGEND = (
     "Room types -- Monster: a normal combat; Elite: a harder combat that always "
-    "drops a relic; Rest site: a campfire (rest to heal, or upgrade a card); "
+    f"drops a relic; Elite {BURNING_ELITE_MARKER}: an elite whose enemies start "
+    "with one random extra buff (Strength, +25% max HP, Metallicize or Regen); "
+    "winning it also offers the Emerald Key; "
+    "Rest site: a campfire (rest to heal, or upgrade a card); "
     "Shop: spend gold on cards/relics/potions; Treasure: a chest with a relic; "
     "Unknown (?): contents are revealed only when you enter."
 )
@@ -987,12 +1013,14 @@ def _format_counts(counts: dict[str, int]) -> str:
 def _render_map(map_graph: dict, legal_actions: list[dict]) -> str:
     """Render the act map as a neutral per-choice path summary, or '' if there is
     nothing to show. `map_graph` is GameContext.map_graph()'s structured DAG
-    ({cur_y, nodes:[{x, y, room, edges}]})."""
+    ({cur_y, burning_elite: {x, y} or None,
+    nodes:[{x, y, room, edges, burning_elite: bool}]}). Burning nodes render as
+    Elite (burning: Emerald Key), including in downstream room counts."""
     rooms: dict[tuple[int, int], str] = {}
     edges: dict[tuple[int, int], list[int]] = {}
     for node in map_graph.get("nodes") or ():
         key = (int(node["x"]), int(node["y"]))
-        rooms[key] = str(node["room"])
+        rooms[key] = "ELITE_BURNING" if node.get("burning_elite") else str(node["room"])
         edges[key] = [int(e) for e in node.get("edges", ())]
 
     cur_y = int(map_graph.get("cur_y", -1))
@@ -1080,6 +1108,7 @@ def augment(
             _combat_card_names(state_text),
             relic_names=_relic_names(state_text),
             potion_names=_potion_names(state_text),
+            card_flag_definitions=_card_flag_definitions(state_text, legal_actions),
         )
         return body + notes + key
     map_block = _render_map(map_graph, legal_actions) if map_graph else ""

@@ -7,7 +7,12 @@ from typing import Any
 
 from sts_env._backend.lightspeed_import import import_lightspeed, native_metadata
 from sts_env._backend.schemas import LegalAction
-from sts_env._backend.turn_math import HandAttack, TurnMathInputs, turn_math_lines
+from sts_env._backend.turn_math import (
+    HAND_DEPENDENT_ATTACKS,
+    HandAttack,
+    TurnMathInputs,
+    turn_math_lines,
+)
 
 
 _PUBLIC_COMBAT_OBSERVATIONS = (
@@ -175,12 +180,14 @@ class LightspeedHybridEnv:
         equivalent actions) produce the same description and the same resulting
         state, so listing both only inflates and confuses the menu (~36% of combat
         decisions had a duplicate). The chosen display index maps to the FIRST raw
-        action carrying that description. This is safe because same-named enemy
-        targets are disambiguated in the action text (``-> NAME [enemy i]``), so an
-        identical description really does mean an interchangeable action.
+        action carrying that description. Same-named enemy targets are
+        disambiguated in the action text (``-> NAME [enemy i]``), and
+        free-once/retained state is part of each card's description. Copies
+        differing only in base cost (with the same cost-for-turn) still render
+        identically and merge; this is a rare, known limitation.
 
-        Out of combat the list stays 1:1 (indices and order unchanged), so the
-        out-of-combat trace shape and reproducibility are untouched.
+        Out of combat the list stays 1:1 with the raw native menu, including
+        potion choices appended after the ordinary screen actions.
         """
         raw = self.raw_actions()
         event = dict(self.gc.public_event()) if self.bc is None and hasattr(self.gc, "public_event") else {}
@@ -243,6 +250,9 @@ class LightspeedHybridEnv:
 
     def describe_state(self) -> str:
         if self.bc is not None:
+            # Combat text reads HP/max HP, potions and (public modes) relic
+            # counters from BattleContext and shows no gold. GameContext's
+            # header is a battle-entry snapshot, so it is not used here.
             public = self.combat_observation in _PUBLIC_COMBAT_OBSERVATIONS
             state = str(
                 self.bc.describe_state(
@@ -293,10 +303,12 @@ class LightspeedHybridEnv:
                 if str(card.get("type")) != "Attack":
                     continue
                 name = str(card.get("name", ""))
+                if name in HAND_DEPENDENT_ATTACKS:
+                    continue
                 cost_for_turn = int(card.get("cost_for_turn", -1))
                 cost_label = "X" if cost_for_turn < 0 else str(cost_for_turn)
-                prefix = f"play {name} [Attack] (cost {cost_label})"
-                if description.startswith(prefix):
+                prefix = f"play {name} [Attack] (cost {cost_label}"
+                if re.match(re.escape(prefix) + r"[,)]", description):
                     key = (name, cost_for_turn)
                     shown_damage[key] = max(
                         shown_damage.get(key, 0),
@@ -426,9 +438,10 @@ class LightspeedHybridEnv:
         )
 
     def map_graph(self) -> dict[str, Any] | None:
-        """Structured act map for the current MAP_SCREEN decision, else None.
+        """Structured act map during out-of-combat decisions, else None.
 
-        Returns ``{"cur_y": int, "nodes": [{"x", "y", "room", "edges"}]}`` from the
+        Returns ``{cur_y, burning_elite: {x, y} | None,
+        nodes: [{x, y, room, burning_elite: bool, edges}]}`` from the
         binding (the DAG `sts_env._backend.glossary` renders into a neutral per-choice path
         summary). The visible map persists across all out-of-combat decisions.
         """
@@ -465,17 +478,22 @@ class LightspeedHybridEnv:
         return selected
 
     def summary(self) -> dict[str, Any]:
+        player = dict(self.bc.public_player()) if self.bc is not None else None
         data: dict[str, Any] = {
             "world_seed": self.world_seed,
             "ascension": self.ascension,
+            # Progress and run outcome change only at battle boundaries, when
+            # exit_battle writes back to GameContext. Resources can change at any
+            # combat decision (damage/healing, Feed/Fruit Juice, gold theft/gain).
             "act": int(self.gc.act),
             "floor": int(self.gc.floor_num),
             "screen_state": str(self.gc.screen_state),
             "room": str(self.gc.cur_room),
             "outcome": str(self.gc.outcome),
-            "cur_hp": int(self.gc.cur_hp),
-            "max_hp": int(self.gc.max_hp),
-            "gold": int(self.gc.gold),
+            "cur_hp": int(player["cur_hp"] if player is not None else self.gc.cur_hp),
+            "max_hp": int(player["max_hp"] if player is not None else self.gc.max_hp),
+            "gold": int(player["gold"] if player is not None else self.gc.gold),
+            "keys": dict(self.gc.keys()),
             "phase": self.phase(),
             "combat_observation": self.combat_observation,
             # Latched across the run (see __init__); also OR in the live battle so an
@@ -508,7 +526,7 @@ class LightspeedHybridEnv:
                 data["combat"].update(
                     {
                         "recent_actions": list(self._combat_recent_actions),
-                        "player": dict(self.bc.public_player()),
+                        "player": player,
                         "cards": dict(
                             self.bc.public_cards(
                                 include_card_type=(

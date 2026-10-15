@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 import unittest
 
-from sts_env._backend import glossary
+from sts_env._backend import glossary, glossary_v4, glossary_v5
 from sts_env._backend.glossary import (
     CARD_DB,
     INTENT_DB,
@@ -42,6 +42,14 @@ class StatusDefinitionTest(unittest.TestCase):
     def test_unknown_status_is_none(self):
         self.assertIsNone(status_definition("Nonexistent"))
 
+    def test_plated_armor_describes_the_holder(self):
+        definition = status_definition("Plated Armor")
+        for phrase in ("holder gains", "Block", "end of turn", "drops by 1",
+                       "holder takes unblocked attack damage"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, definition)
+        self.assertNotIn("when you take", definition)
+
 
 class CardDefinitionTest(unittest.TestCase):
     def test_lookup_and_upgrade_marker(self):
@@ -58,6 +66,21 @@ class CardDefinitionTest(unittest.TestCase):
 class AugmentCombatTest(unittest.TestCase):
     def setUp(self):
         self.out = augment(COMBAT_TEXT, [], "combat")
+
+    def test_hand_flags_preserve_card_names_and_definitions(self):
+        for typed in (False, True):
+            for suffix in ("", ", free once", ", retained", ", free once, retained"):
+                with self.subTest(typed=typed, suffix=suffix):
+                    tag = " [Attack]" if typed else ""
+                    text = (
+                        f"Hand:\n  [0] Strike{tag} (cost 1{suffix})\n"
+                        "  [1] Bash (cost 2)\nPiles: draw 0, discard 0, exhaust 0\nAscension: 0"
+                    )
+                    self.assertEqual(glossary._hand_card_names(text), ["Strike", "Bash"])
+                    for renderer in (glossary, glossary_v4, glossary_v5):
+                        rendered = renderer.augment(text, [], "combat")
+                        self.assertIn("Strike: ", rendered)
+                        self.assertIn("Bash: ", rendered)
 
     def test_non_attacking_intent_labelled_with_effect(self):
         # A known non-attacking move now spells out its effect (not bare "no attack").
@@ -231,6 +254,51 @@ class AugmentCombatTest(unittest.TestCase):
         self.assertNotIn("Mysterycard:", out)
 
 
+class CardFlagKeyTest(unittest.TestCase):
+    def test_only_visible_hand_and_play_flags_are_defined_once(self):
+        for renderer in (glossary, glossary_v4, glossary_v5):
+            for typed in (False, True):
+                for source in ("hand", "action", "both"):
+                    for flags in ((), ("free once",), ("retained",), ("free once", "retained")):
+                        with self.subTest(renderer=renderer.__name__, typed=typed,
+                                          source=source, flags=flags):
+                            tag = " [Attack]" if typed else ""
+                            suffix = "".join(f", {flag}" for flag in flags)
+                            hand_suffix = suffix if source in ("hand", "both") else ""
+                            text = (
+                                f"Hand:\n  [0] Strike{tag} (cost 1{hand_suffix})\n"
+                                "Piles: draw 0, discard 0, exhaust 0\nAscension: 0\n"
+                            )
+                            actions = [] if source == "hand" else [{
+                                "description": f"play Strike{tag} (cost 1{suffix}) -> FOE (deal 6)",
+                            }]
+                            key = renderer.augment(text, actions, "combat").split("-- KEY", 1)[1]
+                            for flag, definition in (
+                                ("free once", "free once: playing this card costs no energy this time"),
+                                ("retained", "retained: this card stays in hand at end of turn"),
+                            ):
+                                self.assertEqual(key.count(definition), int(flag in flags))
+
+    def test_other_text_and_noncombat_do_not_add_flag_definitions(self):
+        text = (
+            "Hand:\n  [0] Strike [Attack] (cost 1)\n"
+            "Piles: draw 1, discard 0, exhaust 0\n"
+            "Draw pile contents (unordered): Strike [Attack] (cost 1, free once, retained)\n"
+            "Recent actions this turn: play Strike (cost 1, free once, retained)\n"
+            "Ascension: 0\n"
+        )
+        for renderer in (glossary, glossary_v4, glossary_v5):
+            for phase in ("combat", "out_of_combat"):
+                with self.subTest(renderer=renderer.__name__, phase=phase):
+                    actions = [{"description": "take card Strike [Attack, Common]"}]
+                    if phase != "combat":
+                        actions.append({"description": "play Strike (cost 1, free once, retained)"})
+                    output = renderer.augment(text, actions, phase)
+                    key = output.split("-- KEY", 1)[1]
+                    self.assertNotIn("free once:", key)
+                    self.assertNotIn("retained:", key)
+
+
 class EnemyPowerKeyTest(unittest.TestCase):
     """Tier-1 Fix 2: persistent enemy powers now emitted on the enemy line by the
     binding (Enrage, Metallicize, ...) get their KEY definition automatically via
@@ -238,6 +306,72 @@ class EnemyPowerKeyTest(unittest.TestCase):
 
     def _key(self, out: str) -> str:
         return out[out.index("-- KEY"):] if "-- KEY" in out else ""
+
+    def test_flight_damage_direction_stack_loss_and_refresh(self):
+        definition = status_definition("Flight")
+        for phrase in (
+            "takes 50% less damage from attacks",
+            "(already reflected in the shown deal N)",
+            "unblocked attack hits", "remove 1 stack", "at 0", "Stunned",
+            "while stacks remain", "reset to 3", "4 at ascension 17+",
+            "start of its turn",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, definition)
+        for phrase in (
+            "gains 3 Flight", "4 at ascension 17+",
+            "halving attack damage it takes", "unblocked attack damage",
+            "removes 1 stack", "at 0", "Stunned",
+        ):
+            with self.subTest(intent_phrase=phrase):
+                self.assertIn(phrase, intent_effect("BYRD_FLY"))
+
+    def test_enemy_power_definitions_state_simulator_rules(self):
+        expected = {
+            "Mode Shift": ("HP", "20 Block", "Defensive Mode", "Sharp Hide",
+                           "Roll Attack", "Twin Slam", "normal pattern", "remaining threshold"),
+            "Angry": ("attack deals unblocked damage", "gains that much Strength"),
+            "Curiosity": ("play a Power card", "this enemy gains that much Strength"),
+            "Time Warp": ("12 cards", "turn immediately ends", "2 Strength",
+                          "carries across turns", "resets to 0"),
+            "Thievery": ("uses a stealing attack", "steals up to that much gold",
+                         "fully blocked"),
+        }
+        for name, phrases in expected.items():
+            for phrase in phrases:
+                with self.subTest(name=name, phrase=phrase):
+                    self.assertIn(phrase, status_definition(name))
+        self.assertNotIn("stops attacking", status_definition("Mode Shift"))
+        self.assertNotIn("still attacks", status_definition("Mode Shift"))
+        self.assertNotIn("fully blocked", status_definition("Angry"))
+        self.assertNotIn("deals 0 damage", status_definition("Angry"))
+        self.assertNotIn("does not apply the trigger", status_definition("Curiosity"))
+        self.assertNotIn("12 cards this turn", status_definition("Time Warp"))
+        self.assertNotIn("takes an extra turn", status_definition("Time Warp"))
+
+    def test_enemy_power_definitions_reach_all_renderers(self):
+        text = (
+            "Enemies:\n"
+            "  [0] BYRD HP 25/25, block 0, intent BYRD_FLY\n"
+            "  [1] BYRD HP 25/25, block 0, intent BYRD_CAW, Flight 2\n"
+            "  [2] THE_GUARDIAN HP 50/250, block 0, intent THE_GUARDIAN_CHARGING_UP, Mode Shift 10\n"
+            "  [3] MAD_GREMLIN HP 20/20, block 0, intent MAD_GREMLIN_SCRATCH (deal 4), Angry 1\n"
+            "  [4] TIME_EATER HP 100/456, block 0, intent TIME_EATER_REVERBERATE (deal 7x3), Time Warp 11\n"
+            "  [5] LOOTER HP 40/40, block 0, intent LOOTER_MUG (deal 10), Thievery 15\n"
+            "  [6] AWAKENED_ONE HP 300/300, block 0, intent AWAKENED_ONE_SLASH (deal 20), Curiosity 1\n"
+            "Hand: empty\nPiles: draw 0, discard 0, exhaust 0\nAscension: 0\n"
+        )
+        for renderer in (glossary, glossary_v4, glossary_v5):
+            with self.subTest(renderer=renderer.__name__):
+                out = renderer.augment(text, [], "combat")
+                self.assertIn(intent_effect("BYRD_FLY"), out)
+                key = self._key(out)
+                for name in ("Flight", "Mode Shift", "Angry", "Curiosity", "Time Warp", "Thievery"):
+                    self.assertIn(status_definition(name), key)
+                self.assertNotIn("this enemy's attack damage is halved", out)
+                self.assertNotIn("unblocked damage reduces Flight", out)
+                self.assertNotIn("takes an extra turn", out)
+                self.assertNotIn("stops attacking", out)
 
     def test_enrage_on_enemy_line_is_defined_in_key(self):
         text = (
@@ -407,6 +541,14 @@ class MapRenderTest(unittest.TestCase):
         self.assertIn("Room types --", out)
         self.assertIn("Your choices (match x= to the LEGAL ACTIONS):", out)
 
+    def test_burning_elite_legend_states_cost_and_reward(self):
+        self.assertIn(
+            "Elite (burning: Emerald Key): an elite whose enemies start with one "
+            "random extra buff (Strength, +25% max HP, Metallicize or Regen); "
+            "winning it also offers the Emerald Key;",
+            self._render(),
+        )
+
     def test_per_choice_reachable_composition_differs(self):
         out = self._render()
         x0 = next(ln for ln in out.splitlines() if ln.startswith("  x=0:"))
@@ -450,6 +592,15 @@ class MapRenderTest(unittest.TestCase):
         out = augment(self.STATE, self.ACTIONS, "out_of_combat")
         self.assertNotIn("Your choices (match x=", out)
         self.assertNotIn("\nMap:\n", out)
+
+    def test_burning_elite_is_marked_in_downstream_branch_counts(self):
+        graph = {**self.GRAPH, "nodes": [dict(node) for node in self.GRAPH["nodes"]]}
+        graph["nodes"][2]["burning_elite"] = True
+        out = augment(self.STATE, self.ACTIONS, "out_of_combat", map_graph=graph)
+        x0 = next(line for line in out.splitlines() if line.startswith("  x=0:"))
+        x1 = next(line for line in out.splitlines() if line.startswith("  x=1:"))
+        self.assertIn("you can reach: 1 Elite (burning: Emerald Key), 1 Rest site.", x0)
+        self.assertNotIn("burning", x1)
 
 
 if __name__ == "__main__":

@@ -35,11 +35,9 @@ through a supplied reward function is an adapter choice, not an environment
 default. Event option descriptions are derived from the pinned simulator's actual
 handlers. Common Act 1 events are described, and dynamic visible HP amounts,
 selected cards, and trade offers are public fields. Uncovered options explicitly
-say their effects are unavailable. This release does not claim full event or
-vanilla-game fidelity: for example, upstream Mushrooms and Mysterious Sphere
-alternative choices award gold, Mausoleum does not award a relic, and Woman in
-Blue does not charge for potions. These are simulator behaviours, recorded
-explicitly instead of silently describing different mechanics.
+say their effects are unavailable. Release 0.1.5 fixed the upstream Mushrooms,
+Mysterious Sphere, Mausoleum, Woman in Blue and Designer In-Spire deviations;
+the release does not claim full event or vanilla-game fidelity.
 
 The optional Gymnasium observation has two fields: `features` (15 compact
 numeric features) and `action_mask` (a fixed menu mask). It omits strategic
@@ -92,36 +90,28 @@ research artifacts retain their prior behaviour. New releases record the native
 patch identity and reject incompatible build/replay provenance.
 
 The initial character is Ironclad and Acts 1–3 are the standard scope. Optional
-Act 4 is experimental: key ownership and burning-elite flags are not yet fully
-represented in public observations. Native timeout/error isolation and reported
+Act 4 is experimental. Run state reports key ownership and the map marks each
+act's burning elite. Native timeout/error isolation and reported
 undefined-behaviour flags do not certify all reachable game states as free of
 upstream undefined-memory bugs. Unflagged corrupted states may still evade
 detection.
 
-Known open faults as of 0.1.4, in addition to the event deviations above:
+Known open faults and limits as of 0.1.5 (see [the 0.1.5 record](release_v0.1.5.md)
+for what was fixed):
 
-- The burning elite is not marked in the public map observation, although the
-  game shows it on the map. Each act has one, in Acts 1-3 regardless of
-  `max_act`: defeating it offers the Emerald Key, and it starts with one random
-  buff from the map RNG (Strength act, +25% max HP, Metallicize 2*act+2 or
-  Regen 2*act+1; `MonsterGroup::applyEmeraldEliteBuff`). The buff itself is
-  visible in the enemy's powers or HP. Earlier research mistook these buffs (a
-  Gremlin Nob with Metallicize 4 or Regen 3) for memory corruption, called
-  "phantom powers"; replaying the recorded worlds shows they are this mechanic.
-- Combat menus de-duplicate actions by description, so a free-to-play-once card
-  merges with an ordinary copy of the same card and cannot be chosen separately.
-- Out-of-combat potion use and discard are missing from legal menus, and native
-  out-of-combat potion execution can fall through into the current screen's
-  choice.
-- During combat, the top-level `cur_hp` and `gold` fields hold run values from
-  battle entry; read live values from the combat player fields.
-- Computed attack damage is annotated for area attacks only when one enemy is
-  alive, and never for X-cost attacks or Fiend Fire.
-- The glossary describes Flight as halving the enemy's attack damage; in the
-  game it halves damage the enemy takes.
-
-Candidate fixes for the menu de-duplication, live combat values and
-out-of-combat potions exist, unreleased, on the `archive/nonllm/critique` tag.
+- Combat menus still merge copies of a card that differ only in base cost (same
+  cost for this turn). This is rare.
+- Out-of-combat potion descriptions state nominal amounts (as rest sites do),
+  ignoring Mark of the Bloom. Toy Ornithopter's potion heal is not implemented.
+- The simulator's monster Intangible also caps potion and other non-attack
+  damage at 1, and its enemy Thorns triggers only on unblocked hits; both are
+  unverified against the game. Enemy Poison and Lock On (Silent and Defect
+  mechanics) are unimplemented and unreachable for Ironclad.
+- Angry follows our reading of the game (attack damage that gets through Block),
+  not a check against decompiled source.
+- If the Mausoleum's relic is Ceramic Fish and it also adds Writhe, the game
+  gives 9 gold and the simulator does not.
+- Key ownership is in structured state only, not in the observation text.
 
 The clean interface additionally exposes the complete visible OOC map routes
 and individual card-reward skip choices. These observation/menu improvements,
@@ -226,3 +216,14 @@ live card instance. Ordinary execution and unsampled search are unchanged, and
 planner; see the [search record](canonical_search_014.md) and
 [release record](release_v0.1.4.md). `scripts/build_test_fixtures.sh` builds
 the test-only native fixture its regression tests need.
+
+## Release 0.1.5: known-fault fixes
+
+Release 0.1.5 fixes the open faults listed for 0.1.4 and further simulator
+divergences found while checking them: free-once/retained card text, live combat
+HP and gold, out-of-combat potion actions and the potion fall-through, the
+burning-elite marker and key ownership, keyed Act 3 wins, complete opt-in damage
+annotations, glossary corrections, five event bugs, and Curiosity, Intangible,
+Lagavulin, Flight and Angry combat logic. The observation label advances to
+`sts_env_public_v3`. See [the release record](release_v0.1.5.md) for the full
+list, migration notes and seed-behaviour changes.
