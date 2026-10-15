@@ -622,7 +622,7 @@ _ENEMY_LINE_RE = re.compile(r"^\s*\[\d+\]\s+\S.*\bHP\s+\d+/\d+")
 _INTENT_RE = re.compile(r"\bintent\s+(\S+)")
 _CARD_TYPE_TAG = r"(?:\s+\[(?:Attack|Skill|Power|Curse|Status)\])?"
 _HAND_CARD_RE = re.compile(
-    rf"^\s*\[\d+\]\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+\S+?\)\s*$"
+    rf"^\s*\[\d+\]\s+(.*?){_CARD_TYPE_TAG}\s+\(cost\s+[^)]*\)\s*$"
 )
 _PUBLIC_PILE_LINE_RE = re.compile(
     r"^(?:Draw|Discard|Exhaust) pile contents \(unordered\):\s*(.*)$"
@@ -701,6 +701,22 @@ def _hand_card_names(state_text: str) -> list[str]:
             if name not in names:
                 names.append(name)
     return names
+
+
+def _card_flag_definitions(state_text: str, legal_actions: list[dict]) -> list[str]:
+    """Explain flags shown in hand cards or current play-action cost blocks."""
+    labels = [line for line in state_text.splitlines() if _HAND_CARD_RE.match(line)]
+    labels.extend(str(action.get("description", "")) for action in legal_actions
+                  if str(action.get("description", "")).startswith("play "))
+    flags: set[str] = set()
+    for label in labels:
+        match = re.search(r"\(cost\s+([^)]*)\)", label)
+        if match:
+            flags.update(part.strip() for part in match.group(1).split(",")[1:])
+    return [f"{name}: {effect}" for name, effect in (
+        ("free once", "playing this card costs no energy this time"),
+        ("retained", "this card stays in hand at end of turn"),
+    ) if name in flags]
 
 
 def _public_pile_card_names(state_text: str) -> list[str]:
@@ -886,6 +902,7 @@ def _build_key(
     card_names: list[str],
     relic_names: list[str] = (),
     potion_names: list[str] = (),
+    card_flag_definitions: Optional[list[str]] = None,
 ) -> str:
     lines: list[str] = []
     for name in sorted(status_names):
@@ -904,6 +921,7 @@ def _build_key(
         definition = potion_definition(name)
         if definition:
             lines.append(f"  {definition}")
+    lines.extend(f"  {definition}" for definition in card_flag_definitions or ())
     if not lines:
         return ""
     return _KEY_HEADER + "\n" + "\n".join(lines)
@@ -1080,6 +1098,7 @@ def augment(
             _combat_card_names(state_text),
             relic_names=_relic_names(state_text),
             potion_names=_potion_names(state_text),
+            card_flag_definitions=_card_flag_definitions(state_text, legal_actions),
         )
         return body + notes + key
     map_block = _render_map(map_graph, legal_actions) if map_graph else ""

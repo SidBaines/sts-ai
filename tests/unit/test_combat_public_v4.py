@@ -3,9 +3,10 @@ from __future__ import annotations
 from copy import deepcopy
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from sts_env._backend.combat_public_v4 import CombatPublicV4Env
+from sts_env._backend.lightspeed import LightspeedHybridEnv
 from sts_env._backend.schemas import LegalAction
 
 
@@ -92,3 +93,38 @@ class CombatPublicV4AdapterTest(unittest.TestCase):
         wrapped = CombatPublicV4Env(base)
         self.assertEqual(wrapped.describe_state(), base.describe_state())
         self.assertEqual(wrapped.summary(), {"phase": "out_of_combat", "combat_observation": "combat_public_v4"})
+
+
+class TurnMathCardFlagsTest(unittest.TestCase):
+    def test_damage_lookup_accepts_flags_and_matches_the_whole_cost(self):
+        for free_once, retained in ((False, False), (True, False), (False, True), (True, True)):
+            for adapter in (None, CombatPublicV4Env):
+                with self.subTest(free_once=free_once, retained=retained, adapter=adapter):
+                    suffix = (", free once" if free_once else "") + (", retained" if retained else "")
+                    descriptions = [
+                        f"play Strike+ [Attack] (cost 1{suffix}) -> FOE (deal 9)",
+                        "play Strike+ [Attack] (cost 10) -> FOE (deal 99)",
+                    ]
+                    bc = SimpleNamespace(
+                        input_state="normal",
+                        public_cards=lambda **kw: {"hand": [{
+                            "name": "Strike+", "type": "Attack", "cost_for_turn": 1,
+                            "free_to_play_once": free_once, "retain": retained,
+                        }]},
+                        public_player=lambda: {"energy": 3},
+                        enemies=lambda: [],
+                        legal_actions=lambda **kw: [
+                            SimpleNamespace(describe=lambda *args, text=text, **kw: text)
+                            for text in descriptions
+                        ],
+                    )
+                    base = object.__new__(LightspeedHybridEnv)
+                    base.bc = bc
+                    base.combat_observation = "combat_public_v3"
+                    base.sts = SimpleNamespace(InputState=SimpleNamespace(PLAYER_NORMAL="normal"))
+                    env = base if adapter is None else adapter(base)
+                    module = "lightspeed" if adapter is None else "combat_public_v4"
+                    with patch(f"sts_env._backend.{module}.turn_math_lines", return_value=[]) as render:
+                        env._turn_math_lines()
+                    inputs = render.call_args.args[0]
+                    self.assertEqual(inputs.hand_attacks, [("Strike+", 0 if free_once else 1, 9, 1)])

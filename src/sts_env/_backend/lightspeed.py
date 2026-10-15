@@ -175,9 +175,11 @@ class LightspeedHybridEnv:
         equivalent actions) produce the same description and the same resulting
         state, so listing both only inflates and confuses the menu (~36% of combat
         decisions had a duplicate). The chosen display index maps to the FIRST raw
-        action carrying that description. This is safe because same-named enemy
-        targets are disambiguated in the action text (``-> NAME [enemy i]``), so an
-        identical description really does mean an interchangeable action.
+        action carrying that description. Same-named enemy targets are
+        disambiguated in the action text (``-> NAME [enemy i]``), and
+        free-once/retained state is part of each card's description. Copies
+        differing only in base cost (with the same cost-for-turn) still render
+        identically and merge; this is a rare, known limitation.
 
         Out of combat the list stays 1:1 (indices and order unchanged), so the
         out-of-combat trace shape and reproducibility are untouched.
@@ -295,8 +297,8 @@ class LightspeedHybridEnv:
                 name = str(card.get("name", ""))
                 cost_for_turn = int(card.get("cost_for_turn", -1))
                 cost_label = "X" if cost_for_turn < 0 else str(cost_for_turn)
-                prefix = f"play {name} [Attack] (cost {cost_label})"
-                if description.startswith(prefix):
+                prefix = f"play {name} [Attack] (cost {cost_label}"
+                if re.match(re.escape(prefix) + r"[,)]", description):
                     key = (name, cost_for_turn)
                     shown_damage[key] = max(
                         shown_damage.get(key, 0),

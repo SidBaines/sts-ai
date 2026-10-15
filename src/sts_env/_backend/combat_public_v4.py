@@ -121,7 +121,8 @@ class CombatPublicV4Env:
                 name = str(card.get("name", ""))
                 cost_for_turn = int(card.get("cost_for_turn", -1))
                 cost_label = "X" if cost_for_turn < 0 else str(cost_for_turn)
-                if description.startswith(f"play {name} [Attack] (cost {cost_label})"):
+                prefix = f"play {name} [Attack] (cost {cost_label}"
+                if re.match(re.escape(prefix) + r"[,)]", description):
                     key = (name, cost_for_turn)
                     shown_damage[key] = max(shown_damage.get(key, 0), int(match.group(1)))
         grouped: Counter[tuple[str, int, bool]] = Counter()

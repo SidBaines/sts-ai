@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Build the test-only native fixture used by
-# tests/integration/test_canonical_search_sampling.py. It creates scratch
-# BattleContext copies with reordered hidden piles; it is never installed as an
+# tests/integration/test_canonical_search_sampling.py and
+# tests/integration/test_combat_card_flags.py. It creates scratch BattleContext
+# copies with reordered hidden piles or hand flags; it is never installed as an
 # environment or policy API. Run scripts/build_lightspeed.sh first, so the
 # source tree holds the patched headers. Prints the fixture path; export it as
 # STS_SEARCH_TEST_FIXTURE (and STS_REQUIRE_SEARCH_TEST_FIXTURE=1 to fail

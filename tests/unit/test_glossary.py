@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 import unittest
 
-from sts_env._backend import glossary
+from sts_env._backend import glossary, glossary_v4, glossary_v5
 from sts_env._backend.glossary import (
     CARD_DB,
     INTENT_DB,
@@ -58,6 +58,21 @@ class CardDefinitionTest(unittest.TestCase):
 class AugmentCombatTest(unittest.TestCase):
     def setUp(self):
         self.out = augment(COMBAT_TEXT, [], "combat")
+
+    def test_hand_flags_preserve_card_names_and_definitions(self):
+        for typed in (False, True):
+            for suffix in ("", ", free once", ", retained", ", free once, retained"):
+                with self.subTest(typed=typed, suffix=suffix):
+                    tag = " [Attack]" if typed else ""
+                    text = (
+                        f"Hand:\n  [0] Strike{tag} (cost 1{suffix})\n"
+                        "  [1] Bash (cost 2)\nPiles: draw 0, discard 0, exhaust 0\nAscension: 0"
+                    )
+                    self.assertEqual(glossary._hand_card_names(text), ["Strike", "Bash"])
+                    for renderer in (glossary, glossary_v4, glossary_v5):
+                        rendered = renderer.augment(text, [], "combat")
+                        self.assertIn("Strike: ", rendered)
+                        self.assertIn("Bash: ", rendered)
 
     def test_non_attacking_intent_labelled_with_effect(self):
         # A known non-attacking move now spells out its effect (not bare "no attack").
@@ -229,6 +244,51 @@ class AugmentCombatTest(unittest.TestCase):
         self.assertIn("intent FOE_GLARE (no attack)", out)
         self.assertNotIn("Bogusbuff", out[out.index("-- KEY"):] if "-- KEY" in out else "")
         self.assertNotIn("Mysterycard:", out)
+
+
+class CardFlagKeyTest(unittest.TestCase):
+    def test_only_visible_hand_and_play_flags_are_defined_once(self):
+        for renderer in (glossary, glossary_v4, glossary_v5):
+            for typed in (False, True):
+                for source in ("hand", "action", "both"):
+                    for flags in ((), ("free once",), ("retained",), ("free once", "retained")):
+                        with self.subTest(renderer=renderer.__name__, typed=typed,
+                                          source=source, flags=flags):
+                            tag = " [Attack]" if typed else ""
+                            suffix = "".join(f", {flag}" for flag in flags)
+                            hand_suffix = suffix if source in ("hand", "both") else ""
+                            text = (
+                                f"Hand:\n  [0] Strike{tag} (cost 1{hand_suffix})\n"
+                                "Piles: draw 0, discard 0, exhaust 0\nAscension: 0\n"
+                            )
+                            actions = [] if source == "hand" else [{
+                                "description": f"play Strike{tag} (cost 1{suffix}) -> FOE (deal 6)",
+                            }]
+                            key = renderer.augment(text, actions, "combat").split("-- KEY", 1)[1]
+                            for flag, definition in (
+                                ("free once", "free once: playing this card costs no energy this time"),
+                                ("retained", "retained: this card stays in hand at end of turn"),
+                            ):
+                                self.assertEqual(key.count(definition), int(flag in flags))
+
+    def test_other_text_and_noncombat_do_not_add_flag_definitions(self):
+        text = (
+            "Hand:\n  [0] Strike [Attack] (cost 1)\n"
+            "Piles: draw 1, discard 0, exhaust 0\n"
+            "Draw pile contents (unordered): Strike [Attack] (cost 1, free once, retained)\n"
+            "Recent actions this turn: play Strike (cost 1, free once, retained)\n"
+            "Ascension: 0\n"
+        )
+        for renderer in (glossary, glossary_v4, glossary_v5):
+            for phase in ("combat", "out_of_combat"):
+                with self.subTest(renderer=renderer.__name__, phase=phase):
+                    actions = [{"description": "take card Strike [Attack, Common]"}]
+                    if phase != "combat":
+                        actions.append({"description": "play Strike (cost 1, free once, retained)"})
+                    output = renderer.augment(text, actions, phase)
+                    key = output.split("-- KEY", 1)[1]
+                    self.assertNotIn("free once:", key)
+                    self.assertNotIn("retained:", key)
 
 
 class EnemyPowerKeyTest(unittest.TestCase):

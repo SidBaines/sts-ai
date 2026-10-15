@@ -164,6 +164,7 @@ def augment(state_text: str, legal_actions: list[dict], phase: str,
         if definition:
             definitions.append(definition)
     definitions += [d for name in legacy._potion_names(state_text) if (d := legacy.potion_definition(name))]
+    definitions += legacy._card_flag_definitions(state_text, legal_actions)
     # Explain referenced statuses before they activate, not only active icons.
     for definition in definitions:
         statuses |= v4._status_names_in_text(definition)

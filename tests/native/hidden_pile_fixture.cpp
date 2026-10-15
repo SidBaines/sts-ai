@@ -1,10 +1,24 @@
 // Test-only mutation of scratch native copies; never installed as a policy API.
 #include <algorithm>
+#include <stdexcept>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "combat/BattleContext.h"
 namespace py=pybind11;
 PYBIND11_MODULE(sts_hidden_pile_fixture,m) {
+    m.def("copy",[](const sts::BattleContext &bc) {
+        return sts::BattleContext(bc);
+    });
+    m.def("hand_flags_copy",[](const sts::BattleContext &bc, int handIdx,
+                                bool freeOnce, bool retain) {
+        if (handIdx < 0 || handIdx >= bc.cards.cardsInHand) {
+            throw std::runtime_error("hand index out of range");
+        }
+        sts::BattleContext result(bc);
+        result.cards.hand[handIdx].freeToPlayOnce = freeOnce;
+        result.cards.hand[handIdx].retain = retain;
+        return result;
+    });
     m.def("reversed_copy",[](const sts::BattleContext &bc) {
         sts::BattleContext result(bc);
         std::reverse(result.cards.drawPile.begin(),result.cards.drawPile.end());
