@@ -2119,10 +2119,18 @@ index 965faef..1d88da6 100644
 
  }
 diff --git a/src/game/GameContext.cpp b/src/game/GameContext.cpp
-index fa10364..0e95174 100644
+index fa10364..4bba65b 100644
 --- a/src/game/GameContext.cpp
 +++ b/src/game/GameContext.cpp
-@@ -2675,6 +2675,7 @@ void GameContext::chooseEventOption(int idx) {
+@@ -2662,6 +2662,7 @@ void GameContext::chooseEventOption(int idx) {
+                     break;
+
+                 case 1:
++                    loseGold(unfavorable ? 50 : 40);
+                     deck.upgradeRandomCards(miscRng, 2);
+                     regainControl();
+                     break;
+@@ -2675,6 +2676,7 @@ void GameContext::chooseEventOption(int idx) {
                      loseGold(unfavorable ? 75 : 60);
                      deck.transformRandomCards(miscRng, 2); // TODO
                      regainControl();
@@ -2130,7 +2138,7 @@ index fa10364..0e95174 100644
 
                  case 4:
                      loseGold(unfavorable ? 110 : 90);
-@@ -2683,7 +2684,7 @@ void GameContext::chooseEventOption(int idx) {
+@@ -2683,7 +2685,7 @@ void GameContext::chooseEventOption(int idx) {
                          returnToMapAction(gc);
                      };
                      openCardSelectScreen(CardSelectScreenType::REMOVE, 1);
@@ -2139,6 +2147,54 @@ index fa10364..0e95174 100644
                  case 5:
                      playerLoseHp(unfavorable ? 5 : 3);
                      regainControl();
+@@ -3081,7 +3083,8 @@ void GameContext::chooseEventOption(int idx) {
+                 enterBattle(MonsterEncounter::MUSHROOMS_EVENT);
+
+             } else if (idx == 1) {
+-                obtainGold(unfavorable ? 50 : 99);
++                playerHeal(fractionMaxHp(0.25f));
++                deck.obtain(*this, CardId::PARASITE);
+                 regainControl();
+
+             } else {
+@@ -3102,7 +3105,6 @@ void GameContext::chooseEventOption(int idx) {
+                 enterBattle(MonsterEncounter::MYSTERIOUS_SPHERE_EVENT);
+
+             } else if (idx == 1) {
+-                obtainGold(unfavorable ? 50 : 99);
+                 regainControl();
+
+             } else {
+@@ -3329,6 +3331,8 @@ void GameContext::chooseEventOption(int idx) {
+                 if (result || unfavorable) {
+                     deck.obtain(*this, CardId::WRITHE);
+                 }
++                auto relic = returnRandomScreenlessRelic(returnRandomRelicTier(relicRng, act));
++                obtainRelic(relic);
+                 regainControl();
+
+             } else if (idx == 1) {
+@@ -3375,17 +3379,20 @@ void GameContext::chooseEventOption(int idx) {
+             Potion pArr[3];
+             switch (idx) {
+                 case 0: {
++                    loseGold(20);
+                     pArr[0] = getRandomPotion(potionRng, cc);
+                     openCombatRewardScreen(Rewards(pArr, 1));
+                     break;
+                 }
+                 case 1: {
++                    loseGold(30);
+                     pArr[0] = getRandomPotion(potionRng, cc);
+                     pArr[1] = getRandomPotion(potionRng, cc);
+                     openCombatRewardScreen(Rewards(pArr, 2));
+                     break;
+                 }
+                 case 2: {
++                    loseGold(40);
+                     pArr[0] = getRandomPotion(potionRng, cc);
+                     pArr[1] = getRandomPotion(potionRng, cc);
+                     pArr[2] = getRandomPotion(potionRng, cc);
 diff --git a/src/game/Shop.cpp b/src/game/Shop.cpp
 index bacf8e7..2625094 100644
 --- a/src/game/Shop.cpp
