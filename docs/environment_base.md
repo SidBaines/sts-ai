@@ -98,6 +98,27 @@ undefined-behaviour flags do not certify all reachable game states as free of
 upstream undefined-memory or phantom-power bugs. Unflagged corrupted states may
 still evade detection.
 
+Known open faults as of 0.1.4, in addition to the event deviations above:
+
+- Phantom powers: monsters or the player can carry impossible powers from
+  earlier state, for example Gremlin Nob with Metallicize. The root cause is not
+  found, the native undefined-behaviour flag does not catch it, and this
+  environment has no detector yet.
+- Combat menus de-duplicate actions by description, so a free-to-play-once card
+  merges with an ordinary copy of the same card and cannot be chosen separately.
+- Out-of-combat potion use and discard are missing from legal menus, and native
+  out-of-combat potion execution can fall through into the current screen's
+  choice.
+- During combat, the top-level `cur_hp` and `gold` fields hold run values from
+  battle entry; read live values from the combat player fields.
+- Computed attack damage is annotated for area attacks only when one enemy is
+  alive, and never for X-cost attacks or Fiend Fire.
+- The glossary describes Flight as halving the enemy's attack damage; in the
+  game it halves damage the enemy takes.
+
+Candidate fixes for the menu de-duplication, live combat values and
+out-of-combat potions exist, unreleased, on the `archive/nonllm/critique` tag.
+
 The clean interface additionally exposes the complete visible OOC map routes
 and individual card-reward skip choices. These observation/menu improvements,
 chest-policy recovery, and the native-policy fixes above deliberately change

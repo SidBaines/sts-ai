@@ -11,7 +11,7 @@ are not yet a complete public observation surface. Experiments, model clients, t
 and experiment-specific reward shaping belong in adapters or workstream
 branches; see [WORKSTREAMS.md](WORKSTREAMS.md) for the active ones. `main`
 receives tested environment fixes, and each release gets an immutable `env-v*`
-tag; `env-v0.1.1` is the latest.
+tag; `env-v0.1.4` is the latest.
 
 ## Install and build
 

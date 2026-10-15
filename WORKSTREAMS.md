@@ -9,7 +9,7 @@ its current handoff.
 
 | Workstream | Branch | Start here, on that branch | Environment it runs on | Status (15 Oct 2026) |
 |---|---|---|---|---|
-| Non-LLM RL: candidate-scoring policy networks, PPO, distillation and native-search experiments | [`ws/nonllm`](https://github.com/SidBaines/sts-ai/tree/ws/nonllm) | `README.md` opening paragraph, which links the current handoff | Unreleased 0.1.3–0.1.4 environment candidates developed on the branch (see below) | Joint sparse-win study complete; next study under discussion |
+| Non-LLM RL: candidate-scoring policy networks, PPO, distillation and native-search experiments | [`ws/nonllm`](https://github.com/SidBaines/sts-ai/tree/ws/nonllm) | `README.md` opening paragraph, which links the current handoff | The 0.1.4 patch, released as `env-v0.1.4`, plus a research-only native overlay for battle copying and reseeding | Joint sparse-win study complete; next study under discussion |
 | LLM agents: Gemma students, search-teacher distillation, and the training-framing research question | [`ws/llm`](https://github.com/SidBaines/sts-ai/tree/ws/llm) | `CLAUDE.md`, then `docs/research_plan.md` | The pre-extraction `sts_ai` harness, not the `sts_env` package | Paused since 13 Oct; the tip is a WIP snapshot |
 
 ## Working conventions
@@ -25,23 +25,24 @@ its current handoff.
 - Update this table when a workstream starts, stops or moves, not at every
   handoff.
 
-## Environment fixes not yet released on main
+## Environment releases and open faults
 
-The non-LLM workstream forked at `env-v0.1.0` and has since made environment
-changes that still need upstreaming as tested releases:
+Releases 0.1.2 (Discovery), 0.1.3 (shop maintenance, `sts_env_public_v2`) and
+0.1.4 (canonical sampled search) carry the non-LLM workstream's environment
+changes to `main`, with identical native patches. `ws/nonllm` has not merged
+`env-v0.1.4` yet. Its own build differs only in a research-only overlay patch,
+and its traces label the environment `0.1.3` where the release says `0.1.4`.
 
-- 0.1.2: validate supported Ironclad Discovery instead of rejecting it as a
-  fault ([PR #1](https://github.com/SidBaines/sts-ai/pull/1)).
-- 0.1.3: shop economics repair and public observation `sts_env_public_v2`.
-- 0.1.4: canonical pile ordering for sampled search, and the
-  `BattleContext.copy` / `reseed_rngs` bindings.
-- Build: `STS_OFFLINE_DEPS=1` reuse of already pinned dependencies.
+Known faults that are still open, such as phantom powers and combat menu
+de-duplication, are listed in
+[the environment contract](docs/environment_base.md).
 
 ## Archived and superseded references
 
 - Tag `archive/nonllm/critique`: the stopped 13 Oct critique branch, with typed
   residual policies and a public action-identity repair. It was never merged
-  into `ws/nonllm`. Entry: `docs/nonllm_critique_handoff_2026-10-13.md`.
+  into `ws/nonllm`. Entry: `docs/nonllm_critique_handoff_2026-10-13.md`. Its
+  `sts_env_public_v2` label names a different change from release 0.1.3's.
 - Tag `archive/nonllm/long-curriculum-v1`: the paused v1 longer-curriculum
   study, superseded by v2, which is in `ws/nonllm` history.
 - Older branch names are superseded and kept only for existing local worktrees.
@@ -49,5 +50,4 @@ changes that still need upstreaming as tested releases:
   `codex/long-curriculum-v2`, `claude/slay-spire-rl-debug-da6d22`,
   `codex/reproducibility-fault-records`, `codex/public-search-canonical` and
   `codex/joint-sparse-win-rl` are all in `ws/nonllm` history.
-  `environment-base` is replaced by `main` and retires once open pull requests
-  targeting it move to `main`.
+  `environment-base` is replaced by `main`.
