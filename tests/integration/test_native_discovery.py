@@ -188,9 +188,21 @@ class NativeDiscoveryTests(unittest.TestCase):
                     observation, _ = env.reset(seed=fixture["seed"])
                     for step, (index, description) in enumerate(fixture["actions"]):
                         action = observation["legal_actions"][index]
-                        self.assertEqual(action["description"], description)
+                        actual_description = action["description"]
+                        # The frozen trace predates multi-enemy/X-cost damage
+                        # annotations. Preserve the artifact and its digest while
+                        # checking the same action identity before the new suffix.
+                        if (description.startswith(("play Whirlwind ", "play Cleave "))
+                                and " (deal " not in description):
+                            actual_description, marker, suffix = actual_description.partition(" (deal ")
+                            self.assertRegex(
+                                marker + suffix,
+                                r"^ \(deal (per target: .+|\d+ = \d+ x\d+)\)$",
+                            )
+                        self.assertEqual(actual_description, description)
                         if step < fixture["original_successful_steps"]:
-                            record = {"phase": observation["phase"], "action": action}
+                            record = {"phase": observation["phase"],
+                                      "action": {**action, "description": description}}
                             digest.update((json.dumps(record, sort_keys=True,
                                                       separators=(",", ":")) + "\n").encode())
                         observation, _, terminated, truncated, _ = env.step(index)
