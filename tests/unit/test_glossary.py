@@ -42,6 +42,14 @@ class StatusDefinitionTest(unittest.TestCase):
     def test_unknown_status_is_none(self):
         self.assertIsNone(status_definition("Nonexistent"))
 
+    def test_plated_armor_describes_the_holder(self):
+        definition = status_definition("Plated Armor")
+        for phrase in ("holder gains", "Block", "end of turn", "drops by 1",
+                       "holder takes unblocked attack damage"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, definition)
+        self.assertNotIn("when you take", definition)
+
 
 class CardDefinitionTest(unittest.TestCase):
     def test_lookup_and_upgrade_marker(self):
@@ -298,6 +306,72 @@ class EnemyPowerKeyTest(unittest.TestCase):
 
     def _key(self, out: str) -> str:
         return out[out.index("-- KEY"):] if "-- KEY" in out else ""
+
+    def test_flight_damage_direction_stack_loss_and_refresh(self):
+        definition = status_definition("Flight")
+        for phrase in (
+            "takes 50% less damage from attacks",
+            "(already reflected in the shown deal N)",
+            "unblocked attack hits", "remove 1 stack", "at 0", "Stunned",
+            "while stacks remain", "reset to 3", "4 at ascension 17+",
+            "start of its turn",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, definition)
+        for phrase in (
+            "gains 3 Flight", "4 at ascension 17+",
+            "halving attack damage it takes", "unblocked attack damage",
+            "removes 1 stack", "at 0", "Stunned",
+        ):
+            with self.subTest(intent_phrase=phrase):
+                self.assertIn(phrase, intent_effect("BYRD_FLY"))
+
+    def test_enemy_power_definitions_state_simulator_rules(self):
+        expected = {
+            "Mode Shift": ("HP", "20 Block", "Defensive Mode", "Sharp Hide",
+                           "Roll Attack", "Twin Slam", "normal pattern", "remaining threshold"),
+            "Angry": ("attack deals unblocked damage", "gains that much Strength"),
+            "Curiosity": ("play a Power card", "this enemy gains that much Strength"),
+            "Time Warp": ("12 cards", "turn immediately ends", "2 Strength",
+                          "carries across turns", "resets to 0"),
+            "Thievery": ("uses a stealing attack", "steals up to that much gold",
+                         "fully blocked"),
+        }
+        for name, phrases in expected.items():
+            for phrase in phrases:
+                with self.subTest(name=name, phrase=phrase):
+                    self.assertIn(phrase, status_definition(name))
+        self.assertNotIn("stops attacking", status_definition("Mode Shift"))
+        self.assertNotIn("still attacks", status_definition("Mode Shift"))
+        self.assertNotIn("fully blocked", status_definition("Angry"))
+        self.assertNotIn("deals 0 damage", status_definition("Angry"))
+        self.assertNotIn("does not apply the trigger", status_definition("Curiosity"))
+        self.assertNotIn("12 cards this turn", status_definition("Time Warp"))
+        self.assertNotIn("takes an extra turn", status_definition("Time Warp"))
+
+    def test_enemy_power_definitions_reach_all_renderers(self):
+        text = (
+            "Enemies:\n"
+            "  [0] BYRD HP 25/25, block 0, intent BYRD_FLY\n"
+            "  [1] BYRD HP 25/25, block 0, intent BYRD_CAW, Flight 2\n"
+            "  [2] THE_GUARDIAN HP 50/250, block 0, intent THE_GUARDIAN_CHARGING_UP, Mode Shift 10\n"
+            "  [3] MAD_GREMLIN HP 20/20, block 0, intent MAD_GREMLIN_SCRATCH (deal 4), Angry 1\n"
+            "  [4] TIME_EATER HP 100/456, block 0, intent TIME_EATER_REVERBERATE (deal 7x3), Time Warp 11\n"
+            "  [5] LOOTER HP 40/40, block 0, intent LOOTER_MUG (deal 10), Thievery 15\n"
+            "  [6] AWAKENED_ONE HP 300/300, block 0, intent AWAKENED_ONE_SLASH (deal 20), Curiosity 1\n"
+            "Hand: empty\nPiles: draw 0, discard 0, exhaust 0\nAscension: 0\n"
+        )
+        for renderer in (glossary, glossary_v4, glossary_v5):
+            with self.subTest(renderer=renderer.__name__):
+                out = renderer.augment(text, [], "combat")
+                self.assertIn(intent_effect("BYRD_FLY"), out)
+                key = self._key(out)
+                for name in ("Flight", "Mode Shift", "Angry", "Curiosity", "Time Warp", "Thievery"):
+                    self.assertIn(status_definition(name), key)
+                self.assertNotIn("this enemy's attack damage is halved", out)
+                self.assertNotIn("unblocked damage reduces Flight", out)
+                self.assertNotIn("takes an extra turn", out)
+                self.assertNotIn("stops attacking", out)
 
     def test_enrage_on_enemy_line_is_defined_in_key(self):
         text = (
