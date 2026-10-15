@@ -181,8 +181,8 @@ class LightspeedHybridEnv:
         differing only in base cost (with the same cost-for-turn) still render
         identically and merge; this is a rare, known limitation.
 
-        Out of combat the list stays 1:1 (indices and order unchanged), so the
-        out-of-combat trace shape and reproducibility are untouched.
+        Out of combat the list stays 1:1 with the raw native menu, including
+        potion choices appended after the ordinary screen actions.
         """
         raw = self.raw_actions()
         event = dict(self.gc.public_event()) if self.bc is None and hasattr(self.gc, "public_event") else {}

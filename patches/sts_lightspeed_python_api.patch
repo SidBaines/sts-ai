@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..0b03c36 100644
+index a9afe35..b148bc2 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1499 @@
+@@ -9,24 +9,1529 @@
 
  #include <sstream>
  #include <algorithm>
@@ -587,6 +587,36 @@ index a9afe35..0b03c36 100644
 +    // NOTE: the raw action `bits` are intentionally omitted from this human-/model-
 +    // facing description; they remain available structurally on LegalAction.bits.
 +    std::ostringstream os;
++
++    if (a.isPotionAction()) {
++        const int slot = a.getIdx1();
++        if (slot >= gc.potionCapacity) {
++            throw std::runtime_error("potion slot out of range");
++        }
++        const auto potion = gc.potions[slot];
++        os << (a.isPotionDiscard() ? "discard potion " : "drink potion ")
++           << safePotionName(potion) << " (slot " << slot << ")";
++        if (!a.isPotionDiscard()) {
++            switch (potion) {
++                case Potion::BLOOD_POTION:
++                    os << ": heal "
++                       << gc.fractionMaxHp(gc.hasRelic(RelicId::SACRED_BARK) ? 0.40f : 0.20f)
++                       << " HP";
++                    break;
++                case Potion::FRUIT_JUICE: {
++                    const int amount = gc.hasRelic(RelicId::SACRED_BARK) ? 10 : 5;
++                    os << ": gain " << amount << " max HP and heal " << amount << " HP";
++                    break;
++                }
++                case Potion::ENTROPIC_BREW:
++                    os << ": fill empty potion slots with random potions";
++                    break;
++                default:
++                    break;
++            }
++        }
++        return os.str();
++    }
 +
 +    switch (gc.screenState) {
 +        case ScreenState::EVENT_SCREEN: {
@@ -1502,7 +1532,7 @@ index a9afe35..0b03c36 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -39,7 +1514,232 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -39,7 +1544,232 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("boss_simulation_multiplier", &search::ScumSearchAgent2::bossSimulationMultiplier, "bonus multiplier to the simulation count for boss fights")
          .def_readwrite("pause_on_card_reward", &search::ScumSearchAgent2::pauseOnCardReward, "causes the agent to pause so as to cede control to the user when it encounters a card reward choice")
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
@@ -1736,7 +1766,7 @@ index a9afe35..0b03c36 100644
 
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
-@@ -55,6 +1755,14 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1785,14 @@ PYBIND11_MODULE(slaythespire, m) {
               [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
               "add a card to the deck"
          )
@@ -1751,11 +1781,28 @@ index a9afe35..0b03c36 100644
          .def("remove_card",
              [](GameContext &gc, int idx) {
                  if (idx < 0 || idx >= gc.deck.size()) {
-@@ -75,6 +1783,43 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +1813,60 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
-+    gameContext.def("legal_actions", &search::GameAction::getAllActionsInState)
++    gameContext.def("legal_actions", [](const GameContext &gc) {
++        // Keep the scripted/search agents' enumerator unchanged. Only the Python
++        // menu appends potion choices, preserving every ordinary screen index.
++        auto actions = search::GameAction::getAllActionsInState(gc);
++        if (!actions.empty()) {
++            for (int slot = 0; slot < gc.potionCapacity; ++slot) {
++                const search::GameAction drink(0x80000000U | static_cast<std::uint32_t>(slot));
++                const search::GameAction discard(0xC0000000U | static_cast<std::uint32_t>(slot));
++                if (drink.isValidAction(gc)) {
++                    actions.push_back(drink);
++                }
++                if (discard.isValidAction(gc)) {
++                    actions.push_back(discard);
++                }
++            }
++        }
++        return actions;
++    })
 +        .def("describe_state", &describeGameState)
 +        .def("map_graph", [](const GameContext &gc) {
 +            // Structured act map for the MAP_SCREEN. Python (sts_ai.glossary) walks
@@ -1795,7 +1842,7 @@ index a9afe35..0b03c36 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -84,7 +1829,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -84,7 +1876,8 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("cur_map_node_x", &GameContext::curMapNodeX)
          .def_readwrite("cur_map_node_y", &GameContext::curMapNodeY)
          .def_readwrite("cur_room", &GameContext::curRoom)
@@ -1805,7 +1852,7 @@ index a9afe35..0b03c36 100644
          .def_readwrite("boss", &GameContext::boss)
 
          .def_readwrite("cur_hp", &GameContext::curHp)
-@@ -836,5 +2582,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +2629,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
@@ -2119,10 +2166,27 @@ index 965faef..1d88da6 100644
 
  }
 diff --git a/src/game/GameContext.cpp b/src/game/GameContext.cpp
-index fa10364..4bba65b 100644
+index fa10364..e0643d9 100644
 --- a/src/game/GameContext.cpp
 +++ b/src/game/GameContext.cpp
-@@ -2662,6 +2662,7 @@ void GameContext::chooseEventOption(int idx) {
+@@ -2187,14 +2187,9 @@ void GameContext::drinkPotion(Potion p) {
+             break;
+
+         case Potion::ENTROPIC_BREW: {
+-            Potion randPotions[5];
+-            for (int i = 0 ; i < potionCapacity; ++i) {
+-                randPotions[i] = returnRandomPotion(potionRng, cc);
+-                if (potions[i] == Potion::EMPTY_POTION_SLOT) {
+-                    potions[i] = randPotions[i];
+-                }
++            for (int i = 0; i < potionCapacity; ++i) {
++                obtainPotion(returnRandomPotion(potionRng, cc, true));
+             }
+-            potionCount = potionCapacity;
+             break;
+         }
+
+@@ -2662,6 +2657,7 @@ void GameContext::chooseEventOption(int idx) {
                      break;
 
                  case 1:
@@ -2130,7 +2194,7 @@ index fa10364..4bba65b 100644
                      deck.upgradeRandomCards(miscRng, 2);
                      regainControl();
                      break;
-@@ -2675,6 +2676,7 @@ void GameContext::chooseEventOption(int idx) {
+@@ -2675,6 +2671,7 @@ void GameContext::chooseEventOption(int idx) {
                      loseGold(unfavorable ? 75 : 60);
                      deck.transformRandomCards(miscRng, 2); // TODO
                      regainControl();
@@ -2138,7 +2202,7 @@ index fa10364..4bba65b 100644
 
                  case 4:
                      loseGold(unfavorable ? 110 : 90);
-@@ -2683,7 +2685,7 @@ void GameContext::chooseEventOption(int idx) {
+@@ -2683,7 +2680,7 @@ void GameContext::chooseEventOption(int idx) {
                          returnToMapAction(gc);
                      };
                      openCardSelectScreen(CardSelectScreenType::REMOVE, 1);
@@ -2147,7 +2211,7 @@ index fa10364..4bba65b 100644
                  case 5:
                      playerLoseHp(unfavorable ? 5 : 3);
                      regainControl();
-@@ -3081,7 +3083,8 @@ void GameContext::chooseEventOption(int idx) {
+@@ -3081,7 +3078,8 @@ void GameContext::chooseEventOption(int idx) {
                  enterBattle(MonsterEncounter::MUSHROOMS_EVENT);
 
              } else if (idx == 1) {
@@ -2157,7 +2221,7 @@ index fa10364..4bba65b 100644
                  regainControl();
 
              } else {
-@@ -3102,7 +3105,6 @@ void GameContext::chooseEventOption(int idx) {
+@@ -3102,7 +3100,6 @@ void GameContext::chooseEventOption(int idx) {
                  enterBattle(MonsterEncounter::MYSTERIOUS_SPHERE_EVENT);
 
              } else if (idx == 1) {
@@ -2165,7 +2229,7 @@ index fa10364..4bba65b 100644
                  regainControl();
 
              } else {
-@@ -3329,6 +3331,8 @@ void GameContext::chooseEventOption(int idx) {
+@@ -3329,6 +3326,8 @@ void GameContext::chooseEventOption(int idx) {
                  if (result || unfavorable) {
                      deck.obtain(*this, CardId::WRITHE);
                  }
@@ -2174,7 +2238,7 @@ index fa10364..4bba65b 100644
                  regainControl();
 
              } else if (idx == 1) {
-@@ -3375,17 +3379,20 @@ void GameContext::chooseEventOption(int idx) {
+@@ -3375,17 +3374,20 @@ void GameContext::chooseEventOption(int idx) {
              Potion pArr[3];
              switch (idx) {
                  case 0: {
@@ -2428,10 +2492,18 @@ index 79eccf9..d715863 100644
          }
          ++foundPotions;
 diff --git a/src/sim/search/GameAction.cpp b/src/sim/search/GameAction.cpp
-index 8c977ee..5da7665 100644
+index 8c977ee..ad6d79b 100644
 --- a/src/sim/search/GameAction.cpp
 +++ b/src/sim/search/GameAction.cpp
-@@ -229,7 +229,8 @@ bool isValidShopAction(const GameContext &gc, const search::GameAction a) {
+@@ -4,6 +4,7 @@
+
+ #include <cassert>
+ #include <bitset>
++#include <stdexcept>
+
+ #include "sim/search/GameAction.h"
+
+@@ -229,7 +230,8 @@ bool isValidShopAction(const GameContext &gc, const search::GameAction a) {
              if (select > 2) {
                  return false;
              }
@@ -2441,7 +2513,52 @@ index 8c977ee..5da7665 100644
 
 
          case search::GameAction::RewardsActionType::RELIC:
-@@ -515,7 +516,8 @@ std::vector<search::GameAction> getAllShopActions(const sts::GameContext &gc) {
+@@ -251,6 +253,9 @@ bool isValidShopAction(const GameContext &gc, const search::GameAction a) {
+ }
+
+ bool isValidPotionAction(const GameContext &gc, const search::GameAction a) {
++    if (gc.screenState == ScreenState::BATTLE || gc.screenState == ScreenState::INVALID) {
++        return false;
++    }
+     if (gc.curEvent == Event::WE_MEET_AGAIN && gc.screenState == ScreenState::EVENT_SCREEN) {
+         return false;
+     }
+@@ -414,21 +419,26 @@ void executeShopAction(GameContext &gc, const search::GameAction a) {
+ }
+
+ void search::GameAction::execute(GameContext &gc) const {
+-#ifdef sts_asserts
+-    if (!isValidAction(gc)) {
+-        std::cerr << "invalid game action taken: " << bits
+-        << " seed: " << gc << std::endl;
+-        assert(false);
+-    }
+-#endif
+-
+     if (isPotionAction()) {
++        // Validate even in Release (asserts are compiled out) so an invalid potion action cannot mutate state.
++        if (!isValidAction(gc)) {
++            throw std::runtime_error("invalid out-of-combat potion action");
++        }
+         if (isPotionDiscard()) {
+             gc.discardPotionAtIdx(getIdx1());
+         } else {
+             gc.drinkPotionAtIdx(getIdx1());
+         }
++        return;
++    }
++
++#ifdef sts_asserts
++    if (!isValidAction(gc)) {
++        std::cerr << "invalid game action taken: " << bits
++        << " seed: " << gc << std::endl;
++        assert(false);
+     }
++#endif
+
+     switch (gc.screenState) {
+         case ScreenState::EVENT_SCREEN:
+@@ -515,7 +525,8 @@ std::vector<search::GameAction> getAllShopActions(const sts::GameContext &gc) {
 
      for (int i = 0; i < 3; ++i) {
          auto price = s.potionPrice(i);
@@ -2451,7 +2568,7 @@ index 8c977ee..5da7665 100644
              actions.emplace_back(search::GameAction::RewardsActionType::POTION, i);
          }
      }
-@@ -574,6 +576,9 @@ std::vector<search::GameAction> getAllRewardActions(const sts::GameContext &gc)
+@@ -574,6 +585,9 @@ std::vector<search::GameAction> getAllRewardActions(const sts::GameContext &gc)
          for (int x = 0; x < r.cardRewards[i].size(); ++x) {
              actions.emplace_back(search::GameAction::RewardsActionType::CARD, i, x);
          }
