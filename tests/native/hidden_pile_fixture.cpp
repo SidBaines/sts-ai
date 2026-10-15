@@ -4,8 +4,26 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "combat/BattleContext.h"
+#include "game/GameContext.h"
 namespace py=pybind11;
 PYBIND11_MODULE(sts_hidden_pile_fixture,m) {
+    m.def("encounter_game_copy",[](const sts::GameContext &gc,
+                                   sts::MonsterEncounter encounter) {
+        sts::GameContext result(gc);
+        result.info.encounter = encounter;
+        return result;
+    });
+    m.def("combat_hit_setup_copy",[](const sts::BattleContext &bc, int targetIdx,
+                                     int block, int energy, int strength) {
+        if (targetIdx < 0 || targetIdx >= bc.monsters.monsterCount || block < 0) {
+            throw std::runtime_error("invalid combat hit setup");
+        }
+        sts::BattleContext result(bc);
+        result.monsters.arr[targetIdx].block = block;
+        result.player.energy = energy;
+        result.player.strength = strength;
+        return result;
+    });
     m.def("copy",[](const sts::BattleContext &bc) {
         return sts::BattleContext(bc);
     });
