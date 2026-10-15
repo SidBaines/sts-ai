@@ -1,5 +1,15 @@
 # Fresh-start progress — newest first
 
+## 15 October 2026, 22:32 UTC — encoder audit findings and native-format repairs
+
+Independent Claude B1 specification review FAILED the initial encoder: real row14 boss edges caused a map exception; native OOC potion gaps/sentinel handling, '=N' public card counters, unplayable curse costs, two event aliases and Library OBTAIN offers were mishandled. The synthetic fixtures missed these formats. B2 is repairing every finding with native-source-faithful regressions and packaging the vocabulary resource. No labels/model experiment has used this prototype; vocabulary is not frozen yet. Full audit is preserved in agent_records/b1_spec_review.
+
+New adapter design: extract only potion slot/name pairs from the ORIGINAL PUBLIC OOC drink/discard menu before hiding those choices. Supply them to encoders as adapter_public_ooc_potions, identity ooc_potion_public_menu_inventory_v1. This avoids losing publicly visible inventory after a text slot gap while maintaining the identical filtered choice space. Raw observations/public hashes remain unchanged, combat untouched. Unobservable inventory remains unavailable. C3 integrates this and the completed D1 model loader; no native data or diagnostic bits/seeds enter model inputs.
+
+C2 passes 47 focused tests (repeat sampling independence, forced combat skips, cached power checks/caffeinate/completion controls); native parity still pending. D1 supervised fitting/statistics/dashboard/batched training pass all49 host tests in 3.686s, no skips, including localhost paths blocked in sandbox. Metal/MPS is available on the host; its throughput/correctness will be checked before choosing a large-fit device, once power permits. These bounded tests are plumbing evidence, not learning results. Source/outputs remain in separate builder worktrees pending independent reviews.
+
+A2 is implementing research-only native provenance checks. Main study native pipeline remains safely paused on battery. No DEV, teacher collection or training has started; confirmation remains closed, step D remains unauthorized.
+
 ## 15 October 2026, 22:20 UTC — reviewed adoption committed; model/data tooling under review
 
 Local commits: `99566cd` adopts immutable env-v0.1.5 (independent Claude spec and quality PASS); `c244e83` records the predeclared split/panel/health decisions separately. Unrestricted pure suite passes 488/488 in 5.133 seconds, no skips. Native validation is still pending because the detached pipeline is waiting on battery; no baseline, labels, or training experiments have run. An asynchronous request asks Sid to connect AC, while implementation/reviews continue.
