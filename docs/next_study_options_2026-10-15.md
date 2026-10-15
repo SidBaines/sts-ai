@@ -1,8 +1,8 @@
 # Next-study options — 15 October 2026
 
 This review of the non-LLM workstream was written after the joint sparse-win run.
-It is an analysis for Sid to choose from, not a launch instruction: **no training
-is authorized until Sid picks a study and its budget.** Read it after the
+It was written as an analysis for Sid to choose from. **Sid has since approved
+a fresh start:** see [the fresh-start plan](fresh_start_plan_2026-10-15.md). Read it after the
 [15 October handoff](handoff/joint_sparse_win_20261015.md). Unless stated
 otherwise, numbers come from saved run records, measured without new training.
 
