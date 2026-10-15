@@ -166,9 +166,9 @@ Version 0.1.0 passed all local release gates on 11 October 2026.
 CLI/replay, privacy, timeout, vectorization and packaging checks. The immutable `env-v0.1.0` tag identifies
 the tested source; no historical training results are claimed for this release.
 
-## Discovery maintenance candidate
+## Release 0.1.2: Discovery
 
-The 0.1.2 candidate adds validated Ironclad Discovery support; see the
+Release 0.1.2 adds validated Ironclad Discovery support; see the
 [repair and verification record](discovery_fix.md). The old native fault flag
 unconditionally marked Discovery as unsupported. It does not diagnose memory
 UB. Unsupported class-card generation and invalid Discovery offers still fail

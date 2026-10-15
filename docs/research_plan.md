@@ -26,9 +26,10 @@ regressions and intentional seeded-trajectory/provenance boundary. The immutable
 release reference is `env-v0.1.1`, validated with 195 base tests, 307 experiment
 integration tests, a bounded native smoke, and repeated affected-world checks.
 
-The 0.1.2 candidate validates the supported Ironclad Discovery path instead of
+Release 0.1.2 validates the supported Ironclad Discovery path instead of
 rejecting every use with the upstream unsupported-behaviour marker. It preserves
 explicit faults for unsupported classes and invalid offers. The
 [repair and verification record](discovery_fix.md) documents exact development
 replays, semantics regressions, determinism and the intentional provenance
-boundary. Existing release tags and experimental backends remain frozen.
+boundary; [the release record](release_v0.1.2.md) adds the release-branch
+rebuild. The immutable release reference is `env-v0.1.2`.
