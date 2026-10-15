@@ -98,6 +98,27 @@ undefined-behaviour flags do not certify all reachable game states as free of
 upstream undefined-memory or phantom-power bugs. Unflagged corrupted states may
 still evade detection.
 
+Known open faults as of 0.1.4, in addition to the event deviations above:
+
+- Phantom powers: monsters or the player can carry impossible powers from
+  earlier state, for example Gremlin Nob with Metallicize. The root cause is not
+  found, the native undefined-behaviour flag does not catch it, and this
+  environment has no detector yet.
+- Combat menus de-duplicate actions by description, so a free-to-play-once card
+  merges with an ordinary copy of the same card and cannot be chosen separately.
+- Out-of-combat potion use and discard are missing from legal menus, and native
+  out-of-combat potion execution can fall through into the current screen's
+  choice.
+- During combat, the top-level `cur_hp` and `gold` fields hold run values from
+  battle entry; read live values from the combat player fields.
+- Computed attack damage is annotated for area attacks only when one enemy is
+  alive, and never for X-cost attacks or Fiend Fire.
+- The glossary describes Flight as halving the enemy's attack damage; in the
+  game it halves damage the enemy takes.
+
+Candidate fixes for the menu de-duplication, live combat values and
+out-of-combat potions exist, unreleased, on the `archive/nonllm/critique` tag.
+
 The clean interface additionally exposes the complete visible OOC map routes
 and individual card-reward skip choices. These observation/menu improvements,
 chest-policy recovery, and the native-policy fixes above deliberately change
@@ -110,7 +131,8 @@ out-of-combat policy is scripted/seeded rather than a planning search.
 ## Migration from the research harness
 
 This clean base uses distribution `slay-the-spire-env`, package `sts_env`, public
-observation contract `sts_env_public_v1`, and trace schema `sts_env_trace_v1`.
+observation contract `sts_env_public_v2` (`sts_env_public_v1` before 0.1.3), and
+trace schema `sts_env_trace_v1`.
 It does not reinterpret the old `sts_ai` DecisionRecord schema. Frozen historical
 traces and their original replay/training tools stay on the LLM workstream (`ws/llm`).
 Port experiments by writing agent/encoder/reward adapters around the new API;
@@ -140,8 +162,9 @@ accepted as skipped integration tests.
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[gym]'
 scripts/build_lightspeed.sh
-STS_REQUIRE_SIMULATOR=1 PYTHONPATH=src .venv/bin/python \
-  -m unittest discover -s tests -t .
+export STS_SEARCH_TEST_FIXTURE="$(scripts/build_test_fixtures.sh)"
+STS_REQUIRE_SIMULATOR=1 STS_REQUIRE_SEARCH_TEST_FIXTURE=1 PYTHONPATH=src \
+  .venv/bin/python -m unittest discover -s tests -t .
 .venv/bin/sts-env doctor
 .venv/bin/sts-env run --agent random --seed 3 --mode ooc \
   --max-act 1 --battle-simulations 50 --output data/release-smoke.jsonl
@@ -165,3 +188,37 @@ Version 0.1.0 passed all local release gates on 11 October 2026.
 [The release verification record](release_v0.1.0.md) records the 191-test suite,
 CLI/replay, privacy, timeout, vectorization and packaging checks. The immutable `env-v0.1.0` tag identifies
 the tested source; no historical training results are claimed for this release.
+
+## Release 0.1.2: Discovery
+
+Release 0.1.2 adds validated Ironclad Discovery support; see the
+[repair and verification record](discovery_fix.md). The old native fault flag
+unconditionally marked Discovery as unsupported. It does not diagnose memory
+UB. Unsupported class-card generation and invalid Discovery offers still fail
+explicitly, and all environment fault/timeout guards remain active. Discovery
+trajectories intentionally continue beyond their former rejection points. The
+public schemas are unchanged; the release/native/interface identities change.
+Historical experiments and running studies keep their frozen backends.
+
+## Release 0.1.3: shop maintenance
+
+Release 0.1.3 repairs upstream shop pricing and purchase validation: Courier and
+Membership discounts, restock and replacement prices, and potion purchases that
+could not take effect. The public observation label advances to
+`sts_env_public_v2` because shop menus no longer offer ineffective potion
+purchases, so menu indices can differ from 0.1.2. See the
+[migration record](shop_maintenance_013.md) and
+[release record](release_v0.1.3.md).
+
+## Release 0.1.4: canonical sampled search
+
+Release 0.1.4 changes only seeded native search queries
+(`search_best_action(..., draw_order_seed=...)`). Before sampling a draw order,
+the query sorts the unordered draw, discard and exhaust piles by public card
+attributes, so a fixed number of sampled worlds no longer starts from the true
+hidden pile order. Returned discard/exhaust selections are mapped back to the
+live card instance. Ordinary execution and unsampled search are unchanged, and
+`sts_env_public_v2` is retained. Neither search mode is a certified public-only
+planner; see the [search record](canonical_search_014.md) and
+[release record](release_v0.1.4.md). `scripts/build_test_fixtures.sh` builds
+the test-only native fixture its regression tests need.

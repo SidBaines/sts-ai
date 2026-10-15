@@ -35,11 +35,17 @@ elif ! git -C "$STS_DIR" apply --check --reverse "$PATCH" 2>/dev/null; then
   echo "Simulator source has a different patch; use a fresh STS_LIGHTSPEED_SOURCE." >&2
   exit 1
 fi
+if [[ "${STS_OFFLINE_DEPS:-0}" == 1 ]]; then
+  # Read-only reuse of populated pinned dependencies; no network or checkout.
+  [[ "$(git -C "$STS_DIR/pybind11" rev-parse HEAD)" == "$(git -C "$STS_DIR/pybind11" rev-parse "$PYBIND_TAG")" ]] || { echo "Offline pybind11 tag mismatch" >&2; exit 1; }
+  [[ "$(git -C "$STS_DIR/json" rev-parse HEAD)" == "$(git -C "$STS_DIR" rev-parse HEAD:json)" ]] || { echo "Offline JSON pin mismatch" >&2; exit 1; }
+else
 # Upstream uses a relative URL; explicitly resolve it for local/fork clones.
 git -C "$STS_DIR" config submodule.pybind11.url https://github.com/pybind/pybind11
 git -C "$STS_DIR" submodule update --init --recursive --depth 1
 git -C "$STS_DIR/pybind11" fetch --depth 1 origin "refs/tags/$PYBIND_TAG:refs/tags/$PYBIND_TAG"
 git -C "$STS_DIR/pybind11" checkout --detach "$PYBIND_TAG"
+fi
 "$PYTHON" "$ROOT/scripts/native_build_manifest.py" check-source "$STS_DIR" "$ROOT"
 
 "$PYTHON" -m cmake -S "$STS_DIR" -B "$BUILD_DIR" \

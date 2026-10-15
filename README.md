@@ -11,7 +11,7 @@ are not yet a complete public observation surface. Experiments, model clients, t
 and experiment-specific reward shaping belong in adapters or workstream
 branches; see [WORKSTREAMS.md](WORKSTREAMS.md) for the active ones. `main`
 receives tested environment fixes, and each release gets an immutable `env-v*`
-tag; `env-v0.1.1` is the latest.
+tag; `env-v0.1.4` is the latest.
 
 ## Install and build
 
@@ -28,7 +28,10 @@ scripts/build_lightspeed.sh
 
 The build script pins upstream and pybind11, applies the versioned binding and
 bug-fix patch, and builds the native module in `external/sts_lightspeed/build`.
-Use the same interpreter to build and run. The Python package does not bundle a
+Use the same interpreter to build and run. The build script may install its pinned
+CMake package into the interpreter selected by `PYTHON`. Use this checkout's own
+isolated `.venv`; any `PYTHON` override should point there. Do not borrow an
+active or frozen experiment runtime for a build. The Python package does not bundle a
 native binary. If you install a wheel or keep the simulator elsewhere, set
 `STS_LIGHTSPEED_BUILD` to its build directory.
 

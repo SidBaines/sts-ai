@@ -25,3 +25,21 @@ preserved. [The verification record](release_v0.1.1.md) describes the
 regressions and intentional seeded-trajectory/provenance boundary. The immutable
 release reference is `env-v0.1.1`, validated with 195 base tests, 307 experiment
 integration tests, a bounded native smoke, and repeated affected-world checks.
+
+Release 0.1.2 validates the supported Ironclad Discovery path instead of
+rejecting every use with the upstream unsupported-behaviour marker. It preserves
+explicit faults for unsupported classes and invalid offers. The
+[repair and verification record](discovery_fix.md) documents exact development
+replays, semantics regressions, determinism and the intentional provenance
+boundary; [the release record](release_v0.1.2.md) adds the release-branch
+rebuild. The immutable release reference is `env-v0.1.2`.
+
+Release 0.1.3 repairs upstream shop pricing and ineffective potion purchases.
+Shop menus change, so the observation label advances to `sts_env_public_v2`; see
+[the migration record](shop_maintenance_013.md). The immutable release
+reference is `env-v0.1.3`.
+
+Release 0.1.4 canonicalizes hidden pile order before seeded native search
+samples, so sampled search cannot depend on the true draw order. Ordinary
+execution is unchanged; see [the search record](canonical_search_014.md). The
+immutable release reference is `env-v0.1.4`.

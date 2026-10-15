@@ -1,13 +1,14 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..7dca98a 100644
+index a9afe35..a54c0ab 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1435 @@
+@@ -9,24 +9,1491 @@
 
  #include <sstream>
  #include <algorithm>
 +#include <map>
 +#include <random>
++#include <tuple>
 
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
@@ -1294,12 +1295,64 @@ index a9afe35..7dca98a 100644
 +    std::uint64_t effectiveDrawOrderSeed = 0;
 +    if (drawOrderPerturbed) {
 +        effectiveDrawOrderSeed = drawOrderSeed.cast<std::uint64_t>();
++        // Public piles are unordered. Canonicalize before fixed-seed sampling,
++        // so the finite sampled worlds cannot depend on the true hidden order.
++        // The key uses only the card fields surfaced in public_cards; unique IDs
++        // and latent specialData (except the public upgrade count) are excluded.
++        auto publicCardLess = [](const CardInstance &a, const CardInstance &b) {
++            auto key = [](const CardInstance &c) {
++                return std::make_tuple(static_cast<int>(c.id), c.getUpgradeCount(),
++                    c.cost, c.costForTurn, c.freeToPlayOnce, c.retain);
++            };
++            return key(a) < key(b);
++        };
++        std::sort(teacherState.cards.drawPile.begin(), teacherState.cards.drawPile.end(), publicCardLess);
++        std::sort(teacherState.cards.discardPile.begin(), teacherState.cards.discardPile.end(), publicCardLess);
++        std::sort(teacherState.cards.exhaustPile.begin(), teacherState.cards.exhaustPile.end(), publicCardLess);
 +        std::mt19937_64 drawOrderRng(effectiveDrawOrderSeed);
 +        std::shuffle(
 +            teacherState.cards.drawPile.begin(),
 +            teacherState.cards.drawPile.end(),
 +            drawOrderRng);
 +    }
++
++    // Canonical discard/exhaust order changes selection indices. Map the
++    // selected instance back to the const live state before exposing any root
++    // action. Instance identity is routing metadata, never a policy feature.
++    auto mapRootAction = [&](const search::Action &action) -> search::Action {
++        if (!drawOrderPerturbed || bc.inputState != InputState::CARD_SELECT
++                || action.getActionType() != search::ActionType::SINGLE_CARD_SELECT) {
++            return action;
++        }
++        auto mapIndex = [&](const auto &from, const auto &to) -> search::Action {
++            const int idx = action.getSelectIdx();
++            if (idx < 0 || idx >= static_cast<int>(from.size())) {
++                throw std::runtime_error("invalid sampled pile selection index");
++            }
++            const auto &card = from[idx];
++            for (int i = 0; i < static_cast<int>(to.size()); ++i) {
++                const auto &live = to[i];
++                if (std::tie(card.id, card.uniqueId, card.specialData, card.cost,
++                            card.costForTurn, card.upgraded, card.freeToPlayOnce, card.retain)
++                        == std::tie(live.id, live.uniqueId, live.specialData, live.cost,
++                            live.costForTurn, live.upgraded, live.freeToPlayOnce, live.retain)) {
++                    return search::Action(search::ActionType::SINGLE_CARD_SELECT, i);
++                }
++            }
++            throw std::runtime_error("sampled selection instance missing from live pile");
++        };
++        switch (bc.cardSelectInfo.cardSelectTask) {
++            case CardSelectTask::EXHUME:
++                return mapIndex(teacherState.cards.exhaustPile, bc.cards.exhaustPile);
++            case CardSelectTask::HEADBUTT:
++            case CardSelectTask::HOLOGRAM:
++            case CardSelectTask::LIQUID_MEMORIES_POTION:
++            case CardSelectTask::MEDITATE:
++                return mapIndex(teacherState.cards.discardPile, bc.cards.discardPile);
++            default:
++                return action;
++        }
++    };
 +
 +    // BattleScumSearcher2 takes another deep BattleContext copy.  Re-seeding
 +    // changes only the searcher's private action-selection RNG; it cannot touch
@@ -1315,13 +1368,13 @@ index a9afe35..7dca98a 100644
 +        && !searcher.bestActionSequence.empty();
 +    const search::Action *selected = nullptr;
 +    const char *selectionMethod = nullptr;
-+    if (hasWinningSequence && searcher.bestActionSequence.front().isValidAction(bc)) {
++    if (hasWinningSequence && mapRootAction(searcher.bestActionSequence.front()).isValidAction(bc)) {
 +        selected = &searcher.bestActionSequence.front();
 +        selectionMethod = "winning_sequence";
 +    } else {
 +        std::int64_t maxVisits = -1;
 +        for (const auto &edge : searcher.root.edges) {
-+            if (edge.action.isValidAction(bc) && edge.node.simulationCount > maxVisits) {
++            if (mapRootAction(edge.action).isValidAction(bc) && edge.node.simulationCount > maxVisits) {
 +                selected = &edge.action;
 +                maxVisits = edge.node.simulationCount;
 +            }
@@ -1333,9 +1386,10 @@ index a9afe35..7dca98a 100644
 +    }
 +
 +    pybind11::dict result;
-+    result["action"] = *selected;
-+    result["bits"] = selected->bits;
-+    result["description"] = describeBattleAction(bc, *selected, includeCardType);
++    const auto liveSelected = mapRootAction(*selected);
++    result["action"] = liveSelected;
++    result["bits"] = liveSelected.bits;
++    result["description"] = describeBattleAction(bc, liveSelected, includeCardType);
 +    result["selection_method"] = selectionMethod;
 +    result["simulations_requested"] = simulations;
 +    result["root_simulations"] = searcher.root.simulationCount;
@@ -1347,10 +1401,11 @@ index a9afe35..7dca98a 100644
 +    pybind11::list rootEdges;
 +    for (const auto &edge : searcher.root.edges) {
 +        pybind11::dict d;
-+        d["action"] = edge.action;
-+        d["bits"] = edge.action.bits;
-+        d["description"] = describeBattleAction(bc, edge.action, includeCardType);
-+        d["valid"] = edge.action.isValidAction(bc);
++        const auto liveEdge = mapRootAction(edge.action);
++        d["action"] = liveEdge;
++        d["bits"] = liveEdge.bits;
++        d["description"] = describeBattleAction(bc, liveEdge, includeCardType);
++        d["valid"] = liveEdge.isValidAction(bc);
 +        d["visits"] = edge.node.simulationCount;
 +        d["evaluation_sum"] = edge.node.evaluationSum;
 +        d["mean_evaluation"] = edge.node.simulationCount == 0
@@ -1382,6 +1437,7 @@ index a9afe35..7dca98a 100644
 +    provenance["evaluation"] = "BattleScumSearcher2::evaluateEndState";
 +    provenance["search_seed"] = effectiveSearchSeed;
 +    provenance["draw_order_perturbed"] = drawOrderPerturbed;
++    provenance["hidden_pile_order_canonicalized"] = drawOrderPerturbed;
 +    if (drawOrderPerturbed) {
 +        provenance["draw_order_seed"] = effectiveDrawOrderSeed;
 +    } else {
@@ -1438,7 +1494,7 @@ index a9afe35..7dca98a 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -39,7 +1450,232 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -39,7 +1506,232 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("boss_simulation_multiplier", &search::ScumSearchAgent2::bossSimulationMultiplier, "bonus multiplier to the simulation count for boss fights")
          .def_readwrite("pause_on_card_reward", &search::ScumSearchAgent2::pauseOnCardReward, "causes the agent to pause so as to cede control to the user when it encounters a card reward choice")
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
@@ -1672,7 +1728,7 @@ index a9afe35..7dca98a 100644
 
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
-@@ -55,6 +1691,14 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1747,14 @@ PYBIND11_MODULE(slaythespire, m) {
               [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
               "add a card to the deck"
          )
@@ -1687,7 +1743,7 @@ index a9afe35..7dca98a 100644
          .def("remove_card",
              [](GameContext &gc, int idx) {
                  if (idx < 0 || idx >= gc.deck.size()) {
-@@ -75,6 +1719,43 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +1775,43 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
@@ -1731,7 +1787,7 @@ index a9afe35..7dca98a 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -84,7 +1765,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -84,7 +1821,8 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("cur_map_node_x", &GameContext::curMapNodeX)
          .def_readwrite("cur_map_node_y", &GameContext::curMapNodeY)
          .def_readwrite("cur_room", &GameContext::curRoom)
@@ -1741,7 +1797,7 @@ index a9afe35..7dca98a 100644
          .def_readwrite("boss", &GameContext::boss)
 
          .def_readwrite("cur_hp", &GameContext::curHp)
-@@ -836,5 +2518,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +2574,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
@@ -1872,8 +1928,55 @@ index ffa449b..711bb31 100644
 
          void stepOutOfCombatPolicy(GameContext &gc);
          void cardSelectPolicy(GameContext &gc);
+diff --git a/src/combat/Actions.cpp b/src/combat/Actions.cpp
+index 93db96f..e8360ec 100644
+--- a/src/combat/Actions.cpp
++++ b/src/combat/Actions.cpp
+@@ -5,6 +5,9 @@
+ #include "combat/Actions.h"
+ #include "combat/BattleContext.h"
+ #include "game/Game.h"
++#include "constants/CardPools.h"
++
++#include <stdexcept>
+
+ using namespace sts;
+
+@@ -564,7 +567,31 @@ Action Actions::PutRandomCardsInDrawPile(CardType type, int count) {
+ Action Actions::DiscoveryAction(CardType type, int amount) {
+     return {[=] (BattleContext &bc) {
+         bc.haveUsedDiscoveryAction = true;
+-        bc.openDiscoveryScreen(sts::generateDiscoveryCards(bc.cardRandomRng, bc.player.cc, type), amount);
++        // INVALID denotes the Discovery card's untyped class pool. Upstream
++        // marked every use as undefined, although the Ironclad implementation
++        // supplies a complete selection path. Other class pools remain missing.
++        if (type == CardType::INVALID && bc.player.cc != CharacterClass::IRONCLAD) {
++            bc.undefinedBehaviorEvoked = true;
++            throw std::runtime_error("Discovery class-card generation only supports Ironclad");
++        }
++        const auto offers = sts::generateDiscoveryCards(bc.cardRandomRng, bc.player.cc, type);
++        if (type == CardType::INVALID) {
++            for (int i = 0; i < 3; ++i) {
++                bool inSupportedPool = false;
++                for (int j = 0; j < CombatCardPool::getPoolSize(bc.player.cc); ++j) {
++                    inSupportedPool |= offers[i] == CombatCardPool::getCardAt(bc.player.cc, j);
++                }
++                bool duplicate = false;
++                for (int j = 0; j < i; ++j) {
++                    duplicate |= offers[i] == offers[j];
++                }
++                if (!inSupportedPool || offers[i] == CardId::INVALID || duplicate) {
++                    bc.undefinedBehaviorEvoked = true;
++                    throw std::runtime_error("Discovery produced invalid class-card offers");
++                }
++            }
++        }
++        bc.openDiscoveryScreen(offers, amount);
+     }};
+ }
+
 diff --git a/src/combat/BattleContext.cpp b/src/combat/BattleContext.cpp
-index 965faef..b5860ef 100644
+index 965faef..1d88da6 100644
 --- a/src/combat/BattleContext.cpp
 +++ b/src/combat/BattleContext.cpp
 @@ -6,12 +6,52 @@
@@ -1968,6 +2071,15 @@ index 965faef..b5860ef 100644
          }
 
          if (inputState != InputState::EXECUTING_ACTIONS) {
+@@ -1283,7 +1335,7 @@ void BattleContext::useSkillCard() {
+             break;
+
+         case CardId::DISCOVERY:
+-            undefinedBehaviorEvoked = true;
++            // DiscoveryAction validates the supported pool before opening its menu.
+             addToBot(Actions::DiscoveryAction(CardType::INVALID, 1));
+             break;
+
 @@ -2232,13 +2284,17 @@ void BattleContext::obtainPotion(Potion p) {
  }
 
@@ -2019,6 +2131,78 @@ index fa10364..0e95174 100644
                  case 5:
                      playerLoseHp(unfavorable ? 5 : 3);
                      regainControl();
+diff --git a/src/game/Shop.cpp b/src/game/Shop.cpp
+index bacf8e7..2625094 100644
+--- a/src/game/Shop.cpp
++++ b/src/game/Shop.cpp
+@@ -3,6 +3,7 @@
+ //
+
+ #include <cmath>
++#include <stdexcept>
+ #include "game/Shop.h"
+ #include "game/GameContext.h"
+ #include "game/Game.h"
+@@ -125,14 +126,19 @@ void Shop::buyRelic(GameContext &gc, int idx) {
+         removeCost = static_cast<int>(std::round(static_cast<float>(removeCost) * MEMBERSHIP_CARD_FACTOR));
+     }
+
++    if (r == RelicId::THE_COURIER) {
++        applyDiscount(COURIER_FACTOR);
++        removeCost = static_cast<int>(std::round(static_cast<float>(removeCost) * COURIER_FACTOR));
++    }
++
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+         relics[idx] = gc.returnRandomRelic(rollRelicTier(gc.merchantRng), true, false);
+-        getNewPrice(gc, getRelicBasePrice(relics[idx]));
++        relicPrice(idx) = getNewPrice(gc, getRelicBasePrice(relics[idx]));
+     } else {
+         relicPrice(idx) = -1;
+     }
+
+-    if (isEggRelic(relics[idx])) {
++    if (isEggRelic(r)) {
+         for (auto &c : cards) {
+             c = gc.previewObtainCard(c);
+         }
+@@ -140,9 +146,10 @@ void Shop::buyRelic(GameContext &gc, int idx) {
+ }
+
+ void Shop::buyPotion(GameContext &gc, int idx) {
+-//    if (gc.hasRelic(RelicId::SOZU)) { // just dont call this with sozu or without enough slots
+-//        return;
+-//    }
++    if (idx < 0 || idx >= 3 || potionPrice(idx) < 0 || gc.gold < potionPrice(idx) ||
++            gc.hasRelic(RelicId::SOZU) || gc.potionCount >= gc.potionCapacity) {
++        throw std::invalid_argument("invalid shop potion purchase");
++    }
+     gc.obtainPotion(potions[idx]);
+     gc.loseGold(potionPrice(idx), true);
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+@@ -198,19 +205,19 @@ int Shop::getNewCardPrice(GameContext &gc, CardRarity rarity, bool colorless) {
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+         price *= 0.8f;
+     }
+-    if (gc.hasRelic(RelicId::THE_COURIER)) {
++    if (gc.hasRelic(RelicId::MEMBERSHIP_CARD)) {
+         price *= 0.5f;
+     }
+     return static_cast<int>(price);
+ }
+
+ int Shop::getNewPrice(GameContext &gc, int basePrice) {
+-    basePrice = static_cast<int>(std::round(gc.merchantRng.random(0.95f, 1.05f)));
++    basePrice = static_cast<int>(std::round(basePrice * gc.merchantRng.random(0.95f, 1.05f)));
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+-        std::round(basePrice * COURIER_FACTOR);
++        basePrice = static_cast<int>(std::round(basePrice * COURIER_FACTOR));
+     }
+     if (gc.hasRelic(RelicId::MEMBERSHIP_CARD)) {
+-        std::round(basePrice * MEMBERSHIP_CARD_FACTOR);
++        basePrice = static_cast<int>(std::round(basePrice * MEMBERSHIP_CARD_FACTOR));
+     }
+     return basePrice;
+ }
 diff --git a/src/sim/search/Action.cpp b/src/sim/search/Action.cpp
 index 551623d..7b4e762 100644
 --- a/src/sim/search/Action.cpp
@@ -2180,10 +2364,30 @@ index 79eccf9..d715863 100644
          }
          ++foundPotions;
 diff --git a/src/sim/search/GameAction.cpp b/src/sim/search/GameAction.cpp
-index 8c977ee..8c4485d 100644
+index 8c977ee..5da7665 100644
 --- a/src/sim/search/GameAction.cpp
 +++ b/src/sim/search/GameAction.cpp
-@@ -574,6 +574,9 @@ std::vector<search::GameAction> getAllRewardActions(const sts::GameContext &gc)
+@@ -229,7 +229,8 @@ bool isValidShopAction(const GameContext &gc, const search::GameAction a) {
+             if (select > 2) {
+                 return false;
+             }
+-            return s.potionPrice(select) != -1 && gc.gold >= s.potionPrice(select);
++            return s.potionPrice(select) != -1 && gc.gold >= s.potionPrice(select) &&
++                   !gc.hasRelic(RelicId::SOZU) && gc.potionCount < gc.potionCapacity;
+
+
+         case search::GameAction::RewardsActionType::RELIC:
+@@ -515,7 +516,8 @@ std::vector<search::GameAction> getAllShopActions(const sts::GameContext &gc) {
+
+     for (int i = 0; i < 3; ++i) {
+         auto price = s.potionPrice(i);
+-        if (price != -1 && gc.gold >= price) {
++        if (price != -1 && gc.gold >= price && !gc.hasRelic(RelicId::SOZU) &&
++                gc.potionCount < gc.potionCapacity) {
+             actions.emplace_back(search::GameAction::RewardsActionType::POTION, i);
+         }
+     }
+@@ -574,6 +576,9 @@ std::vector<search::GameAction> getAllRewardActions(const sts::GameContext &gc)
          for (int x = 0; x < r.cardRewards[i].size(); ++x) {
              actions.emplace_back(search::GameAction::RewardsActionType::CARD, i, x);
          }
