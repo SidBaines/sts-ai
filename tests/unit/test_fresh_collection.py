@@ -103,7 +103,9 @@ class CliTests(unittest.TestCase):
              "--out", "out", "--bank", "a", "b", "--bank-world-start", str(SEED), "--bank-n", "2"]))
         self.assertEqual(value["bank"], ["a", "b"])
         self.assertEqual((value["bank_world_start"], value["bank_n"]), (SEED, 2))
-        self.assertTrue(all(value["starts_per_group"]["EVENT"+str(act)] > 0 for act in (1, 2, 3)))
+        self.assertEqual((value["starts_per_group"]["EVENT1"], value["starts_per_group"]["EVENT2"]), (52, 4))
+        self.assertNotIn("EVENT3", value["starts_per_group"])
+        self.assertEqual(sum(value["starts_per_group"].values()), 1006)
 
     def test_both_clis_emit_done_with_explicit_partial_failure_status(self):
         summary = {"event": "done", "status": "failed", "cohort_complete": False,
@@ -592,27 +594,36 @@ class CollectionTests(LifecycleTests):
 
 
 class PanelTests(LifecycleTests):
+    @staticmethod
+    def panel_receipt(out, *args, **kwargs):
+        from sts_rl.fresh_study import atomic_json
+        atomic_json(Path(out)/"receipt.json", SOURCE)
+        return SOURCE
+
     def run_fixture(self, out, factory, **changes):
         states = [observation(), observation("combat", "BOSS"), observation("combat", "BOSS", hp=20, actions=[])]
         world = play_world(Worker(states), Policy(), SEED, config(mode="eval"), Control(), Progress(), SOURCE, lambda _: None)
         bank_file = write_cohort(out/"bank", [world])
         model = SimpleNamespace(identity={"champion": {"path": "champion"}, "combat": {"path": "entity"}, "ooc": None})
         with patch("sts_rl.fresh_panel.StudyPolicy", return_value=model), \
-             patch("sts_rl.fresh_panel.prepare_run", return_value=SOURCE):
+             patch("sts_rl.fresh_panel.prepare_run", side_effect=self.panel_receipt):
             return run_panel({"out": str(out), "bank": str(bank_file), "checkpoint": "champion",
                 "combat": "entity", "workers": 1, "timeout": 1., "resamples": 1,
                 "starts_per_group": {"BOSS2": 1}, **changes}, worker_factory=factory)
 
     def rows(self):
-        return [{"world_seed": SEED+i, "start_id": start, "group": group}
-                for i in range(3) for start, group in ((1, "BOSS2"), (2, "MONSTER2"))]
+        return [{"world_seed": SEED+i, "start_id": start, "group": group,
+                 "public_hash": "ooc", "first_combat_hash": "combat", "expected_provenance": EXPECTED,
+                 "prefix": [], "task": {}, "entering_action": 2, "entering_description": "enter"}
+                for i in range(3) for start, group in ((1, "BOSS2"), (2, "MONSTER2"), (3, "BOSS2"))]
 
-    def test_whole_world_selection_and_grid_integrity(self):
+    def test_one_start_per_world_group_selection_and_grid_integrity(self):
         selected, frozen = freeze_grid(self.rows(), {"BOSS2": 2}, 3)
-        self.assertEqual(len(selected), 4)
-        self.assertEqual(frozen["coverage"], {"BOSS2": 2, "MONSTER2": 2})
+        self.assertEqual(len(selected), 2)
+        self.assertEqual(len({r["world_seed"] for r in selected}), 2)
+        self.assertEqual(frozen["coverage"], {"BOSS2": 2})
         self.assertEqual(frozen["salts"], [-1, 0, 1, 2])
-        self.assertEqual(len(frozen["grid"]), 16)
+        self.assertEqual(len(frozen["grid"]), 8)
         self.assertEqual(freeze_grid(list(reversed(self.rows())), {"BOSS2": 2}, 3)[1], frozen)
         records = []
         for item in frozen["grid"]:
@@ -625,7 +636,10 @@ class PanelTests(LifecycleTests):
         self.assertEqual(metric["paired_difference"], 1.)
         self.assertEqual(metric["se"], 0.)
         records[0]["cut"] = True
-        self.assertFalse(paired_summary(records, frozen)["confidence_claims_allowed"])
+        incomplete = paired_summary(records, frozen)
+        self.assertFalse(incomplete["confidence_claims_allowed"])
+        self.assertTrue(incomplete["groups"]["BOSS2:resampled"]["diagnostic_only"])
+        self.assertTrue(incomplete["groups"]["BOSS2:unsalted"]["win"]["diagnostic_only"])
         with self.assertRaisesRegex(ValueError, "Duplicate"):
             paired_summary(records + records[:1], frozen)
         records[0].pop("cut")
@@ -674,7 +688,7 @@ class PanelTests(LifecycleTests):
             out.mkdir()
             model = SimpleNamespace(identity={"champion": {"path": "champion"}, "combat": {"path": "entity"}, "ooc": None})
             with patch("sts_rl.fresh_panel.StudyPolicy", return_value=model), \
-                 patch("sts_rl.fresh_panel.prepare_run", return_value=SOURCE):
+                 patch("sts_rl.fresh_panel.prepare_run", side_effect=self.panel_receipt):
                 report = run_panel({"out": str(out), "bank": str(bank_file), "checkpoint": "champion",
                     "combat": "entity", "workers": 2, "timeout": 1., "resamples": 1,
                     "starts_per_group": {"BOSS2": 1}}, worker_factory=Factory)
@@ -813,6 +827,25 @@ class PanelTests(LifecycleTests):
         with self.assertRaisesRegex(ValueError, "inference bug"):
             episode._scratch(raw, base, 0, bank, Bad())
         self.assertIs(raw.sts.BattleContext.exit_battle, original)
+
+    def test_salted_entry_hp_is_measured_from_public_combat_state(self):
+        episode, raw, bank, _ = self.native_fake()
+        original_observe = episode.episode._observe
+        def observe():
+            value = original_observe()
+            if value["phase"] == "combat":
+                # Combat initialization can differ from the bank's entry HP;
+                # the public combat HP also takes precedence over state.cur_hp.
+                value["state"]["combat"] = {"player_cur_hp": 51 if raw.gc.seed == 40+1_000_003 else 61}
+            return value
+        episode.episode._observe = observe
+        raw, base = episode._preinitialization(bank)
+        for salt, hp in ((0, 51), (1, 61)):
+            result = episode._scratch(raw, base, salt, bank, Policy())
+            self.assertEqual(result["entry_hp"], hp)
+            self.assertEqual(result["source_entry_hp"], 37)
+            self.assertEqual(result["hp_after"], 25)
+            self.assertEqual(result["hp_lost"], hp-25)
 
     def test_prepared_cache_replays_and_verifies_once_for_all_eighteen_fights(self):
         episode, raw, bank, events = self.native_fake()

@@ -16,13 +16,18 @@ import statistics
 import traceback
 
 from sts_env.env import SimulatorError, SimulatorTimeout
-from sts_policy.curriculum import public_hash
+from sts_policy.curriculum import player_hp, public_hash
 from sts_rl.panel import PanelEpisode, PanelWorker
 from sts_rl.fresh_native import install_native_guards
+from sts_rl.fresh_panel_grid import (DEFAULT_TARGETS, HP_DEFINITION, bank_identity,
+                                     freeze_grid, load_grid, save_grid)
+from sts_rl.recording import file_identity
 from sts_rl.fresh_study import (Interrupted, PROTOCOL, Progress, RunControl, StudyPolicy,
-                                atomic_json, finish_run, prepare_run, validate_world_range)
+                                atomic_json, prepare_run, validate_world_range)
 
 _POLICIES = {}
+_GRID_FIELDS = ("grid_hash", "selection_protocol", "targets", "resamples", "coverage", "coverage_sufficient",
+                "coverage_shortfall", "eligible_worlds", "absent_groups")
 
 
 def _policy(champion, combat):
@@ -181,7 +186,7 @@ class FreshPanelEpisode(PanelEpisode):
                 raise SimulatorError("Unsalted first-combat public hash mismatch")
             if policy is None:
                 return {"first_combat_hash": actual_hash}
-            entry_hp, decisions = bank["entry_hp"], 0
+            entry_hp, decisions = player_hp(observation), 0
             while not ended and observation["phase"] == "combat" and decisions < max_decisions:
                 action = policy.choose_action(observation)
                 observation, _, terminated, truncated, _ = self.episode.step(action)
@@ -193,7 +198,7 @@ class FreshPanelEpisode(PanelEpisode):
             valid = bool(ended) and not ub
             hp_after = (ended["hp_after"] if ended.get("win") else 0) if valid else None
             return {"salt": salt, "win": ended.get("win") if valid else None,
-                    "entry_hp": entry_hp, "hp_after": hp_after,
+                    "entry_hp": entry_hp, "source_entry_hp": bank["entry_hp"], "hp_after": hp_after,
                     "hp_lost": entry_hp - hp_after if valid else None,
                     "decisions": decisions, "cut": not bool(ended), "ub": ub,
                     "first_combat_hash": actual_hash}
@@ -275,40 +280,26 @@ def _bank_rows(cohort):
     return rows
 
 
-def freeze_grid(rows, targets, resamples):
-    if resamples < 1 or not targets or any(isinstance(n, bool) or not isinstance(n, int) or n < 1 for n in targets.values()):
-        raise ValueError("Require positive group targets and resamples")
-    worlds = defaultdict(list)
-    for row in rows:
-        worlds[row["world_seed"]].append(row)
-    counts, selected = defaultdict(int), []
-    for seed in sorted(worlds, key=lambda s: public_hash({"panel_world": s})):
-        if not any(counts[r["group"]] < targets.get(r["group"], 0) for r in worlds[seed]):
-            continue
-        # Select whole worlds, retaining all their fight rooms and late starts.
-        selected.extend(worlds[seed])
-        for row in worlds[seed]:
-            counts[row["group"]] += 1
-    selected.sort(key=lambda r: (r["world_seed"], r["start_id"]))
-    grid = [{"world_seed": r["world_seed"], "start_id": r["start_id"],
-             "group": r["group"], "salt": salt} for r in selected for salt in [-1, *range(resamples)]]
-    return selected, {"protocol": PROTOCOL, "targets": targets, "coverage": dict(counts),
-                      "coverage_sufficient": all(counts[g] >= n for g, n in targets.items()),
-                      "salts": [-1, *range(resamples)], "grid": grid,
-                      "grid_hash": public_hash({"grid": grid})}
-
-
 def paired_summary(records, frozen):
+    """Summarize paired cells; legacy grids without C5 metadata are diagnostic."""
     expected = {(r["world_seed"], r["start_id"], r["salt"], p)
                 for r in frozen["grid"] for p in ("champion", "replacement")}
     actual = [(r["world_seed"], r["start_id"], r["salt"], r["policy"]) for r in records]
     if len(set(actual)) != len(actual) or not set(actual) <= expected:
         raise ValueError("Duplicate or unexpected panel grid result")
+    grid_groups = {(r["world_seed"], r["start_id"], r["salt"]): r["group"] for r in frozen["grid"]}
+    if any(r["group"] != grid_groups[(r["world_seed"], r["start_id"], r["salt"])] or
+           ("grid_hash" in r and r["grid_hash"] != frozen.get("grid_hash")) for r in records):
+        raise ValueError("Panel group/grid hash mismatch")
     valid = [r for r in records if not (r.get("fault") or r.get("cut") or r.get("ub") or
                                        r.get("censored") or r.get("programming_error"))]
-    complete = len(valid) == len(expected) and frozen["coverage_sufficient"]
+    results_complete = len(valid) == len(expected)
+    complete = results_complete and bool(frozen.get("coverage_sufficient", False))
+    # Cell completeness alone cannot establish the provenance of legacy input.
+    confidence_allowed = complete and all(frozen.get(key) is not None for key in _GRID_FIELDS)
+    diagnostic_only = not confidence_allowed
     groups = {}
-    for group in sorted({r["group"] for r in frozen["grid"]}):
+    for group in sorted(frozen.get("targets") or {r["group"] for r in frozen["grid"]}):
         # The unsalted control is reported separately; no mixture with resamples.
         for control in (False, True):
             rows = [r for r in valid if r["group"] == group and (r["salt"] == -1) == control]
@@ -330,34 +321,96 @@ def paired_summary(records, frozen):
                 # dependent. Sample SD of world means / sqrt(number of worlds).
                 means = [statistics.mean(values) for values in clusters.values()]
                 se = statistics.stdev(means) / math.sqrt(len(means)) if len(means) > 1 else None
-                metrics[metric] = {"paired_difference": statistics.mean(means) if means else None,
+                metrics[metric] = {"diagnostic_only": diagnostic_only,
+                    "paired_difference": statistics.mean(means) if means else None,
                     "worlds": len(means), "se": se, "approx_80pct_power_mde": 2.8 * se if se is not None else None,
                     "champion_mean": statistics.mean(statistics.mean(v) for v in baseline.values()) if pairs else None,
                     "replacement_mean": statistics.mean(statistics.mean(v) for v in replacement.values()) if pairs else None}
+            metrics["diagnostic_only"] = diagnostic_only
             groups[group + (":unsalted" if control else ":resampled")] = metrics
-    return {"protocol": PROTOCOL, "grid_complete": complete, "confidence_claims_allowed": complete,
+    return {"protocol": PROTOCOL, **_grid_fields(frozen), "grid_complete": complete,
+            "results_complete": results_complete, "diagnostic_only": diagnostic_only,
+            "confidence_claims_allowed": confidence_allowed,
             "expected_results": len(expected), "received": len(records), "valid": len(valid),
             "faults": sum(bool(r.get("fault")) for r in records),
             "cuts": sum(bool(r.get("cut")) for r in records), "ub": sum(bool(r.get("ub")) for r in records),
             "censored": sum(bool(r.get("censored") or r.get("programming_error")) for r in records),
-            "unstarted": len(expected)-len(records), "groups": groups,
+            "unstarted": len(expected)-len(records), "missing_results": len(expected)-len(records),
+            "invalid_results": len(records)-len(valid), "groups": groups,
             "method": "Equal-source-world paired means; SE=SD(world means)/sqrt(n worlds); MDE=2.8*SE. "
-                      "Approximate normal 80% power at two-sided 5%; no final claims for incomplete grid.",
+                      "Approximate normal 80% power at two-sided 5%; no final claims for incomplete grid "
+                      "or missing manifest metadata.",
             "records": records}
+
+
+def _grid_fields(frozen):
+    return {**{key: frozen.get(key) for key in _GRID_FIELDS}, "hp_definition": dict(HP_DEFINITION)}
+
+
+def _panel_bank(config):
+    from sts_rl.fresh_cohort import validate_cohorts
+    cohort = validate_cohorts(config["bank"], world_start=config.get("bank_world_start"), n=config.get("bank_n"))
+    return cohort, _bank_rows(cohort), bank_identity(cohort)
+
+
+def freeze_panel_grid(config):
+    """Model-free entry point; --out is a new immutable manifest file."""
+    _, rows, identity = _panel_bank(config)
+    _, frozen = freeze_grid(rows, config.get("starts_per_group", DEFAULT_TARGETS), config.get("resamples", 8),
+                            bank_identity=identity)
+    save_grid(config["out"], frozen)
+    return frozen
+
+
+def _finish_panel(out, summary, source, progress):
+    """Panel-specific completion fields without changing the running collector."""
+    summary["source"] = source
+    summary["cohort_complete"] = summary["grid_complete"]
+    failed = bool(summary.get("programming_error") or summary.get("grid_validation_error") or summary["faults"])
+    summary.update(event="done", status=("failed" if failed else "completed" if summary["cohort_complete"] else
+                         "interrupted" if summary.get("stop_reasons") else "incomplete"))
+    if summary["status"] != "completed":
+        summary["confidence_claims_allowed"] = False
+        summary["diagnostic_only"] = True
+        for metrics in summary.get("groups", {}).values():
+            metrics["diagnostic_only"] = True
+            for key in ("win", "hp_lost"):
+                metrics[key]["diagnostic_only"] = True
+    summary["run_control"] = progress.control.stats()
+    atomic_json(out / "summary.json", summary)
+    keys = ("status", "cohort_complete", "confidence_claims_allowed", "diagnostic_only", "grid_complete",
+            "faults", "cuts", "censored", "unstarted", "stop_reasons", "valid", "results_complete",
+            "missing_results", "invalid_results", "expected_results", "received", "grid_input")
+    fields = {key: summary[key] for key in keys}
+    fields.update({key: summary[key] for key in (*_GRID_FIELDS, "hp_definition")})
+    atomic_json(out / "completion.json", {"protocol": PROTOCOL, "event": "done", **fields,
+                "source": source, "summary": file_identity(out / "summary.json"),
+                "run_control": summary["run_control"]})
+    progress.emit("done", **fields)
 
 
 def run_panel(config, *, worker_factory=None):
     from sts_rl.common import WORKER_CONFIG
-    from sts_rl.fresh_cohort import validate_cohorts
     if config["workers"] < 1 or not math.isfinite(config["timeout"]) or config["timeout"] <= 0:
         raise ValueError("Require positive workers and finite positive timeout")
-    cohort = validate_cohorts(config["bank"], world_start=config.get("bank_world_start"), n=config.get("bank_n"))
-    rows = _bank_rows(cohort)
-    selected, frozen = freeze_grid(rows, config["starts_per_group"], config["resamples"])
+    config = {"starts_per_group": dict(DEFAULT_TARGETS), "resamples": 8, **config}
+    cohort, rows, identity = _panel_bank(config)
+    grid_input = None
+    if config.get("grid"):
+        selected, frozen, grid_input = load_grid(config["grid"], rows, config["starts_per_group"],
+                                                config["resamples"], bank_identity=identity)
+    else:
+        selected, frozen = freeze_grid(rows, config["starts_per_group"], config["resamples"], bank_identity=identity)
+    # These fields reach begin_run via prepare_run, before any model is scored.
+    config = {**config, **_grid_fields(frozen), "bank_identity": identity, "grid_input": grid_input}
     policy = StudyPolicy(config["checkpoint"], combat=config["combat"])
-    source = prepare_run(config["out"], config, policy, inputs=[*cohort["inputs"], *cohort["shards"]])
+    if grid_input is not None and file_identity(config["grid"]) != grid_input:
+        raise ValueError("Frozen grid input changed before launch")
+    source = prepare_run(config["out"], config, policy,
+                         inputs=[*cohort["inputs"], *cohort["shards"], *([config["grid"]] if grid_input else [])])
     out = Path(config["out"])
-    atomic_json(out / "grid.json", {**frozen, "source": source})
+    source_ref = file_identity(out / "receipt.json")
+    save_grid(out / "grid.json", frozen)
     control = RunControl(out, config.get("deadline_utc"))
     progress, records = Progress(out, control), []
     # Assign a complete start to one child; every individual policy/salt remains
@@ -402,7 +455,7 @@ def run_panel(config, *, worker_factory=None):
                     except Exception as exc:
                         programming_error = exc
                         result = {"programming_error": f"{type(exc).__name__}: {exc}"}
-                    row = {**result, **item, "policy": name, "source": source}
+                    row = {**result, **item, "policy": name, "source_ref": source_ref, "grid_hash": frozen["grid_hash"]}
                     invalid = any(result.get(k) for k in ("fault", "cut", "ub", "censored", "programming_error"))
                     path = out / ("quarantine" if invalid else "results") / f"{item['world_seed']}-{item['start_id']}-{item['salt']}-{name}.json"
                     atomic_json(path, row)
@@ -450,16 +503,20 @@ def run_panel(config, *, worker_factory=None):
             summary = paired_summary(records, frozen)
         except Exception as exc:
             error = error or exc
-            summary = {"protocol": PROTOCOL, "grid_complete": False, "confidence_claims_allowed": False,
+            summary = {"protocol": PROTOCOL, **_grid_fields(frozen), "grid_complete": False,
+                       "confidence_claims_allowed": False, "diagnostic_only": True, "results_complete": False,
+                       "valid": 0, "received": len(records), "expected_results": len(frozen["grid"])*2,
+                       "missing_results": len(frozen["grid"])*2-len(records), "invalid_results": len(records),
                        "records": records, "grid_validation_error": str(exc),
                        "faults": sum(bool(r.get("fault")) for r in records),
                        "cuts": sum(bool(r.get("cut")) for r in records),
                        "censored": sum(bool(r.get("censored") or r.get("programming_error")) for r in records),
                        "unstarted": len(frozen["grid"])*2-len(records)}
         summary["stop_reasons"] = sorted(stop_reasons)
+        summary["grid_input"] = grid_input
         if error:
             summary.update(programming_error=f"{type(error).__name__}: {error}", confidence_claims_allowed=False)
-        finish_run(out, summary, source, progress)
+        _finish_panel(out, summary, source, progress)
     if error:
         raise error
     return summary

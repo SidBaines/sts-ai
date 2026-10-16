@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Freeze a whole-world bank grid and compare champion/replacement combat heads."""
+"""Freeze one start per source world/group, then compare paired combat heads."""
 from __future__ import annotations
 
 import argparse
@@ -9,7 +9,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
-from sts_rl.fresh_panel import run_panel
+from sts_rl.fresh_panel import DEFAULT_TARGETS, freeze_panel_grid, run_panel
 
 
 def parser():
@@ -17,13 +17,13 @@ def parser():
     p.add_argument("--bank", required=True, nargs="+", help="Completed receipted collection directories")
     p.add_argument("--bank-world-start", type=int, help="Optional exact expected bank seedgrid start")
     p.add_argument("--bank-n", type=int, help="Optional exact expected bank seedgrid size")
-    p.add_argument("--checkpoint", required=True)
-    p.add_argument("--combat", required=True, help="entity_fresh_v1 replacement combat head")
-    p.add_argument("--out", required=True)
+    p.add_argument("--checkpoint")
+    p.add_argument("--combat", help="entity_fresh_v1 replacement combat head")
+    p.add_argument("--out", required=True, help="New run directory, or new grid JSON file with --freeze-grid-only")
+    p.add_argument("--grid", help="Pre-frozen immutable grid JSON; exact bank, targets and resamples must match")
+    p.add_argument("--freeze-grid-only", action="store_true", help="Create --out grid JSON without loading any model")
     p.add_argument("--starts-per-group", type=json.loads,
-                   default={"BOSS2": 300, "BOSS1": 100, "BOSS3": 100,
-                            "ELITE2": 150, "ELITE3": 100, "MONSTER2": 100, "MONSTER3": 100,
-                            "EVENT1": 100, "EVENT2": 100, "EVENT3": 100})
+                   default=dict(DEFAULT_TARGETS), help="Positive source-WORLD counts per target group (JSON)")
     p.add_argument("--resamples", type=int, default=8, help="Salted repeats, plus exact unsalted control -1")
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--timeout", type=float, default=120.0)
@@ -32,9 +32,22 @@ def parser():
 
 
 def main(argv=None):
-    summary = run_panel(vars(parser().parse_args(argv)))
+    p = parser()
+    config = vars(p.parse_args(argv))
+    if config["freeze_grid_only"]:
+        if config["grid"] or config["checkpoint"] or config["combat"]:
+            p.error("--freeze-grid-only takes bank/targets/resamples/out, without --grid or model arguments")
+        frozen = freeze_panel_grid(config)
+        print(json.dumps({k: frozen[k] for k in ("grid_hash", "selection_protocol", "resamples", "targets", "coverage",
+                                                "coverage_sufficient", "coverage_shortfall", "absent_groups")}))
+        return
+    if not config["checkpoint"] or not config["combat"]:
+        p.error("Panel comparison requires --checkpoint and --combat; freeze first with --freeze-grid-only")
+    summary = run_panel(config)
     print(json.dumps({k: summary[k] for k in ("event", "status", "cohort_complete", "grid_complete",
-                                             "valid", "faults", "cuts", "censored", "unstarted")}))
+                     "valid", "faults", "cuts", "censored", "unstarted", "grid_hash", "selection_protocol",
+                     "targets", "coverage", "coverage_sufficient", "results_complete", "missing_results",
+                     "invalid_results") if k in summary}))
 
 
 if __name__ == "__main__":
