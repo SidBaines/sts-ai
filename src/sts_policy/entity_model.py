@@ -120,10 +120,11 @@ class _Critic(nn.Module):
 class EntityActorCritic(nn.Module):
     """One phase per model; no shared actor/critic or combat/OOC parameters.
 
-    Each row is unpadded before arithmetic. This makes single-observation logits
+    actor_logits unpads each row before arithmetic. This makes its logits
     bit-identical on CPU across different batch partners and padding lengths,
     including duplicate-card ties. Default dropout is zero. Use eval() for policy
-    inference if explicitly configuring nonzero dropout. No global thread changes.
+    inference if explicitly configuring nonzero dropout. training_logits uses
+    masked, vectorized arithmetic for optimization. No global thread changes.
     """
     def __init__(self, width=128, layers=2, heads=4, dropout=0.0, phase='combat'):
         super().__init__()
@@ -182,6 +183,44 @@ class EntityActorCritic(nn.Module):
     def critic_values(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
         """Critic-only fitting path with no actor execution or gradients."""
         return torch.stack([self.critic(row) for row in self._rows(batch)])
+
+    def training_logits(self, batch: dict[str, torch.Tensor]) -> torch.Tensor:
+        """Vectorized actor arithmetic for trusted, CPU-validated collator output.
+
+        Padding is masked throughout. No per-observation device synchronization;
+        singleton evaluation deliberately continues to use actor_logits.
+        """
+        b, tower = batch, self.actor.tower
+        entities = (tower.identity(b['entity_ids']) + tower.entity_type(b['entity_types'])
+                    + tower.identity(b['entity_aux']).sum(-2) + tower.numeric(b['entity_numeric']))
+        size, count, width = entities.shape
+        powers = tower.power_value(torch.cat((tower.power(b['power_ids']),
+            b['power_amounts'].unsqueeze(-1), b['power_amount_available'].unsqueeze(-1).to(entities.dtype)), -1))
+        owners = b['power_owner'].clamp_min(0) + torch.arange(size, device=entities.device)[:, None] * count
+        additions = torch.zeros_like(entities).reshape(-1, width).index_add(
+            0, owners.reshape(-1), (powers * b['power_mask'].unsqueeze(-1)).reshape(-1, width))
+        entities = tower.attention(entities + additions.reshape_as(entities),
+                                   src_key_padding_mask=~b['entity_mask'])
+        mask = b['entity_mask'].unsqueeze(-1)
+        pooled = (entities * mask).sum(1) / mask.sum(1).clamp_min(1)
+        recent = (tower.identity(b['recent_ids']) + tower.action_type(b['recent_types'])
+                  + tower.numeric(b['recent_numeric']))
+        history, _ = tower.recent(recent)
+        lengths = b['recent_mask'].sum(1)
+        context = history[torch.arange(size, device=entities.device), (lengths - 1).clamp_min(0)]
+        context = context * (lengths > 0).unsqueeze(-1)
+        state = tower.pool(torch.cat((pooled, context), -1))
+        action = (tower.identity(b['action_ids']) + tower.action_type(b['action_types'])
+                  + tower.identity(b['action_aux']).sum(-2) + self.actor.action_numeric(b['action_numeric'])
+                  + self.actor.text(b['action_text']))
+        rows = torch.arange(size, device=entities.device)[:, None, None]
+        members = entities[rows, b['action_source_members'].clamp_min(0)]
+        member_mask = b['action_source_mask'].unsqueeze(-1)
+        source = (members * member_mask).sum(2) / member_mask.sum(2).clamp_min(1)
+        target = entities[rows.squeeze(-1), b['action_target'].clamp_min(0)]
+        target = target * (b['action_target'] >= 0).unsqueeze(-1)
+        features = torch.cat((action, source, target, state[:, None].expand_as(action)), -1)
+        return self.actor.score(features).squeeze(-1).masked_fill(~b['action_mask'], -torch.inf)
 
     def forward(self, batch: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
         return self.actor_logits(batch), self.critic_values(batch)
