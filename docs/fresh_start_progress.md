@@ -2,7 +2,7 @@
 
 **Current state:** the approved A–C study and monitoring are complete. **G1 was not met; the full fresh composite's G2 result is inconclusive.** Keep the champion as default. The old-encoder combat fallback won 222/4,096 DEV games versus 143 for the champion; this is exploratory. All experiment workers are finished. Confirmation and Step D remain unopened pending Sid's decision.
 
-Read the [Gate C report and plots](fresh_start_gate_c_2026-10-16.md). The [full technical journal](fresh_start_progress_detail.md) preserves every previous entry, decision, setting and receipt reference unchanged. Artifacts remain in `data/rl_runs/fresh_start_20261015/`; nothing was deleted or pushed. The deadline was 16 October 08:00 UTC.
+Read the [Gate C report and plots](fresh_start_gate_c_2026-10-16.md). The [full technical journal](fresh_start_progress_detail.md) preserves every previous entry, decision, setting and receipt reference unchanged. Artifacts remain in `data/rl_runs/fresh_start_20261015/`; nothing was deleted or pushed. Hard deadline: 16 October 08:00 UTC.
 
 ## 16 October 2026, 04:06 UTC — completion audit and readable handoff
 
