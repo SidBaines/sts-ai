@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="775.56pt" height="379.44pt" viewBox="0 0 775.56 379.44" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <title>G2 · shop gold amount per opportunity</title>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:title>G2 · shop gold amount per opportunity</dc:title>
+    <dc:date>2026-10-16T04:47:01.456109</dc:date>
+    <dc:description>fresh_start_v1 · greedy full-game DEV evaluation · 4,096 paired worlds; 95% paired WORLD bootstrap of summed amount/opportunities.
+Includes zero spend at eligible purchase-choice menus; denominator is opportunities, not purchases. S = student; C = original champion.
+Policy-dependent opportunity cohorts: descriptive, not causal. No margin.
+◇ = degenerate empirical bootstrap (constant observed contrast); it does not imply zero population uncertainty.</dc:description>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.0, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 379.44 
+L 775.56 379.44 
+L 775.56 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 306.4 264.752 
+L 768.36 264.752 
+L 768.36 67.299516 
+L 306.4 67.299516 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <path d="M 365.004968 264.752 
+L 365.004968 67.299516 
+" clip-path="url(#pd1499970e6)" style="fill: none; stroke: #dcdcdc; stroke-opacity: 0.55; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2">
+      <defs>
+       <path id="mf6116df9c4" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mf6116df9c4" x="365.004968" y="264.752" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle" x="365.004968" y="278.589891" transform="rotate(-0 365.004968 278.589891)">−0.4</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_3">
+      <path d="M 452.358512 264.752 
+L 452.358512 67.299516 
+" clip-path="url(#pd1499970e6)" style="fill: none; stroke: #dcdcdc; stroke-opacity: 0.55; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#mf6116df9c4" x="452.358512" y="264.752" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle" x="452.358512" y="278.589891" transform="rotate(-0 452.358512 278.589891)">−0.2</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_5">
+      <path d="M 539.712056 264.752 
+L 539.712056 67.299516 
+" clip-path="url(#pd1499970e6)" style="fill: none; stroke: #dcdcdc; stroke-opacity: 0.55; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#mf6116df9c4" x="539.712056" y="264.752" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle" x="539.712056" y="278.589891" transform="rotate(-0 539.712056 278.589891)">0.0</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_7">
+      <path d="M 627.065599 264.752 
+L 627.065599 67.299516 
+" clip-path="url(#pd1499970e6)" style="fill: none; stroke: #dcdcdc; stroke-opacity: 0.55; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#mf6116df9c4" x="627.065599" y="264.752" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle" x="627.065599" y="278.589891" transform="rotate(-0 627.065599 278.589891)">0.2</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_9">
+      <path d="M 714.419143 264.752 
+L 714.419143 67.299516 
+" clip-path="url(#pd1499970e6)" style="fill: none; stroke: #dcdcdc; stroke-opacity: 0.55; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#mf6116df9c4" x="714.419143" y="264.752" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle" x="714.419143" y="278.589891" transform="rotate(-0 714.419143 278.589891)">0.4</text>
+     </g>
+    </g>
+    <g id="text_6">
+     <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle" x="537.38" y="293.110281" transform="rotate(-0 537.38 293.110281)">Student minus champion mean gold spent per shop opportunity (gold / opportunity)</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_11">
+      <defs>
+       <path id="m7aeee6ca37" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m7aeee6ca37" x="306.4" y="100.208263" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'" transform="translate(204.433125 98.676769)">Combat replacement</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'" transform="translate(10.137188 109.47923)">S 1,415,826 gold / 28,955 opps; C 1,440,708 gold / 29,361 opps</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m7aeee6ca37" x="306.4" y="166.025758" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'" transform="translate(219.294375 164.494264)">OOC replacement</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'" transform="translate(10.137188 175.296725)">S 1,468,602 gold / 29,868 opps; C 1,440,708 gold / 29,361 opps</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m7aeee6ca37" x="306.4" y="231.843253" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'" transform="translate(214.146094 230.311758)">Both replacements</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'" transform="translate(10.137188 241.114219)">S 1,454,870 gold / 29,606 opps; C 1,440,708 gold / 29,361 opps</text>
+     </g>
+    </g>
+   </g>
+   <g id="LineCollection_1">
+    <path d="M 327.398182 100.208263 
+L 602.796489 100.208263 
+" clip-path="url(#pd1499970e6)" style="fill: none; stroke: #0072b2; stroke-width: 1.7"/>
+   </g>
+   <g id="line2d_14">
+    <defs>
+     <path id="m0d3c626c8a" d="M 0 4 
+L 0 -4 
+" style="stroke: #0072b2"/>
+    </defs>
+    <g clip-path="url(#pd1499970e6)">
+     <use xlink:href="#m0d3c626c8a" x="327.398182" y="100.208263" style="fill: #0072b2; stroke: #0072b2"/>
+     <use xlink:href="#m0d3c626c8a" x="602.796489" y="100.208263" style="fill: #0072b2; stroke: #0072b2"/>
+    </g>
+   </g>
+   <g id="line2d_15">
+    <defs>
+     <path id="maab7266d55" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #0072b2"/>
+    </defs>
+    <g clip-path="url(#pd1499970e6)">
+     <use xlink:href="#maab7266d55" x="464.892387" y="100.208263" style="fill: #0072b2; stroke: #0072b2"/>
+    </g>
+   </g>
+   <g id="LineCollection_2">
+    <path d="M 418.780725 166.025758 
+L 746.540004 166.025758 
+" clip-path="url(#pd1499970e6)" style="fill: none; stroke: #d55e00; stroke-width: 1.7"/>
+   </g>
+   <g id="line2d_16">
+    <defs>
+     <path id="md2f973d08f" d="M 0 4 
+L 0 -4 
+" style="stroke: #d55e00"/>
+    </defs>
+    <g clip-path="url(#pd1499970e6)">
+     <use xlink:href="#md2f973d08f" x="418.780725" y="166.025758" style="fill: #d55e00; stroke: #d55e00"/>
+     <use xlink:href="#md2f973d08f" x="746.540004" y="166.025758" style="fill: #d55e00; stroke: #d55e00"/>
+    </g>
+   </g>
+   <g id="line2d_17">
+    <defs>
+     <path id="m661dad8b71" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #d55e00"/>
+    </defs>
+    <g clip-path="url(#pd1499970e6)">
+     <use xlink:href="#m661dad8b71" x="583.81782" y="166.025758" style="fill: #d55e00; stroke: #d55e00"/>
+    </g>
+   </g>
+   <g id="LineCollection_3">
+    <path d="M 398.470585 231.843253 
+L 747.361818 231.843253 
+" clip-path="url(#pd1499970e6)" style="fill: none; stroke: #009e73; stroke-width: 1.7"/>
+   </g>
+   <g id="line2d_18">
+    <defs>
+     <path id="m360d7c039e" d="M 0 4 
+L 0 -4 
+" style="stroke: #009e73"/>
+    </defs>
+    <g clip-path="url(#pd1499970e6)">
+     <use xlink:href="#m360d7c039e" x="398.470585" y="231.843253" style="fill: #009e73; stroke: #009e73"/>
+     <use xlink:href="#m360d7c039e" x="747.361818" y="231.843253" style="fill: #009e73; stroke: #009e73"/>
+    </g>
+   </g>
+   <g id="line2d_19">
+    <defs>
+     <path id="mfc10c72621" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #009e73"/>
+    </defs>
+    <g clip-path="url(#pd1499970e6)">
+     <use xlink:href="#mfc10c72621" x="571.285034" y="231.843253" style="fill: #009e73; stroke: #009e73"/>
+    </g>
+   </g>
+   <g id="line2d_20">
+    <path d="M 539.712056 264.752 
+L 539.712056 67.299516 
+" clip-path="url(#pd1499970e6)" style="fill: none; stroke-dasharray: 1,1.65; stroke-dashoffset: 0; stroke: #555555"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 306.4 264.752 
+L 306.4 67.299516 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 306.4 264.752 
+L 768.36 264.752 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+  </g>
+  <g id="text_10">
+   <text style="font-weight: 700; font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle" x="387.36" y="18.597656" transform="rotate(-0 387.36 18.597656)">G2 · shop gold amount per opportunity</text>
+  </g>
+  <g id="text_11">
+   <text style="font-size: 9px; font-family: 'DejaVu Sans'" transform="translate(7.2 327.348281)">fresh_start_v1 · greedy full-game DEV evaluation · 4,096 paired worlds; 95% paired WORLD bootstrap of summed amount/opportunities.</text>
+   <text style="font-size: 9px; font-family: 'DejaVu Sans'" transform="translate(7.2 340.973437)">Includes zero spend at eligible purchase-choice menus; denominator is opportunities, not purchases. S = student; C = original champion.</text>
+   <text style="font-size: 9px; font-family: 'DejaVu Sans'" transform="translate(7.2 354.473437)">Policy-dependent opportunity cohorts: descriptive, not causal. No margin.</text>
+   <text style="font-size: 9px; font-family: 'DejaVu Sans'" transform="translate(7.2 367.973437)">◇ = degenerate empirical bootstrap (constant observed contrast); it does not imply zero population uncertainty.</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pd1499970e6">
+   <rect x="306.4" y="67.299516" width="461.96" height="197.452484"/>
+  </clipPath>
+ </defs>
+</svg>

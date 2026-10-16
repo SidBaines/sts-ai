@@ -1,0 +1,46 @@
+{
+  "created_utc": "2026-10-16T03:50:14.960863+00:00",
+  "source_commit": "c9d4cfd007d672ab058e419968c618bdc2574ac5",
+  "scientific_src_unchanged_from": "ee115ba",
+  "plot_data_sha256": "ae3843db8a11b5a25d187660187b41878e21b282437c1d1d961c0230333ac671",
+  "plot_data_preserved_at": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start/data/rl_runs/fresh_start_20261015/report_plot_data_v1.json",
+  "smith_supplement_preserved_at": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start/data/rl_runs/fresh_start_20261015/report_smith_bands_v1.json",
+  "visual_qa": {
+    "png_families": 9,
+    "all_reviewed_by_root": true,
+    "clipping_or_legend_blockers": false
+  },
+  "tests": {
+    "reporting": 12,
+    "result": "PASS"
+  },
+  "files": {
+    "artifact_provenance.json": "e8712c6f9e3ff7003f8fb32c8bdfb99aac39eb33e991de99c7791186eca63a25",
+    "behavior_components.csv": "d69bfe3cec00b97fad54d3be19cf0d323a6fd7d9b2b2cc68da8e554750203826",
+    "champion_boss_metrics.csv": "c566b70f1b09ef400004c7e2f965342f7d7c13dcb4585a6631fe947f022cbd63",
+    "combat_test_learning.png": "6fc0273c1d02779081b713709c6e16f1586a87718d7bcfef4b6e751f10421acb",
+    "combat_test_learning.svg": "b169aacf9d833e7fc6a3a9f1b7f68f7e0fac4d6b79dc7947790370a286418284",
+    "fixed93e9_movement_combat.png": "49ad05680d1a43a22795e4702cc675eca69d42519044147001d9b0c47d595a2f",
+    "fixed93e9_movement_combat.svg": "3d574917e951e38f135c646c0a3edd443db033054da9f794427b31022d36e131",
+    "fixed93e9_movement_ooc.png": "98b462b601a99f321e73c9fe2c8aaa650c5c87b2d3b0fed22120956e00ef7ce9",
+    "fixed93e9_movement_ooc.svg": "b12cd1b5a5f22dd7f0e7c797145d301c5b4655e4027ac132829f470a475e5b50",
+    "g1_direct_panel.png": "5c9610e7d168a4cad907d2a3594ba1f7eb0390912ceceda24d23d20ed8396cba",
+    "g1_direct_panel.svg": "06626cce00be4b86933d2fae720919e410c7e99c86f3bf0d31f54390d3fce46e",
+    "g1_paired_label_groups.csv": "6dcf1db2bce46eb62002fc1184284d77d26cb2aae176ae4aec990d65c0a1cdf5",
+    "g1_panel_sensitivity.csv": "1a3d9b227c545cbf22a67311533ee09fe0ff190020bec5f1fd8863166247a04d",
+    "g2_behavior_rates.png": "51246d357ad1575df48d807427f589054ad15cf7b4d0fbec11bb02aca312786c",
+    "g2_behavior_rates.svg": "991a049b7d0176257788b136869a7739d645572b7cc3d60f2c6a1aa9a3546168",
+    "g2_boss_differences.png": "a68eba7ed6609d4ff60c2018df73aaf91c172792ee4a7b2435bef848279df947",
+    "g2_boss_differences.svg": "7d08264c4dce2147b0f063505d9eb951fc12be20b9b610dcbb5faefdfd7212a7",
+    "g2_boss_metrics.csv": "0746b63794fb50d5f1c88a5e3eccc090649faaa4092ea4dd8b68bec2ff4932f3",
+    "g2_paired_differences.png": "3103c04afa41ad7c3866d47cf6599b286adfe946797e71205d587769f56e01bf",
+    "g2_paired_differences.svg": "bec293767557ef9b2c4b28fc77519289cba1f0a3ceb1f9af19a528069c63c65c",
+    "g2_shop_gold.png": "f8885b586aa4dd855fa70975418af92ad16ddbc4753f5aa5a29764de4a14b2e5",
+    "g2_shop_gold.svg": "01c562d12c755eea79203af19ca63a50752c549482f67ff8bb9ded66681e6573",
+    "smith_hp_bands.csv": "0ffc0de0b53d3b375d3ca7fce88938563774b3625f55cc7c572c988bb946bb96",
+    "test_strata.csv": "d87e4d7f3f6e7a4256f9d406e5fa6c6948364b7cfd37f63d62ef4c69ccdb54b2",
+    "validation_learning.png": "9f11df77d4481f3bd5af9362eb2a070720e50c6042facca0ef6305ea77bfb23c",
+    "validation_learning.svg": "f4002c38820692d05add5e314fb47a4101991bee24186976727c6490e65bf4b5"
+  },
+  "csv_projection_note": "MDE columns mechanically filled as predeclared 2.8 * existing SE; original points, CIs and SEs unchanged."
+}
