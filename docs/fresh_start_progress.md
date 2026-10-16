@@ -4,6 +4,12 @@
 
 Read the [Gate C report and plots](fresh_start_gate_c_2026-10-16.md). The [full technical journal](fresh_start_progress_detail.md) preserves every previous entry, decision, setting and receipt reference unchanged. Artifacts remain in `data/rl_runs/fresh_start_20261015/`; nothing was deleted or pushed. Hard deadline: 16 October 08:00 UTC.
 
+## 16 October 2026, 12:13 UTC — source-level diagnosis of the representation comparison
+
+Compared the actual fresh-student trainer, parameter counts and selected example budgets with the historical champion lineage. Both combat controls started from scratch on identical labels; the champion's old curriculum was not inherited. The old encoder retained useful public rule-derived action features that the structured model omitted, and its trainable policy was 2.37× larger. Selected exposure counts were closely matched; learning-rate tuning was unequal.
+
+A small read-only trained-model CPU/MPS check on 32 reserved observations per phase found no action differences. No new fits or games were run. Missing action semantics and capacity are now concrete hypotheses to test, rather than a proven cause. [Full diagnosis and proposed controlled follow-up](fresh_start_representation_followup_2026-10-16.md). Original results, confirmation embargo and next-stage authorization are unchanged.
+
 ## 16 October 2026, 04:06 UTC — completion audit and readable handoff
 
 Checked the approved scope against the current source, test logs, native hashes, data manifests, completed evaluation records, figures and independent reviews. All authorized A–C/E deliverables are present; negative findings are reported honestly. The audit is saved as `data/rl_runs/fresh_start_20261015/completion_audit_v1.json`.
