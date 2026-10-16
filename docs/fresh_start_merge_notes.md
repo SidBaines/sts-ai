@@ -78,15 +78,24 @@ Full output and both independent Claude reviews are preserved locally under
 The quality reviewer read the earlier sandbox result; this later host result
 resolves the nineteen permission errors without changing tests.
 
-The review identified an inherited research-helper risk: build_native_rl.sh
-could label stale source as the current patch. The fresh-clone pipeline verifies
-patch application and avoids it. A fail-closed repair is planned for the research
-helper before accepting builds for experiments. Native verification must exercise
-both core and research binaries, record skips and build-source identity, and
-include fresh-process smoke/replay; it remains waiting on AC power.
+The inherited research-helper risk (stale source labelled as the current patch)
+is repaired and independently passed specification and quality review. The helper
+reconstructs pinned upstream plus both patches privately, checks all build inputs
+and dependency pins, refuses nonempty build directories, and binds atomic manifests
+to matching pre/post-build identities and actual compiler/CMake versions. All 27
+host regression tests pass. A fresh `build015_verified` build reproduces the exact
+canonical research binary `6351c58c3c5a17275e8036145ea53c41c71cc711afe0167159a3273ac5723428`
+and passes two fresh-process smokes plus replay. The canonical loaded `build015`
+was unchanged; experiments retain that original native identity. Evidence is in
+`data/rl_runs/fresh_start_20261015/step_a_verified_helper/`.
+
+Both core and research builds have native verification: core-specific 275 tests
+pass without skips; the initial research full suite passes 727 tests with two
+explicit historical-artifact skips. Fresh-process determinism and replay pass for
+both. See the progress log for the later study harness tests and measured baseline.
 
 The 0.1.5 menu/game changes require new baselines: the study adapter hides OOC
 potion drink/discard entries for all players, preserves ordinary indices, and
 leaves combat potions intact. Existing legacy combat features do not add new
-free-once/retain flags; the new entity representation will. Existing HP-based
+free-once/retain flags; the new entity representation does. Existing HP-based
 research overlays now receive live combat HP. No old-bank migration is attempted.
