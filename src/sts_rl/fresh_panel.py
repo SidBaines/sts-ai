@@ -19,6 +19,7 @@ from sts_env.env import SimulatorError, SimulatorTimeout
 from sts_policy.curriculum import player_hp, public_hash
 from sts_rl.panel import PanelEpisode, PanelWorker
 from sts_rl.fresh_native import install_native_guards
+from sts_rl.controlled_policy import policy_factory
 from sts_rl.fresh_panel_grid import (DEFAULT_TARGETS, HP_DEFINITION, bank_identity,
                                      freeze_grid, load_grid, save_grid)
 from sts_rl.recording import file_identity
@@ -33,7 +34,7 @@ _GRID_FIELDS = ("grid_hash", "selection_protocol", "targets", "resamples", "cove
 def _policy(champion, combat):
     key = champion, combat
     if key not in _POLICIES:
-        _POLICIES[key] = StudyPolicy(champion, combat=combat)
+        _POLICIES[key] = policy_factory(champion, combat=combat, original_policy=StudyPolicy)
     return _POLICIES[key]
 
 
@@ -403,7 +404,7 @@ def run_panel(config, *, worker_factory=None):
         selected, frozen = freeze_grid(rows, config["starts_per_group"], config["resamples"], bank_identity=identity)
     # These fields reach begin_run via prepare_run, before any model is scored.
     config = {**config, **_grid_fields(frozen), "bank_identity": identity, "grid_input": grid_input}
-    policy = StudyPolicy(config["checkpoint"], combat=config["combat"])
+    policy = policy_factory(config["checkpoint"], combat=config["combat"], original_policy=StudyPolicy)
     if grid_input is not None and file_identity(config["grid"]) != grid_input:
         raise ValueError("Frozen grid input changed before launch")
     source = prepare_run(config["out"], config, policy,

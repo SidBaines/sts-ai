@@ -13,7 +13,7 @@ from sts_rl.fresh_scoring import score_deferred
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--selection',required=True,help='Frozen JSON: selected_checkpoint, manifest, selection_criterion')
+    p.add_argument('--selection',required=True,help='Frozen JSON: selected_checkpoint, manifest, selection_criterion; controlled also requires architecture and training_condition')
     p.add_argument('--out',required=True,help='Fresh scoring directory')
     p.add_argument('--deadline-utc',required=True)
     a = p.parse_args(argv)

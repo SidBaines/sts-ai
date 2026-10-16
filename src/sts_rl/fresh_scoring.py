@@ -44,10 +44,20 @@ def score_deferred(selection_path, out, *, deadline_utc=None):
     metadata = payload['metadata']
     config = metadata['config']
     architecture, phase = config['architecture'], config['phase']
+    controlled_inputs = None
+    if architecture == 'controlled' or metadata.get('kind') == 'entity_controlled_v1':
+        from sts_rl.controlled_scoring import frozen_selection
+        from sts_rl.fresh_panel_comparison import _Inputs
+        controlled_inputs = _Inputs()
+        checked, checked_id, checked_manifest, _, _ = frozen_selection(selection_path, controlled_inputs)
+        if (checked != selection or checked_id != selection_identity or checked_manifest != manifest or
+                architecture != 'controlled'):
+            raise ValueError('Controlled selection changed or architecture/kind mismatch')
+        del checked_manifest
     if (not config.get('defer_test',False) or metadata.get('initialization') != 'from_scratch' or
             metadata.get('parent_checkpoint') is not None or metadata.get('filters') != FILTERS or
             metadata.get('vocabulary_sha256') != VOCABULARY_SHA256 or
-            architecture not in ('new','old') or phase not in ('combat','ooc')):
+            architecture not in ('new','old','controlled') or phase not in ('combat','ooc')):
         raise ValueError('Checkpoint is not a compatible deferred warm-up selection')
     if payload['step'] != metadata['training_state']['best_step']:
         raise ValueError('Checkpoint is not the validation-selected best step')
@@ -89,13 +99,19 @@ def score_deferred(selection_path, out, *, deadline_utc=None):
         # Recheck the frozen inputs immediately before TEST encoding.
         for identity in (selection_identity,selection['manifest'],checkpoint):
             _verify_file(identity)
+        if controlled_inputs is not None:
+            controlled_inputs.recheck()
         dataset = preencode(sources,manifest,phase,architecture,control=control,splits=('TEST',))
         result = score_test_checkpoint(checkpoint['path'],dataset['TEST'],architecture,out,control=control)
         for identity in (selection_identity,selection['manifest'],checkpoint):
             _verify_file(identity)
+        if controlled_inputs is not None:
+            controlled_inputs.recheck()
         summary = {'status':'completed','training':False,'weight_updates':0,
                    'selected_checkpoint':checkpoint,'selection':selection_identity,
                    'data_identity':manifest['data_identity'],**result,**control.stats()}
+        if controlled_inputs is not None:
+            summary['test_rows_file'] = file_identity(out/'test_rows.jsonl')
         atomic_json(out/'summary.json',summary)
         control.status.update(summary)
         control.emit()

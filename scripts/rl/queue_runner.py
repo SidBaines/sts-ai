@@ -8,8 +8,8 @@
 
 Runs execute one at a time, each in its own process group. On battery the
 group is SIGSTOPped and caffeinate released; on AC it is SIGCONTed and the Mac
-kept awake. A run whose log.jsonl makes no progress for STALL_MINUTES (while not
-paused) is killed and retried once with --resume.
+kept awake. A stalled run is stopped and marked failed for diagnosis. Scientific
+jobs are never automatically restarted or resumed into an existing output.
 """
 from __future__ import annotations
 
@@ -88,6 +88,19 @@ def last_activity(run: dict) -> tuple[float, bool]:
     return max(times), log.exists()
 
 
+def launch_inputs(cmd: list[str]) -> list[str]:
+    """Collect file-valued options; --bank may also be a boolean collector switch."""
+    inputs = []
+    for flag in ('--bank', '--records', '--baseline', '--teacher'):
+        if flag not in cmd:
+            continue
+        for value in cmd[cmd.index(flag) + 1:]:
+            if value.startswith('--'):
+                break
+            inputs.append(value)
+    return inputs
+
+
 def launch(run: dict) -> int:
     sys.path.insert(0, str(ROOT/'src'))
     from sts_rl.recording import begin_run
@@ -95,7 +108,7 @@ def launch(run: dict) -> int:
     out.mkdir(parents=True, exist_ok=True)
     cmd = run['cmd']
     checkpoint = cmd[cmd.index('--checkpoint')+1] if '--checkpoint' in cmd else None
-    inputs = [cmd[cmd.index(flag)+1] for flag in ['--bank', '--records', '--baseline', '--teacher'] if flag in cmd]
+    inputs = launch_inputs(cmd)
     build = next((word.split('=',1)[1] for word in cmd if word.startswith('STS_LIGHTSPEED_BUILD=')), ENV['STS_LIGHTSPEED_BUILD'])
     run['launch_record'] = begin_run(out, {'queue_name':run['name'], 'cmd':cmd, 'lane':run.get('lane','main')},
                                      checkpoint, inputs, build_dir=build, preparation=run.get('preparation',False))
@@ -166,10 +179,7 @@ def runner() -> None:
                 limit = STALL_MINUTES * 60 * (1 if has_log else 3)
                 if run["status"] == "running" and time.time() - last > limit:
                     os.killpg(pid, signal.SIGKILL)
-                    if not run.get("retried") and "--resume" not in run["cmd"]:
-                        run.update(cmd=run["cmd"] + ["--resume"], retried=True, status="pending", stalled_at=time.time())
-                    else:
-                        run.update(status="failed", ended=time.time(), reason="stalled")
+                    run.update(status="failed", ended=time.time(), reason="stalled; diagnosis required, no automatic retry")
             # One active job per lane (default lane "main").
             busy = {r.get("lane", "main") for r in queue["runs"] if r["status"] in ("running", "paused")}
             if not battery:

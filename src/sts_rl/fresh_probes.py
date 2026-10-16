@@ -9,10 +9,10 @@ import numpy as np
 import torch
 
 from sts_policy.curriculum import public_hash
-from sts_policy import entity_encoding, encoding
+from sts_policy import entity_encoding
 from sts_rl.fresh_study import PROTOCOL, INFERENCE, policy_observation
 from sts_rl.fresh_training import (_integer, _validate_collection_source, digest, shard_files,
-                                   validate_provenance, public_surface, coverage, movement)
+                                   validate_provenance, public_surface, coverage, movement, observation_encoder)
 from sts_rl.recording import file_identity
 
 PROBE_LABEL = 'fixed93e9 probes'
@@ -134,7 +134,7 @@ def select_probes(sources, phase, *, expected_surface=None, control=None):
 
 
 def encode_probes(raws, selection, architecture):
-    encoder = entity_encoding if architecture == 'new' else encoding
+    encoder = observation_encoder(architecture)
     result = []
     for raw, meta in zip(raws, selection['rows'], strict=True):
         encoded = encoder.encode_observation(policy_observation(raw['observation']))
@@ -164,14 +164,14 @@ class ProbeMonitor:
             self.shadow.load_state_dict({k: v.detach().to('cpu') for k, v in model.state_dict().items()})
         was_training = scorer.training
         scorer.eval()
-        encoder = entity_encoding if self.architecture == 'new' else encoding
+        encoder = observation_encoder(self.architecture)
         result, positions = [], []
         try:
             for probe in self.probes:
                 if self.control:
                     self.control.check()
                 batch = encoder.collate_observations([probe.encoded], device='cpu')
-                logits = scorer.actor_logits(batch) if self.architecture == 'new' else scorer.actor_logits(*batch)
+                logits = scorer.actor_logits(*batch) if self.architecture == 'old' else scorer.actor_logits(batch)
                 if logits.shape != (1, len(probe.meta['action_indices'])) or not torch.isfinite(logits).all():
                     raise ValueError('Nonfinite/misaligned singleton probe logits')
                 result.append(logits[0].softmax(-1).numpy().copy())

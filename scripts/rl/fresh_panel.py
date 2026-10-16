@@ -18,7 +18,7 @@ def parser():
     p.add_argument("--bank-world-start", type=int, help="Optional exact expected bank seedgrid start")
     p.add_argument("--bank-n", type=int, help="Optional exact expected bank seedgrid size")
     p.add_argument("--checkpoint")
-    p.add_argument("--combat", help="entity_fresh_v1 replacement combat head")
+    p.add_argument("--combat", help="entity_fresh_v1 or entity_controlled_v1 replacement combat head")
     p.add_argument("--out", required=True, help="New run directory, or new grid JSON file with --freeze-grid-only")
     p.add_argument("--grid", help="Pre-frozen immutable grid JSON; exact bank, targets and resamples must match")
     p.add_argument("--freeze-grid-only", action="store_true", help="Create --out grid JSON without loading any model")

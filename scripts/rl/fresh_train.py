@@ -15,9 +15,13 @@ def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--data',nargs='+',required=True,help='C1 source directories or immutable gzip shards')
     p.add_argument('--manifest',help='Require this exact frozen common manifest')
+    p.add_argument('--preencoded-cache',default=argparse.SUPPRESS,metavar='RECEIPT.json',
+                   help='Opt-in lossless controlled/combat/full FIT+VALIDATION cache; requires --manifest and --defer-test')
     p.add_argument('--probe',nargs='+',help='Required for production: immutable unlabelled 93e9 world shards; movement monitoring only')
     p.add_argument('--out',required=True)
-    p.add_argument('--architecture',choices=('new','old'),required=True)
+    p.add_argument('--architecture',choices=('new','old','controlled'),required=True)
+    p.add_argument('--legacy-action-features',action=argparse.BooleanOptionalAction,default=argparse.SUPPRESS,
+                   help='Controlled only: include exact legacy 128 action features (default: OFF); --no-legacy-action-features disables them')
     p.add_argument('--phase',choices=('combat','ooc'),required=True)
     p.add_argument('--fit-size',choices=('5000','20000','full'),default='full',
                    help='Informative combat target prefix; OOC is full-only (optimizer excludes forced targets)')

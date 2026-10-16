@@ -605,7 +605,7 @@ class PanelTests(LifecycleTests):
         world = play_world(Worker(states), Policy(), SEED, config(mode="eval"), Control(), Progress(), SOURCE, lambda _: None)
         bank_file = write_cohort(out/"bank", [world])
         model = SimpleNamespace(identity={"champion": {"path": "champion"}, "combat": {"path": "entity"}, "ooc": None})
-        with patch("sts_rl.fresh_panel.StudyPolicy", return_value=model), \
+        with patch("sts_rl.fresh_panel.policy_factory", return_value=model), \
              patch("sts_rl.fresh_panel.prepare_run", side_effect=self.panel_receipt):
             return run_panel({"out": str(out), "bank": str(bank_file), "checkpoint": "champion",
                 "combat": "entity", "workers": 1, "timeout": 1., "resamples": 1,
@@ -687,7 +687,7 @@ class PanelTests(LifecycleTests):
             out = Path(directory)/"out"
             out.mkdir()
             model = SimpleNamespace(identity={"champion": {"path": "champion"}, "combat": {"path": "entity"}, "ooc": None})
-            with patch("sts_rl.fresh_panel.StudyPolicy", return_value=model), \
+            with patch("sts_rl.fresh_panel.policy_factory", return_value=model), \
                  patch("sts_rl.fresh_panel.prepare_run", side_effect=self.panel_receipt):
                 report = run_panel({"out": str(out), "bank": str(bank_file), "checkpoint": "champion",
                     "combat": "entity", "workers": 2, "timeout": 1., "resamples": 1,

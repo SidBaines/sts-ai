@@ -43,3 +43,33 @@ class QueueRecordingTests(unittest.TestCase):
         run=self.check_completion(child_code=None,fresh_done=False)
         self.assertIsNone(run['returncode'])
         self.assertEqual(run['status'],'failed')
+
+    def test_boolean_bank_flag_is_not_a_filename(self):
+        spec = importlib.util.spec_from_file_location('rl_queue_inputs', Path(__file__).parents[2] / 'scripts/rl/queue_runner.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        self.assertEqual(module.launch_inputs(['python', '--bank', '--no-teacher-labels', '--n', '256']), [])
+        self.assertEqual(module.launch_inputs(['python', '--bank']), [])
+        self.assertEqual(module.launch_inputs(['python', '--bank', '/bank/a', '/bank/b', '--out', '/run']), ['/bank/a', '/bank/b'])
+        self.assertEqual(module.launch_inputs(['python', '--records', '/rows.json', '--baseline', '/baseline.json']), ['/rows.json', '/baseline.json'])
+
+    def test_stalled_job_fails_without_rewriting_command_or_retry(self):
+        spec = importlib.util.spec_from_file_location('rl_queue_stall', Path(__file__).parents[2] / 'scripts/rl/queue_runner.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        run = {'name': 'owned', 'cmd': ['python', 'fit.py'], 'status': 'running', 'pid': 123, 'started': 0}
+        with tempfile.TemporaryDirectory() as td, contextlib.ExitStack() as stack:
+            stack.enter_context(patch.object(module, 'ROOT', Path(td)))
+            stack.enter_context(patch.object(module, 'STATUS', Path(td) / 'status.json'))
+            stack.enter_context(patch.object(module, 'Locked', return_value=contextlib.nullcontext()))
+            stack.enter_context(patch.object(module, 'read_queue', return_value={'runs': [run]}))
+            stack.enter_context(patch.object(module, 'write_queue'))
+            stack.enter_context(patch.object(module, 'on_battery', return_value=False))
+            child = Mock(); child.poll.return_value = None; module.LAUNCHED[123] = child
+            stack.enter_context(patch.object(module, 'last_activity', return_value=(0, True)))
+            stack.enter_context(patch.object(module.time, 'time', return_value=999999))
+            kill = stack.enter_context(patch.object(module.os, 'killpg'))
+            stack.enter_context(patch.object(module.time, 'sleep', side_effect=StopIteration))
+            with self.assertRaises(StopIteration): module.runner()
+            kill.assert_called_once_with(123, module.signal.SIGKILL)
+        self.assertEqual(run['status'], 'failed')
+        self.assertEqual(run['cmd'], ['python', 'fit.py'])
+        self.assertNotIn('retried', run)

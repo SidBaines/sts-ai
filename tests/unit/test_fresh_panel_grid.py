@@ -251,7 +251,7 @@ class PanelReceiptTests(unittest.TestCase):
             bank = fixture_bank(root/"bank")
             grid = root/"frozen.json"
             base = {"bank": [str(bank)], "starts_per_group": {"BOSS2": 1}, "resamples": 8}
-            with patch("sts_rl.fresh_panel.StudyPolicy", side_effect=AssertionError("freeze loaded model")), \
+            with patch("sts_rl.fresh_panel.policy_factory", side_effect=AssertionError("freeze loaded model")), \
                  patch("sts_rl.fresh_study.begin_run", side_effect=AssertionError("freeze launched run")):
                 frozen = freeze_panel_grid({**base, "out": str(grid)})
             grid_before = file_identity(grid)
@@ -263,7 +263,7 @@ class PanelReceiptTests(unittest.TestCase):
                 policy = SimpleNamespace(identity={"champion": file_identity(champion),
                                                      "combat": file_identity(combat), "ooc": None})
                 out = root/name
-                with patch("sts_rl.fresh_panel.StudyPolicy", return_value=policy), \
+                with patch("sts_rl.fresh_panel.policy_factory", return_value=policy), \
                      patch("sts_rl.fresh_study.begin_run", side_effect=launch), \
                      patch("sts_rl.fresh_panel.RunControl", PanelControl):
                     report = run_panel({**base, "grid": str(grid), "out": str(out),
@@ -298,7 +298,7 @@ class PanelReceiptTests(unittest.TestCase):
                              {(w, s, t) for combat, w, s, t in calls if combat == str(root/"new.pt")})
 
             # Any mismatch rejects before a policy can be loaded/scored/launched.
-            with patch("sts_rl.fresh_panel.StudyPolicy", side_effect=AssertionError("loaded before validation")):
+            with patch("sts_rl.fresh_panel.policy_factory", side_effect=AssertionError("loaded before validation")):
                 with self.assertRaisesRegex(ValueError, "targets/resamples"):
                     run_panel({**base, "grid": str(grid), "starts_per_group": {"BOSS2": 2},
                                "out": str(root/"bad"), "workers": 1, "timeout": 1.})
@@ -316,7 +316,7 @@ class PanelReceiptTests(unittest.TestCase):
             bank = fixture_bank(Path(directory)/"bank")
             grid = Path(directory)/"grid.json"
             output = io.StringIO()
-            with patch("sts_rl.fresh_panel.StudyPolicy", side_effect=AssertionError("model loaded")), redirect_stdout(output):
+            with patch("sts_rl.fresh_panel.policy_factory", side_effect=AssertionError("model loaded")), redirect_stdout(output):
                 cli.main(["--freeze-grid-only", "--bank", str(bank), "--out", str(grid),
                           "--starts-per-group", '{"BOSS2":1}', "--resamples", "8"])
             self.assertEqual(json.loads(output.getvalue())["grid_hash"], json.loads(grid.read_text())["grid_hash"])

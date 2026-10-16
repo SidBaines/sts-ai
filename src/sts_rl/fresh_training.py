@@ -387,10 +387,22 @@ class Example:
     meta: dict
 
 
+def observation_encoder(architecture):
+    """Explicit dispatch; the archived public adapter remains unchanged."""
+    from sts_policy import entity_encoding, encoding
+    if architecture == 'controlled':
+        from sts_policy import controlled_encoding
+        return controlled_encoding
+    if architecture == 'new':
+        return entity_encoding
+    if architecture == 'old':
+        return encoding
+    raise ValueError('architecture must be new, old or controlled')
+
+
 def preencode(sources, manifest, phase, architecture, fit_size='full', *, control=None,
               splits=('FIT','VALIDATION','TEST')):
-    from sts_policy import entity_encoding, encoding
-    encoder = entity_encoding if architecture == 'new' else encoding
+    encoder = observation_encoder(architecture)
     if fit_size not in ('5000','20000','full'):
         raise ValueError('Unknown nested FIT subset')
     if not splits or len(set(splits)) != len(splits) or set(splits)-{'FIT','VALIDATION','TEST'}:
@@ -427,30 +439,37 @@ def soft_cross_entropy(logits, targets, mask):
 
 
 def make_model(architecture, phase, *, width=128, layers=2, heads=4,
-               old_size='large', old_context='none'):
+               old_size='large', old_context='none', legacy_action_features=False):
     """Initialize independent weights; old defaults match champion architecture.
 
     This is an architecture-matched old control, not a parameter-count match to
     the entity transformer. No checkpoint or teacher weights are accepted.
     """
-    if architecture == 'new':
+    if type(legacy_action_features) is not bool:
+        raise ValueError('legacy_action_features must be boolean')
+    if architecture != 'controlled' and legacy_action_features:
+        raise ValueError('legacy_action_features requires controlled architecture')
+    if architecture == 'controlled':
+        from sts_policy.controlled_entity import ControlledEntityActorCritic
+        model = ControlledEntityActorCritic(width=width, layers=layers, heads=heads, dropout=0., phase=phase,
+                                           legacy_action_features=legacy_action_features)
+    elif architecture == 'new':
         from sts_policy.entity_model import EntityActorCritic
         model = EntityActorCritic(width=width, layers=layers, heads=heads, dropout=0., phase=phase)
     elif architecture == 'old':
         from sts_policy.model import CandidateActorCritic
         model = CandidateActorCritic(size=old_size, context=old_context)
     else:
-        raise ValueError('architecture must be new or old')
+        raise ValueError('architecture must be new, old or controlled')
     for p in model.critic.parameters():
         p.requires_grad_(False)
     return model
 
 
 def collate(examples, architecture, device):
-    from sts_policy import entity_encoding, encoding
-    module = entity_encoding if architecture == 'new' else encoding
+    module = observation_encoder(architecture)
     batch = module.collate_observations([x.encoded for x in examples], device=device)
-    mask = batch['action_mask'] if architecture == 'new' else batch[2]
+    mask = batch[2] if architecture == 'old' else batch['action_mask']
     targets = np.zeros(tuple(mask.shape), np.float32)
     for i,x in enumerate(examples):
         targets[i,:len(x.target)] = x.target
@@ -458,7 +477,11 @@ def collate(examples, architecture, device):
 
 
 def actor_logits(model, batch, architecture, *, singleton=False):
-    return (model.actor_logits(batch) if singleton else model.training_logits(batch)) if architecture=='new' else model.actor_logits(*batch)
+    if architecture in ('new', 'controlled'):
+        return model.actor_logits(batch) if singleton else model.training_logits(batch)
+    if architecture == 'old':
+        return model.actor_logits(*batch)
+    raise ValueError('architecture must be new, old or controlled')
 
 
 def actor_parameters(model):
@@ -642,7 +665,7 @@ def minibatch_order(examples, architecture, batch_size, rng):
     """Bucket both padded axes without dropping or duplicating any example."""
     buckets = defaultdict(list)
     for i, x in enumerate(examples):
-        entities = len(x.encoded.entity_ids) if architecture == 'new' else 1
+        entities = len(x.encoded.entity_ids) if architecture in ('new', 'controlled') else 1
         actions = len(x.encoded.action_indices)
         buckets[((max(1, entities)-1).bit_length(), (max(1, actions)-1).bit_length())].append(i)
     batches = []
@@ -659,6 +682,15 @@ def fit(model, dataset, config, out, manifest, receipt, control, *, probes=None)
     config = {**config, 'old_size':config.get('old_size','large'),
               'old_context':config.get('old_context','none'), 'defer_test':config.get('defer_test',False)}
     architecture, device = config['architecture'], config['device']
+    if architecture == 'controlled':
+        if config['defer_test'] is not True:
+            raise ValueError('Controlled fitting requires defer_test=True; freeze validation-only selection before TEST')
+        config.setdefault('legacy_action_features', False)
+        for key in ('phase', 'width', 'layers', 'heads', 'legacy_action_features'):
+            actual = getattr(model.config, key)
+            config.setdefault(key, actual)
+            if type(config[key]) is not type(actual) or config[key] != actual:
+                raise ValueError('Controlled model/config mismatch: ' + key)
     critic_status = ('head_frozen_shared_actor_features_trained' if architecture=='old'
                      else 'frozen_untrained')
     if architecture=='old' and (model.config.size != config['old_size'] or model.config.context != config['old_context']):
@@ -783,12 +815,12 @@ def checkpoint_training_condition(payload):
     """Scientific settings from the selected checkpoint, never a row-side claim."""
     config = payload['metadata']['config']
     architecture = config['architecture']
-    if architecture not in ('new','old') or config['phase'] not in ('combat','ooc'):
+    if architecture not in ('new','old','controlled') or config['phase'] not in ('combat','ooc'):
         raise ValueError('Invalid checkpoint architecture/phase')
     condition = {k:config[k] for k in ('phase','lr','seed','steps','min_steps','eval_every','patience','device')}
     condition.update(fit_size=config.get('fit_size','full'), batch=config.get('batch') or 128,
                      defer_test=config.get('defer_test',False))
-    if architecture=='new':
+    if architecture in ('new','controlled'):
         actual = payload['metadata']['model_config']
         if actual['phase'] != config['phase']:
             raise ValueError('Checkpoint entity phase/config mismatch')
@@ -796,6 +828,13 @@ def checkpoint_training_condition(payload):
             if config.get(k,actual[k]) != actual[k]:
                 raise ValueError('Checkpoint entity architecture/config mismatch')
             condition[k] = actual[k]
+        if architecture == 'controlled':
+            flag = actual['legacy_action_features']
+            if (payload['metadata'].get('kind') != 'entity_controlled_v1' or type(flag) is not bool
+                    or type(config.get('legacy_action_features')) is not bool
+                    or config['legacy_action_features'] != flag):
+                raise ValueError('Checkpoint controlled legacy_action_features/config mismatch')
+            condition['legacy_action_features'] = flag
     else:
         actual = payload['model_config']
         for k, field in (('old_size','size'),('old_context','context')):
@@ -807,10 +846,14 @@ def checkpoint_training_condition(payload):
 
 def score_test_checkpoint(checkpoint, examples, architecture, out, *, control=None):
     """Actor-only CPU singleton TEST pass; no optimizer, backward or weight save."""
-    if architecture=='new':
+    if architecture=='controlled':
+        from sts_policy.controlled_entity import policy_from_payload
+    elif architecture=='new':
         from sts_policy.entity_model import policy_from_payload
-    else:
+    elif architecture=='old':
         from sts_policy.model_agent import policy_from_payload
+    else:
+        raise ValueError('architecture must be new, old or controlled')
     payload = load_checkpoint(checkpoint)
     if payload['metadata']['config']['architecture'] != architecture:
         raise ValueError('Selected checkpoint architecture mismatch')
@@ -846,6 +889,15 @@ def statistics_mean(values):
 
 
 def validate_training_config(config, *, synthetic=False):
+    if 'preencoded_cache' in config:
+        from sts_rl.controlled_cache import validate_optin
+        validate_optin(config)
+    if type(config.get('legacy_action_features',False)) is not bool:
+        raise ValueError('legacy_action_features must be boolean')
+    if config.get('architecture') != 'controlled' and config.get('legacy_action_features',False):
+        raise ValueError('legacy_action_features requires controlled architecture')
+    if config.get('architecture') == 'controlled' and not synthetic and config.get('defer_test') is not True:
+        raise ValueError('Production controlled training requires --defer-test; freeze validation-only selection before TEST')
     if config.get('phase')=='ooc' and config.get('fit_size','full')!='full':
         raise ValueError('OOC warm-up is full-only; FIT prefixes apply to informative combat targets')
     if config.get('old_size','large') not in ('small','medium','large') or config.get('old_context','none') not in ('none','mean'):
@@ -870,6 +922,8 @@ def validate_training_config(config, *, synthetic=False):
 def run_training(config):
     config = {**config, 'old_size':config.get('old_size','large'),
               'old_context':config.get('old_context','none'), 'defer_test':config.get('defer_test',False)}
+    if config.get('architecture') == 'controlled':
+        config.setdefault('legacy_action_features', False)
     validate_training_config(config)
     out = Path(config['out'])
     out.mkdir(parents=True,exist_ok=True)
@@ -889,6 +943,8 @@ def run_training(config):
             frozen = json.loads(Path(config['manifest']).read_text())
             if frozen != manifest:
                 raise ValueError('Frozen manifest/source identities differ')
+            if 'preencoded_cache' in config:
+                del frozen
         atomic_json(out/'manifest.json',manifest)
         probe_selection, probe_rows = None, None
         if config.get('probe'):
@@ -902,13 +958,20 @@ def run_training(config):
                         'label':'fixed93e9 probes', 'role':'unlabelled movement monitoring'}
                        if probe_selection else None)
         teachers = sorted({s['policy']['champion']['path'] for s in manifest['collection_sources'].values()})
+        cache = None
+        if 'preencoded_cache' in config:
+            from sts_rl.controlled_cache import prepare_cache, load_cache
+            cache = prepare_cache(config['preencoded_cache'],manifest,config['manifest'],config['data'],control)
         effective = {**config,'teacher_checkpoints':teachers,'filters':FILTERS,'stage':'supervised_teacher_warmup',
                      'data_identity':manifest['data_identity'],'vocabulary_sha256':VOCABULARY_SHA256,
                      'probe_selection':probe_input, 'initialization':'from_scratch', 'parent_checkpoint':None}
         vocab = Path(__file__).parents[1]/'sts_policy'/'entity_vocabulary.json'
+        if cache:
+            effective['preencoded_cache_provenance'] = cache.provenance
         launch = begin_run(out,effective,checkpoint=None,
             inputs=[out/'manifest.json',vocab,*teachers,*shard_files(config['data']),
-                    *([out/'probe_selection.json',*shard_files(config['probe'])] if probe_selection else [])])
+                    *([out/'probe_selection.json',*shard_files(config['probe'])] if probe_selection else []),
+                    *(cache.input_paths if cache else [])])
         _verify_file(launch)
         recorded = json.loads(Path(launch['path']).read_text())
         if (recorded['native'].get('preparation_only') or not recorded['native'].get('module_sha256') or
@@ -920,15 +983,27 @@ def run_training(config):
                    'old_context':config['old_context'],'defer_test':config['defer_test'],
                    'probe_selection':probe_input, 'label_source_files':manifest['source_files'],
                    'probe_source_files':probe_selection['source_files'] if probe_selection else []}
+        if config['architecture'] == 'controlled':
+            receipt['legacy_action_features'] = config['legacy_action_features']
+        if cache:
+            receipt['preencoded_cache'] = cache.provenance
         atomic_json(out/'receipt.json',receipt)
         atomic_json(out/'config.json',effective)
         control.status.update(status='preencoding',data_collected=manifest['collected_total'])
         splits = ('FIT','VALIDATION') if config['defer_test'] else ('FIT','VALIDATION','TEST')
-        dataset = preencode(config['data'],manifest,config['phase'],config['architecture'],config['fit_size'],
-                            control=control,splits=splits)
+        if cache:
+            control.status.update(status='loading_preencoded_cache')
+            dataset, cache_timings = load_cache(cache,manifest,control)
+            atomic_json(out/'cache_usage.json',dict(cache.provenance,**cache_timings))
+        else:
+            dataset = preencode(config['data'],manifest,config['phase'],config['architecture'],config['fit_size'],
+                                control=control,splits=splits)
         atomic_json(out/'coverage.json',{s:{'rows':len(v),'coverage':coverage(v)} for s,v in dataset.items()})
         model = make_model(config['architecture'],config['phase'],width=config['width'],layers=config['layers'],
-                           heads=config['heads'],old_size=config['old_size'],old_context=config['old_context'])
+                           heads=config['heads'],old_size=config['old_size'],old_context=config['old_context'],
+                           legacy_action_features=config.get('legacy_action_features',False))
+        if cache:
+            cache.recheck(control)
         summary = fit(model,dataset,effective,out,manifest,receipt,control,probes=probe_rows)
         summary.update(collected_total=manifest['collected_total'],filters=FILTERS,**control.stats())
         atomic_json(out/'summary.json',summary)
