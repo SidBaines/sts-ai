@@ -49,8 +49,9 @@ All research writing lives in `research/`, in these files and no others:
   or CLAUDE.md), not in `research/`.
 - Machine detail (hashes, PIDs, absolute paths, full commands, seeds,
   receipts, monitoring heartbeats) goes in machine-readable records in the
-  run's output directory, referred to by run name. Only `status.md` may hold
-  the few commands needed to check or stop a live job.
+  run's output directory, referred to by run name. Exceptions: `status.md`
+  may hold the few commands needed to check or stop a live job, and an
+  experiment page ends with its code folder, commit and run names.
 - If a page grows past its limit, condense it rather than splitting it into
   more files.
 
@@ -82,6 +83,9 @@ What this suggests doing next.
 
 ## Log
 Dated one-line entries for decisions, surprises and changes of plan only.
+
+Code: `experiments/YYYY-MM-DD-name/` at commit <short hash>. Data: run
+`<run name>` (local).
 ```
 
 ### Results ledger
@@ -132,6 +136,42 @@ Dated one-line entries for decisions, surprises and changes of plan only.
   current best and next steps; reset `status.md`.
 - Commit research notes together with the code and configuration that
   produced the result.
+
+## Code on workstream branches
+
+Keep the reusable code small, tested and easy to find, and keep one-off
+orchestration out of it. Workstream code is one of three kinds:
+
+| Kind | Where | What belongs there | Tests |
+|---|---|---|---|
+| Library | `src/<package>/` | Pieces that more than one experiment uses: encoders, models, trainers, collectors, evaluators, fight panels, statistics, run records | Unit tests in `tests/`, required |
+| Tools | `scripts/<area>/` | A small set of general command-line tools over the library: train, collect, evaluate, compare, dashboard, job queue | A cheap smoke test |
+| Experiment code | `experiments/YYYY-MM-DD-name/`, named like its research page | Everything specific to one study: launch scripts, configs, analysis and plotting scripts | Only calculations that decide results, and those belong in the library |
+
+- New code starts in its experiment's folder unless it is clearly general.
+  Promote it to the library, with tests, when a second experiment needs it.
+  Never import from another experiment's folder.
+- Library code never imports experiment code, and contains no study names,
+  dates, seed ranges or paths. Those go in the experiment's config files.
+- Before writing a new script, look for an existing tool or function that does
+  the job, and prefer adding an option to it over writing a near-duplicate.
+- Keep orchestration as simple as the study allows: the shared job queue, a
+  short launch script and a config file. Reproducibility comes from the run
+  record written by the library (source commit, config, native build hash,
+  seeds, parent checkpoints). Do not build per-study controllers, receipt
+  systems or hash-binding layers unless Sid asks for them.
+- Check checkpoint and data compatibility with explicit version numbers that
+  are bumped when behaviour changes. Record source hashes for provenance, but
+  never refuse to load because a source file's bytes changed: a comment edit
+  must not make old checkpoints unusable.
+- Don't write tests for one-off orchestration plumbing. Test library code and
+  the calculations that decide results.
+- When a study finishes, promote what is worth reusing and leave the rest of
+  its folder unchanged. Its research page names the folder and the commit
+  that produced each result. A later cleanup may delete old experiment
+  folders that nothing uses; git keeps them.
+- Models, datasets and run outputs stay in gitignored `data/` (for example
+  `data/rl_runs/<run name>/`), never in an experiment folder.
 
 ## Development contracts
 
