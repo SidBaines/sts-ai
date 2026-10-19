@@ -39,6 +39,7 @@ All research writing lives in `research/`, in these files and no others:
 | `experiments/YYYY-MM-DD-name.md` | One page per experiment, from plan to conclusion | about 150 lines | Fill in as it runs |
 | `status.md` | Live state for handoff: what is running, where, how to check or stop it, what happens next | about 40 lines | Rewrite it; "Nothing running" when idle |
 | `figures/<experiment>/` | PNG figures (each under about 300 KB) and the CSV data behind them | | |
+| `brainstorms/YYYY-MM-DD-topic.md` | A dated record of a strategy discussion with Sid: what was found, the ideas considered, and the decisions | | Written when Sid asks for one; append later decisions rather than rewriting |
 | `archive.md` | Index of retired documents and the git tag that holds them | | Add entries |
 
 - Do not create other document types: no separate plans, handoffs, progress
