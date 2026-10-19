@@ -121,6 +121,13 @@ Code: `experiments/YYYY-MM-DD-name/` at commit <short hash>. Data: run
 - Keep caveats to one list per page rather than hedging every sentence.
 - Leave out process (reviews, builders, receipts, retries) unless it changed
   a result; it belongs in commit messages and run records.
+- Fix recurring problems at their source, not in the notes. A trap that is
+  likely to bite again (a tooling pitfall, a misleading default, a gap or
+  error in these instructions) does no good in an experiment page, where the
+  next agent won't look. Point it out to Sid and propose wording for the
+  right CLAUDE.md: this file, a directory's own CLAUDE.md (for example
+  `scripts/rl/CLAUDE.md`), or a skill. With his agreement, add it there. This
+  is the "Help improve these instructions" rule in Sid's global instructions.
 - Outside the results ledger, delete stale text rather than appending
   corrections. Git keeps the history.
 
