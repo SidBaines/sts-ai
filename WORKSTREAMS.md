@@ -3,13 +3,13 @@
 `main` holds only the reusable environment. Each learning strategy lives on its
 own long-lived workstream branch, so different agents can pursue completely
 different approaches against the same tested environment. Start from the
-workstream's entry document, not from this file: each workstream keeps the
-opening paragraph of its own `README.md` (or the file named below) pointing at
-its current handoff.
+workstream's front page, not from this file: `research/README.md` on its
+branch, laid out as described under "Writing up research" in `CLAUDE.md`. A
+workstream that predates that convention names its entry document below.
 
 | Workstream | Branch | Start here, on that branch | Environment it runs on | Status (15 Oct 2026) |
 |---|---|---|---|---|
-| Non-LLM RL: candidate-scoring policy networks, PPO, distillation and native-search experiments | [`ws/nonllm`](https://github.com/SidBaines/sts-ai/tree/ws/nonllm) | `README.md` opening paragraph, which links the current handoff | The 0.1.4 patch, released as `env-v0.1.4`, plus a research-only native overlay for battle copying and reseeding | Joint sparse-win study complete; next study under discussion |
+| Non-LLM RL: candidate-scoring policy networks, PPO, distillation and native-search experiments | [`ws/nonllm`](https://github.com/SidBaines/sts-ai/tree/ws/nonllm) | `research/README.md` | The 0.1.4 patch, released as `env-v0.1.4`, plus a research-only native overlay for battle copying and reseeding | Joint sparse-win study complete; next study under discussion |
 | LLM agents: Gemma students, search-teacher distillation, and the training-framing research question | [`ws/llm`](https://github.com/SidBaines/sts-ai/tree/ws/llm) | `CLAUDE.md`, then `docs/research_plan.md` | The pre-extraction `sts_ai` harness, not the `sts_env` package | Paused since 13 Oct; the tip is a WIP snapshot |
 
 ## Working conventions
@@ -21,9 +21,10 @@ its current handoff.
   merges the tag rather than carrying a private fix.
 - Models, datasets, checkpoints and native builds are gitignored. They live in
   local worktrees, so a branch alone does not reproduce a result. Each
-  workstream's handoff lists its local dependencies.
+  workstream's `research/status.md` or experiment pages list the local
+  dependencies they need.
 - Update this table when a workstream starts, stops or moves, not at every
-  handoff.
+  experiment.
 
 ## Environment releases and open faults
 
