@@ -167,5 +167,5 @@ Caveats:
 Code: `src/sts_rl/controlled_*.py`, `src/sts_rl/representation_controls.py`
 and `scripts/rl/controlled_*.py` at commit `1636034`; game-arm completion,
 analysis and figures in `experiments/2026-10-16-representation-controls/` at
-commit `83538a3` and later. Data: run `representation_controls_20261016`
+commit `fc506cd`. Data: run `representation_controls_20261016`
 (local), analysis in its `analysis_20261020/report.json`.
