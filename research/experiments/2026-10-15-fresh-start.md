@@ -138,5 +138,6 @@ Caveats:
 - 16 Oct: a follow-up compared the two encoders' sources and settings and found
   the differences listed under Conclusion; no new training.
 
-Data and models: run `fresh_start_20261015` in the `nonllm-fresh-start`
-worktree (local only).
+Code: `src/sts_rl/fresh_*.py` and `scripts/rl/fresh_*.py` (written before
+the experiment-folder convention), at commit `ee115ba`. Data: run
+`fresh_start_20261015` in the `nonllm-fresh-start` worktree (local).
