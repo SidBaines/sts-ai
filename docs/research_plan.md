@@ -1,52 +1,51 @@
-# Non-LLM curriculum research goals and current state
+# Environment base goals and status
 
-**Current state (15 October 2026):** the sections below are the history up to
-12 October. Later work is the OOC macro-credit, distillation and search studies
-(see the [training review](training_review_2026-10-14.md)) and the completed joint
-sparse-win run (see the [15 October handoff](handoff/joint_sparse_win_20261015.md)).
-The active study is the [fresh-start plan](fresh_start_plan_2026-10-15.md), approved
-15 October; its background is in the [next-study options](next_study_options_2026-10-15.md).
+`main` is the reusable environment release, extracted from the research
+harness. Its source of truth is
+[the environment contract and maintenance plan](environment_base.md). Research
+goals, experiments, and artifacts live on workstream branches; see
+[WORKSTREAMS.md](../WORKSTREAMS.md).
 
-The first local campaign is **complete**. Work is isolated on `codex/nonllm-curriculum`; the original `astra-6sep` checkout is preserved. Signed environment releases `env-v0.1.0` and corrected `env-v0.1.1` remain immutable. Core stays dependency-free; PyTorch/NumPy and Gymnasium are optional extras.
+Release 0.1.0 passed all local gates on 11 October 2026: a dependency-free
+stepping API, optional Gymnasium wrapper, three control modes, custom-agent CLI,
+pinned native build, replayable public traces, and bounded native fault handling.
+The immutable release reference is `env-v0.1.0`;
+[the verification record](release_v0.1.0.md) contains the 191-test result and
+CLI, replay, privacy, vectorization, and packaging evidence.
 
-The [curriculum plan](nonllm_curriculum_plan.md) considers action representations, architecture/method alternatives, hyperparameters and bounded selection. Executed stages include supervised candidate policies, combat DAgger/PPO, corrected-native OOC PPO and joint full-control Acts 1–3 PPO. Separate 2.3M candidate heads are trained together in the final composite. Scope is Ironclad, ascension0, ordinary Acts1–3.
+Subsequent work maintains tested environment fixes here with new immutable
+release tags. Model, encoder, reward, and training experiments belong in adapters
+or experiment branches started from a release tag. Known simulator and Act 4
+public-state limitations remain documented in the contract.
 
-Selection froze at **2026-10-12 05:58:19 UTC**, after the last GPU learner ended at05:58:04, before the06:30 deadline. All22 declared final panels passed independent exact-cohort, command/status/hash, checkpoint, source, native-binary and Python-interface gates. Four full three-act CLI runs on two previously checked DEV worlds plus two replays passed; traces matched across processes and native-controlled decisions were zero. **362 tests** and the mandatory bounded core smoke passed. See [completion audit](nonllm_completion_audit.md).
+Release 0.1.1 corrects the combat character-class initialization used by
+Entropic Brew and rejects reported undefined behavior in automatic combat before
+applying battle outcomes. Its new binary is built separately; 0.1.0 artifacts are
+preserved. [The verification record](release_v0.1.1.md) describes the
+regressions and intentional seeded-trajectory/provenance boundary. The immutable
+release reference is `env-v0.1.1`, validated with 195 base tests, 307 experiment
+integration tests, a bounded native smoke, and repeated affected-world checks.
 
-Held-out results: **145/160 isolated Act1 fights**, **25/32 later-act fights**, **17/21 Act1 clears with native combat**, and **20/21 Act1 clears under full learned control**. Three-act full control has **0 victories,20 defeats,1 simulator fault**; no truncations. The specialist comparator has0victories/21defeats/0faults. Strong Act1 competence is supported; full-game competence is not established. [Final report and uncertainty](nonllm_final_evaluation.md).
+Release 0.1.2 validates the supported Ironclad Discovery path instead of
+rejecting every use with the upstream unsupported-behaviour marker. It preserves
+explicit faults for unsupported classes and invalid offers. The
+[repair and verification record](discovery_fix.md) documents exact development
+replays, semantics regressions, determinism and the intentional provenance
+boundary; [the release record](release_v0.1.2.md) adds the release-branch
+rebuild. The immutable release reference is `env-v0.1.2`.
 
-[Latest-first summary](nonllm_summary.md), [detailed progress](nonllm_progress.md), [decision history](nonllm_progress_notes.md), [usage](nonllm_agent_usage.md) and [artifact hashes](nonllm_artifacts.json) preserve the experiment. Checkpoints, banks and binaries are gitignored local outputs; copy them before removing the worktree. Frozen shared role denotes the joint composite, not a single shared encoder.
+Release 0.1.3 repairs upstream shop pricing and ineffective potion purchases.
+Shop menus change, so the observation label advances to `sts_env_public_v2`; see
+[the migration record](shop_maintenance_013.md). The immutable release
+reference is `env-v0.1.3`.
 
-Native0.1.1 repairs automatic-combat character initialization and rejects reported undefined behavior. Old auto-combat evidence is quarantined; legacy full-control combat transfer remains scoped, not a general simulator certification. The broad hash-final partition has an early seed-3 diagnostic exception outside the quantitative benchmark ([audit](nonllm_protocol_audit.md)). Final horizons and censoring differ from development and are reported explicitly.
+Release 0.1.4 canonicalizes hidden pile order before seeded native search
+samples, so sampled search cannot depend on the true draw order. Ordinary
+execution is unchanged; see [the search record](canonical_search_014.md). The
+immutable release reference is `env-v0.1.4`.
 
-Future research should investigate later-act OOC/deck strategy, continuation starts, credit assignment and learner-induced combat states with a new evaluation protocol. Short OOC bridges and GAE pilots were rejected before final selection. No post-final training or hyperparameter tuning occurred. Other algorithms/representations were considered rather than all implemented; this campaign does not claim game mastery or complete simulator fidelity.
-
-## 12 October: longer local continuation study
-
-A new authorized study is being prepared on `codex/long-curriculum`, transferring the frozen selected checkpoint `57f1e961...` without changing the completed first campaign. Its [plan](long_curriculum_plan.md), [latest-first summary](long_curriculum_summary.md), and [detailed log](long_curriculum_progress.md) are the live record. New TRAIN worlds begin at 1000000; fixed DEV worlds begin at 200000; a new 48-world final cohort begins at 300000 and remains embargoed until selection freezes.
-
-Fresh matched 48-world DEV baselines are 41 Act 1 clears, 8 Act 2 clears and 0 three-act victories, with no faults or cutoffs. The curriculum mixes later-act native/learner continuations, new full starts and Act 1 rehearsal. Continuation outcomes remain conditional, separately labelled evidence. Reset optimizer state when the goal changes; protect Act 1 retention and use explicit later-floor/progress drift gates. The controller must provide finite duration, owned process locks, atomic recovery, bounded retries, true-progress watchdog, disk/battery pauses and run-owned checkpoint retention. The user confirmed a 10-hour active first allocation, dedicated GPU and pause/resume at any time; execution uses eight simulator workers, one CPU thread and no artificial cooling. Offline/resource pauses do not consume the allocation. Explicit extensions append to the final mixed stage without changing earlier stage boundaries or reward coefficients. A measured 15-minute pilot and independent safeguard review precede sustained training. No new final evaluation has occurred.
-
-Preflight acceptance at 2026-10-12 10:34 UTC: the final host/native suite ran 404 tests successfully (one optional generated-artifact skip), and the mandatory bounded core rollout passed. Source hashes stayed unchanged during checks. Real process regressions cover parent crash, previously unobserved owned workers, unrelated-process preservation, altered ownership refusal and duplicate-controller journal integrity. Fake-clock orchestration proves a one-day resource pause preserves active time and correctly rebases the stage/child deadline. Initial rewards remain +0.05 per positive floor advance, +1 success and −1 ordinary defeat; future taper is hypothetical. Pilot acceptance and main launch remain next.
-
-Pilot acceptance at 10:52 UTC: 27 chunks, 736,386 valid transitions and 1,785 optimizer steps; all owned process groups exited cleanly. Best DEV improved Act 2 clears from 8/48 to 9/48 with Act 1 retention 42/48. Main resumed in the background at 10:53:40 UTC with the same source, reward and remaining active budget; six further completed chunks were verified by 10:57. Hourly monitoring keeps the logs and latest-first summary current. New final evaluation remains embargoed until the user finishes the continuous study. No reward taper is enabled.
-
-At the user's request, an independent monitoring-only CPU observer now evaluates selected and latest completed checkpoints on the fixed fresh-start 48-world Act 3 DEV panel every30 minutes. The dashboard explicitly distinguishes initial references from timestamped evaluated snapshots. First selected CP14 result is0/48 full wins withmeanfloor30.92 versusinitial28.60; a recent candidate also has0/48 withmeanfloor28.71. No full-game competence claim follows. Training remains the unchanged10h active curriculum; exact12:04 seed audit records10,320 distinct requested TRAIN worlds and rotatingfresh coverage. See[observer](full_run_monitor.md) and[seed audit](long_curriculum_seed_audit.md).
-
-At13:21 UTC the user-requested interactive dashboard replaced static telemetry with zoom/pan/brush, rolling and dual-axis plots, source/start/goal/floor/horizon filters, episode distributions, scatter and CSV records. Lazy bounded read-only APIs retain exact task/checkpoint identity and show coverage limits; source/rewards remain frozen.437host tests plus JS regressions and bounded smoke passed. Latest periodic full3 candidate again scored0/48; the earlier1/48 snapshot is descriptive history. See[dashboard guide](long_rl_dashboard.md) and[live summary](long_curriculum_summary.md).
-
-At14:21 UTC, theplannedact2_full phase isrunning with96freshworlds perchecked128-task chunk. Latestmonitoringcandidate scored2/48 full3victories(46defeats,0faults/cuts), followingcandidatewinhistory0,1,0,1,2;selected CP236remains0/48 full3and11/48Act2. Thesearevariable repeated-DEVevidence,withnoobserverselectionfeedback orfinalopening.417committedchunks cover27,632distinctrequested TRAINworlds;about6.3activehoursremain. See[latest-first summary](long_curriculum_summary.md).
-
-The15:25UTC critical audit found weak broad learning, variable full3 candidate wins and frequent short-branch resets. Selected CP236 retains only6new training chunks despite526completed jobs; full3two-win CP405 was rejected by the Act2 objective. A proposed separately identified next condition would select on full3, confirm on fresh DEV and separate continuing learner from evaluation champion. It has not been applied; v1 remains unchanged. See[learning and selection audit](long_curriculum_learning_audit.md).
-
-## 12 October: authorized continuous full-game v2
-
-The user paused v1 and authorized a revised study from the morning original checkpoint, using only the remaining18,424.128active seconds. The new branch codex/long-curriculum-v2 separates a continuous warm learner from a full3-confirmed champion, unifies all training goals atAct3, and logs retained lineage, optimizer resets, paired outcomes and public endpoint health. New48screen/192confirmation/paired192retention DEV references are fixed; no final data opened.467host/native tests and real baseline/controller proofs passed before the pilot. See[v2protocol](long_curriculum_v2_protocol.md),[latest summary](long_curriculum_v2_summary.md) and[detailed log](long_curriculum_v2_progress.md). The independently tested Discovery fix PR is kept separate from the pinned study backend.
-
-V2pilot was accepted after26continuous chunks/3,086retainedupdates/862,697validtransitions, withonecoldstart and25warmoptimizerrestores. Main resumed16:44:51UTC andgenuinecontinuedupdatespassed;the10hcombinedallocation remainsunchanged. The dashboardnowdefaults tov2withpausedv1selector. First48screen remained1/48 andthe192championisstilloriginal2/192,so usefulperformancegainisnotyetestablished. See[v2summary](long_curriculum_v2_summary.md). DiscoveryfixdraftPR#1 targetsenvironment-base independently; studybackend0.1.1 staysfrozen.
-
-At 17:42 UTC the user paused v2 for a causal combat/OOC regression investigation and forgetting prevention. Two matched confirmations remain 0/192 full3 victories versus the original 2/192; Act1 retention was 131 then139 versus151. All v2 learner processes are stopped and 14,252.174 active seconds remain unspent. Matched TRAIN head swaps and code/gradient review are being prepared under separate diagnostic identities; no automatic continuation, final opening or science change is allowed. See the latest v2 summary and progress log.
-
-The 18:01 UTC phase diagnosis used 64 matched TRAIN starts and the exact192 DEV confirmation (190 common-valid). OOC-only replacement reduced Act1 clears151→130 andAct2 clears13→5; combat-only replacement preserved151Act1clears andincreasedAct2to22 butlosttheoriginal2fullwins. Savedcombat32bankwins24→25. OOCdriftthereforeexplainsbroadprogressionloss, whilebothphasesneedfull-winretentionchecks. A protectedoriginalrestartpilot is proposed, not launched; v2remainsoperator_paused with3.959activehoursremaining. Fournewdiagnosticregressionsplusfull471testsandboundedcoresmokepassed. See the forgetting diagnosis and v2summary for evidence and uncertainties.
-
-At 2026-10-12 20:58 UTC, the user paused all work for critical review and requested a committed agent handoff. Both longer runs remain operator-paused, the monitor is PAUSED and14,252.174 active seconds remain. No next anti-forgetting condition has been implemented, authorized or tested. [The comprehensive handoff](experiment_handoff.md) is the new entry point, with verified artifact/state manifest and preserved detailed controller history. It distinguishes initial Act1 learning from unestablished full-game competence, two longer-run failures, observed phase effects and unproven fixes. Source/model/runtime/final-data identities remain preserved.
+Release 0.1.5 fixes the remaining known environment faults after checking each
+against the real game (the 0.1.4 "phantom powers" were the burning elite's
+buff). It changes menus, observation text and some game logic, so the
+observation label advances to `sts_env_public_v3`; see [the release
+record](release_v0.1.5.md). The immutable release reference is `env-v0.1.5`.

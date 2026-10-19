@@ -1,18 +1,10 @@
 # Slay the Spire Environment: non-LLM RL workstream
 
 This is the `ws/nonllm` workstream branch: the environment plus the non-LLM
-policy and RL code. Start new work on a topic branch from `ws/nonllm`; the
-maintained environment base is on `main` (see `CLAUDE.md`).
-
-**Current work: [controlled representation diagnosis, 16 October](docs/representation_controls_progress.md).** Sid authorized comparisons of legacy action features, matched policy capacity and learning rates, repeated across two training seeds on the same original labels. The [predeclared design](docs/representation_controls_plan_2026-10-16.md) uses new fight-bank and development game worlds; the fresh bank and native checks are complete, with the controlled training matrix ready after final cache replay. This is a supervised diagnostic follow-up. The champion stays the default; confirmation and further reinforcement learning remain unopened.
-
-The [completed fresh-start results](docs/fresh_start_gate_c_2026-10-16.md) and [initial diagnosis](docs/fresh_start_representation_followup_2026-10-16.md) motivate this work. Preserve all original gitignored artifacts in `/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start`. Follow-up outputs live in `/Users/sidbaines/.codex/worktrees/representation-controls/SlayTheSpireAI/data/rl_runs/representation_controls_20261016`. Both studies use the frozen research runtime and original environment 0.1.5 native build; never install into the frozen runtime.
-
-Previous study: [15 October joint RL handoff](docs/handoff/joint_sparse_win_20261015.md). The fresh two-hour joint sparse-win run is complete: 19 accepted rounds, no simulator faults or KL failures, and final greedy 62/1,024 versus original 58/1,024, an inconclusive difference. No actor was promoted. Training is stopped and its monitor is paused; discuss a new condition before starting more training. Read the [completed results](docs/joint_sparse_win_v2_results_2026-10-15.md) and [critic trace diagnosis](docs/joint_critic_trace_diagnosis_2026-10-15.md).
-
-The optional joint adapter now has [tested collection and evaluation speedups](docs/joint_training_speedups.md) and an opt-in fast configuration. Bounded performance fixtures use separate outputs from the completed study.
-
-Earlier work: the [training review](docs/training_review_2026-10-14.md) covers principal setups, lineage and results. The [overnight study](docs/rl_overnight_2026-10-14.md) includes corrected search confirmation and the boss-head ablation. The [KL repair and critic audit](docs/joint_kl_critic_diagnosis_2026-10-15.md) explains the first joint pilot's rejection/underfitting failures. [Training records and fault replay](docs/rl_recording_and_fault_replay.md) preserve reproducibility guarantees and limits. Older longer-curriculum studies remain paused; their [12 October handoff](docs/experiment_handoff.md) is historical and names a different worktree. Models/data/native binaries remain local, not in Git; preserve their recorded paths.
+policy and RL code (`src/sts_policy`, `src/sts_rl`, `scripts/rl`). **Start at
+[research/README.md](research/README.md)** for the goal, the current best
+agent, what is running and what comes next. The rest of this page describes
+the environment, which is maintained on `main`.
 
 A maintained environment base for custom agents, LLM adapters, and reinforcement
 learning experiments. The Python core has no runtime dependencies. Game logic
@@ -25,8 +17,6 @@ and experiment-specific reward shaping belong in adapters or workstream
 branches; see [WORKSTREAMS.md](WORKSTREAMS.md) for the active ones. `main`
 receives tested environment fixes, and each release gets an immutable `env-v*`
 tag; `env-v0.1.5` is the latest.
-
-On the `codex/nonllm-curriculum` experiment branch, the optional non-LLM adapter trains and runs candidate-action policies. See [agent and training usage](docs/nonllm_agent_usage.md), the [latest-first experiment summary](docs/nonllm_summary.md), and the [detailed curriculum plan](docs/nonllm_curriculum_plan.md). Active native-assisted experiments use the corrected `env-v0.1.1` backend; the original release remains available.
 
 ## Install and build
 

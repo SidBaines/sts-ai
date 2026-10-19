@@ -246,7 +246,7 @@ th{color:var(--mut);font-weight:500}td.num{text-align:right;font-variant-numeric
 button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;padding:2px 8px;cursor:pointer}
 </style></head><body>
 <h1>Slay the Spire RL</h1>
-<div class="mut small">Objective: complete the game, i.e. an Ascension 0 Act 3 boss win. Write-up: docs/rl_findings_2026-10-13.md · log: docs/rl_progress_log.md</div>
+<div class="mut small">Objective: complete the game, i.e. an Ascension 0 Act 3 boss win. Write-up: research/README.md · results: research/results.md</div>
 <div class="mut small" id="hdr">loading…</div>
 <div class="card"><h2>Win rate, 4,096-world win set (TRAIN seeds from 6e9), Wilson 95% CI</h2>
 <div class="tw"><table id="win"></table></div>

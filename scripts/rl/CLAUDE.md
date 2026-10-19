@@ -1,15 +1,18 @@
 # scripts/rl — sts_rl experiment tooling
 
-Start with `docs/rl_findings_2026-10-13.md` (what works, what failed and why, next
-directions). Chronological detail and the dashboard link: `docs/rl_progress_log.md`.
-Code: `src/sts_rl/`.
+Start with [research/README.md](../../research/README.md) for the current state
+and [research/strategies.md](../../research/strategies.md) for what works and
+what failed. Commands and module usage: [src/sts_rl/README.md](../../src/sts_rl/README.md).
 
 - **Run jobs through `queue_runner.py`** (detached, pauses on battery, one job
   per `--lane`). Run outputs and logs are in `data/rl_runs/<name>/`.
-- **Native build:** `build_native_rl.sh` → `external/sts_lightspeed_rl/build`.
-  It applies the unchanged 0.1.1 study patch plus `patches/sts_lightspeed_rl_panel.patch`
-  (`GameContext.copy/enter_battle/upcoming_*_encounters`) and plays identically
-  to the frozen binary. The fight panel (`src/sts_rl/panel.py`) needs this build.
+- **Native build:** `build_native_rl.sh` applies the current environment patch
+  plus `patches/sts_lightspeed_rl_panel.patch`
+  (`GameContext.copy/enter_battle/upcoming_*_encounters`). The fight panel
+  (`src/sts_rl/panel.py`) needs this build. It uses the separate
+  `.venv-native` build tools, takes the target interpreter from `PYTHON`, and
+  requires a new, empty `BUILD_DIR`. Never build over a module a running job
+  has loaded, and never install into a frozen runtime.
 - **Memory:** `collect_rollouts` keeps every transition, with its full
   observation dict, until it returns. A 768-game batch plus a 1,024-game eval
   in one process reached 20+ GB and drove the 48 GB Mac into swap exhaustion
@@ -55,12 +58,14 @@ Code: `src/sts_rl/`.
 
   `--strategic-temperature` explores those menus, but on its own it learned
   the wrong lesson: low-HP smiths are very costly.
-- **Selection bias:** every comparison uses the same eval worlds (seeds from
-  5e9). After choosing among variants, confirm the winner on fresh TRAIN worlds
-  (`--world-start 5600000000`, `data/rl_runs/fresh_eval/`).
+- **Selection bias:** every comparison reuses the same DEV worlds. After
+  choosing among variants, confirm the winner on fresh confirmation worlds.
+  The world ranges depend on the environment version: see
+  `research/metrics.md` (on 0.1.5, DEV starts at 91,000,000,000; the seeds
+  quoted below are from before 0.1.3).
   `scripts/rl/compare_evals.py A.json B.json ...` gives the paired difference.
-- **Progress-log headers:** take the time from `date` when writing the entry.
-  Never estimate it.
+- **Timestamps** in `research/status.md` and Log entries: take the time from
+  `date`. Never estimate it.
 - **OOC credit must not be critic-bootstrapped at λ = 0.95** (2026-10-13). The
   OOC critic cannot see the value of delayed-payoff choices, such as a single
   card upgrade, but it sees HP directly. So λ = 0.95 macro advantages rank
@@ -88,3 +93,32 @@ Code: `src/sts_rl/`.
   capability. Distilling either one's per-decision votes into the combat head
   hurt the Act 2 boss (−6 points), whereas playing with public search helped
   (+8 points).
+- **Select the native build explicitly.** The queue's built-in
+  `STS_LIGHTSPEED_BUILD` overrides the shell environment. Use
+  `-- env STS_LIGHTSPEED_BUILD=BUILD ...` in the queued command so both its
+  launch record and child use the intended build.
+- **Plan a migration before editing source-bound checkpoints.** Entity loading
+  compares a SHA-256 of all bytes in `src/sts_policy/entity_encoding.py` and
+  checks vocabulary identity. Controlled loading additionally compares source
+  bytes for `controlled_encoding.py`, `controlled_entity.py`, `entity_model.py`
+  and legacy `encoding.py`. Even a comment edit changes these identities and
+  makes affected checkpoints refuse to load. Never edit those files without a
+  planned migration; ordinary entity loading does not itself hash the model file.
+- **Preserve saved frontiers explicitly.** In `train_nonllm.py`, use
+  `--preserve-task-prefixes` for saved out-of-combat/run continuations; without it,
+  the task file supplies worlds restarted from the beginning. The flag also
+  preserves each task's horizon, act limit and search settings.
+- **Check the replay worker class.** The generic fault replayer accepts only
+  `CurriculumWorker` and `PanelWorker`; fresh-panel and lookahead subclass
+  records are not supported. Do not promise replay merely because a packet exists.
+- **Keep faults out of outcomes and targets.** Simulator failures, reported
+  undefined behavior, timeouts and censored worlds are not defeats. Quarantine
+  whole-world labels where supported; older helper outputs can contain partial
+  faulted-world rows. Programming and recording errors must propagate.
+- **Preserve fresh-start filtering and selection.** Recover public potion slots
+  from the raw menu before hiding out-of-combat drink/discard choices; preserve
+  original indices and keep combat potions. Call `policy_observation` with the
+  raw unfiltered observation; it creates policy context without mutating that input.
+  Freeze panel grids before fitting or scoring students, defer test scoring until validation-only selection freezes,
+  and compare exact cohorts with frozen expectations. Never use cohort intersections
+  to repair incomplete fresh-start results.

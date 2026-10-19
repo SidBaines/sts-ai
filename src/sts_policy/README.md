@@ -1,197 +1,259 @@
-# Curriculum task and data adapters
+# sts_policy: encoders, models and training adapters
 
-The environment release remains unchanged. `workers.CurriculumWorker` wraps a
-private base episode only inside a persistent, bounded native subprocess. The
-parent owns inference, learning and model memory. Each worker supplies reset,
-step, teacher_action, and asynchronous submit methods. On any native fault the
-worker process is destroyed; reset creates a clean one. Faulted transitions and
-labels are never ordinary defeats.
+`sts_policy` encodes public game observations, scores legal actions and
+supplies training, curriculum and isolated-worker adapters without changing
+`sts_env`. Ironclad and Acts 1–3 are the supported research scope. See
+[`sts_rl`](../sts_rl/README.md) for trainers, queues and dashboards;
+[metrics](../../research/metrics.md) defines evaluation terms.
 
-`curriculum.TaskSpec` identifies a world, task kind, exact public action prefix,
-optional observation hash, horizon and act limit. Battle tasks end immediately
-at the fight outcome; OOC tasks resolve combat with native search; run tasks
-allow control of all actions. Limits truncate, game/fight outcomes terminate.
-The base records max_act completion as a truncation. This explicit curriculum
-adapter promotes it to terminal `act_clear` success when `goal_act_clear=True`
-(default). Full-game victory and individual-battle victory remain distinct
-outcomes; task horizons remain bootstrap truncations. Set goal_act_clear=False
-to retain the base cutoff semantics.
+## Public encoders and models
 
-Non-obvious replay invariant: native OOC action previews are pure queries, but
-executing their chosen action commits the native policy RNG. Replaying only
-menu indices would omit that commit. `ooc_previews` records which prefix actions
-were preceded by a native OOC preview; all replay banks must preserve it, along
-with max_act, ascension, seed and search settings. `task_start_ooc_previews`
-accompanies the worker's `task_start_prefix` in diagnostic info. Policy inputs
-are exclusively the `observation` object, never these diagnostics or raw native
-bits. Native teacher labels are privileged and kept separate; the OOC teacher
-is a scripted baseline, not a strategic expert.
+`encoding.py` implements `public_candidate_v2`: a 32-bit floating-point state
+vector of length 256 and one vector of length 128 per currently legal
+candidate. Allowlisted public fields and controlled public text describe
+health points, resources, cards, enemies, powers, offers and reachable map
+routes. Fixed Blake2b signed hash bags preserve multiplicities and unordered
+card piles. Candidate features join public card/potion rules to the matching
+enemy's public state; duplicate enemy names use the public enemy index.
+Multi-selection actions encode selected cards rather than using a fixed global
+action head.
 
-`data.collect_dataset` generates fresh labels and battle banks against the
-new base native binary. Every world shares one stable train/dev/final split,
-including all fights from that world. Atomic per-world journals preserve
-completed worlds after interruption. Resume rejects changes to collection
-settings or adapter source. Errors discard the entire world's labels. Summary
-aggregation streams worlds to keep memory bounded. Use a new output directory
-for different collection settings or code identities.
+Only the `observation` enters the encoder. Diagnostics, world seeds, native
+bits, hidden draw order and teacher values are excluded. Menu indices route a
+selected row back to the current menu; they are never neural inputs. Version 2
+corrects potion-name parsing and card-removal coverage. Version 1 encoded
+caches and checkpoints are incompatible even though dimensions match.
 
-Reward version `sts_curriculum_reward_v2` belongs to this experiment adapter.
-Worker config `reward_mode` selects potential (default), sparse, or progress.
-Gamma defaults to 1.0; training must log/configure its matching discount. Progress
-mode adds progress_floor_weight (default 0.05) per new floor; this changes the
-objective and is a curriculum hypothesis, not invariant potential shaping.
-Terminal HP bonus is optional via terminal_hp_weight (default 0.0). Reward
-settings/components are recorded in info, separately from policy observations.
+`model.CandidateActorCritic` applies shared multilayer perceptrons to state
+and candidate features, then scores their joint features.
+`size=small|medium|large` selects capacity; `context=mean` adds masked mean
+candidate embeddings and `context=none` omits them. Candidate permutation
+permutes logits and preserves critic value. Padding is ignored and receives
+logit -1e9. Terminal batches keep one masked slot for critic evaluation; never
+sample that action distribution.
 
-Potential shaping It uses public player HP
-and enemy HP progress, with gamma*Phi(next)-Phi(previous), terminal Phi zero.
-Block is deliberately excluded because rewarding block directly invites
-endless block cycles. Horizon cutoffs retain potential for value bootstrap;
-native faults never produce reward targets.
+`entity_encoding.py` implements `public_entities_fresh_v1`: explicit player,
+enemy, card, relic, potion, map and offer entities, with a frozen vocabulary,
+numeric availability flags, owner-linked powers, recent public actions and
+candidate source/target links. `entity_model.EntityActorCritic` uses separate
+actor and critic transformer towers and one phase per model. `actor_logits`
+unpads each row before arithmetic for stable processor inference;
+`training_logits` uses masked vectorized batches. Full layouts belong in
+[entity_encoding.md](entity_encoding.md). Controlled variants add optional
+legacy candidate features; they are study adapters, not a new encoder default.
 
-Optional `fast_observations=True` installs process-local precompiled status
-regexes and bounded immutable-text caches. This addresses the observed glossary
-rendering bottleneck without editing base source or changing observations.
-Paired whole-run public observations, encoded state/action arrays, teacher
-actions, rewards and diagnostic info must remain exactly equal. The collection
-CLI accepts --fast-observations; dataset identity includes this adapter's source.
+## Train and deploy a candidate policy
 
-Bank replay validates Python public-interface/runtime identity and exact native
-provenance before executing a prefix. Resume probes the live build and validates
-the same native/interface provenance for all valid saved worlds. A public start
-hash alone cannot establish compatibility across changed native builds.
+Use the repository root and a runtime with the optional `policy` dependencies.
+In a new development runtime, install with `pip install -e '.[policy]'`;
+preserve frozen study runtimes. Set `PYTHONPATH=src` and
+`STS_LIGHTSPEED_BUILD` to a verified native build compatible with the Python
+interpreter and environment patch. The package does not embed a native binary.
+Use separate source/build directories when rebuilding; never reuse another
+source tree's CMake cache.
 
-11 October 2026 Mac CPU panel (32 identical world seeds, native 50 simulations):
-uncached workers 1/4/8/12 yielded 743/2267/3638/3927 valid records per second;
-process-local exact caches yielded 1343/3597/5002/5021. Both produced exactly
-5562 valid labels and the same one simulator fault. Eight cached workers achieve
-99.6% of twelve-worker throughput, leaving CPU capacity for policy encoding.
-This is a short native-collection benchmark, not an end-to-end GPU-training
-measurement. Native teacher search consumed about 4% of profiled runtime;
-glossary status scanning was the dominant removable cost.
+These examples use your compatible teacher bank and task files and create new
+artifacts. Behavioral cloning fits teacher actions; proximal policy
+optimization (PPO) fits collected returns. Route heavy jobs through the
+[queue](../sts_rl/README.md#run-jobs-through-the-queue).
 
-## Optional privileged OOC lookahead teacher
+```sh
+.venv/bin/python scripts/train_nonllm.py bc --teacher BANK/teacher.jsonl \
+  --split train --phase all --size large --context none --device cpu \
+  --batch-size 1024 --learning-rate 0.0001 --updates 100 --seconds 120 \
+  --output data/custom_nonllm/bc.pt
+.venv/bin/python scripts/train_nonllm.py ppo --checkpoint data/custom_nonllm/bc.pt \
+  --tasks PANELS/train_act1.jsonl --split train --task-kind battle --max-act 1 \
+  --horizon 256 --workers 8 --threads 2 --simulations 200 --gamma 1 \
+  --fast-observations --fast-replay --deferred-bootstrap --kl-guard-before-update \
+  --updates 100 --seconds 180 --output data/custom_nonllm/combat.pt
+.venv/bin/python scripts/train_nonllm.py evaluate --checkpoint MODEL.pt \
+  --tasks PANELS/dev_act1.jsonl --split dev --task-kind battle --episodes 32 \
+  --max-act 1 --horizon 256 --simulations 200 --output data/custom_nonllm/dev.pt
+```
 
-`CounterfactualOOCWorker` in lookahead.py exactly replays a full-mode prefix and
-evaluates up to four sampled public menu candidates from common seeded starts.
-Native search handles combat during each continuation; the seeded native OOC
-policy handles subsequent OOC choices. The default horizon is 30 OOC decisions.
-The scripted baseline is always included, and wins exact score ties to avoid
-creating label noise from arbitrary tie breaks. Any branch native fault rejects
-the entire source label. Candidate-order invariance and repeatability are tested.
+Evaluation writes metrics only; `--output` supplies their naming stem. PPO
+uses `--device` for optimization and `--inference-device` for collection; each
+accepts `cpu` (processor) or `mps` (Apple's Metal backend). `--task-kind ooc`
+exposes out-of-combat choices with native combat, while `run` exposes both
+phases. `--teacher-simulations` collects teacher labels on learner states.
+Training permits only training worlds. `--resume` requires identical data and
+compatible task/reward settings and restores optimizer/random state.
+`--warm-optimizer` carries moments across compatible PPO chunks and resets on
+method, task-kind or reward changes. `--preserve-task-prefixes` retains saved
+frontiers and per-task settings; without it, out-of-combat/run task files
+supply deduplicated worlds restarted from the beginning.
 
-Explicit proxy score: act-clear/full-victory +1, defeat -1, final public HP/max HP
-times 0.25, and new floors times 0.05. This teacher uses privileged continuations
-and evaluates a partial menu; it is not a strategic-expertise claim. Logs retain
-individual score terms and whether the continuation horizon was reached. The
-engine heals at the next act, so final HP saturates on act-clear outcomes; this
-proxy is useful for an ablation, not a certificate of stronger overall play.
-Only the original public observation and chosen index are training inputs.
+The public agent factory accepts candidate or candidate-composite checkpoints:
 
-`collect_ooc_lookahead.py` samples train-world OOC states from atomic source-bank
-journals and emits separately identified labels, with independent source/code/
-settings validation on resume. Eight tested sources produced two strict proxy
-improvements over scripted labels, no faults, in 0.81 seconds of evaluation;
-that does not establish any held-out policy win-rate improvement.
+```sh
+.venv/bin/python -m sts_env run --agent sts_policy.model_agent:make_agent \
+  --agent-config '{"checkpoint":"MODEL.pt","device":"cpu","deterministic":true}' \
+  --mode full --seed 10121 --policy-seed 777 --max-act 1 --max-steps 2048 \
+  --battle-simulations 200 --step-timeout 10 --output data/custom_nonllm/run.jsonl
+.venv/bin/python -m sts_env inspect data/custom_nonllm/run.jsonl
+.venv/bin/python -m sts_env replay data/custom_nonllm/run.jsonl
+```
 
-## Native automatic-combat validity limitation
+Choose a declared development world; existing trace paths reject. `full` gives
+both phases to the model, `ooc` gives combat to native search, and `combat`
+gives out-of-combat choices to the scripted native policy with seeded pathing.
+Deterministic play uses exact argmax. The public command line gives reward 1
+only for game victory and truncates at act limits; curriculum shaping and
+Act-clear promotion below do not apply there.
 
-The pinned binding's resolve_current_battle creates a local BattleContext, calls
-ScumSearchAgent2::playoutBattle, then exitBattle. It does not check the context's
-undefinedBehaviorEvoked flag. BattleContext::exitBattle copies player/game state
-but does not retain that flag in GameContext. Exposed GameContext and Agent APIs
-have no last-battle/context/UB status accessor; Agent.playout operates on an
-entire GameContext and also destroys its local battle context. An adapter cannot
-recover this flag after automatic resolution using the current native API.
+## Checkpoints and composition
 
-Therefore OOC/automatic-combat comparisons report surfaced exceptions/timeouts
-separately but cannot claim parity with full-combat live-flag detection. Zero
-reported faults does not certify their continuation labels are free of simulator
-UB. Unflagged corruption can also escape full-combat detection. Original labels
-and scientific settings are preserved; this finding does not silently change
-the native controller or overwrite prior banks.
+Load format 1 with `training.load_checkpoint`, then reconstruct candidates or
+composites through `model_agent.policy_from_payload`. It validates encoder
+version, supported kind, fixed dimensions and exact weight structure.
+Candidate configs may omit `kind`; composite configs use `kind: composite`
+with candidate `combat` and `ooc` configs. Nested composites are rejected.
 
-A minimal future environment-base maintenance patch should check
-bc.undefinedBehaviorEvoked after bc.init(gc), and again after
-agent.playoutBattle(bc), throwing before bc.exitBattle(gc) if either is true.
-Keep the native controller/seed/search settings unchanged. Add native regression
-coverage for automatic-resolution flag rejection and ordinary deterministic
-trajectory parity, rebuild, publish a new release tag, and collect separately
-identified comparison data. Explicit micro-action search in an experiment
-adapter would expose live flags, but changes the controller and must be treated
-as a separate experiment instead of a transparent repair.
+```sh
+.venv/bin/python scripts/compose_nonllm.py --combat-checkpoint COMBAT.pt \
+  --ooc-checkpoint OOC.pt --output data/custom_nonllm/composite.pt
+```
 
-## Optional prefix replay acceleration
+Composition copies weights without overwriting either source, checks stable
+inputs and rejects disagreement in recorded provenance. Missing legacy native
+provenance stays explicitly missing; campaign/data manifests remain
+authoritative. It starts at step zero without optimizer state. Later PPO
+updates both heads; normal resume restores their parameter order and optimizer
+moments. Phase dispatch runs only the appropriate head, using public encoder
+state feature 7. `make_agent` also accepts both `combat_checkpoint` and
+`ooc_checkpoint` instead of `checkpoint`. The training command line's
+two-source loading is evaluation-only; compose one file for training.
+Composition accepts candidate heads only.
 
-Worker config `fast_replay=True` skips intermediate observation text generation
-when reconstructing a saved action prefix. It still executes each action through
-the v5 public semantic wrapper, preserves OOC preview RNG commits and counters,
-advances native state identically, and checks sticky UB, terminal state, and a
-nonempty legal menu after every prefix action. It renders once at the final
-frontier; default replay remains unchanged.
+Entity and controlled payloads require `entity_model.policy_from_payload` or
+`controlled_entity.policy_from_payload`. They are unsupported by `ModelAgent`
+and candidate composition; fresh-start inference uses `StudyPolicy`, and
+controlled replacements use its controlled policy factory. Entity inference
+receives one dictionary batch; candidate inference receives an unpacked tuple.
+Source-file compatibility traps belong in [the tooling
+instructions](../../scripts/rl/CLAUDE.md).
 
-Paired generated trajectories, ten random first-bank starts, twenty Act 2/3
-starts, and a known fault prefix verified exact reset observations/diagnostics,
-teacher labels, subsequent rewards/observations/diagnostics, and identical fault
-rejection. Matched persistent RPC benchmarks over twenty later-act starts and
-7852 prefix actions measured reset totals 4.118 seconds standard vs 1.579 seconds
-fast (2.61x), with all semantics checks passing.
+Checkpoints retain configuration, weights, optional optimizer state, update
+count and random-number-generator state. Training records parent identities,
+composition ancestry and current environment provenance. With
+`STS_LIGHTSPEED_BUILD` set, training validates the manifest against the actual
+native module. Preserve model files, banks, manifests and build identities
+separately: they are gitignored. Freeze manifests identify the selected
+artifact; do not infer selection from its filename. Preserve the original
+identity record when relocating artifacts.
 
-Initial native banks retain collection adapter hash
-6438978542e95701d505d273534209a35d84140bb5918580de059642e8a37499.
-Adding this optional replay path changes the collection source identity to
-08e37bd55722543cc64a0f81a7f5b37eafc91a28b3f194761bdc3056f6984f4d.
-Old banks remain replay compatible because native/public Python identities are
-unchanged and still validated. Never resume old collection under changed source:
-use a new dataset directory so the recorded collection identity remains true.
+## Collection and replay
 
-## Balanced panels and rehearsal reservoirs
+`workers.CurriculumWorker` keeps the native simulator in a persistent
+subprocess; inference, learning and model memory stay in the parent. Reset,
+step and teacher queries have finite bounds and asynchronous submit methods. A
+native failure destroys the worker; reset starts a clean process. Faulted
+episodes and labels never become ordinary defeats or targets. See [fault
+recording and replay](../sts_rl/README.md#records-replay-and-dashboards).
 
-`build_curriculum_panels.py --banks ... --output ...` assembles preserved battle
-starts without executing any held-out learner. Training uses three genuine act
-files cycled by round rather than invented duplicate IDs. Development/final
-panels request equal act counts, select across worlds before adding extra fights
-from a world, and never oversample evaluation starts. Metadata records actual
-world/floor coverage and source bank manifest identities. Publish new cohorts
-to a versioned directory: changing an active development file mid-screen would
-make candidate scores incomparable.
+`curriculum.TaskSpec` retains seed, kind, exact action prefix, optional public
+start hash, horizon, act limit, ascension and search settings. Native
+out-of-combat previews are queries, but executing the chosen action commits
+the policy's random stream. Preserve aligned `ooc_previews` markers when
+replaying prefixes. `task_start_prefix`/`task_start_ooc_previews` are
+diagnostics, never inputs. Replay validates native and Python
+interface/runtime provenance before execution; a matching public start hash
+alone cannot establish compatibility.
 
-`aggregation.aggregate_teachers` streams a deterministic train-only reservoir
-over native/learner label files. It validates world splits and legal menu labels,
-retains source-file/line hashes, and never overwrites a source. A fixed native
-rehearsal sample avoids repeatedly scanning gigabytes of immutable native labels
-for every DAgger correction; subsequent aggregation adds all prior learner
-corrections. The saved rehearsal file and its manifest provide the provenance
-chain back to original native banks. Compression and source mixing are explicit
-recorded settings, not silently equivalent to retaining every native example.
+`scripts/collect_curriculum.py --output DIRECTORY --worlds 32 --workers 4
+--max-act 1 --simulations 200 --fast-observations` calls
+`data.collect_dataset`. Every fight/state from a world shares its stable
+training/development/final split. Atomic per-world journals preserve completed
+worlds; errors discard the entire world's labels. Resume checks
+source/settings and probes live native/interface identity against saved valid
+worlds. Changed collection code/settings require a new directory, even when
+old banks remain replay-compatible. Summary aggregation streams worlds to
+bound memory.
 
-The first Act 3 expansion used 2048 separate worlds, native 200 simulations,
-four CPU workers and a 480-second collection ceiling; all worlds finished in
-337 seconds, with 2025 valid and 23 flagged-invalid worlds. The expanded panel
-contains 16 Act 3 development fights from 15 worlds and 16 Act 3 final fights
-from 12 worlds, replacing the original one-world-per-split coverage only after
-its separate publication. Original banks/panels remain preserved.
+`fast_observations=True` installs process-local compiled patterns and bounded
+immutable-text caches without changing observations. `fast_replay=True` skips
+intermediate prefix text rendering while preserving semantic actions, preview
+commits, counters, terminal/menu checks and sticky/live undefined-behavior
+flags; it renders the final frontier. Command-line flags are
+`--fast-observations` and `--fast-replay` where supported. Candidate text hash
+caching and phase dispatch are automatic. Rollouts normally retain their exact
+encodings for PPO reuse; reuse checks observation identity/legal indices, ends
+with the buffer and discards faulted trajectories. Custom collators keep their
+original path; `reuse_encodings=False` disables reuse. `--threads` controls
+Torch processor threads; measure full collection throughput before changing
+threads or worker layout.
 
-The later direct-guard optimization removes the remaining per-prefix v5 summary
-copy. Inside the isolated adapter, it reads exactly the base summary's predicate:
-raw backend `_undefined_behavior_evoked`, OR a live battle context's
-`undefined_behavior_evoked`. The sticky flag remains checked after battle exit;
-terminal/legal-menu checks, OOC previews and all counters remain unchanged.
+## Tasks and rewards
 
-Landed-source verification repeated generated prefixes, ten random first-bank
-starts, twenty Act 2/3 starts, and a known invalid prefix. Public observations,
-all diagnostics, native teacher labels, subsequent rewards, and rejection errors
-were identical. Matched persistent RPC resets over 7852 prefix actions measured
-1.613 seconds with the old summary guard versus 0.915 seconds with direct flags
-(1.763x additional reset speedup). No native binary or environment-base source
-changed. This optimization landed after both health-ablation conditions finished.
+Curriculum rewards and termination belong to the adapter, not the environment.
+Battle tasks terminate at fight outcome; out-of-combat tasks resolve combat
+with native search; run tasks expose both phases. Horizons truncate for value
+bootstrap. Default `goal_act_clear=True` promotes the base act-limit
+truncation to terminal `act_clear`; set it false to retain the base cutoff.
+Battle victory, Act clear and whole-game victory remain distinct outcomes.
 
-The current collection adapter identity is
-1f2e599fe97c57be233c3d66e1bb10682d9079394676c20657bd625781b41607.
-Earlier banks preserve their original collection identities and remain replay
-compatible under their unchanged native/Python provenance; new collection must
-use a new directory rather than resume an old source identity.
+Reward version `sts_curriculum_reward_v2` offers `potential` (default),
+`sparse` and `progress`. Potential uses public player/enemy health, with
+`gamma * Phi(next) - Phi(previous)`, zero terminal potential and no block
+reward. Cutoffs retain potential for bootstrap. Match and record the learner's
+discount to worker `gamma` (default 1). Progress adds `progress_floor_weight`
+(default 0.05) per new floor and changes the objective. `terminal_hp_weight`
+defaults to zero. Components/settings are diagnostics; faults produce no
+reward targets.
 
-The spawn-based simulator cannot start from a Python stdin entry point. Use the
-guarded official CLI or a saved script with `if __name__ == "__main__"`; do not
-interpret a missing `<stdin>` child entry point as a simulator or policy fault.
+## Evaluation
+
+Match exact task identities, splits, horizons, act limits, policy seeds and
+native search settings across arms. Out-of-combat/run evaluation deduplicates
+worlds from fight banks; battle evaluation retains distinct prefixes. Select
+on development data and reserve final worlds until selection freezes. Require
+exact requested-task coverage and retain wins/requested for conservative
+selection. Report faults, defeats, cutoffs, unresolved outcomes and unstarted
+tasks separately. `scripts/report_nonllm.py` supplies equal-world estimates
+and 95% bootstrap intervals with at least two worlds; many fights from one
+world remain one cluster. Its success ratios condition on decisive completion,
+excluding faults/censoring; keep outcome counts beside them. World-level
+cloning intervals need per-record `bc_records` with world seed, phase,
+correctness and loss, not just aggregate accuracy. For comparisons report the
+paired difference, baseline, world count, interval and evidence level.
+Repeated development selection is descriptive evidence.
+
+`build_curriculum_panels.py --banks A B --output DIRECTORY` selects genuine
+per-act training cohorts and balanced development/final fights across worlds,
+without oversampling evaluation starts. Metadata retains coverage/source
+identities. Publish changed panels separately; never change an active
+selection cohort. `aggregation.aggregate_teachers` builds a deterministic
+training-only rehearsal reservoir, validates splits/legal labels and preserves
+source-line provenance. Compression and mixing remain explicit settings;
+source files stay unchanged.
+
+## Limits and optional teachers
+
+Privileged labels remain separate from public policy inputs.
+
+- Native combat search uses hidden state; native out-of-combat choices are
+  scripted. `lookahead.CounterfactualOOCWorker` tests a bounded partial menu
+  with native combat and scripted continuations. Defaults are four candidates
+  and 30 decisions; the baseline is included and wins score ties. Any branch
+  fault rejects the source label. Its proxy scores success +1, defeat -1,
+  final health fraction weighted by 0.25 and new floors by 0.05; horizons and
+  terms are logged. `collect_ooc_lookahead.py` samples training-bank states by
+  default and separately validates source/code/settings on resume. Only the
+  original public observation and selected index become training inputs.
+- Act-boundary healing can saturate the proxy's health term. `hp_cost` is
+  reset health minus endpoint health, can be negative after healing, and is
+  not cumulative damage or remaining health. Fresh panel pre-healing loss has
+  a separate definition.
+- The current native patch checks reported undefined behavior during automatic
+  combat initialization and playout. Older banks can predate this check; zero
+  surfaced faults never certifies the absence of unflagged corruption.
+  Preserve original conditions rather than silently relabelling them.
+- Hash collisions, partial text parsing and missing public fields limit
+  candidate features. Unknown symbols stay hashed; missing damage stays zero.
+  Supported block rules use public Dexterity/Frail/No Block, while complex
+  fallbacks can be approximate. Track coverage and bump encoder
+  versions/re-encode when semantics change.
+- Spawn-based workers require a saved script with an `if __name__ ==
+  "__main__"` guard or an official guarded CLI; a Python standard-input entry
+  point cannot launch them.
