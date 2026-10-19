@@ -122,3 +122,12 @@ what failed. Commands and module usage: [src/sts_rl/README.md](../../src/sts_rl/
   Freeze panel grids before fitting or scoring students, defer test scoring until validation-only selection freezes,
   and compare exact cohorts with frozen expectations. Never use cohort intersections
   to repair incomplete fresh-start results.
+- **Final-boss scope:** identify final-boss fights from the public act and
+  room fields, and verify the encounter when investigating anomalies. Do not
+  assume the Act 3 final boss is on floor 50: Secret Portal can legally reach
+  it earlier, so fixed-floor counters undercount entrants. (A floor-50 counter
+  caused a false alarm about invalid wins on 14 October.)
+- **Keep evaluated checkpoints:** never let checkpoint retention delete a
+  checkpoint whose results are reported or used for a decision. Copy it
+  somewhere retention won't touch before evaluating it. (Retention deleted an
+  evaluated long-curriculum v2 checkpoint, which blocked later diagnosis.)
