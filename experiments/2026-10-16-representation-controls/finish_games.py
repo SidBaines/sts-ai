@@ -8,7 +8,12 @@ kept and excluded. Checkpoints come from the study's global_freeze_v1.json.
 
     finish_games.py plan          print the shard and merge commands
     finish_games.py enqueue       add the shards to the study's queue and start it
+    finish_games.py retry         queue a fresh run of each shard in shard_retries, in a new folder
     finish_games.py merge-watch   queue each arm's merge once its 8 shards are complete
+
+A shard listed in shard_retries (for example after a battery pause made one
+world time out) is re-run whole into the named folder, and merges use that
+folder. Arms listed in no_merge are analysed from their shards instead.
 
 merge-watch stops when every arm's merge is queued, or when STOP exists in the
 run's finish_games_20261019/ folder.
@@ -42,15 +47,19 @@ def arm_dir(arm):
     return BASE / 'games' / CONFIG['out_dir'].get(arm, arm)
 
 
-def shard_command(arm, i, checkpoint):
+def shard_dir(arm, i):
+    return arm_dir(arm) / CONFIG.get('shard_retries', {}).get(f'{arm}/{i:02d}', f'shard_{i:02d}')
+
+
+def shard_command(arm, i, checkpoint, folder):
     return prefix() + [str(ROOT / 'scripts/rl/controlled_eval.py'), '--mode', 'eval',
         '--checkpoint', CONFIG['champion'], '--no-teacher-labels', '--no-bank', '--self-consistency-every', '0',
         '--world-start', str(CONFIG['world_start'] + CONFIG['shard_worlds'] * i), '--n', str(CONFIG['shard_worlds']),
-        '--workers', '1', '--timeout', '30', '--out', str(arm_dir(arm) / f'shard_{i:02d}'), '--combat', checkpoint]
+        '--workers', '1', '--timeout', '30', '--out', str(folder), '--combat', checkpoint]
 
 
 def merge_command(arm):
-    shards = [str(arm_dir(arm) / f'shard_{i:02d}') for i in range(CONFIG['shards'])]
+    shards = [str(shard_dir(arm, i)) for i in range(CONFIG['shards'])]
     return prefix() + [str(ROOT / 'scripts/rl/fresh_merge.py'), '--inputs', *shards,
         '--world-start', str(CONFIG['world_start']), '--n', str(CONFIG['shard_worlds'] * CONFIG['shards']),
         '--out', str(arm_dir(arm) / 'merged')]
@@ -63,7 +72,7 @@ def shard_jobs():
         for i in range(CONFIG['shards']):
             k = len(jobs)
             jobs.append((f'{CONFIG["queue_prefix"]}_game_{arm}_{i:02d}', f'game{k % CONFIG["lanes"]}',
-                         shard_command(arm, i, cps[arm])))
+                         shard_command(arm, i, cps[arm], arm_dir(arm) / f'shard_{i:02d}')))
     return jobs
 
 
@@ -77,7 +86,7 @@ def add(name, lane, command):
 
 
 def shard_complete(arm, i):
-    path = arm_dir(arm) / f'shard_{i:02d}' / 'completion.json'
+    path = shard_dir(arm, i) / 'completion.json'
     if not path.exists():
         return None
     done = json.loads(path.read_text())
@@ -105,6 +114,17 @@ def main():
             if name not in existing:
                 add(name, lane, cmd)
         subprocess.run(QUEUE + ['start'], check=True)
+    elif mode == 'retry':
+        cps, lanes, existing = checkpoints(), {name: lane for name, lane, _ in shard_jobs()}, queued_names()
+        for key, folder in CONFIG['shard_retries'].items():
+            arm, i = key.split('/')[0], int(key.split('/')[1])
+            original = f'{CONFIG["queue_prefix"]}_game_{arm}_{i:02d}'
+            name = f'{original}_{folder.rsplit("_", 1)[-1]}'
+            if name in existing:
+                continue
+            if shard_dir(arm, i).exists():
+                sys.exit(f'{shard_dir(arm, i)} already exists; refusing to reuse an output folder')
+            add(name, lanes[original], shard_command(arm, i, cps[arm], shard_dir(arm, i)))
     elif mode == 'merge-watch':
         queued, warned = set(), set()
         while True:
@@ -114,6 +134,9 @@ def main():
             names = queued_names()
             for arm in CONFIG['arm_order']:
                 name = f'{CONFIG["queue_prefix"]}_merge_{arm}'
+                if arm in CONFIG.get('no_merge', {}):
+                    queued.add(name)
+                    continue
                 if name in queued or name in names:
                     queued.add(name)
                     continue

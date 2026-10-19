@@ -9,5 +9,7 @@
   "lanes": 7,
   "arm_order": ["old1919", "old2020", "off128_s2020", "off128_s1919", "on128_s1919", "off216_s1919", "on216_s1919"],
   "out_dir": {"old1919": "old1919_retry1"},
+  "shard_retries": {"off128_s1919/05": "shard_05_retry1", "on128_s1919/02": "shard_02_retry1"},
+  "no_merge": {"old2020": "shard 06 has one world cut at the 4,096-decision limit; analyse from the shards"},
   "queue_prefix": "rcf"
 }

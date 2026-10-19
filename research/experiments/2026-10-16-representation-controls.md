@@ -84,6 +84,13 @@ whether to confirm the old-encoder combat candidate and start step D.
   own commands. Two changes: seven lanes instead of eight, and a new output
   folder for the interrupted seed-1919 old-encoder arm (its stopped partial
   run is excluded).
+- 19 Oct: the queue paused on battery for four hours. Two worlds timed out
+  when it resumed; their shards are re-run whole into new folders.
+- 19 Oct: one old-encoder seed-2020 world (91001003143) was cut at the
+  4,096-decision limit: the agent chose the first menu option for hundreds
+  of decisions in a row. The champion also
+  lost that world. How to count it is for Sid to decide; it cannot move any
+  win count by more than one.
 
 Code: `src/sts_rl/controlled_*.py`, `src/sts_rl/representation_controls.py`
 and `scripts/rl/controlled_*.py`, at commit `1636034`; game arms finished with
