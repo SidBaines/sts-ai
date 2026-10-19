@@ -1,0 +1,13 @@
+{
+  "root": "/Users/sidbaines/.codex/worktrees/representation-controls/SlayTheSpireAI",
+  "base": "data/rl_runs/representation_controls_20261016",
+  "champion": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start/data/rl_runs/fresh_start_20261015/inputs/champion_3d135d9bd53b.pt",
+  "native_build": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start/external/sts_lightspeed_rl/build015",
+  "world_start": 91001000000,
+  "shard_worlds": 512,
+  "shards": 8,
+  "lanes": 7,
+  "arm_order": ["old1919", "old2020", "off128_s2020", "off128_s1919", "on128_s1919", "off216_s1919", "on216_s1919"],
+  "out_dir": {"old1919": "old1919_retry1"},
+  "queue_prefix": "rcf"
+}

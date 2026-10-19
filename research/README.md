@@ -26,10 +26,10 @@ finished comparison is in the [results ledger](results.md).
 
 ## Now
 
-Nothing is running. [Representation controls](experiments/2026-10-16-representation-controls.md),
+[Representation controls](experiments/2026-10-16-representation-controls.md),
 a supervised diagnosis of why the structured encoder played worse than the old
-one, is paused: its fight panels are complete, and seven of eight full-game
-arms remain. See [status](status.md).
+one, is finishing its last seven full-game arms (about two hours from 18:00
+BST on 19 October). Its fight panels are complete. See [status](status.md).
 
 ## Next
 

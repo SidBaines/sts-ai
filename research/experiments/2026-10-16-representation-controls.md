@@ -80,7 +80,12 @@ whether to confirm the old-encoder combat candidate and start step D.
   caused six simulator timeouts in one panel, which was re-run successfully.
 - 19 Oct: all fight panels finished. Sid stopped the study during the game
   arms so that Claude could take over.
+- 19 Oct: Claude relaunched the remaining seven game arms with the study's
+  own commands. Two changes: seven lanes instead of eight, and a new output
+  folder for the interrupted seed-1919 old-encoder arm (its stopped partial
+  run is excluded).
 
 Code: `src/sts_rl/controlled_*.py`, `src/sts_rl/representation_controls.py`
-and `scripts/rl/controlled_*.py`, at commit `1636034`. Data: run
+and `scripts/rl/controlled_*.py`, at commit `1636034`; game arms finished with
+`experiments/2026-10-16-representation-controls/finish_games.py`. Data: run
 `representation_controls_20261016` (local).
