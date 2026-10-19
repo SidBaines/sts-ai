@@ -15,9 +15,123 @@ starting or resuming experiment work.
 - An environment bug found in a workstream gets its own pull request to main,
   with a regression test and a new `env-v*` tag; the workstream then merges
   that tag rather than carrying a private fix.
-- Keep each workstream's README.md opening paragraph pointing at its current
-  handoff, so WORKSTREAMS.md on main only changes when a workstream starts,
+- Each workstream's front page is `research/README.md` on its branch (see
+  below), so WORKSTREAMS.md on main only changes when a workstream starts,
   stops or moves.
+
+## Writing up research
+
+Research notes exist so that Sid, or an agent new to the work, can quickly see
+what has been tried, what happened, and what to do next. Every workstream
+branch follows this convention. On `main`, which holds no research, only the
+style rules apply.
+
+### Where things go
+
+All research writing lives in `research/`, in these files and no others:
+
+| File | Holds | Limit | How to update |
+|---|---|---|---|
+| `README.md` | The goal, the current best agent and its headline numbers, what is running now, next steps, open questions | about 60 lines | Rewrite it |
+| `strategies.md` | One section per approach: the idea, its status (working, promising, stalled or abandoned), the key evidence, and our best explanation | about 15 lines per approach | Edit in place |
+| `results.md` | The results ledger: one table row per finished comparison, newest first | one row each | Add rows; if one proves wrong, mark it superseded and link the correction |
+| `metrics.md` | Definitions of every metric, evaluation set, baseline and term used elsewhere | a line or two per entry | Add or correct entries |
+| `experiments/YYYY-MM-DD-name.md` | One page per experiment, from plan to conclusion | about 150 lines | Fill in as it runs |
+| `status.md` | Live state for handoff: what is running, where, how to check or stop it, what happens next | about 40 lines | Rewrite it; "Nothing running" when idle |
+| `figures/<experiment>/` | PNG figures (each under about 300 KB) and the CSV data behind them | | |
+| `archive.md` | Index of retired documents and the git tag that holds them | | Add entries |
+
+- Do not create other document types: no separate plans, handoffs, progress
+  logs, summaries, audits or "detail" files. A handoff is `README.md`,
+  `status.md` and the active experiment page. A plan is the first half of an
+  experiment page.
+- How to run code is documented beside the code (that directory's README.md
+  or CLAUDE.md), not in `research/`.
+- Machine detail (hashes, PIDs, absolute paths, full commands, seeds,
+  receipts, monitoring heartbeats) goes in machine-readable records in the
+  run's output directory, referred to by run name. Only `status.md` may hold
+  the few commands needed to check or stop a live job.
+- If a page grows past its limit, condense it rather than splitting it into
+  more files.
+
+### Experiment pages
+
+```markdown
+# <Plain-words title>
+
+**Status:** planned | running | finished <date>. **Verdict:** <one sentence>.
+
+## Question
+What we want to know and why it matters; link the approach in strategies.md.
+
+## Design
+What changes relative to the baseline and what stays fixed; the training data,
+evaluation sets and metrics (names from metrics.md); the compute budget; the
+decision rule, fixed before looking at results; Sid's approval and its date.
+
+## Results
+The main comparison first, as a small table, then one to three figures, then
+other results in brief.
+
+## Conclusion
+What we learned, in plain words: what is now established, what is not, and
+one list of caveats.
+
+## Next
+What this suggests doing next.
+
+## Log
+Dated one-line entries for decisions, surprises and changes of plan only.
+```
+
+### Results ledger
+
+```markdown
+| Date | Experiment | Tested | Result | Evidence | Verdict |
+|---|---|---|---|---|---|
+| 2026-10-16 | [Fresh start](experiments/2026-10-15-fresh-start.md) | Combat distilled from search vs champion combat | DEV wins 222 vs 143 of 4,096 (+1.9 points, 95% CI +1.2 to +2.7) | Exploratory | Better |
+```
+
+- **Evidence** is one of: *Exploratory* (chosen or analysed after seeing
+  results), *Planned* (decision rule fixed in advance, on reused evaluation
+  worlds) or *Confirmed* (fresh worlds, after the candidate was frozen).
+- **Verdict** is one of: *Better*, *Worse*, *No clear difference* (enough data,
+  no meaningful gap) or *Inconclusive* (too little data to tell).
+
+### Style
+
+- Write plain English for a smart reader who is new to the work, in normal
+  sentences with normal spacing. Never squeeze words together or drop spaces
+  and articles to save room.
+- Lead with the answer. The first line of each page and section says the
+  conclusion.
+- Use words, not codes: "Act 2 boss fights", not BOSS2; "learning rate
+  0.001", not lr1e3. A run or configuration ID may appear once, in code
+  format, beside its plain description.
+- Define every term and abbreviation in `metrics.md`, or spell it out. Reuse
+  existing names rather than inventing new ones.
+- Give each number its sample size and baseline, and give comparisons as the
+  paired difference with a 95% interval and the evidence level. Say "no clear
+  difference" rather than implying that two things are equal.
+- Say each thing once, in its home file, and link to it from elsewhere.
+- Keep caveats to one list per page rather than hedging every sentence.
+- Leave out process (reviews, builders, receipts, retries) unless it changed
+  a result; it belongs in commit messages and run records.
+- Outside the results ledger, delete stale text rather than appending
+  corrections. Git keeps the history.
+
+### When to update
+
+- **Starting an experiment:** write its Question and Design, add it to the
+  README's "Now" section, and fill in `status.md`.
+- **While it runs:** keep `status.md` current by rewriting it. Add Log lines
+  only for decisions and surprises. Interpret monitoring in chat and in run
+  records, not as entries in the docs.
+- **When it finishes:** fill in Results, Conclusion and Next; add rows to
+  `results.md`; update the approach in `strategies.md`; update the README's
+  current best and next steps; reset `status.md`.
+- Commit research notes together with the code and configuration that
+  produced the result.
 
 ## Development contracts
 
