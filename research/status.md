@@ -25,7 +25,8 @@ the queue was paused on battery from about 18:55 to 23:14.
   resumed from the battery pause; both are re-run whole into `*_retry1`
   folders, which the merges use. The old-encoder seed-2020 arm has one world
   cut at the 4,096-decision limit, so the strict merge would refuse it; it is
-  analysed from its shards (`no_merge` in the config).
+  analysed from its shards (`no_merge` in the config), counting that world as
+  a loss (Sid's decision).
 - **Launch script:** `experiments/2026-10-16-representation-controls/finish_games.py`.
 
 ## Next
