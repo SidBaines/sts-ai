@@ -114,6 +114,28 @@ Older history is also on the tags listed in `WORKSTREAMS.md` on `main`
 - `docs/rl_overnight_2026-10-14.md`: Overnight player improvement study 14 October 2026
 - `docs/training_review_2026-10-14.md`: Training setups and evidence — 14 October 2026
 
+## Now covered by [experiments/2026-10-16-representation-controls.md](experiments/2026-10-16-representation-controls.md)
+
+Retired when the study stopped for handoff. These are under a separate tag,
+`archive/nonllm/representation-controls-2026-10-19`, which holds Codex's final
+versions, including its detailed resume instructions:
+
+```bash
+git show archive/nonllm/representation-controls-2026-10-19:docs/representation_controls_progress.md
+```
+
+- `docs/representation_controls_controller.md`: Representation controls controller
+- `docs/representation_controls_handoff_2026-10-16.md`: Representation controls: stopped handoff for the next agent
+- `docs/representation_controls_handoff_detail_2026-10-16.md`: Controlled representation diagnosis — continuation handoff
+- `docs/representation_controls_progress.md`: Representation controls progress — newest first
+- `docs/controlled_cache.md`: Optional controlled preencoding cache
+- `docs/controlled_evaluation_usage.md`: Controlled representation evaluation and comparison
+- `docs/controlled_factorial_usage.md`: Controlled representation factorial analysis
+- `docs/controlled_representation_training.md`: Controlled representation: model and training
+
+`docs/representation_controls_plan_2026-10-16.md` stays in place: the study's
+controller code hashes it as a pinned input.
+
 ## Replaced or moved
 
 - `docs/research_plan.md`: the workstream's version (goals and history to 15

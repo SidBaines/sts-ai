@@ -26,9 +26,10 @@ finished comparison is in the [results ledger](results.md).
 
 ## Now
 
-[Representation controls](experiments/2026-10-16-representation-controls.md)
-is running. It is a supervised diagnosis of why the structured encoder played
-worse than the old one. See [status](status.md).
+Nothing is running. [Representation controls](experiments/2026-10-16-representation-controls.md),
+a supervised diagnosis of why the structured encoder played worse than the old
+one, is paused: its fight panels are complete, and seven of eight full-game
+arms remain. See [status](status.md).
 
 ## Next
 
@@ -39,7 +40,7 @@ worse than the old one. See [status](status.md).
    it visits with the search teacher, retrain, and check on the fight panel
    before full games. The aim is to close the gap to play-time search.
 3. Move single-study code out of the library packages into experiment folders,
-   following the code convention in `CLAUDE.md`, once the running study ends.
+   following the code convention in `CLAUDE.md`.
 
 ## Open questions
 

@@ -1,6 +1,7 @@
 # Representation controls: why did the structured encoder lose?
 
-**Status:** running (collection resumed 19 October). **Verdict:** none yet.
+**Status:** paused 19 October, partly collected, handed from Codex to Claude.
+**Verdict:** none yet; no outcome analysis has run.
 
 ## Question
 
@@ -45,9 +46,15 @@ explains the gap, and does the gap repeat with a different training seed?
 
 ## Results
 
-Not yet available. All 26 fits and the label scoring are complete. The fight
-panels are part done and the eight full-game arms have not started; see
-[status](../status.md) for live progress.
+Not yet analysed. Collected so far:
+
+- all 26 fits, and label scoring for all 28 models;
+- all 28 fight panels (10,800 results each, validated);
+- the champion's full-game baseline on the 4,096 new DEV worlds.
+
+Not yet collected: the other seven full-game arms. The old-encoder seed-1919
+arm was stopped after 1,051 of 4,096 worlds; that partial run is kept but
+excluded, and the arm needs a fresh full run. The other six have not started.
 
 Validation loss barely separates the models: every fit landed between 1.28
 and 1.35. For the wide model, the lower learning rate was better at both seeds.
@@ -70,7 +77,9 @@ whether to confirm the old-encoder combat candidate and start step D.
 - 17 Oct: collection paused while the laptop was on battery. It then stopped
   at a safety deadline the study had set itself.
 - 19 Oct: restarted with no deadline at Sid's request. A second battery pause
-  caused six simulator timeouts in one panel, which is being re-run.
+  caused six simulator timeouts in one panel, which was re-run successfully.
+- 19 Oct: all fight panels finished. Sid stopped the study during the game
+  arms so that Claude could take over.
 
 Code: `src/sts_rl/controlled_*.py`, `src/sts_rl/representation_controls.py`
 and `scripts/rl/controlled_*.py`, at commit `1636034`. Data: run
