@@ -31,14 +31,22 @@ so the network plays well without search.
   teacher labels for about 4,000 updates. Paired with champion out-of-combat
   play, it won 222 of 4,096 DEV worlds against the champion's 143
   (environment 0.1.5). This is exploratory and not yet confirmed.
+- On 4,096 worlds it had never played, the same model won 197 against the
+  champion's 156 (+1.0 points [+0.2, +1.8]), about half its first margin; a
+  second training seed of the same recipe won 221 (+1.6 [+0.8, +2.4]).
+- The gain comes from hallway fights: the students reach the Act 3 boss far
+  more often, but every one of 28 students wins fewer Act 2 boss fights than
+  the champion.
 - Best explanation: the earlier failures were budget-starved. A full training
   run on many labels works, though agreement with the teacher is a poor
-  predictor of playing strength.
-- Next: confirm on fresh worlds, then run expert iteration (label the states
-  the student itself visits and retrain).
+  predictor of playing strength. The teacher itself is weak at bosses (see
+  the [19 October brainstorm](brainstorms/2026-10-19-brainstorming.md)).
+- Next: confirm one chosen student on the confirmation worlds; improve the
+  teacher before expert iteration.
 - Pages: [combat PPO and early imitation](experiments/2026-10-13-combat-ppo.md),
   [overnight tests](experiments/2026-10-14-overnight-tests.md),
-  [fresh start](experiments/2026-10-15-fresh-start.md).
+  [fresh start](experiments/2026-10-15-fresh-start.md),
+  [representation controls](experiments/2026-10-16-representation-controls.md).
 
 ## Out-of-combat PPO with macro credit
 
@@ -121,18 +129,22 @@ saved later-act starts.
 
 ## Structured entity encoder
 
-**Stalled, under diagnosis.** Represent the game as separate entities
-(player, enemies, cards, relics, potions) for a small transformer, instead of
-the old hand-built feature vector.
+**Abandoned for now.** Represent the game as separate entities (player,
+enemies, cards, relics, potions) for a small transformer, instead of the old
+hand-built feature vector.
 
 - It copied the search teacher as well as the old encoder (58.7% against
-  58.4% agreement) but played worse: more HP lost in Act 2 boss fights, and
-  131 against the old encoder's 222 wins when paired with champion OOC play.
-- It lacked the old encoder's hand-made rule features, was smaller, and had
-  less learning-rate tuning. The
-  [representation controls](experiments/2026-10-16-representation-controls.md)
-  study is testing which of these matters.
-- [Fresh-start page](experiments/2026-10-15-fresh-start.md).
+  58.4% agreement) but played worse: 131 against the old encoder's 222 wins
+  when paired with champion OOC play.
+- The [representation controls](experiments/2026-10-16-representation-controls.md)
+  study showed the gap is real at two training seeds (+2.4 and +3.1 points
+  for the old encoder). Adding the old encoder's rule features recovered about
+  a point; matching its size recovered nothing; about 1.4 points remain.
+- Best explanation: the structured model has no card semantics beyond
+  identity and cost, and lacks the old encoder's state features (incoming
+  and unblocked damage, pile summaries). Untested.
+- Wide structured models need a learning rate of 0.0003; at 0.001 they train
+  badly.
 
 ## Fight-value prediction
 
