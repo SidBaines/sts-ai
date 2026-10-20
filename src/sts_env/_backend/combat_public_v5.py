@@ -1,11 +1,11 @@
 """V5 public presentation over the unchanged v3 simulator/replay interface."""
 from __future__ import annotations
 
-from copy import deepcopy
 from dataclasses import replace
 import re
 from typing import Any
 
+from sts_env._copies import copy_tree
 from sts_env._backend.combat_public_v4 import CombatPublicV4Env
 from sts_env._backend.schemas import LegalAction
 
@@ -82,22 +82,27 @@ class CombatPublicV5Env(CombatPublicV4Env):
         return list(self._public_history)
 
     def _cards(self, cards: dict[str, Any]) -> dict[str, Any]:
-        data = deepcopy(cards)
-        selection = data.get("selection")
+        data = copy_tree(cards)
+        self._label_selection(data)
+        return data
+
+    def _label_selection(self, cards: dict[str, Any]) -> None:
+        selection = cards.get("selection")
         if selection:
             self.legal_actions()  # refresh labels for all currently legal masks
             selection["candidates"] = [self._label(x) for x in selection["candidates"]]
-        return data
 
     def public_combat_cards(self) -> dict[str, Any]:
         return self._cards(self._env.public_combat_cards())
 
     def summary(self) -> dict[str, Any]:
-        data = deepcopy(self._env.summary())
+        data = copy_tree(self._env.summary())
         data["combat_observation"] = self.combat_observation
         combat = data.get("combat")
         if combat:
-            combat["cards"] = self._cards(combat["cards"])
+            # Already owned by this summary; only standalone card views need a
+            # separate copy before relabelling their selection candidates.
+            self._label_selection(combat["cards"])
             combat["recent_actions"] = self._history(combat["recent_actions"])
         return data
 

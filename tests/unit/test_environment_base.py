@@ -171,6 +171,7 @@ class EnvironmentTests(unittest.TestCase):
         def reward(before, index, after, info):
             before.clear()
             after.clear()
+            info.clear()
             return -0.25
         env, _ = self.make(reward_fn=reward)
         env.reset(seed=3)
@@ -178,6 +179,20 @@ class EnvironmentTests(unittest.TestCase):
         self.assertEqual(reward, -0.25)
         self.assertIn("state", obs)
         self.assertIn("state", env.observation)
+
+    def test_info_copies_nested_provenance_for_each_call(self):
+        backend = FakeBackend()
+        backend.native_provenance = {"build": {"flags": ["original", {"enabled": True}]}}
+        env, _ = self.make(backend)
+        _, first = env.reset(seed=3)
+        first["native_provenance"]["build"]["flags"][1]["enabled"] = False
+        first["native_provenance"]["build"]["flags"].append("changed")
+        _, _, _, _, second = env.step(0)
+        self.assertEqual(second["native_provenance"],
+                         {"build": {"flags": ["original", {"enabled": True}]}})
+        second["native_provenance"]["build"].clear()
+        self.assertEqual(backend.native_provenance,
+                         {"build": {"flags": ["original", {"enabled": True}]}})
 
     def test_close_is_idempotent_and_prevents_step(self):
         env, _ = self.make()
