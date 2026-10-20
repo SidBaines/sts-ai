@@ -238,3 +238,14 @@ annotations, glossary corrections, five event bugs, and Curiosity, Intangible,
 Lagavulin, Flight and Angry combat logic. The observation label advances to
 `sts_env_public_v3`. See [the release record](release_v0.1.5.md) for the full
 list, migration notes and seed-behaviour changes.
+
+## Release 0.1.5.1: faster step path
+
+Release 0.1.5.1 is a performance release with no behaviour change: the step
+path copies public state as plain JSON trees instead of using `deepcopy`, and
+caches pure glossary lookups. Observations, text, info, rewards and menus are
+byte-identical to 0.1.5, so `ENVIRONMENT_VERSION` stays `0.1.5` and the
+observation label stays `sts_env_public_v3`. The in-process step costs about a
+third as much (1,119 to 356 µs per decision). Source identity
+(`python_interface_sha256`) changes, as for any source edit, so traces
+recorded under 0.1.5 keep their usual replay boundary.
