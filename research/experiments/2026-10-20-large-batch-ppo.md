@@ -109,8 +109,9 @@ floor and boss-pass gains are the same size on both.
   iteration 12.
 - Half-batch gradient cosines ranged from −0.43 to +0.54 with no trend;
   entropy stayed near 0.18; KL per iteration 0.006 to 0.012.
-- Training behaviour (sampled): smith rate 0.25 to 0.28 and card skip rate
-  0.02 throughout.
+- Training behaviour: the smith rate fell from 0.28 to 0.20 by iteration 9
+  and then rose to 0.41 by iteration 24, the one clear behaviour change of
+  the run; the card skip rate stayed near 0.02.
 
 **On top of the new champion, the day's other gains stack** (second-DEV
 worlds, paired with its 276 wins; Planned): the Demon Form rule 292 (p =
@@ -128,7 +129,43 @@ in general but did not teach it to keep its potions. In 64 games with the
 actions offered it discarded 588 potions and drank 31 out of combat,
 against the previous champion's 565 and 32: the habit did not move at all.
 
-Arms 3 and 4: pending.
+**Arm 3 (the recipe with the potion filter) wins 208 of 4,096 on the
+second-DEV worlds: more than the previous champion's 156, fewer than arm
+1's 276, with no clear difference in mean floor from arm 1.** Final
+checkpoint, iteration 24 (also the best by the trainer's evaluation),
+paired:
+
+| Baseline, worlds | Wins | Discordant, baseline only / arm 3 only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
+|---|---:|---:|---:|---|---|
+| Previous champion, second DEV | 156 → 208 (3.8% → 5.1%) | 101 / 153 | 0.001 | +0.98 [+0.66, +1.30] | +4.6 points [+2.5, +6.6] (2,701 worlds) |
+| Arm 1, second DEV | 276 → 208 (6.7% → 5.1%) | 207 / 139 | < 0.001 | −0.13 [−0.48, +0.22] | −1.3 points [−3.6, +1.0] (2,724 worlds) |
+| Previous champion, fresh worlds | 152 → 197 (3.7% → 4.8%) | 104 / 149 | 0.006 | +1.13 [+0.81, +1.45] | +4.7 points [+2.6, +6.7] (2,692 worlds) |
+| Arm 1, fresh worlds | 232 → 197 (5.7% → 4.8%) | 178 / 143 | 0.058 | −0.11 [−0.45, +0.23] | −0.4 points [−2.5, +1.8] (2,719 worlds) |
+
+- The filter fixed the monitoring: the trainer's own evaluation, now under
+  the study protocol, went 35, 32, 46, 31, 44, 38, 49 wins of 1,024 at
+  iterations 0 to 24 (3.4% to 4.8%), in line with the 5.1% the final
+  checkpoint scores on 4,096 worlds; arm 1's monitoring had been an order
+  of magnitude off.
+- Health signals matched arm 1: half-batch cosines −0.40 to +0.32 with no
+  trend, KL 0.004 to 0.019, clip fraction 0.02 to 0.05, no faults or
+  collector restarts. Entropy was lower throughout (0.13 to 0.16 against
+  arm 1's 0.16 to 0.19) and fell over the run. Collection wins rose from
+  109 to about 125 of 3,072 (arm 1, with potions visible: 44 to 103).
+  Median 6.1 minutes per iteration; one iteration took 153 minutes during
+  a battery pause.
+- Training behaviour: the smith rate went 0.31, 0.22 (iteration 4), 0.34
+  (iteration 12), 0.29 (iteration 24), where arm 1 ended at 0.41; the card
+  skip rate rose from 0.023 to 0.030.
+- Reading, with care: each arm is one run, and arm 1's own checkpoints
+  swing between 224 (iteration 20) and 276 (iteration 24) wins, so the
+  68-win gap on DEV and the borderline gap on fresh worlds may be
+  checkpoint noise rather than an effect of the filter. What is
+  established is that hiding the potion actions during training added
+  nothing: it gave fewer wins at no clear difference in floor. The filter
+  is a monitoring and deployment fix, not a training improvement.
+
+Arms 4 to 6: pending.
 
 ## Conclusion
 
@@ -140,6 +177,10 @@ Pending.
 
 ## Log
 
+- 20 Oct, 23:23: arm 3's final checkpoint evaluated: 208 of 4,096 on the
+  second-DEV worlds and 197 on the fresh worlds, better than the previous
+  champion but fewer wins than arm 1 with no clear difference in floor.
+- 20 Oct, 23:09: arm 3 finished (2 hours 20 minutes paused on battery).
 - 20 Oct, 16:00: confirmed on the fresh worlds: 232 against 152 wins.
 - 20 Oct, 15:49: confirmation queued on 4,096 unused worlds from seed
   94,000,000,000, with the champion on the same worlds. Two earlier

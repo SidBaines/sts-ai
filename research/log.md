@@ -7,6 +7,13 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Arm 3 (the recipe with the potion filter) evaluated**, 23:23: final
+  checkpoint 208 of 4,096 on second DEV (previous champion 156, p = 0.001;
+  arm 1 276, p < 0.001) and 197 on the fresh worlds (152, p = 0.006; arm 1
+  232, p = 0.058); no clear difference in mean floor from arm 1 on either.
+  The trainer's own evaluation under the filter tracked the study protocol
+  (49 of 1,024 at iteration 24). An hourly check-in in the Claude session
+  added at 23:40 at Sid's request, as a backstop for the watchers.
 - **Overnight runs queued**, 23:00, behind the hygiene arm: round 3 (the new
   champion's out-of-combat head with the combat student spliced in, potion
   filter, 24 iterations of 3,072 games) and a batch-size control (previous

@@ -173,6 +173,10 @@ release changed game behaviour.
   visible information (damage, block, lethal targets and basic out-of-combat
   rules).
 - **Smithing:** upgrading a card at a rest site instead of resting to heal.
+- **Smith rate, card skip rate:** behaviour rates in the trainer's
+  per-iteration record: the share of rest-site choices in that iteration's
+  collected games that smith, and the share of card-reward choices that
+  skip the card.
 - **Phase swap:** combining one checkpoint's combat network with another's
   out-of-combat network, to see which change caused an effect.
 - **Plurality vote:** the search teacher's choice: the action proposed by the

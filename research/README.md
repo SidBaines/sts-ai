@@ -28,8 +28,12 @@ in the [results ledger](results.md).
 
 ## Now
 
-Running: [large-batch PPO](experiments/2026-10-20-large-batch-ppo.md)
-(the champion's recipe at 3,072 games per iteration). Finished on 20 October:
+Running overnight: [large-batch PPO](experiments/2026-10-20-large-batch-ppo.md)
+arms 4 to 6 (the hygiene options with the potion filter, round 3 from the
+new champion with the combat student spliced in, and a batch-size control).
+Arm 3, the recipe with the potion filter, won 208 of 4,096 against the
+previous champion's 156 but fewer than arm 1's 276, at no clear difference
+in floor. Finished on 20 October:
 [boss rares](experiments/2026-10-20-boss-rares.md): forcing Demon Form
 whenever offered wins 179 against 156 of 4,096 games (p = 0.010), and 230
 against 198 with the old-encoder combat head, the first single deck-building
@@ -56,9 +60,7 @@ restores the study protocol). See [status](status.md) and the temporary
 3. **Learn deck strength instead of simulating each choice.** Train a
    deck-value network on oracle scores from many states, then use it to
    score options. To discuss with Sid.
-4. **Large-batch PPO with the hygiene options and the potion filter,**
-   after the running recipe arm.
-5. Confirm one old-encoder combat student, chosen in advance, on the
+4. Confirm one old-encoder combat student, chosen in advance, on the
    confirmation worlds before promoting it.
 
 The agent must stay a pure policy; search may be used to make better
