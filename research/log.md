@@ -17,10 +17,12 @@ per entry; numbers and conclusions live in the linked pages.
   step dominates, which task 1 cuts 3x; the combination is to be measured.
   Batch-size divergences (7 of 256 worlds) were between equivalent actions:
   same lengths, floors and outcomes.
-- **PPO hygiene started (Codex task 3,** branch `nonllm/ppo-hygiene`): explicit
-  weight decay (default 0), lambda default 1, an option to keep the value loss
-  out of the actor's trunk, optional return normalisation, and an entropy
-  bonus on strategic menus only. Options and tests only; no training.
+- **PPO hygiene merged into `ws/nonllm`** (Codex task 3, reviewed by Claude;
+  978 tests pass). Weight decay now explicit, default 0 (was a silent 0.01);
+  out-of-combat lambda default 1.0. New options, default off: value loss kept
+  out of the actor's trunk, value targets scaled by a running return scale,
+  entropy bonus on strategic menus only. Runs after this are not directly
+  comparable with older ones on the first two points. No training yet.
 - **Batched game runner reviewed (Codex task 2).** At one game per process it
   reproduces all 256 recorded champion games exactly; at four per process one
   game in eight diverges at a near-tie (logit gap 5 x 10^-7). Three fixes
