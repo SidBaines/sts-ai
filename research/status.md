@@ -1,12 +1,16 @@
 # Status
 
-**Updated 20 October 2026, 12:15 BST.** Nothing is running. Waiting for Sid:
-the choice of the next deck-building study.
+**Updated 20 October 2026, 11:50 BST.** The boss-rares evaluation is running;
+nothing is waiting for Sid.
 
-- `ws/nonllm` now has in-process PPO collection (`--in-process-games`, see
-  `src/sts_rl/README.md`) and the finished
-  [power picks](experiments/2026-10-20-power-picks.md) study (data in run
-  `power_picks_20261020`, worktree `nonllm-power-picks`).
+- **Running:** [boss rares](experiments/2026-10-20-boss-rares.md), four
+  arms of the champion on the 4,096 second-DEV worlds, queued on lane `eval`
+  in worktree `nonllm-boss-rares` (branch `nonllm/boss-rares`): names
+  `bossrares-champion`, `bossrares-noskip`, `bossrares-demonform`,
+  `bossrares-both`; outputs in `data/rl_runs/boss_rares_20261020/`. About 3
+  minutes each. Check with `scripts/rl/queue_runner.py status`; cancel with
+  `scripts/rl/queue_runner.py cancel NAME`. Compare arms with
+  `scripts/rl/compare_evals.py champion.json ARM.json`.
 - Idle: the representation-controls queue runner and two older ones in the
   `4a3c` and `slay-spire-rl-debug` worktrees.
 - Topic worktrees `nonllm-repr-finish`, `nonllm-deck-oracle`,
@@ -18,5 +22,5 @@ the choice of the next deck-building study.
 
 ## Next
 
-Discuss with Sid: test the boss-reward skips with a paired overlay
-evaluation, or build the deck-value network; see the [README](README.md).
+Write up the boss-rares result; then the next study, chosen with Sid from
+the options laid out on 20 October.

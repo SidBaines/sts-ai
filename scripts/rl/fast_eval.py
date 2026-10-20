@@ -30,8 +30,22 @@ def parser():
     p.add_argument("--processes", type=int, default=1)
     p.add_argument("--games-per-process", type=int, default=8)
     p.add_argument("--timeout", type=float, default=120., help="Seconds without a completed decision per process")
+    p.add_argument("--no-skip-rares", action="store_true", default=False,
+                   help="overlay: at a card reward whose cards are all rare, take one rather than skipping")
+    p.add_argument("--take-card", action="append", default=[], metavar="NAME",
+                   help="overlay: always take this card (upgraded copies too) when a reward offers it; repeatable")
     p.add_argument("--out", required=True)
     return p
+
+
+def overlays_from(config):
+    """Menu overlay keywords for sts_rl.common.apply_overlays, or None when no rule is set."""
+    overlays = {}
+    if config.get("no_skip_rares"):
+        overlays["no_skip_rares"] = True
+    if config.get("take_card"):
+        overlays["take_cards"] = tuple(config["take_card"])
+    return overlays or None
 
 
 def prepare_output(config):
@@ -68,7 +82,8 @@ def main(argv=None):
     try:
         records = run_multiprocess(range(config["world_start"], config["world_start"] + config["n"]),
             config["checkpoint"], config["combat"], config["ooc"], processes=config["processes"],
-            games_per_process=config["games_per_process"], timeout=config["timeout"])
+            games_per_process=config["games_per_process"], timeout=config["timeout"],
+            overlays=overlays_from(config))
     except Exception as exc:
         summary = evaluation_summary(getattr(exc, "records", []), config["n"])
         summary.update(error=f"{type(exc).__name__}: {exc}", confidence_claims_allowed=False,

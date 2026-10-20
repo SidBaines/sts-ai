@@ -386,6 +386,91 @@ Decisions and notes added as the discussion continues:
     A.3 (a learned deck-value network) becomes the next step.
   - PPO hygiene (idea E) merged as options; not yet tested in training.
 
+## 8. Options after the power-picks study, 20 October
+
+Written while the [boss-rares](../experiments/2026-10-20-boss-rares.md)
+evaluation ran, for discussion with Sid. Where we stand: the champion wins
+3.8%; the same networks with search at boss fights win 8.1%, so better boss
+play alone is worth about four points; decks vary widely in oracle-measured
+strength, and the champion's deck is mostly decided by which of three
+favourite powers the game offers, with firm rejections of the rest and of
+most boss rares. Evaluation is now 3.5 times faster and PPO collection 3.2
+times faster, so a 4,096-world paired evaluation costs about 3 minutes and
+a 768-game PPO iteration collects in about half a minute.
+
+### Group 1: deck-building by rules (hours)
+
+- **1a. A rule grid.** Each candidate rule is a menu overlay evaluated
+  paired against the champion on 4,096 worlds, about 3 minutes each: never
+  skip a boss rare (running), take Demon Form (running), never skip any
+  card reward, take named powers, buy a removal when affordable
+  (`prefer_remove`; the champion removes 0 of 11 opportunities per game),
+  smith thresholds, elite paths. Ten rules in an hour. Gives a map of which
+  habits cost or win points. Rules interact and reuse DEV worlds, so winners
+  need confirmation.
+- **1b. Distil a winning rule and continue PPO** (the loop that made the
+  champion), now much cheaper. Gains so far from single rules have been
+  about one point each.
+
+### Group 2: learned deck value (one to two weeks)
+
+- **2a. Deck-value network from oracle scores.** Label tens of thousands of
+  states with the oracle's boss score (about 1 s each; batchable with
+  in-process workers), train a network on deck, relics, HP and boss, and use
+  it two ways: to score every option at card, shop, removal and upgrade
+  menus as a teacher for distillation, and as a dense potential reward for
+  out-of-combat PPO, which gives deck decisions the credit full-game reward
+  cannot. Open question: whether pooling across states resolves single-card
+  differences that 32 fights could not. The oracle is myopic (today's boss)
+  and tied to the champion's combat play.
+- **2b. Deck-strength trajectory.** Score 300 games' decks at several floors
+  to see where strength is gained or lost (about 2 hours). Cheap context for
+  2a; not a lever by itself.
+
+### Group 3: boss-fight play (the biggest measured gap)
+
+- **3a. Promote the old-encoder combat student:** confirm it on the unopened
+  confirmation worlds and make it the default combat head. Ten minutes,
+  about one point, pure policy.
+- **3b. A better teacher for combat distillation.** The search teacher's
+  votes are noisy (median plurality 12 of 24, self-agreement 71%), and every
+  student wins fewer boss fights than the champion while the search itself
+  wins far more. Steps in rising cost: soft targets from the full vote
+  distribution and value targets; labels only on confident states; more
+  search per label; iterate distil, play, relabel (expert iteration);
+  finally, use the student as the search's rollout policy instead of
+  uniform random playouts, which needs the network inside the native search.
+  A diagnostic should come first: how much of the search's advantage is
+  reproducible from public information at all, since the teacher
+  determinises hidden state.
+- **3c. Combat PPO on fight banks:** tried twice without effect; not without
+  a new idea.
+
+### Group 4: the training process (now cheap)
+
+- **4a. Out-of-combat PPO with the hygiene options at large batches:**
+  3,072 games per iteration, Monte-Carlo credit, detached critic, return
+  normalisation, strategic-menu entropy. Tests whether gradient noise
+  (half-batch cosines 0.09 to 0.21) was the limit. One overnight run.
+- **4b. A budget scaling test:** the champion's own recipe with five times
+  the iterations, to learn whether more PPO helps at all before building
+  anything else on it.
+
+### Group 5: later
+
+- A recurrent policy (memory across turns): noted, left for later.
+- The structured encoder: abandoned for now.
+- Search as the player: not now.
+
+### Suggested order
+
+Today: read the boss-rares result; run the rule grid (1a) and confirm the
+combat student (3a). Overnight: distil any winning rules and continue PPO
+(1b), or the large-batch hygiene run (4a), whichever the rule grid argues
+for. The week's build: 3b (teacher) or 2a (deck value); the teacher has the
+better-measured ceiling, the deck-value network addresses the problem that
+no rule can (valuing cards in context).
+
 ## Appendix: analyses behind the numbers
 
 All data is local. Paths are relative to the run folders named.

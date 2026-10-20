@@ -35,16 +35,27 @@ class BatchedPolicy:
     One forward per distinct model/encoder is necessary for phase replacements.
     With no replacements the champion receives one batch, including both phases.
     """
-    def __init__(self, study_policy):
+    def __init__(self, study_policy, overlays=None):
         configure_cpu()
         self.study = study_policy
+        # Menu overlays (sts_rl.common.apply_overlays keywords) run on the raw
+        # out-of-combat menu before the study filters, as FilteringWorker does.
+        self.overlays = dict(overlays or {})
+        if self.overlays:
+            from sts_rl.common import apply_overlays
+            self._apply_overlays = apply_overlays
+
+    def _menu(self, observation):
+        if self.overlays:
+            observation = self._apply_overlays(observation, **self.overlays)
+        return policy_observation(observation)
 
     def choose_actions(self, observations, *, details=None):
         import torch
         from sts_policy.entity_model import EntityActorCritic
         from sts_policy.model_agent import collate_public
 
-        filtered = [policy_observation(obs) for obs in observations]
+        filtered = [self._menu(obs) for obs in observations]
         actions, groups = [None] * len(filtered), {}
         if details is not None:
             details.extend([None] * len(filtered))
@@ -149,11 +160,12 @@ def _diagnose(world, action, scores, policy, references):
 
 
 def run_in_process(seeds, policy, games_per_process=1, *, episode_factory=None,
-                   on_event=None, reference_records=None):
+                   on_event=None, reference_records=None, overlays=None):
     """Run batched greedy games directly, without native crash/timeout isolation.
 
     Native exception guards are scoped to this call. The process driver provides
     containment; custom episode factories are useful for tests without a build.
+    ``overlays`` are menu rules for a policy that is not yet a BatchedPolicy.
     """
     from contextlib import nullcontext
     if episode_factory is None:
@@ -164,11 +176,11 @@ def run_in_process(seeds, policy, games_per_process=1, *, episode_factory=None,
         scope = nullcontext()
     with scope:
         return _run_in_process(seeds, policy, games_per_process, episode_factory=episode_factory,
-                               on_event=on_event, reference_records=reference_records)
+                               on_event=on_event, reference_records=reference_records, overlays=overlays)
 
 
 def _run_in_process(seeds, policy, games_per_process=1, *, episode_factory=None,
-                    on_event=None, reference_records=None):
+                    on_event=None, reference_records=None, overlays=None):
     """Run a queue of worlds directly; caller supplies isolation if required.
 
     Events are start(seed), decision(active worlds), record(record). A decision
@@ -182,7 +194,9 @@ def _run_in_process(seeds, policy, games_per_process=1, *, episode_factory=None,
     _positive_integer(games_per_process, "games_per_process")
     seeds = _validate_seeds(seeds)
     pending, active, records = deque(seeds), [], []
-    policy = policy if isinstance(policy, BatchedPolicy) else BatchedPolicy(policy)
+    if overlays and isinstance(policy, BatchedPolicy):
+        raise ValueError("Overlays belong to the BatchedPolicy; pass a study policy instead")
+    policy = policy if isinstance(policy, BatchedPolicy) else BatchedPolicy(policy, overlays=overlays)
     references = {r["world_seed"]: r for r in reference_records or []}
     if reference_records is not None and (len(references) != len(reference_records) or
                                          set(references) != set(seeds)):
@@ -260,7 +274,8 @@ class _RecycleRunner(Exception):
     """A native fault retires the process, as in FreshPanelWorker."""
 
 
-def _runner_child(connection, seeds, checkpoint, combat, ooc, games_per_process, reference_records=None):
+def _runner_child(connection, seeds, checkpoint, combat, ooc, games_per_process, reference_records=None,
+                  overlays=None):
     configure_cpu()
     from sts_rl.controlled_policy import policy_factory
     last_sent = 0.0
@@ -282,7 +297,8 @@ def _runner_child(connection, seeds, checkpoint, combat, ooc, games_per_process,
 
     try:
         policy = policy_factory(checkpoint, combat, ooc)
-        run_in_process(seeds, policy, games_per_process, on_event=event, reference_records=reference_records)
+        run_in_process(seeds, policy, games_per_process, on_event=event, reference_records=reference_records,
+                       overlays=overlays)
         connection.send(("done", None))
     except _RecycleRunner:
         pass
@@ -363,7 +379,7 @@ def _close_lane(lane):
 
 def run_multiprocess(seeds, checkpoint, combat=None, ooc=None, *, processes=1,
                      games_per_process=8, timeout=120.0, reference_records=None, on_record=None,
-                     clock=None):
+                     clock=None, overlays=None):
     """Spawn N runners; retry in-flight peers once after a process failure.
 
     Start/record events share an ordered pipe. Drain it before handling EOF/death,
@@ -388,7 +404,8 @@ def run_multiprocess(seeds, checkpoint, combat=None, ooc=None, *, processes=1,
         parent, child = context.Pipe(duplex=False)
         process = context.Process(target=_runner_child,
             args=(child, lane.remaining, checkpoint, combat, ooc, games_per_process,
-                  [references[s] for s in lane.remaining] if reference_records is not None else None),
+                  [references[s] for s in lane.remaining] if reference_records is not None else None,
+                  overlays),
             name="batched-games")
         try:
             process.start()

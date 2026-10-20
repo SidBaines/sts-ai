@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Boss rares started** ([page](experiments/2026-10-20-boss-rares.md)):
+  four arms of the champion on the 4,096 second-DEV worlds through
+  `eval_policy.py` with the new `--no-skip-rares` and `--take-card` overlays
+  (12 in-process collectors of 32 games), queued at 11:50.
 - **Power picks finished** ([page](experiments/2026-10-20-power-picks.md)).
   Replayed the champion's 4,096 games to all 59,532 card rewards and 11,908
   shops (3 minutes on 6 cores). Powers are taken 26.2% of the time when

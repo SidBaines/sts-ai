@@ -83,6 +83,37 @@ class MenuFilterTests(unittest.TestCase):
         fight["state"] = {**fight["state"], "cards": {"energy": 2}}
         self.assertEqual(len(force_play(fight)["legal_actions"]), 2)  # only an unsafe card: keep end turn
 
+    def test_hidden_out_of_combat_potions_keep_the_visible_inventory(self):
+        from sts_rl.common import FilteringWorker
+        raw = menu("skip rewards / proceed", "drink potion Fire Potion (slot 1)", "discard potion Fire Potion (slot 1)")
+        worker = FilteringWorker(object(), dead_actions=True, hide_ooc_potions=True)
+        mapped = worker._map(raw)
+        self.assertEqual([a["description"] for a in mapped["legal_actions"]], ["skip rewards / proceed"])
+        self.assertEqual(mapped["adapter_public_ooc_potions"], [{"slot": 1, "name": "Fire Potion"}])
+        self.assertEqual(len(raw["legal_actions"]), 3)
+        terminal = {**raw, "legal_actions": []}
+        self.assertEqual(worker._map(terminal)["legal_actions"], [])
+        self.assertEqual(len(FilteringWorker(object(), dead_actions=True)._map(raw)["legal_actions"]), 3)
+
+    def test_boss_reward_overlays(self):
+        def names(observation):
+            return [a["description"] for a in observation["legal_actions"]]
+        boss = menu("take gold 75g", "take card Demon Form [Power, Rare]", "take card Offering [Skill, Rare]",
+                    "take card Immolate [Attack, Rare]", "skip card reward", "skip rewards / proceed")
+        self.assertEqual(names(apply_overlays(boss, no_skip_rares=True)),
+                         ["take gold 75g", "take card Demon Form [Power, Rare]", "take card Offering [Skill, Rare]",
+                          "take card Immolate [Attack, Rare]"])
+        hallway = menu("take card Demon Form+ [Power, Rare]", "take card Anger [Attack, Common]", "skip card reward",
+                       "skip rewards / proceed")
+        self.assertIs(apply_overlays(hallway, no_skip_rares=True), hallway)  # not all rare: untouched
+        self.assertEqual(names(apply_overlays(hallway, take_cards=("Demon Form",))),
+                         ["take card Demon Form+ [Power, Rare]"])
+        self.assertEqual(names(apply_overlays(boss, take_cards=("Demon Form",), no_skip_rares=True)),
+                         ["take card Demon Form [Power, Rare]"])
+        self.assertIs(apply_overlays(hallway, take_cards=("Juggernaut",)), hallway)
+        taken = menu("take gold 75g", "skip rewards / proceed")
+        self.assertIs(apply_overlays(taken, no_skip_rares=True, take_cards=("Demon Form",)), taken)
+
 
 if __name__ == "__main__":
     unittest.main()

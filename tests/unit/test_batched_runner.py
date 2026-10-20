@@ -85,6 +85,24 @@ class BatchedPolicyTests(unittest.TestCase):
             self.assertEqual(actor.call_args.args[0].shape[0], 2)
         self.assertEqual(raw, original)
 
+    def test_menu_overlays_run_before_the_study_filters(self):
+        boss = observation("ooc")
+        boss["legal_actions"] = [{"index": 2, "description": "take card Demon Form [Power, Rare]"},
+                                 {"index": 5, "description": "take card Offering [Skill, Rare]"},
+                                 {"index": 7, "description": "skip card reward"},
+                                 {"index": 9, "description": "discard potion Fire Potion (slot 1)"}]
+        original = deepcopy(boss)
+        with torch.no_grad():
+            for parameter in self.study.champion.parameters():
+                parameter.zero_()  # every menu is an exact tie: the first kept action wins
+        self.assertEqual(BatchedPolicy(self.study).choose_actions([boss]), [2])
+        self.assertEqual(BatchedPolicy(self.study, overlays={"no_skip_rares": True}).choose_actions([boss]), [2])
+        self.assertEqual(BatchedPolicy(self.study, overlays={"take_cards": ("Offering",)}).choose_actions([boss]), [5])
+        self.assertEqual(boss, original)
+        with self.assertRaisesRegex(ValueError, "Overlays belong"):
+            run_in_process([91_000_000_000], BatchedPolicy(self.study), 1, episode_factory=FakeEpisode,
+                           overlays={"no_skip_rares": True})
+
     def test_first_tie_wins_and_singleton_is_bit_identical(self):
         obs = observation("combat")
         details = []
@@ -228,7 +246,7 @@ class RunnerTests(unittest.TestCase):
         self.assertAlmostEqual(world.divergence["batched_logit_gap"], 1., places=5)
 
 
-def _crash_fixture(connection, seeds, checkpoint, combat, ooc, games_per_process, reference_records=None):
+def _crash_fixture(connection, seeds, checkpoint, combat, ooc, games_per_process, reference_records=None, overlays=None):
     for seed in seeds:
         connection.send(("start", seed))
         if seed == 10:
@@ -242,7 +260,7 @@ def _crash_fixture(connection, seeds, checkpoint, combat, ooc, games_per_process
     connection.close()
 
 
-def _fault_fixture(connection, seeds, checkpoint, combat, ooc, games_per_process, reference_records=None):
+def _fault_fixture(connection, seeds, checkpoint, combat, ooc, games_per_process, reference_records=None, overlays=None):
     connection.send(("start", seeds[0]))
     connection.send(("record", fault_record(seeds[0], "fixture reset fault")))
     connection.close()  # Retire after the fault; untouched worlds need a new process.
@@ -413,7 +431,7 @@ class DriverProcessTests(unittest.TestCase):
         self.assertTrue(all(r["status"] == "fault" and r["win"] is None for r in rows))
 
 
-def _error_fixture(connection, seeds, checkpoint, combat, ooc, games_per_process, reference_records=None):
+def _error_fixture(connection, seeds, checkpoint, combat, ooc, games_per_process, reference_records=None, overlays=None):
     connection.send(("start", seeds[0]))
     connection.send(("record", fault_record(seeds[0], "fixture simulator fault")))
     connection.send(("start", seeds[1]))

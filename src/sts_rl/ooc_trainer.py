@@ -58,6 +58,7 @@ class OOCTrainConfig:
     strategic_cards: bool = False      # also apply it to card-reward menus
     card_temperature: float = 1.0      # independently soften card-reward choices only
     dead_action_filter: bool = True
+    hide_ooc_potions: bool = False  # deployment protocol: no potion drinking or discarding out of combat
     dominated_filter: bool = False  # drop strictly dominated OOC actions (rest at full HP)
     smith_above: float | None = None  # rule overlay: no 'rest' at HP fraction >= this (train + eval)
     prefer_remove: bool = False     # rule overlay: no potion buys while a removal is affordable
@@ -411,14 +412,14 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
     if cfg.collectors > 1:
         from .parallel_collect import CollectorPool
         pool = CollectorPool(cfg.collectors, workers=cfg.workers, checkpoint=cfg.checkpoint,
-                             in_process=cfg.in_process_games,
+                             in_process=cfg.in_process_games, hide_ooc_potions=cfg.hide_ooc_potions,
                              dead_action_filter=cfg.dead_action_filter, dominated=cfg.dominated_filter,
                              smith_above=cfg.smith_above, prefer_remove=cfg.prefer_remove,
                              elite_above=cfg.elite_above)
         workers: list[Any] = []
     else:
         workers = make_workers(cfg.workers, dead_action_filter=cfg.dead_action_filter,
-                               in_process=cfg.in_process_games,
+                               in_process=cfg.in_process_games, hide_ooc_potions=cfg.hide_ooc_potions,
                                dominated=cfg.dominated_filter, smith_above=cfg.smith_above,
                                prefer_remove=cfg.prefer_remove, elite_above=cfg.elite_above)
 

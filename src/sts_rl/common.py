@@ -46,17 +46,21 @@ def make_workers(count: int, *, timeout: float = 10.0, dead_action_filter: bool 
                  slim: bool = True, in_process: bool = False, forced_play: bool = False, dominated: bool = False,
                  smith_above: float | None = None, prefer_remove: bool = False,
                  elite_above: float | None = None, skip_cards_after: int | None = None,
-                 save_potions_above: float | None = None, avoid_boss_relics: tuple[str, ...] = ()) -> list[Any]:
+                 save_potions_above: float | None = None, avoid_boss_relics: tuple[str, ...] = (),
+                 no_skip_rares: bool = False, take_cards: tuple[str, ...] = (),
+                 hide_ooc_potions: bool = False) -> list[Any]:
     workers = [InProcessWorker(config=WORKER_CONFIG) if in_process else
                CurriculumWorker(config=WORKER_CONFIG, timeout=timeout) for _ in range(count)]
     if not (dead_action_filter or slim or forced_play or dominated or smith_above is not None or prefer_remove
             or elite_above is not None or skip_cards_after is not None or save_potions_above is not None
-            or avoid_boss_relics):
+            or avoid_boss_relics or no_skip_rares or take_cards or hide_ooc_potions):
         return workers
     return [FilteringWorker(w, dead_actions=dead_action_filter, slim=slim, forced_play=forced_play,
                             dominated=dominated, smith_above=smith_above, prefer_remove=prefer_remove,
                             elite_above=elite_above, skip_cards_after=skip_cards_after,
-                            save_potions_above=save_potions_above, avoid_boss_relics=tuple(avoid_boss_relics))
+                            save_potions_above=save_potions_above, avoid_boss_relics=tuple(avoid_boss_relics),
+                            no_skip_rares=no_skip_rares, take_cards=tuple(take_cards),
+                            hide_ooc_potions=hide_ooc_potions)
             for w in workers]
 
 
@@ -215,14 +219,28 @@ def hp_fraction(observation: dict[str, Any]) -> float | None:
         return None
 
 
+_CARD_OFFER = re.compile(r"^take card (.+?) \[(\w+), (\w+)\]")
+
+
 def apply_overlays(observation: dict[str, Any], *, smith_above: float | None = None,
                    prefer_remove: bool = False, elite_above: float | None = None,
-                   skip_cards_after: int | None = None, avoid_boss_relics: tuple[str, ...] = ()) -> dict[str, Any]:
+                   skip_cards_after: int | None = None, avoid_boss_relics: tuple[str, ...] = (),
+                   no_skip_rares: bool = False, take_cards: tuple[str, ...] = ()) -> dict[str, Any]:
     if observation.get("phase") == "combat":
         return observation
     legal = observation.get("legal_actions") or []
     descriptions = [str(a.get("description", "")) for a in legal]
     drop: set[int] = set()
+    offers = [(i, m) for i, m in ((i, _CARD_OFFER.match(d)) for i, d in enumerate(descriptions)) if m]
+    if take_cards and offers:
+        # Force a listed card (upgraded copies included) whenever a reward offers it.
+        wanted = {name.rstrip("+") for name in take_cards}
+        keep = {i for i, m in offers if m[1].rstrip("+") in wanted}
+        if keep:
+            drop |= {i for i in range(len(legal)) if i not in keep}
+    if no_skip_rares and offers and all(m[3] == "Rare" for _, m in offers):
+        # A boss card reward: take one of the rares rather than leaving without a card.
+        drop |= {i for i, d in enumerate(descriptions) if d in ("skip card reward", "skip rewards / proceed")}
     if smith_above is not None and any(d.startswith("smith") for d in descriptions):
         fraction = hp_fraction(observation)
         if fraction is not None and fraction >= smith_above:
@@ -294,13 +312,16 @@ class FilteringWorker:
                  forced_play: bool = False, dominated: bool = False, smith_above: float | None = None,
                  prefer_remove: bool = False, elite_above: float | None = None,
                  skip_cards_after: int | None = None, save_potions_above: float | None = None,
-                 avoid_boss_relics: tuple[str, ...] = ()) -> None:
+                 avoid_boss_relics: tuple[str, ...] = (), no_skip_rares: bool = False,
+                 take_cards: tuple[str, ...] = (), hide_ooc_potions: bool = False) -> None:
         self.worker, self.dead_actions, self.slim = worker, dead_actions, slim
         self.forced_play, self.dominated = forced_play, dominated
         self.smith_above, self.prefer_remove, self.elite_above = smith_above, prefer_remove, elite_above
         self.skip_cards_after = skip_cards_after
         self.save_potions_above = save_potions_above
         self.avoid_boss_relics = tuple(avoid_boss_relics)
+        self.no_skip_rares, self.take_cards = no_skip_rares, tuple(take_cards)
+        self.hide_ooc_potions = hide_ooc_potions
 
     @property
     def last_fault_path(self):
@@ -308,6 +329,12 @@ class FilteringWorker:
 
     def _map(self, observation: dict[str, Any]) -> dict[str, Any]:
         # Menu filters run before slimming: they read structured state and relic text.
+        if self.hide_ooc_potions and observation.get("legal_actions"):
+            # The deployment protocol (fresh_study.StudyPolicy): recover the visible
+            # potion inventory from the raw menu, then hide out-of-combat drink and
+            # discard choices. With them offered, the champion wastes its potions.
+            from .fresh_study import policy_observation
+            observation = policy_observation(observation)
         if self.forced_play:
             observation = force_play(observation)
         if self.dominated:
@@ -315,10 +342,12 @@ class FilteringWorker:
         if self.save_potions_above is not None:
             observation = save_potions(observation, self.save_potions_above)
         if (self.smith_above is not None or self.prefer_remove or self.elite_above is not None
-                or self.skip_cards_after is not None or self.avoid_boss_relics):
+                or self.skip_cards_after is not None or self.avoid_boss_relics or self.no_skip_rares
+                or self.take_cards):
             observation = apply_overlays(observation, smith_above=self.smith_above, prefer_remove=self.prefer_remove,
                                          elite_above=self.elite_above, skip_cards_after=self.skip_cards_after,
-                                         avoid_boss_relics=self.avoid_boss_relics)
+                                         avoid_boss_relics=self.avoid_boss_relics,
+                                         no_skip_rares=self.no_skip_rares, take_cards=self.take_cards)
         if self.dead_actions:
             return filter_observation(observation, slim=self.slim)
         return {**observation, "text": slim_text(str(observation.get("text", "")))} if self.slim else observation
