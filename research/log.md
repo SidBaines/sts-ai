@@ -7,6 +7,14 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Stack confirmed on fresh worlds**, 16:39: new champion plus the combat
+  student plus the Demon Form rule wins 346 of 4,096 against the new
+  champion's 232 (p < 0.001; floor +1.09 [+0.74, +1.44]) and the previous
+  champion's 152: 3.7% to 8.4% in a day. The new champion with potions
+  visible wins 143 against the previous champion's 70 (+1.17 floors), about
+  half its study-protocol rate: the discarding habit survived large-batch
+  PPO unchanged (588 discards in 64 games against the previous champion's
+  565).
 - **Harvest on the new champion**, 16:23 (second DEV, paired with its
   276): plus the combat student 316 (p = 0.050), plus the Demon Form rule
   292 (p = 0.076), plus both 333 (8.1%, p = 0.006; floor +1.29 [+0.95,

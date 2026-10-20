@@ -99,6 +99,22 @@ floor and boss-pass gains are the same size on both.
 - Training behaviour (sampled): smith rate 0.25 to 0.28 and card skip rate
   0.02 throughout.
 
+**On top of the new champion, the day's other gains stack** (second-DEV
+worlds, paired with its 276 wins; Planned): the Demon Form rule 292 (p =
+0.076, floor +0.20 [+0.09, +0.31]); the old-encoder combat student 316
+(p = 0.050, floor +1.11 [+0.76, +1.46]); both 333 (8.1%, p = 0.006, floor
++1.29 [+0.95, +1.65]). Confirmed on the fresh worlds from 94,000,000,000:
+both together 346 against the new champion's 232 (8.4% against 5.7%, p <
+0.001, floor +1.09 [+0.74, +1.44]) and the previous champion's 152.
+
+**The potion habit survived.** With out-of-combat potion actions visible
+(the `eval_policy.py` protocol), the new champion wins 143 of 4,096 against
+the previous champion's 70 (floor +1.17 [+0.84, +1.51]), about half its
+study-protocol rate: 24 iterations with the actions visible improved play
+in general but did not teach it to keep its potions. In 64 games with the
+actions offered it discarded 588 potions and drank 31 out of combat,
+against the previous champion's 565 and 32: the habit did not move at all.
+
 Arms 3 and 4: pending.
 
 ## Conclusion

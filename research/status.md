@@ -23,11 +23,11 @@ queued behind it; waiting for Sid: the next study.
   processes of 32 games).
 - **Harvest on the new champion** (second DEV, `large_batch_20261020/harvest/`):
   plus the combat student 316, plus Demon Form 292, plus both 333 against
-  276. Running on lane `eval` of the `nonllm-boss-rares` queue: the stack
-  (student plus Demon Form) on the fresh worlds from 94,000,000,000
-  (`confirm94/student_demon_form`), and the new champion on the
-  potions-visible protocol (`potions_visible/new_champion.json`, paired with
-  the previous champion's 70 wins there). Outputs in `data/rl_runs/large_batch_20261020/{recipe,recipe_hidden,hygiene_hidden}`
+  276; the stack (student plus Demon Form) confirmed on the fresh worlds
+  from 94,000,000,000 at 346 against 232 (`confirm94/student_demon_form`).
+  With potions visible the new champion wins 143 against the previous
+  champion's 70 (`potions_visible/new_champion.json`). The evaluation lane
+  is idle. Outputs in `data/rl_runs/large_batch_20261020/{recipe,recipe_hidden,hygiene_hidden}`
   (`log.jsonl`, `eval_XXXX.json`, `iter_XXXX.pt`). Check with
   `scripts/rl/queue_runner.py status` in `nonllm-large-batch`; cancel with
   `scripts/rl/queue_runner.py cancel NAME`. That worktree also holds
