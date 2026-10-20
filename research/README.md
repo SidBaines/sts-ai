@@ -9,9 +9,9 @@ everything is measured.
 
 | Player | Win rate | Evidence |
 |---|---|---|
-| Champion: round-2 out-of-combat PPO update 20 | 3.8% (156 of 4,096 second-DEV worlds, environment 0.1.5) | Current default |
-| Large-batch out-of-combat PPO from the champion, iteration 24 (3,072 games per iteration) | 5.7% on 4,096 fresh worlds (232 against the champion's 152 on the same worlds; +2.0 points, p < 0.001; mean floor +1.24 [+0.91, +1.58]); 6.7% on the second-DEV worlds (276) | Confirmed; proposed as the new champion |
-| Old-encoder combat distilled from the search teacher, with champion out-of-combat play | 4.8% (197 of the same worlds; +1.0 points [+0.2, +1.8]); a second training seed 5.4% (221) | Planned comparisons on worlds new to both; not yet on the confirmation worlds |
+| **Champion from 20 October:** large-batch out-of-combat PPO from the previous champion, iteration 24 (`champion_ba2fa6a2987d.pt`) | 5.7% on 4,096 fresh worlds (232 against the previous champion's 152; +2.0 points, p < 0.001; mean floor +1.24 [+0.91, +1.58]); 6.7% on the second-DEV worlds (276) | Confirmed; current default |
+| Previous champion: round-2 out-of-combat PPO update 20 | 3.8% (156 of 4,096 second-DEV worlds; 3.7% on the fresh worlds above) | Baseline of every comparison before 20 October |
+| Old-encoder combat distilled from the search teacher, with the previous champion's out-of-combat play | 4.8% (197 of the second-DEV worlds; +1.0 points [+0.2, +1.8]); a second training seed 5.4% (221) | Planned; being re-tested on the new champion |
 | Champion plus search at Act 2 and 3 bosses and elites | 8.1% (333 of 4,096 fresh worlds, environment 0.1.4) | Confirmed, but search is not a pure policy |
 
 Compare numbers only within one environment version and world set.

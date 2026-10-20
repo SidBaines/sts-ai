@@ -111,9 +111,15 @@ release changed game behaviour.
 
 ## Players, teachers and encoders
 
-- **Champion:** the best retained learned player. From 13 October it is
-  round-2 out-of-combat PPO update 20, with combat weights from the first
-  curriculum. Lineage:
+- **Champion:** the best retained learned player. From 20 October it is
+  the large-batch out-of-combat PPO checkpoint at iteration 24, trained
+  from the previous champion (`champion_ba2fa6a2987d.pt`, SHA-256 prefix
+  `ba2fa6a2987d`, in run `large_batch_20261020/inputs`), with the same
+  combat weights; confirmed at 232 against 152 wins of 4,096 fresh worlds
+  ([large-batch PPO page](experiments/2026-10-20-large-batch-ppo.md)).
+  Comparisons before 20 October use the **previous champion**: round-2
+  out-of-combat PPO update 20 (`champion_3d135d9bd53b.pt`), with combat
+  weights from the first curriculum; lineage on the
   [out-of-combat PPO page](experiments/2026-10-13-ooc-macro-credit-ppo.md).
 - **Search teacher:** the simulator's combat search run on copies of the game,
   24 reseeded samples of 1,000 simulations each, choosing by plurality vote.

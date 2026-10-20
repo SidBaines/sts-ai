@@ -7,6 +7,12 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **New champion**, 16:05: Sid promoted the large-batch iteration-24
+  checkpoint; copied to `large_batch_20261020/inputs/champion_ba2fa6a2987d.pt`
+  (worktree `nonllm-large-batch`, now preserved). Its second-DEV games
+  (`study_eval/recipe_i0024`) are the paired baseline for future DEV
+  comparisons. The Demon Form rule and the old-encoder combat student are
+  being re-tested on top of it (`harvest-*` on the boss-rares queue).
 - **Large-batch recipe checkpoint confirmed**, 16:00: on 4,096 fresh worlds
   from seed 94,000,000,000, iteration 24 wins 232 against the champion's
   152 (p < 0.001; floor +1.24 [+0.91, +1.58]; Act 2 boss pass +5.1

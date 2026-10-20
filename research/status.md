@@ -13,10 +13,18 @@ queued behind it; waiting for Sid: the next study.
   iterations); `lb-recipe-hidden` is running and `lb-hygiene-hidden` queued
   (they run `train_ooc.py` from the frozen checkout
   `nonllm-large-batch-hidden` at `ws/nonllm` 8aca4e4, which has
-  `--hide-ooc-potions`), about 3 hours each. The recipe arm's final
-  checkpoint (`large_batch_20261020/recipe/iter_0024.pt`) is confirmed on
-  fresh worlds (232 against 152 of 4,096) and proposed as the new champion;
-  evaluations in `large_batch_20261020/{study_eval,confirm94}/`. Outputs in `data/rl_runs/large_batch_20261020/{recipe,recipe_hidden,hygiene_hidden}`
+  `--hide-ooc-potions`), about 3 hours each.
+- **New champion** (promoted by Sid at 16:05): the recipe arm's iteration
+  24, `large_batch_20261020/inputs/champion_ba2fa6a2987d.pt` in worktree
+  `nonllm-large-batch`, which must now be preserved. Confirmed on fresh
+  worlds (232 against 152 of 4,096). Paired baselines: second DEV
+  `large_batch_20261020/study_eval/recipe_i0024/summary.json`, fresh worlds
+  from 94,000,000,000 `confirm94/recipe_i0024/summary.json` (both at 8
+  processes of 32 games).
+- **Running: harvest arms** on lane `eval` of the `nonllm-boss-rares` queue:
+  the new champion with the Demon Form rule, with the old-encoder combat
+  student, and with both (`harvest-*`, outputs in
+  `large_batch_20261020/harvest/`), about 6 minutes each. Outputs in `data/rl_runs/large_batch_20261020/{recipe,recipe_hidden,hygiene_hidden}`
   (`log.jsonl`, `eval_XXXX.json`, `iter_XXXX.pt`). Check with
   `scripts/rl/queue_runner.py status` in `nonllm-large-batch`; cancel with
   `scripts/rl/queue_runner.py cancel NAME`. That worktree also holds
@@ -30,7 +38,9 @@ queued behind it; waiting for Sid: the next study.
 - Topic worktrees `nonllm-repr-finish`, `nonllm-deck-oracle`,
   `nonllm-throughput`, `nonllm-ppo-hygiene`, `nonllm-power-picks`,
   `nonllm-batched-collection` and `env-fast-step` hold only merged work and
-  can be removed. The local `ws/nonllm` branch (checked out in the old
+  can be removed. `nonllm-large-batch` (the new champion and its runs),
+  `nonllm-fresh-start` (the previous champion, the combat student and the
+  native build) and `nonllm-boss-rares` (today's evaluations) must stay. The local `ws/nonllm` branch (checked out in the old
   `workstream-integration` worktree under `/private/tmp`) is behind
   `origin/ws/nonllm`; cut topic branches from the origin branch.
 
