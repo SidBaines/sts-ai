@@ -39,12 +39,14 @@ All research writing lives in `research/`, in these files and no others:
 | `experiments/YYYY-MM-DD-name.md` | One page per experiment, from plan to conclusion | about 150 lines | Fill in as it runs |
 | `status.md` | Live state for handoff: what is running, where, how to check or stop it, what happens next | about 40 lines | Rewrite it; "Nothing running" when idle |
 | `figures/<experiment>/` | PNG figures (each under about 300 KB) and the CSV data behind them | | |
+| `brainstorms/YYYY-MM-DD-topic.md` | A dated record of a strategy discussion with Sid: what was found, the ideas considered, and the decisions | | Written when Sid asks for one; append later decisions rather than rewriting |
+| `log.md` | A temporary running log: one or two dated lines per run started or result obtained, newest first, so Sid can follow progress | | Add lines as work happens. It will be deleted, so anything that matters must also be in its home file |
 | `archive.md` | Index of retired documents and the git tag that holds them | | Add entries |
 
-- Do not create other document types: no separate plans, handoffs, progress
-  logs, summaries, audits or "detail" files. A handoff is `README.md`,
-  `status.md` and the active experiment page. A plan is the first half of an
-  experiment page.
+- Do not create other document types: no separate plans, handoffs,
+  summaries, audits or "detail" files, and no progress logs other than the
+  temporary `log.md`. A handoff is `README.md`, `status.md` and the active
+  experiment page. A plan is the first half of an experiment page.
 - How to run code is documented beside the code (that directory's README.md
   or CLAUDE.md), not in `research/`.
 - Machine detail (hashes, PIDs, absolute paths, full commands, seeds,
@@ -138,6 +140,10 @@ Code: `experiments/YYYY-MM-DD-name/` at commit <short hash>. Data: run
 - **While it runs:** keep `status.md` current by rewriting it. Add Log lines
   only for decisions and surprises. Interpret monitoring in chat and in run
   records, not as entries in the docs.
+- **As work happens:** add a dated line to `log.md` for each run started and
+  each result. The log is temporary and will be deleted, so never let it be
+  the only record of anything: results, decisions and lessons also go in
+  their home files, as described here.
 - **When it finishes:** fill in Results, Conclusion and Next; add rows to
   `results.md`; update the approach in `strategies.md`; update the README's
   current best and next steps; reset `status.md`.
