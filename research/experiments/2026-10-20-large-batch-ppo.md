@@ -27,10 +27,19 @@ small entropy bonus on strategic menus) add anything on top? (Approach:
   plus a detached critic (value loss reaches only the critic head),
   normalised value targets, and an entropy bonus of 0.01 on strategic menus
   (rest, shop, card reward, map and removal). Same seed, so the two arms
-  see the same training worlds. Cancelled before it started, pending Sid's
-  decision: it should run with `--hide-ooc-potions` (see
-  [boss rares](2026-10-20-boss-rares.md)), as should a second recipe arm, so
-  that training matches the deployment protocol.
+  see the same training worlds. Cancelled before it started: after the
+  potion-protocol finding ([boss rares](2026-10-20-boss-rares.md)) it was
+  replaced by the two arms below.
+- **Arm 3, recipe with the potion filter** (`large_batch_20261020/recipe_hidden`):
+  arm 1 with `--hide-ooc-potions`, so collection and the trainer's own
+  evaluation use the deployment protocol (no potion drinking or discarding
+  out of combat). Against arm 1 it measures what the filter alone does to
+  training.
+- **Arm 4, hygiene with the potion filter** (`large_batch_20261020/hygiene_hidden`):
+  arm 3 plus the hygiene options of arm 2. Arms 3 and 4 run from a frozen
+  checkout of `ws/nonllm` at `8aca4e4`, queued after arm 1 on the same lane;
+  approved by Sid on 20 October ("queue the recipe and hygiene arms with
+  --hide-ooc-potions after lb-recipe finishes").
 - **Collection:** 12 in-process collectors of 32 games each
   (`--in-process-games`), the first use of in-process collection in
   training; the games are identical in distribution to the subprocess path.
@@ -69,6 +78,10 @@ Pending.
 
 - 20 Oct, 12:14: queued both arms; the hygiene arm cancelled at 12:16 after
   the potion-protocol finding, to be re-queued with the potion filter.
+- 20 Oct, 13:25: arms 3 and 4 queued after the recipe arm.
+- 20 Oct, 12:56: iteration 4 of the recipe arm evaluates at 13 wins of 1,024
+  (17 at the start), mean floor 31.3 (30.8); cosines −0.43 and +0.48 at
+  iterations 3 and 4.
 - 20 Oct, 12:34: iterations 1 and 2 of the recipe arm: 3,072 games, about
   259,000 out-of-combat choice transitions, 192 optimizer steps and 9
   minutes per iteration beside evaluations; half-batch gradient cosines

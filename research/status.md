@@ -1,19 +1,21 @@
 # Status
 
-**Updated 20 October 2026, 12:57 BST.** One training run is running; waiting
-for Sid: whether to queue the potion-hidden large-batch arms, and the next
-study.
+**Updated 20 October 2026, 13:25 BST.** One training run is running with two
+queued behind it; waiting for Sid: the next study.
 
 - **Running: large-batch out-of-combat PPO**
-  ([page](experiments/2026-10-20-large-batch-ppo.md)), arm `lb-recipe` on
-  lane `train` of the queue in worktree `nonllm-large-batch` (branch
-  `nonllm/large-batch-ppo`), output `data/rl_runs/large_batch_20261020/recipe`
-  (`log.jsonl`, `eval_XXXX.json`, `iter_XXXX.pt`). About 9 minutes per
-  iteration while evaluations share the machine; 24 iterations. The
-  `lb-hygiene` arm was cancelled before starting: it should run with
-  `--hide-ooc-potions`, which that worktree does not yet have. Check with
-  `scripts/rl/queue_runner.py status` there; cancel with
-  `scripts/rl/queue_runner.py cancel lb-recipe`.
+  ([page](experiments/2026-10-20-large-batch-ppo.md)) on lane `train` of the
+  queue in worktree `nonllm-large-batch`: `lb-recipe` (running, about 8
+  minutes per iteration, 24 iterations, ends about 15:30), then
+  `lb-recipe-hidden` and `lb-hygiene-hidden` (queued; they run
+  `train_ooc.py` from the frozen checkout `nonllm-large-batch-hidden` at
+  `ws/nonllm` 8aca4e4, which has `--hide-ooc-potions`), about 2.5 hours
+  each. Outputs in `data/rl_runs/large_batch_20261020/{recipe,recipe_hidden,hygiene_hidden}`
+  (`log.jsonl`, `eval_XXXX.json`, `iter_XXXX.pt`). Check with
+  `scripts/rl/queue_runner.py status` in `nonllm-large-batch`; cancel with
+  `scripts/rl/queue_runner.py cancel NAME`. That worktree also holds
+  uncommitted copies of research notes already merged through `ws/nonllm`;
+  discard them when the runs are over.
 - Finished today: [boss rares](experiments/2026-10-20-boss-rares.md)
   (including the combat-head arms) and
   [power picks](experiments/2026-10-20-power-picks.md).

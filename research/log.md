@@ -7,6 +7,9 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Potion-filter training arms queued**, 13:25: `lb-recipe-hidden` and
+  `lb-hygiene-hidden` after `lb-recipe`, from a frozen checkout of
+  `ws/nonllm` 8aca4e4 ([page](experiments/2026-10-20-large-batch-ppo.md)).
 - **Co-adaptation test finished**, 12:55: with the old-encoder combat
   student in place of the champion's combat head, the Demon Form rule wins
   230 against 198 of 4,096 (p = 0.001), a larger gain than with the
