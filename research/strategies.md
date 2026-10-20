@@ -66,9 +66,13 @@ deck-building, which full-game reward cannot.
   champion nearly always takes Juggernaut, Inflame and Metallicize, nearly
   never the other eleven, and skips about two thirds of boss card rewards
   ([power picks](experiments/2026-10-20-power-picks.md)).
-- Next: test whether taking a rare at boss rewards instead of skipping helps,
-  by a paired overlay evaluation; learn a deck-value network from oracle
-  scores to pool information across decisions.
+- Forcing Demon Form whenever offered wins 179 against 156 of 4,096 games
+  (p = 0.010), the first single deck-building habit shown to change wins;
+  forcing any rare at boss rewards helps the boss fight but not clearly
+  wins ([boss rares](experiments/2026-10-20-boss-rares.md)).
+- Next: distil the Demon Form rule and confirm it; test the rules with the
+  better combat head; learn a deck-value network from oracle scores to pool
+  information across decisions.
 - [Deck oracle page](experiments/2026-10-20-deck-oracle.md).
 
 ## Out-of-combat PPO with macro credit

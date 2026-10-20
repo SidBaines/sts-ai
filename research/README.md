@@ -26,29 +26,37 @@ in the [results ledger](results.md).
 
 ## Now
 
-Nothing is running. Two things landed on 20 October: in-process PPO
-collection (`--in-process-games`: games inside each collector process, no
-native RPC; 27.5 games/s on 12 collectors against 8.6 for the old recipe,
-with identical games at equal slot counts), and the
-[power picks](experiments/2026-10-20-power-picks.md) study: powers are not
-under-picked as a class; the champion's power count is set by whether three
+Running: [large-batch PPO](experiments/2026-10-20-large-batch-ppo.md)
+(the champion's recipe at 3,072 games per iteration) and the boss-rares
+rules with the better combat head. Finished on 20 October:
+[boss rares](experiments/2026-10-20-boss-rares.md): forcing Demon Form
+whenever offered wins 179 against 156 of 4,096 games (p = 0.010), the first
+single deck-building habit shown to change wins;
+[power picks](experiments/2026-10-20-power-picks.md): powers are not
+under-picked as a class, the champion's power count is set by whether three
 favourite powers are offered, and it skips about two thirds of boss card
-rewards. See [status](status.md) and the temporary [experiment log](log.md).
+rewards. Also landed: in-process PPO collection (`--in-process-games`; 27.5
+games/s on 12 collectors against 8.6 for the old recipe), and the finding
+that the trainer and `eval_policy.py` let the policy waste potions out of
+combat, under which the champion wins 1.7%, not 3.8% (`--hide-ooc-potions`
+restores the study protocol). See [status](status.md) and the temporary
+[experiment log](log.md).
 
 ## Next
 
-1. **Test the boss-reward skips.** A paired evaluation on the 4,096 DEV
-   worlds of the champion against the champion with a rule that takes a
-   chosen rare at boss rewards instead of skipping (the existing overlay,
-   distil, PPO loop). To discuss with Sid.
-2. **Learn deck strength instead of simulating each choice.** The oracle
-   measures whole decks well but cannot separate single card rewards. Train
-   a deck-value network on oracle scores from many states, then use it to
+1. **Distil the Demon Form rule** into the out-of-combat head, confirm it on
+   the confirmation worlds, and continue PPO from it with the potion filter
+   on; extend the rule grid to other declined powers and removals.
+2. **Exploration for a saturated policy** (discussion with Sid, 20 October):
+   track per-menu entropy and rare-action sampling in the trainer; then try
+   paired counterfactual exploration or an ε-mixture behaviour policy on
+   strategic menus, with a fresh out-of-combat lineage held in reserve.
+3. **Learn deck strength instead of simulating each choice.** Train a
+   deck-value network on oracle scores from many states, then use it to
    score options. To discuss with Sid.
-3. **Out-of-combat PPO with the hygiene options,** at larger batches with
-   in-process collection: detached critic, strategic-menu entropy,
-   checkpoint choice on 4,096 worlds.
-4. Confirm one old-encoder combat student, chosen in advance, on the
+4. **Large-batch PPO with the hygiene options and the potion filter,**
+   after the running recipe arm.
+5. Confirm one old-encoder combat student, chosen in advance, on the
    confirmation worlds before promoting it.
 
 The agent must stay a pure policy; search may be used to make better

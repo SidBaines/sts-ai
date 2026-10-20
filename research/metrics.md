@@ -125,6 +125,18 @@ release changed game behaviour.
   cards, relics, potions, map nodes) fed to a small transformer. Built in the
   [fresh-start study](experiments/2026-10-15-fresh-start.md).
 
+- **Study protocol** (deployment protocol): how every full-game number in
+  this ledger from 15 October is measured: exact argmax, out-of-combat
+  potion drinking and discarding hidden from the policy, "take key" and
+  "recall" hidden, the visible potion inventory recovered from the raw menu
+  (`fresh_study.policy_observation`; `fast_eval.py`, `fresh_collect.py`,
+  `--hide-ooc-potions` elsewhere). The champion wins 3.8% under it.
+- **Potions-visible protocol:** the default of `eval_policy.py` and of the
+  trainer's collection and evaluation: the same filters except that
+  out-of-combat potion actions stay in the menu, and the champion wastes
+  them. It wins 1.7% under it on the same worlds. Numbers from the two
+  protocols are not comparable.
+
 ## Terms
 
 - **Out-of-combat (OOC):** map, card reward, shop, event and rest-site

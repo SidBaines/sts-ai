@@ -7,6 +7,17 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Boss rares finished** ([page](experiments/2026-10-20-boss-rares.md)),
+  12:34: on the 4,096 second-DEV worlds under the study protocol, forcing
+  Demon Form wins 179 against the champion's 156 (p = 0.010, +0.21 floors,
+  +2.4 points of Act 2 boss passes); never skipping a boss rare 172 (p =
+  0.29); both 181 (p = 0.10). The co-adaptation test (same rules with the
+  old-encoder combat head) queued at 12:37.
+- **Evaluator protocol trap found**, 12:14: `eval_policy.py` and the
+  trainer let the policy drink and discard potions out of combat; the study
+  protocol hides them. The champion wins 1.7% instead of 3.8% with them
+  visible, and hiding them reproduces the study's games exactly.
+  `--hide-ooc-potions` added to `eval_policy.py` and `train_ooc.py`.
 - **Boss rares started** ([page](experiments/2026-10-20-boss-rares.md)):
   four arms of the champion on the 4,096 second-DEV worlds through
   `eval_policy.py` with the new `--no-skip-rares` and `--take-card` overlays

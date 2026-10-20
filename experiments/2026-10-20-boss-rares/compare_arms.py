@@ -45,12 +45,12 @@ def compare(base, arm):
             "mcnemar_p": exact_discordance(only_arm, only_base),
             "floor": {"baseline": sum(base[s]["floor"] for s in common) / len(common),
                       "arm": sum(arm[s]["floor"] for s in common) / len(common),
-                      "difference": floors["estimate"], "ci95": floors["interval"]},
+                      "difference": floors["point"], "ci95": floors["ci95"]},
             "act2_boss": {"reached_both": len(reached),
                           "pass_rate": [sum(boss_pass(base[s]) for s in reached) / max(1, len(reached)),
                                         sum(boss_pass(arm[s]) for s in reached) / max(1, len(reached))],
-                          "difference": passes["estimate"] if passes else None,
-                          "ci95": passes["interval"] if passes else None}}
+                          "difference": passes["point"] if passes else None,
+                          "ci95": passes["ci95"] if passes else None}}
 
 
 def main():
