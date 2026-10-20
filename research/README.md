@@ -10,6 +10,7 @@ everything is measured.
 | Player | Win rate | Evidence |
 |---|---|---|
 | **Champion from 20 October:** large-batch out-of-combat PPO from the previous champion, iteration 24 (`champion_ba2fa6a2987d.pt`) | 5.7% on 4,096 fresh worlds (232 against the previous champion's 152; +2.0 points, p < 0.001; mean floor +1.24 [+0.91, +1.58]); 6.7% on the second-DEV worlds (276) | Confirmed; current default |
+| New champion with the old-encoder combat student and the Demon Form rule (an overlay, not yet distilled) | 8.1% on the second-DEV worlds (333 against 276; +1.4 points, p = 0.006); student alone 316, rule alone 292 | Planned; confirmation on fresh worlds running |
 | Previous champion: round-2 out-of-combat PPO update 20 | 3.8% (156 of 4,096 second-DEV worlds; 3.7% on the fresh worlds above) | Baseline of every comparison before 20 October |
 | Old-encoder combat distilled from the search teacher, with the previous champion's out-of-combat play | 4.8% (197 of the second-DEV worlds; +1.0 points [+0.2, +1.8]); a second training seed 5.4% (221) | Planned; being re-tested on the new champion |
 | Champion plus search at Act 2 and 3 bosses and elites | 8.1% (333 of 4,096 fresh worlds, environment 0.1.4) | Confirmed, but search is not a pure policy |

@@ -7,6 +7,15 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Harvest on the new champion**, 16:23 (second DEV, paired with its
+  276): plus the combat student 316 (p = 0.050), plus the Demon Form rule
+  292 (p = 0.076), plus both 333 (8.1%, p = 0.006; floor +1.29 [+0.95,
+  +1.65]). Confirmation of the stack on the fresh worlds queued at 16:26.
+- **Why the potion filter**, 16:25: out-of-combat potion actions are new in
+  environment 0.1.5; the previous champion never trained on them and, when
+  offered, discards almost every potion it holds (565 discards and 32 drinks
+  in 64 games, at 71% HP on average). Whether the new champion learned to
+  stop after 24 iterations with them visible is being measured.
 - **New champion**, 16:05: Sid promoted the large-batch iteration-24
   checkpoint; copied to `large_batch_20261020/inputs/champion_ba2fa6a2987d.pt`
   (worktree `nonllm-large-batch`, now preserved). Its second-DEV games
