@@ -7,6 +7,14 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Large-batch recipe arm finished**, 15:20: 24 iterations of 3,072
+  games; on its own potions-visible protocol its 1,024-world evaluation
+  went from 17 wins and floor 30.8 at the start to 31 wins at iteration 20
+  and 25 at iteration 24 (floor 32.2); half-batch cosines stayed between
+  −0.43 and +0.54. Study-protocol evaluation of iterations 20 and 24 queued.
+- **Dashboard served**, 15:23, at http://127.0.0.1:8795 (Codex extended
+  `scripts/rl/dashboard.py` with extra run roots, nested run folders,
+  health charts and time estimates; merged to `ws/nonllm`).
 - **Potion-filter training arms queued**, 13:25: `lb-recipe-hidden` and
   `lb-hygiene-hidden` after `lb-recipe`, from a frozen checkout of
   `ws/nonllm` 8aca4e4 ([page](experiments/2026-10-20-large-batch-ppo.md)).

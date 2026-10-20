@@ -3,14 +3,20 @@
 **Updated 20 October 2026, 13:25 BST.** One training run is running with two
 queued behind it; waiting for Sid: the next study.
 
+- **Dashboard:** http://127.0.0.1:8795 shows the large-batch arms live
+  (progress, time estimates, health charts). It runs detached from worktree
+  `nonllm-dashboard`; restart with `scripts/rl/dashboard.py restart --port
+  8795 --root <nonllm-large-batch>/data/rl_runs` there.
 - **Running: large-batch out-of-combat PPO**
   ([page](experiments/2026-10-20-large-batch-ppo.md)) on lane `train` of the
-  queue in worktree `nonllm-large-batch`: `lb-recipe` (running, about 8
-  minutes per iteration, 24 iterations, ends about 15:30), then
-  `lb-recipe-hidden` and `lb-hygiene-hidden` (queued; they run
-  `train_ooc.py` from the frozen checkout `nonllm-large-batch-hidden` at
-  `ws/nonllm` 8aca4e4, which has `--hide-ooc-potions`), about 2.5 hours
-  each. Outputs in `data/rl_runs/large_batch_20261020/{recipe,recipe_hidden,hygiene_hidden}`
+  queue in worktree `nonllm-large-batch`: `lb-recipe` finished at 15:20 (24
+  iterations); `lb-recipe-hidden` is running and `lb-hygiene-hidden` queued
+  (they run `train_ooc.py` from the frozen checkout
+  `nonllm-large-batch-hidden` at `ws/nonllm` 8aca4e4, which has
+  `--hide-ooc-potions`), about 3 hours each. The recipe arm's final and
+  best checkpoints are being evaluated under the study protocol on lane
+  `eval` of the `nonllm-boss-rares` queue (`lbeval-recipe-*`, outputs in
+  `large_batch_20261020/study_eval/`). Outputs in `data/rl_runs/large_batch_20261020/{recipe,recipe_hidden,hygiene_hidden}`
   (`log.jsonl`, `eval_XXXX.json`, `iter_XXXX.pt`). Check with
   `scripts/rl/queue_runner.py status` in `nonllm-large-batch`; cancel with
   `scripts/rl/queue_runner.py cancel NAME`. That worktree also holds
