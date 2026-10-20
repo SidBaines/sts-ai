@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Large-batch recipe checkpoint confirmed**, 16:00: on 4,096 fresh worlds
+  from seed 94,000,000,000, iteration 24 wins 232 against the champion's
+  152 (p < 0.001; floor +1.24 [+0.91, +1.58]; Act 2 boss pass +5.1
+  points). Proposed as the new champion.
 - **Large-batch recipe arm evaluated under the study protocol**, 15:32:
   the final checkpoint (iteration 24) wins 276 of 4,096 second-DEV worlds
   against the champion's 156 (p < 0.001; floor +1.11 [+0.78, +1.44]; Act 2

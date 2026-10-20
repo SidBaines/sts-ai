@@ -83,9 +83,9 @@ large batches of whole games.
 
 - At 3,072 games per iteration (four times the recipe), 24 iterations from
   the champion won 276 of 4,096 second-DEV worlds against 156 under the
-  study protocol (+2.9 points, p < 0.001), the largest pure-policy gain so
-  far; confirmation on untouched worlds pending
-  ([large-batch PPO](experiments/2026-10-20-large-batch-ppo.md)). The arm
+  study protocol, and 232 against 152 on 4,096 fresh worlds (+2.0 points,
+  p < 0.001; floor +1.24 [+0.91, +1.58]), the largest confirmed pure-policy
+  gain so far ([large-batch PPO](experiments/2026-10-20-large-batch-ppo.md)). The arm
   also set lambda 1 and weight decay 0 explicitly, so batch size alone is
   not isolated. The trainer's own 1,024-world evaluation, on the
   potions-visible protocol, showed only 17 to 25 wins and hid the gain.

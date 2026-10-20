@@ -74,6 +74,18 @@ second-DEV worlds, paired:
 | Iteration 24 (final, pre-registered) | 276 (6.7%) | 109 / 229 | < 0.001 | +1.11 [+0.78, +1.44] | +5.2 points [+3.1, +7.3] (2,661 worlds) |
 | Iteration 20 (best by the trainer's evaluation) | 224 (5.5%) | 109 / 177 | < 0.001 | +1.24 [+0.90, +1.57] | +5.3 points [+3.1, +7.4] (2,652 worlds) |
 
+**Confirmed on fresh worlds.** On 4,096 worlds from seed 94,000,000,000,
+never used before, played by both policies:
+
+| Policy | Wins (rate) | Discordant, champion only / arm only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
+|---|---:|---:|---:|---|---|
+| Champion | 152 (3.7%) | | | 35.09 | |
+| Iteration 24 | 232 (5.7%) | 106 / 186 | < 0.001 | +1.24 [+0.91, +1.58] | +5.1 points [+3.0, +7.3] (2,670 worlds) |
+
+The win gain on fresh worlds (+2.0 points) is smaller than on the DEV
+worlds (+2.9), as expected from noise in a single 4,096-world estimate; the
+floor and boss-pass gains are the same size on both.
+
 - Run facts: 24 iterations of 3,072 games (about 259,000 out-of-combat
   choice transitions and 192 optimizer steps each), 8 to 19 minutes per
   iteration beside evaluations, no faults or collector restarts.
@@ -99,6 +111,7 @@ Pending.
 
 ## Log
 
+- 20 Oct, 16:00: confirmed on the fresh worlds: 232 against 152 wins.
 - 20 Oct, 15:49: confirmation queued on 4,096 unused worlds from seed
   94,000,000,000, with the champion on the same worlds. Two earlier
   attempts were abandoned: the reserved set from 91,200,000,000 is

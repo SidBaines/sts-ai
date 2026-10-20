@@ -13,10 +13,10 @@ queued behind it; waiting for Sid: the next study.
   iterations); `lb-recipe-hidden` is running and `lb-hygiene-hidden` queued
   (they run `train_ooc.py` from the frozen checkout
   `nonllm-large-batch-hidden` at `ws/nonllm` 8aca4e4, which has
-  `--hide-ooc-potions`), about 3 hours each. The recipe arm's final and
-  best checkpoints are being evaluated under the study protocol on lane
-  `eval` of the `nonllm-boss-rares` queue (`lbeval-recipe-*`, outputs in
-  `large_batch_20261020/study_eval/`). Outputs in `data/rl_runs/large_batch_20261020/{recipe,recipe_hidden,hygiene_hidden}`
+  `--hide-ooc-potions`), about 3 hours each. The recipe arm's final
+  checkpoint (`large_batch_20261020/recipe/iter_0024.pt`) is confirmed on
+  fresh worlds (232 against 152 of 4,096) and proposed as the new champion;
+  evaluations in `large_batch_20261020/{study_eval,confirm94}/`. Outputs in `data/rl_runs/large_batch_20261020/{recipe,recipe_hidden,hygiene_hidden}`
   (`log.jsonl`, `eval_XXXX.json`, `iter_XXXX.pt`). Check with
   `scripts/rl/queue_runner.py status` in `nonllm-large-batch`; cancel with
   `scripts/rl/queue_runner.py cancel NAME`. That worktree also holds
