@@ -26,22 +26,27 @@ in the [results ledger](results.md).
 
 ## Now
 
-Nothing is running. Throughput and PPO hygiene work landed on 20 October:
-full-game evaluation with `scripts/rl/fast_eval.py` is about 3.5 times
-faster. See [status](status.md) and the temporary [experiment log](log.md).
+In-process PPO collection (games inside the collector process, many per
+process, one batched forward per tick) is being built on
+`nonllm/batched-collection`. The [power picks](experiments/2026-10-20-power-picks.md)
+study finished on 20 October: powers are not under-picked as a class; the
+champion's power count is set by whether three favourite powers are offered,
+and it skips about two thirds of boss card rewards. See [status](status.md)
+and the temporary [experiment log](log.md).
 
 ## Next
 
-1. **Learn deck strength instead of simulating each choice.** The oracle
+1. **Test the boss-reward skips.** A paired evaluation on the 4,096 DEV
+   worlds of the champion against the champion with a rule that takes a
+   chosen rare at boss rewards instead of skipping (the existing overlay,
+   distil, PPO loop). To discuss with Sid.
+2. **Learn deck strength instead of simulating each choice.** The oracle
    measures whole decks well but cannot separate single card rewards. Train
    a deck-value network on oracle scores from many states, then use it to
-   score options; check first whether power cards and potions, which go with
-   strong decks, are under-picked.
-2. **Out-of-combat PPO with the hygiene options,** at larger batches now that
-   evaluation is about 3.5 times faster: detached critic, strategic-menu
-   entropy, checkpoint choice on 4,096 worlds.
-3. Bring PPO collection onto the batched runner, for the same speed-up in
-   training.
+   score options. To discuss with Sid.
+3. **Out-of-combat PPO with the hygiene options,** at larger batches once
+   in-process collection lands: detached critic, strategic-menu entropy,
+   checkpoint choice on 4,096 worlds.
 4. Confirm one old-encoder combat student, chosen in advance, on the
    confirmation worlds before promoting it.
 

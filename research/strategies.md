@@ -62,8 +62,13 @@ deck-building, which full-game reward cannot.
 - It cannot choose between card rewards: one card moves the boss fight by
   less than 32 simulated fights can resolve, and following its choice gained
   nothing measurable ([oracle options](experiments/2026-10-20-oracle-options.md)).
-- Next: learn a deck-value network from oracle scores to pool information
-  across decisions; find which choices make decks strong.
+- Powers, which go with strong decks, are not under-picked as a class: the
+  champion nearly always takes Juggernaut, Inflame and Metallicize, nearly
+  never the other eleven, and skips about two thirds of boss card rewards
+  ([power picks](experiments/2026-10-20-power-picks.md)).
+- Next: test whether taking a rare at boss rewards instead of skipping helps,
+  by a paired overlay evaluation; learn a deck-value network from oracle
+  scores to pool information across decisions.
 - [Deck oracle page](experiments/2026-10-20-deck-oracle.md).
 
 ## Out-of-combat PPO with macro credit

@@ -158,3 +158,9 @@ release changed game behaviour.
   out-of-combat network, to see which change caused an effect.
 - **Plurality vote:** the search teacher's choice: the action proposed by the
   most of its 24 samples.
+- **Take rate when offered:** of the times a card appeared as an option at a
+  card reward, the share of times it was taken. It depends on what else was
+  offered beside it.
+- **Boss card reward:** the card reward after a boss fight, where every
+  option is a rare card. Measured as the screens whose offered cards are all
+  rare, which includes a few rare rewards elsewhere.
