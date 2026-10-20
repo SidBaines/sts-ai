@@ -9,7 +9,7 @@ from pathlib import Path
 import random
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import numpy as np
 import torch
@@ -301,14 +301,48 @@ class OOCPPOHygieneTests(unittest.TestCase):
             for row in [r for r in records if r["event"] == "train"]:
                 self.assertEqual(row["steps"], 2)
                 self.assertTrue(row["early_stop"])
+                self.assertEqual(row["collector_restarts"], 0)
+            for row in [r for r in records if r["event"] == "eval"]:
+                self.assertEqual(row["collector_restarts"], 0)
+
+    def test_trainer_records_restarts_for_each_collection_and_evaluation(self):
+        model = self.model()
+        pool = Mock(restarts=5)
+
+        def evaluate(*args, **kwargs):
+            pool.restarts += 1
+            return {"summary": {}, "records": []}
+
+        def collect(*args, **kwargs):
+            pool.restarts += 2
+            return {"kept": [], "game_episodes": [{"floor": 5, "task_outcome": "defeat"}],
+                    "faults": 0, "fault_records": [], "stats": {}, "collector_restarts": 2}
+
+        pool.collect_ooc.side_effect = collect
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as directory, \
+             contextlib.redirect_stdout(io.StringIO()):
+            cfg = OOCTrainConfig(out=directory, iterations=1, eval_every=1, health_every=0, collectors=2)
+            with patch.object(ooc_trainer, "load_policy", return_value=(model, {})), \
+                 patch.object(ooc_trainer, "begin_run", return_value={}), \
+                 patch("sts_rl.parallel_collect.CollectorPool", return_value=pool), \
+                 patch.object(ooc_trainer, "evaluate", side_effect=evaluate), \
+                 patch.object(ooc_trainer, "write_collection"):
+                ooc_trainer.train(cfg)
+            records = [json.loads(line) for line in (Path(directory) / "log.jsonl").read_text().splitlines()]
+        self.assertEqual([row["collector_restarts"] for row in records if row["event"] == "train"], [2])
+        self.assertEqual([row["collector_restarts"] for row in records if row["event"] == "eval"], [1, 1])
+        self.assertEqual(pool.restarts, 9)
+        pool.close.assert_called_once()
 
     def test_parallel_collector_forwards_value_scale_without_starting_workers(self):
         from sts_rl.parallel_collect import CollectorPool
         pool = CollectorPool.__new__(CollectorPool)
+        pool.restarts = 0
         with patch.object(pool, "_scatter", return_value=[]) as scatter:
-            pool.collect_ooc(self.model(), [], combat="greedy", temperature=1., ppo=PPOConfig(),
-                             credit="macro", gae_lambda=1., chunk=1, seed=1, value_scale=3.5)
+            result = pool.collect_ooc(self.model(), [], combat="greedy", temperature=1., ppo=PPOConfig(),
+                                      credit="macro", gae_lambda=1., chunk=1, seed=1, value_scale=3.5)
         self.assertEqual(scatter.call_args.kwargs["value_scale"], 3.5)
+        self.assertEqual(result["collector_restarts"], 0)
 
     def test_kl_guard_reports_actual_optimizer_steps_for_both_update_paths(self):
         model = self.model()

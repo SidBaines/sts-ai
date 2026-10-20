@@ -33,15 +33,17 @@ def main() -> None:
     p.add_argument("--games", type=int, default=128)
     p.add_argument("--workers", type=int, default=14)
     p.add_argument("--collectors", type=int, default=4)
+    p.add_argument("--in-process", action="store_true")
     args = p.parse_args()
     torch.set_num_threads(2)
     model, _ = load_policy(args.checkpoint)
     model.eval()
     ppo = PPOConfig(gamma=1.0, gae_lambda=.95, epochs=1, minibatch_size=4096, kl_guard_before_update=True,
                     target_kl=.05)
-    report = {}
-    pool = CollectorPool(args.collectors, workers=args.workers, checkpoint=args.checkpoint)
-    workers = make_workers(args.workers, dead_action_filter=True)
+    report = {"collectors": args.collectors, "workers": args.workers, "in_process": args.in_process}
+    pool = CollectorPool(args.collectors, workers=args.workers, checkpoint=args.checkpoint,
+                         in_process=args.in_process)
+    workers = make_workers(args.workers, dead_action_filter=True, in_process=args.in_process)
     try:
         t = time.time(); local = evaluate(model, workers, n=args.eval_n); report["eval_local_s"] = time.time() - t
         t = time.time(); par = evaluate(model, pool, n=args.eval_n); report["eval_pool_s"] = time.time() - t
@@ -59,6 +61,12 @@ def main() -> None:
         report["kept_local"] = sum(len(e) for e in a["kept"])
         report["kept_pool"] = sum(len(e) for e in b["kept"])
         report["games_local"], report["games_pool"] = len(a["game_episodes"]), len(b["game_episodes"])
+        for label in ("local", "pool"):
+            seconds = report[f"collect_{label}_s"]
+            report[f"games_per_second_{label}"] = report[f"games_{label}"] / seconds
+            report[f"kept_transitions_per_second_{label}"] = report[f"kept_{label}"] / seconds
+        report["collector_restarts"] = b["collector_restarts"]
+        report["faults_local"], report["faults_pool"] = a["faults"], b["faults"]
         flat = [t for ep in b["kept"] for t in ep]
         out = update_ppo(model, flat, collate=collate_public, forward=phase_forward(combat="greedy"), config=ppo,
                          micro_batch=1024)

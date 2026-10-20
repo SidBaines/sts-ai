@@ -16,6 +16,8 @@ from sts_policy.model_agent import forward_policy, policy_from_payload
 from sts_policy.training import load_checkpoint
 from sts_policy.workers import CurriculumWorker
 
+from .in_process import InProcessWorker
+
 ORIGINAL_CHECKPOINT = ("/Users/sidbaines/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/"
                        "data/nonllm_native_revision/campaign/joint_act3_0030.pt")
 WORKER_CONFIG = {"gamma": 1.0, "reward_mode": "progress", "terminal_hp_weight": 0.0,
@@ -41,11 +43,12 @@ def train_tasks(start: int, count: int, *, max_act: int = 3, horizon: int = 4096
 
 
 def make_workers(count: int, *, timeout: float = 10.0, dead_action_filter: bool = False,
-                 slim: bool = True, forced_play: bool = False, dominated: bool = False,
+                 slim: bool = True, in_process: bool = False, forced_play: bool = False, dominated: bool = False,
                  smith_above: float | None = None, prefer_remove: bool = False,
                  elite_above: float | None = None, skip_cards_after: int | None = None,
                  save_potions_above: float | None = None, avoid_boss_relics: tuple[str, ...] = ()) -> list[Any]:
-    workers = [CurriculumWorker(config=WORKER_CONFIG, timeout=timeout) for _ in range(count)]
+    workers = [InProcessWorker(config=WORKER_CONFIG) if in_process else
+               CurriculumWorker(config=WORKER_CONFIG, timeout=timeout) for _ in range(count)]
     if not (dead_action_filter or slim or forced_play or dominated or smith_above is not None or prefer_remove
             or elite_above is not None or skip_cards_after is not None or save_potions_above is not None
             or avoid_boss_relics):
@@ -282,12 +285,12 @@ class _MappedFuture:
 
 
 class FilteringWorker:
-    """Wraps a CurriculumWorker so observations never offer dead actions.
+    """Wraps either game worker so observations never offer dead actions.
 
     slim=True additionally drops observation text the encoder never reads
     (verified to leave public_candidate_v2 encodings byte-identical)."""
 
-    def __init__(self, worker: CurriculumWorker, *, dead_actions: bool = True, slim: bool = False,
+    def __init__(self, worker: CurriculumWorker | InProcessWorker, *, dead_actions: bool = True, slim: bool = False,
                  forced_play: bool = False, dominated: bool = False, smith_above: float | None = None,
                  prefer_remove: bool = False, elite_above: float | None = None,
                  skip_cards_after: int | None = None, save_potions_above: float | None = None,

@@ -37,8 +37,9 @@ _GUARDED_METHODS = {
 def install_native_guards(sts):
     """Wrap explicit native boundaries, retaining the real native object types.
 
-    Disposable children install once. Direct runners use native_guard_scope so
-    callers outside a run retain the native module's original exception API.
+    Disposable children and in-process game slots install permanently in their
+    hosting process. Direct runners use native_guard_scope so callers outside
+    a run retain the native module's original exception API.
     """
     if getattr(sts, "_fresh_native_guards", False):
         return

@@ -17,6 +17,7 @@ experiment folders under the code-placement convention.
 | `recording` | Launch snapshots, input identities, resumable optimizer/random state and compressed collection records. |
 | `evaluate`, `parallel_collect` | Fixed-world evaluation, paired comparisons and persistent parallel collectors. |
 | `batched_runner` | In-process greedy game batches and spawned runners with decision-progress timeouts and worker recovery. |
+| `in_process` | Synchronous curriculum game slots for batched PPO collection without native RPC. |
 | `panel`, `teacher` | Privileged scratch-fight panels and an out-of-combat afterstate teacher. |
 | `ooc_trainer`, `combat_trainer`, `distill` | Proximal policy optimization (PPO) for one phase, or supervised distillation with rehearsal; the other phase stays frozen by default. |
 
@@ -127,6 +128,52 @@ macro|micro`, `--combat greedy|sample`, `--lr`, `--eval-every`, `--eval-n`,
 (previously 0.95), matching the champion's delayed strategic credit recipe.
 Both trainers now pass explicit `--weight-decay` (default 0.0); older runs
 silently used AdamW's 0.01. These default changes break direct run comparability.
+
+Out-of-combat `--in-process-games` changes only where games run: inside each
+collecting process without native RPC, making many more slots per collector
+affordable. Both worker kinds batch one policy forward per tick, and the pool
+splits `ceil(workers / collectors)` slots per collector (at least one).
+For example, `--collectors 12 --workers 384 --in-process-games` runs 32 games
+per collector.
+With one collector all slots share the trainer process. The subprocess path
+remains the default; `--no-in-process-games` selects it explicitly.
+
+In-process simulator errors fail closed: the whole faulted episode is excluded,
+its native episode is discarded, and the next reset constructs a fresh episode.
+At the worker a programming error propagates unchanged, but `collect_rollouts`
+records every exception from a game slot as a fault and excludes that episode,
+so the difference is only that the fault record names the real exception type.
+No fault packets are written, and there is no per-step or teacher-operation
+timeout: a native hang stalls the process, with containment supplied by the job
+queue's stall watchdog. In-process mode gives up crash isolation: a native
+segfault or abort kills every game in that collector process, and with
+`--collectors 1` the trainer itself. The pool restarts a dead collector once and
+replays the identical request (same model, seed, tasks and slot count), so a
+deterministic native crash recurs and ends the run with "failed twice", where
+the subprocess path would have excluded one episode. Train and eval records
+count `collector_restarts` during that collection or evaluation (zero without
+a collector pool).
+
+`check_parallel_collect.py --checkpoint MODEL.pt --games 64 --eval-n 32`
+measured the pooled collection path (`collect_pool`) on 20 October 2026 on
+Sid's laptop (15 logical cores), using environment 0.1.5.1 and the champion
+checkpoint. For 64 games with `--eval-n 32`, 4 collectors with 8 subprocess
+workers achieved 8.6 games/s and 686 kept out-of-combat transitions/s;
+4 collectors with 32 in-process slots achieved 11.9 games/s and 989
+transitions/s; and 4 collectors with 128 in-process slots achieved 11.7 games/s
+and 942 transitions/s.
+
+For 256 games with `--eval-n 16`, 4 collectors with 8 subprocess workers
+achieved 8.6 games/s and 713 kept out-of-combat transitions/s; 12 collectors
+with 24 subprocess workers achieved 13.1 games/s and 1,080 transitions/s;
+12 collectors with 384 in-process slots (32 per collector) achieved
+27.5 games/s and 2,362 transitions/s; and 12 collectors with 96 in-process
+slots (8 per collector) achieved 24.1 games/s and 2,054 transitions/s.
+
+With few slots the in-process path is not faster: the exactness test's 8 games
+on 4 slots took 1.9 s with subprocess workers and 2.1 s in-process. The gain
+comes from running one process per core with many slots each, instead of two
+or three processes per collector.
 
 Out-of-combat hygiene options are `--critic-gradient shared|detached`
 (default shared), `--value-weight` (0.5), `--normalize-returns` (off), and

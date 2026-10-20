@@ -69,6 +69,7 @@ class OOCTrainConfig:
     baseline: str | None = None    # eval records JSON for paired comparison
     train_world_start: int = TRAIN_WORLD_START
     workers: int = 14
+    in_process_games: bool = False
     seed: int = 0
     health_every: int = 1
     collect_chunk: int = 128
@@ -410,20 +411,24 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
     if cfg.collectors > 1:
         from .parallel_collect import CollectorPool
         pool = CollectorPool(cfg.collectors, workers=cfg.workers, checkpoint=cfg.checkpoint,
+                             in_process=cfg.in_process_games,
                              dead_action_filter=cfg.dead_action_filter, dominated=cfg.dominated_filter,
                              smith_above=cfg.smith_above, prefer_remove=cfg.prefer_remove,
                              elite_above=cfg.elite_above)
         workers: list[Any] = []
     else:
         workers = make_workers(cfg.workers, dead_action_filter=cfg.dead_action_filter,
+                               in_process=cfg.in_process_games,
                                dominated=cfg.dominated_filter, smith_above=cfg.smith_above,
                                prefer_remove=cfg.prefer_remove, elite_above=cfg.elite_above)
 
     def run_eval(iteration: int) -> None:
+        restarts_before = pool.restarts if pool is not None else 0
         result = evaluate(model, pool if pool is not None else workers, n=cfg.eval_n,
                           world_start=cfg.eval_world_start)
         (out / f"eval_{iteration:04d}.json").write_text(json.dumps(result))
-        record = {"event": "eval", "iteration": iteration, **result["summary"]}
+        record = {"event": "eval", "iteration": iteration, **result["summary"],
+                  "collector_restarts": pool.restarts - restarts_before if pool is not None else 0}
         if baseline_records is not None:
             record["paired"] = paired(baseline_records, result["records"])
         log.emit(record)
@@ -449,6 +454,7 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                                           gae_lambda=cfg.gae_lambda, chunk=cfg.collect_chunk,
                                           value_scale=normalizer.scale if cfg.normalize_returns else 1.0)
             kept, game_episodes, faults, stats_acc = batch["kept"], batch["game_episodes"], batch["faults"], batch["stats"]
+            collector_restarts = batch["collector_restarts"] if pool is not None else 0
             collection = out / f'collection_{iteration:04d}.json.gz'
             write_collection(collection, {'schema':'sts_training_collection_v1', 'run_record':run_record,
                 'iteration':iteration, 'tasks':[task.to_dict() for task in tasks], 'episodes':game_episodes,
@@ -473,6 +479,7 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 "collect_act1_clear": float((floors > 16).mean()), "collect_act2_clear": float((floors > 33).mean()),
                 "collect_wins": int(sum(e["task_outcome"] in ("act_clear", "victory") for e in game_episodes)),
                 "games": len(game_episodes), "faults": faults,
+                "collector_restarts": collector_restarts,
                 "ooc_choice_transitions": len(flat), "collect_seconds": collect_seconds,
                 "adv_raw_std": float(np.std([t.advantage for t in flat])) if flat else 0.0,
                 "return_scale": return_scale,
