@@ -20,10 +20,13 @@ def main() -> None:
     args = p.parse_args()
     model, template = load_policy(args.ooc)
     combat_state = load_checkpoint(args.combat)["model_state"]
+    # A composite stores the combat head under "combat."; a trained phase head
+    # (for example a distilled combat student) stores it bare.
+    prefix = "combat." if any(key.startswith("combat.") for key in combat_state) else ""
     state = model.state_dict()
     for key in state:
         if key.startswith("combat."):
-            state[key] = combat_state[key].clone()
+            state[key] = combat_state[prefix + key[len("combat."):]].clone()
     model.load_state_dict(state)
     save_policy(args.output, model, template, metadata={"stage": "sts_rl_combined", "ooc_source": args.ooc,
                                                         "combat_source": args.combat})

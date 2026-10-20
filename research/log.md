@@ -7,6 +7,11 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Overnight runs queued**, 23:00, behind the hygiene arm: round 3 (the new
+  champion's out-of-combat head with the combat student spliced in, potion
+  filter, 24 iterations of 3,072 games) and a batch-size control (previous
+  champion, 96 iterations of 768 games, potion filter). The recipe-hidden
+  arm lost 2 hours 20 minutes paused on battery (20:10 to 22:29).
 - **Stack confirmed on fresh worlds**, 16:39: new champion plus the combat
   student plus the Demon Form rule wins 346 of 4,096 against the new
   champion's 232 (p < 0.001; floor +1.09 [+0.74, +1.44]) and the previous

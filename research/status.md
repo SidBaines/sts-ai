@@ -9,11 +9,17 @@ queued behind it; waiting for Sid: the next study.
   8795 --root <nonllm-large-batch>/data/rl_runs` there.
 - **Running: large-batch out-of-combat PPO**
   ([page](experiments/2026-10-20-large-batch-ppo.md)) on lane `train` of the
-  queue in worktree `nonllm-large-batch`: `lb-recipe` finished at 15:20 (24
-  iterations); `lb-recipe-hidden` is running and `lb-hygiene-hidden` queued
-  (they run `train_ooc.py` from the frozen checkout
-  `nonllm-large-batch-hidden` at `ws/nonllm` 8aca4e4, which has
-  `--hide-ooc-potions`), about 3 hours each.
+  queue in worktree `nonllm-large-batch`, in this order: `lb-recipe`
+  (finished 15:20), `lb-recipe-hidden` (running, ends about 23:15),
+  `lb-hygiene-hidden` (about 2.2 hours), `lb-round3-student` (about 2.3
+  hours) and `lb-small-hidden` (about 2.6 hours). The last four run
+  `train_ooc.py` from the frozen checkout `nonllm-large-batch-hidden` at
+  `ws/nonllm` 8aca4e4. A watcher process evaluates each arm's final and
+  best-by-trainer checkpoints under the study protocol when it finishes
+  (outputs in `large_batch_20261020/{study_eval,confirm94}/`, comparisons
+  printed to its log in the session scratchpad and copied into the
+  experiment page afterwards). The queue pauses jobs on battery and resumes
+  on power; `lb-recipe-hidden` lost 2 hours 20 minutes that way at 20:10.
 - **New champion** (promoted by Sid at 16:05): the recipe arm's iteration
   24, `large_batch_20261020/inputs/champion_ba2fa6a2987d.pt` in worktree
   `nonllm-large-batch`, which must now be preserved. Confirmed on fresh

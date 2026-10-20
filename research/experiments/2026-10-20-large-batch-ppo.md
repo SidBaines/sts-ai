@@ -40,6 +40,19 @@ small entropy bonus on strategic menus) add anything on top? (Approach:
   checkout of `ws/nonllm` at `8aca4e4`, queued after arm 1 on the same lane;
   approved by Sid on 20 October ("queue the recipe and hygiene arms with
   --hide-ooc-potions after lb-recipe finishes").
+- **Overnight additions (20 October, 23:00), queued after arm 4:**
+  - **Arm 5, round 3** (`large_batch_20261020/round3_student`): arm 3's
+    settings from a new start, the new champion's out-of-combat head with
+    the old-encoder combat student spliced in as the frozen combat head
+    (`inputs/champion_ba2fa6a2987d_student_combat.pt`, SHA-256 prefix
+    `9eddab12139f`; `combine_heads.py`; it plays bit-identically to the
+    champion with the student as a replacement on 8 checked worlds). Its
+    baselines are that start's games: 316 wins on the second-DEV worlds and
+    its fresh-world run.
+  - **Arm 6, batch-size control** (`large_batch_20261020/small_hidden`):
+    arm 3 with 768 games per iteration for 96 iterations, the same number
+    of games as 24 iterations of 3,072, from the previous champion. Against
+    arm 3 it isolates batch size at equal compute.
 - **Collection:** 12 in-process collectors of 32 games each
   (`--in-process-games`), the first use of in-process collection in
   training; the games are identical in distribution to the subprocess path.
