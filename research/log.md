@@ -7,6 +7,18 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Instruction updates agreed with Sid.** `log.md` is now a recognised but
+  temporary document (`main` via pull request
+  [#7](https://github.com/SidBaines/sts-ai/pull/7), `ws/nonllm`, `ws/llm`),
+  together with `brainstorms/`. `scripts/rl/CLAUDE.md` now says the batched
+  evaluator is reproducible only at fixed batch size and process count, and
+  that battery-pause faults leave evaluation cohorts incomplete.
+- **Faster environment released and merged.** Pull request
+  [#8](https://github.com/SidBaines/sts-ai/pull/8) merged into `main`,
+  checked from a fresh checkout (266 tests, smoke rollout), tagged
+  `env-v0.1.5.1`, and merged into `ws/nonllm` (1,010 tests pass). On the
+  merged tip, `fast_eval.py` on 7 processes makes 18.8 games/s, against 5.3
+  for the old evaluator, with all 224 test games identical.
 - **Batched game runner merged into `ws/nonllm`** (Codex tasks 2 and 2b,
   reviewed by Claude; 1,005 tests pass). `scripts/rl/fast_eval.py` plays many
   games per process with batched inference; its stall detection ignores

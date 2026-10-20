@@ -1,21 +1,17 @@
 # Status
 
-**Updated 20 October 2026, 02:15 BST.** Nothing is running.
+**Updated 20 October 2026, 02:45 BST.** Nothing is running and nothing is
+waiting for Sid.
 
-Waiting for Sid:
-
-- Pull request [#8](https://github.com/SidBaines/sts-ai/pull/8): the 3.1x
-  faster environment step, byte-identical output. After merging, tag it
-  (suggested `env-v0.1.5.1`) and merge the tag into `ws/nonllm`.
-- Pull request [#7](https://github.com/SidBaines/sts-ai/pull/7): the
-  `brainstorms/` row in `main`'s `CLAUDE.md`.
-
-Idle: the representation-controls queue runner and two older ones in the
-`4a3c` and `slay-spire-rl-debug` worktrees. Topic worktrees
-`nonllm-deck-oracle`, `nonllm-throughput`, `nonllm-ppo-hygiene` and
-`env-fast-step` hold merged or pushed work and can be removed.
+- `ws/nonllm` has environment 0.1.5.1 (faster step), the batched evaluator
+  (`scripts/rl/fast_eval.py`), the PPO hygiene options and the deck oracle
+  library (`src/sts_rl/deck_oracle.py`).
+- Idle: the representation-controls queue runner and two older ones in the
+  `4a3c` and `slay-spire-rl-debug` worktrees.
+- Topic worktrees `nonllm-repr-finish`, `nonllm-deck-oracle`,
+  `nonllm-throughput`, `nonllm-ppo-hygiene` and `env-fast-step` hold only
+  merged work and can be removed.
 
 ## Next
 
-See the [README](README.md): choose the next deck-building study, using the
-faster evaluator.
+Choose the next deck-building study; see the [README](README.md).

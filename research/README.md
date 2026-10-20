@@ -26,10 +26,9 @@ in the [results ledger](results.md).
 
 ## Now
 
-Nothing is running. Throughput and PPO hygiene work landed on 20 October;
-the faster environment step waits for Sid to merge pull request
-[#8](https://github.com/SidBaines/sts-ai/pull/8). See [status](status.md)
-and the running [experiment log](log.md).
+Nothing is running. Throughput and PPO hygiene work landed on 20 October:
+full-game evaluation with `scripts/rl/fast_eval.py` is about 3.5 times
+faster. See [status](status.md) and the temporary [experiment log](log.md).
 
 ## Next
 
@@ -39,8 +38,8 @@ and the running [experiment log](log.md).
    score options; check first whether power cards and potions, which go with
    strong decks, are under-picked.
 2. **Out-of-combat PPO with the hygiene options,** at larger batches now that
-   evaluation is about 3.4x faster: detached critic, strategic-menu entropy,
-   checkpoint choice on 4,096 worlds.
+   evaluation is about 3.5 times faster: detached critic, strategic-menu
+   entropy, checkpoint choice on 4,096 worlds.
 3. Bring PPO collection onto the batched runner, for the same speed-up in
    training.
 4. Confirm one old-encoder combat student, chosen in advance, on the
@@ -66,6 +65,7 @@ teachers, not to play.
 - [metrics.md](metrics.md): definitions of metrics, evaluation worlds and terms.
 - [experiments/](experiments/): one page per study.
 - [brainstorms/](brainstorms/): dated records of strategy discussions.
-- [log.md](log.md): running experiment log, newest first.
+- [log.md](log.md): temporary running experiment log, newest first; it will be
+  deleted.
 - [status.md](status.md): what is running now.
 - [archive.md](archive.md): where the retired documents went.
