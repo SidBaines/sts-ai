@@ -37,6 +37,8 @@ class Transition:
     # In-memory public features only: not part of observation/on-disk schemas.
     encoded_observation: Any = field(default=None, repr=False, compare=False)
     encoding_observation_id: int | None = field(default=None, repr=False, compare=False)
+    # OOC menu classification captured before collection slims public text.
+    strategic_menu: bool | None = None
 
 
 def _public_number(value: Any) -> int | float | None:
@@ -398,16 +400,25 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
                config: PPOConfig = PPOConfig(), device: str = "cpu", seed: int = 0,
                optimizer: torch.optim.Optimizer | None = None,
                max_seconds: float | None = None,
-               micro_batch: int | None = None) -> dict[str, Any]:
+               micro_batch: int | None = None,
+               return_scale: float = 1.0,
+               entropy_weights: Sequence[float] | None = None) -> dict[str, Any]:
     """Masked PPO over an immutable buffer.
 
     ``micro_batch`` splits each minibatch's forward/backward into gradient-
     accumulated chunks (same update up to float summation order). Candidate
     menus are padded per batch, so a 4096-row minibatch of large OOC menus can
     need ~10 GB of activations; chunks of ~1024 bound that peak.
+
+    Targets are divided by ``return_scale`` without mutating the raw buffer.
+    ``entropy_weights`` optionally supplies the total bonus coefficient per row.
     """
+    if not math.isfinite(return_scale) or return_scale <= 0:
+        raise ValueError("return_scale must be finite and positive")
+    if entropy_weights is not None and len(entropy_weights) != len(transitions):
+        raise ValueError("entropy weights must align with transitions")
     if not transitions:
-        return {"steps": 0, "samples": 0, "optimizer": optimizer}
+        return {"steps": 0, "samples": 0, "early_stop": False, "optimizer": optimizer}
     started = time.monotonic()
     model.to(device).train()
     # Each PPO buffer is immutable throughout its epochs. Encode public state
@@ -425,6 +436,8 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
     preparation_seconds = time.monotonic() - started
     optimizer = optimizer or torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
     advantages = torch.tensor([t.advantage for t in transitions], device=device)
+    entropy_coefficients = (None if entropy_weights is None else
+                            torch.tensor(entropy_weights, device=device))
     if len(transitions) > 1:
         advantages = (advantages - advantages.mean()) / advantages.std(unbiased=False).clamp_min(1e-8)
     rng, order = random.Random(seed), list(range(len(transitions)))
@@ -457,7 +470,8 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
                     loss, stats = ppo_objective(
                         logits, mask, values, torch.tensor([t.action_position for t in part], device=device),
                         torch.tensor([t.behavior_log_prob for t in part], device=device),
-                        advantages[part_indices], torch.tensor([t.returns for t in part], device=device), config)
+                        advantages[part_indices], torch.tensor([t.returns / return_scale for t in part], device=device),
+                        config, entropy_weights=(None if entropy_coefficients is None else entropy_coefficients[part_indices]))
                     weight = len(part) / len(chosen)
                     (loss * weight).backward()
                     for key, value in stats.items():
@@ -480,9 +494,10 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
             logits, values, mask = forward(model, collate([t.observation for t in chosen], device))
             actions = torch.tensor([t.action_position for t in chosen], device=device)
             old_log_probs = torch.tensor([t.behavior_log_prob for t in chosen], device=device)
-            returns = torch.tensor([t.returns for t in chosen], device=device)
+            returns = torch.tensor([t.returns / return_scale for t in chosen], device=device)
             loss, stats = ppo_objective(logits, mask, values, actions, old_log_probs,
-                                        advantages[indices], returns, config)
+                                        advantages[indices], returns, config,
+                                        entropy_weights=(None if entropy_coefficients is None else entropy_coefficients[indices]))
             if config.kl_guard_before_update:
                 current = {key: float(value.cpu()) for key, value in stats.items()}
                 if current["approx_kl"] > config.target_kl:

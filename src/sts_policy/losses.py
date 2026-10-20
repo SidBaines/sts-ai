@@ -124,6 +124,8 @@ def ppo_objective(
     advantages: Tensor,
     returns: Tensor,
     config: PPOConfig,
+    *,
+    entropy_weights: Tensor | None = None,
 ) -> tuple[Tensor, dict[str, Tensor]]:
     distribution = masked_distribution(logits, mask)
     log_probs = distribution.log_prob(actions)
@@ -133,9 +135,12 @@ def ppo_objective(
     clipped = ratios.clamp(1 - config.clip_ratio, 1 + config.clip_ratio) * advantages
     policy_loss = -torch.minimum(unclipped, clipped).mean()
     value_loss = 0.5 * (values - returns).square().mean()
-    entropy = distribution.entropy().mean()
+    row_entropy = distribution.entropy()
+    entropy = row_entropy.mean()
+    entropy_bonus = (config.entropy_weight * entropy if entropy_weights is None else
+                     (entropy_weights * row_entropy).mean())
     loss = (
-        policy_loss + config.value_weight * value_loss - config.entropy_weight * entropy
+        policy_loss + config.value_weight * value_loss - entropy_bonus
     )
     metrics = {
         "policy_loss": policy_loss.detach(),

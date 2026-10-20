@@ -94,11 +94,11 @@ class CollectorPool:
     def collect_ooc(self, model: torch.nn.Module, tasks: Sequence[Any], *, combat: str, temperature: float,
                     ppo: PPOConfig, credit: str, gae_lambda: float, chunk: int, seed: int,
                     strategic_temperature: float = 1.0, strategic_cards: bool = False,
-                    card_temperature: float = 1.0) -> dict[str, Any]:
+                    card_temperature: float = 1.0, value_scale: float = 1.0) -> dict[str, Any]:
         parts = self._scatter("ooc", model, tasks, seed, combat=combat, temperature=temperature, ppo=ppo,
                               credit=credit, gae_lambda=gae_lambda, chunk=chunk,
                               strategic_temperature=strategic_temperature, strategic_cards=strategic_cards,
-                              card_temperature=card_temperature)
+                              card_temperature=card_temperature, value_scale=value_scale)
         merged: dict[str, Any] = {"kept": [], "game_episodes": [], "faults": 0, 'fault_records': [], "stats": {}}
         for part in parts:
             # Unpickled observations are new objects: re-bind the encoding identity
