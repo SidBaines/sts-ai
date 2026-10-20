@@ -7,6 +7,18 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Power picks finished** ([page](experiments/2026-10-20-power-picks.md)).
+  Replayed the champion's 4,096 games to all 59,532 card rewards and 11,908
+  shops (3 minutes on 6 cores). Powers are taken 26.2% of the time when
+  offered, more than other uncommon or rare cards; Juggernaut, Metallicize
+  and Inflame are taken 87% to 100%, the other eleven powers 0% to 29%, with
+  near-zero probability on the declined ones. Boss card rewards are skipped
+  72% of the time in Act 1 and 58% in Act 2. Figure and CSVs in
+  `figures/2026-10-20-power-picks/`.
+- **In-process PPO collection started** with Codex on
+  `nonllm/batched-collection` (morning): an in-process game worker behind
+  `collect_rollouts`, `--in-process-games`, collector restarts, exactness
+  test against the subprocess path, and a throughput measurement.
 - **Instruction updates agreed with Sid.** `log.md` is now a recognised but
   temporary document (`main` via pull request
   [#7](https://github.com/SidBaines/sts-ai/pull/7), `ws/nonllm`, `ws/llm`),
