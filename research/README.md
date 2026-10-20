@@ -16,27 +16,27 @@ everything is measured.
 Compare numbers only within one environment version and world set.
 
 The agent loses mainly at bosses, above all the Act 2 boss (43% of the
-champion's losses), and the [19 October brainstorm](brainstorms/2026-10-19-brainstorming.md)
-found why: its decks are uniformly weak (starter cards never removed, few
-powers, little variety), so the full-game reward says almost nothing about
-deck-building. Distilled combat helps by winning hallway fights, not boss
-fights. Details in [strategies](strategies.md); every finished comparison is
+champion's losses). The [19 October brainstorm](brainstorms/2026-10-19-brainstorming.md)
+found weak deck-building (starter cards never removed, few powers, little
+variety), and the [deck oracle](experiments/2026-10-20-deck-oracle.md) showed
+that deck strength, measured by simulating the boss fight, varies widely and
+predicts the real boss outcome far better than HP. Distilled combat helps by
+winning hallway fights, not boss fights. Details in [strategies](strategies.md); every finished comparison is
 in the [results ledger](results.md).
 
 ## Now
 
-Starting the work agreed on 20 October (see the brainstorm, section 7). See
-[status](status.md) for what is running.
+Codex is building the throughput changes; the deck-oracle spike is done.
+See [status](status.md) and the running [experiment log](log.md).
 
 ## Next
 
 1. **Throughput.** Move network inference into the simulator worker
    processes and step several games per process, for three to ten times more
    games per hour. Everything else needs this.
-2. **Deck-strength oracle, feasibility spike.** Play the upcoming boss fight
-   many times from a given deck in the simulator, and test whether the score
-   separates decks that passed the Act 2 boss from decks that failed. If it
-   does, it becomes a teacher and dense reward for deck-building.
+2. **Deck-strength oracle as a teacher.** It measures decks well; next test
+   whether it separates the options at a card reward, shop, rest site or
+   removal, then distil its choices into the out-of-combat network.
 3. **PPO hygiene:** separate critic, normalised returns, exploration on
    strategic menus, bigger batches, no silent weight decay.
 4. Confirm one old-encoder combat student, chosen in advance, on the
@@ -62,5 +62,6 @@ teachers, not to play.
 - [metrics.md](metrics.md): definitions of metrics, evaluation worlds and terms.
 - [experiments/](experiments/): one page per study.
 - [brainstorms/](brainstorms/): dated records of strategy discussions.
+- [log.md](log.md): running experiment log, newest first.
 - [status.md](status.md): what is running now.
 - [archive.md](archive.md): where the retired documents went.
