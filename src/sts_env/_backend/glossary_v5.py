@@ -5,13 +5,22 @@ unchanged. No draw order, RNG, sampled future intent, or search labels are read.
 """
 from __future__ import annotations
 
+from functools import lru_cache
 import re
 
 from sts_env._backend import glossary as legacy, glossary_v4 as v4
 
 
 _PAIR = re.compile(r"(-?\d+) \((-?\d+)\)")
-_SLIMES = {"SLIME_BOSS", "ACID_SLIME_L", "SPIKE_SLIME_L"}
+_UPGRADE_RE = re.compile(r"\+\d*$")
+_INSTANCE_RE = re.compile(r"(.+)=(-?\d+)")
+_UPGRADE_COST_RE = re.compile(r" \(costs? 0 when upgraded\)")
+_ASCENSION_RE = re.compile(r"^Ascension: (\d+)$", re.MULTILINE)
+_BUFF_RE = re.compile(r"\(no damage; .*?\)(?=,|$)")
+_SLIME_RE = re.compile(r"\] (?:SLIME_BOSS|ACID_SLIME_L|SPIKE_SLIME_L) HP")
+_SELECTION_RE = re.compile(r"^Selection type: (\S+)", re.MULTILINE)
+_POWER_PATTERNS = tuple((name, re.compile(rf"\b{name} (-?\d+)"))
+                        for name in ("Dexterity", "Frail", "No Block"))
 _BLOCK = {"Defend": (5, 8), "Armaments": (5, 5), "Flame Barrier": (12, 16),
           "Ghostly Armor": (10, 13), "Good Instincts": (6, 9),
           "Impervious": (30, 40), "Panic Button": (30, 40),
@@ -32,16 +41,24 @@ _ROUND_RULES = (
 )
 
 
+@lru_cache(maxsize=2048)
 def card_parts(name: str) -> tuple[str, bool, int | None]:
-    upgraded = bool(re.search(r"\+\d*$", name))
-    plain = re.sub(r"\+\d*$", "", name)
-    match = re.fullmatch(r"(.+)=(-?\d+)", plain)
+    upgraded = bool(_UPGRADE_RE.search(name))
+    plain = _UPGRADE_RE.sub("", name)
+    match = _INSTANCE_RE.fullmatch(plain)
     return (match[1], upgraded, int(match[2])) if match else (plain, upgraded, None)
 
 
 def card_definition(name: str, relics: list[str]) -> str | None:
+    # Blue Candle is the only relic affecting card rule text. Other relics do
+    # not needlessly multiply entries; instance values and upgrade counts do.
+    return _cached_card_definition(name, "Blue Candle" in relics)
+
+
+@lru_cache(maxsize=2048)
+def _cached_card_definition(name: str, blue_candle: bool) -> str | None:
     base, upgraded, value = card_parts(name)
-    original = v4._card_definition(name, relics)
+    original = v4._card_definition(name, ["Blue Candle"] if blue_candle else [])
     if original is None and base == "Ritual Dagger" and value is not None:
         original = "Ritual Dagger: Deal damage."
     if original is None:
@@ -60,7 +77,7 @@ def card_definition(name: str, relics: list[str]) -> str | None:
     }
     effect = overrides.get(base, effect)
     # Costs already have per-instance/current values in every card label.
-    effect = re.sub(r" \(costs? 0 when upgraded\)", "", effect)
+    effect = _UPGRADE_COST_RE.sub("", effect)
     if base == "Rampage":
         bonus = value if value is not None else 0
         effect = (f"Deal {8 + bonus} unmodified damage (base 8 plus accumulated bonus {bonus}). "
@@ -110,9 +127,9 @@ def augment(state_text: str, legal_actions: list[dict], phase: str,
             turn_math_lines: list[str] | None = None) -> str:
     if phase != "combat":
         return v4.augment(state_text, legal_actions, phase, map_graph, damage_note, turn_math_lines)
-    rendered = v4.augment(state_text, legal_actions, phase, map_graph, damage_note, turn_math_lines)
-    head = rendered.split(legacy._KEY_HEADER, 1)[0].rstrip()
-    asc_match = re.search(r"^Ascension: (\d+)$", state_text, re.MULTILINE)
+    body, _ = v4._combat_lines(state_text, legal_actions, damage_note, turn_math_lines)
+    head = "\n".join(body).split(legacy._KEY_HEADER, 1)[0].rstrip()
+    asc_match = _ASCENSION_RE.search(state_text)
     if asc_match is None:
         raise ValueError("v5 requires public ascension for exact enemy buff rules")
     ascension = int(asc_match[1])
@@ -127,10 +144,10 @@ def augment(state_text: str, legal_actions: list[dict], phase: str,
             if move:
                 effect = buff_effect(move[1], ascension)
                 if effect:
-                    line = re.sub(r"\(no damage; .*?\)(?=,|$)", f"(no damage; {effect})", line)
+                    line = _BUFF_RE.sub(f"(no damage; {effect})", line)
                     lines[i] = line
                 statuses |= v4._status_names_in_text(effect or legacy.intent_effect(move[1]) or "")
-            slime_present |= any(re.search(rf"\] {name} HP", line) for name in _SLIMES)
+            slime_present |= bool(_SLIME_RE.search(line))
         elif line.startswith("Player powers:"):
             statuses |= v4._scan_status_names(line)
     # Replace the generic base/upgraded legend with per-instance semantics.
@@ -144,14 +161,14 @@ def augment(state_text: str, legal_actions: list[dict], phase: str,
                      "changes its current intent to Split, replacing its previous move. At its enemy action, "
                      "it splits into two living offspring, each starting with the parent's current HP at the split. "
                      "Slime Boss creates one Large Acid and one Large Spike Slime; each large slime creates two medium slimes of its own type.")
-    selection = re.search(r"^Selection type: (\S+)", state_text, re.MULTILINE)
+    selection = _SELECTION_RE.search(state_text)
     if selection and selection[1] == "EXHAUST_MANY":
         lines.append("EXHAUST_MANY means exhaust the selected hand cards. Exhausting no cards finishes this optional selection. Choose only a listed selection.")
     definitions = [d for name in legacy._combat_card_names(state_text)
                    if (d := card_definition(name, relics))]
     powers_line = next((line for line in lines if line.startswith("Player powers:")), "")
-    powers = {name: int(m[1]) for name in ("Dexterity", "Frail", "No Block")
-              if (m := re.search(rf"\b{name} (-?\d+)", powers_line))}
+    powers = {name: int(m[1]) for name, pattern in _POWER_PATTERNS
+              if (m := pattern.search(powers_line))}
     if not selection:
         for name in legacy._hand_card_names(state_text):
             amount = calculated_block(name, powers)

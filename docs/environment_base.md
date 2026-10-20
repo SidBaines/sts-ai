@@ -148,6 +148,17 @@ and upstream source are ignored; never depend on an untracked edit for a fix.
 
 ## Release verification
 
+Step-path performance can be checked without IPC using
+`PYTHONPATH=src python scripts/benchmark_env_step.py` (`--profile` adds cProfile).
+It reuses the deterministic policy and eight complete worlds recorded by
+`tests/integration/test_step_equivalence.py` before the optimization. The fixture
+checks every observation, reward, info field and episode boundary, substituting
+only source/runtime/build identity values while separately checking live identity
+reporting. These worlds cover Act 1 and Act 2, including shops, events, rest sites,
+card selections and boss relic rewards; they do not reach Act 3 or a victory.
+The optimization changes no public versions or gameplay/text output. Source
+identity still changes normally, so historical traces retain their replay boundary.
+
 Run these checks from a fresh source checkout before tagging. The build must be
 present; `STS_REQUIRE_SIMULATOR=1` prevents missing binaries from being silently
 accepted as skipped integration tests.
@@ -227,3 +238,14 @@ annotations, glossary corrections, five event bugs, and Curiosity, Intangible,
 Lagavulin, Flight and Angry combat logic. The observation label advances to
 `sts_env_public_v3`. See [the release record](release_v0.1.5.md) for the full
 list, migration notes and seed-behaviour changes.
+
+## Release 0.1.5.1: faster step path
+
+Release 0.1.5.1 is a performance release with no behaviour change: the step
+path copies public state as plain JSON trees instead of using `deepcopy`, and
+caches pure glossary lookups. Observations, text, info, rewards and menus are
+byte-identical to 0.1.5, so `ENVIRONMENT_VERSION` stays `0.1.5` and the
+observation label stays `sts_env_public_v3`. The in-process step costs about a
+third as much (1,119 to 356 µs per decision). Source identity
+(`python_interface_sha256`) changes, as for any source edit, so traces
+recorded under 0.1.5 keep their usual replay boundary.
