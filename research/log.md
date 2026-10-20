@@ -7,6 +7,11 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Large-batch recipe arm evaluated under the study protocol**, 15:32:
+  the final checkpoint (iteration 24) wins 276 of 4,096 second-DEV worlds
+  against the champion's 156 (p < 0.001; floor +1.11 [+0.78, +1.44]; Act 2
+  boss pass +5.2 points); iteration 20 wins 224. Confirmation on 4,096
+  untouched worlds (seeds from 91,200,000,000) queued at 15:33.
 - **Large-batch recipe arm finished**, 15:20: 24 iterations of 3,072
   games; on its own potions-visible protocol its 1,024-world evaluation
   went from 17 wins and floor 30.8 at the start to 31 wins at iteration 20

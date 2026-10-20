@@ -10,6 +10,7 @@ everything is measured.
 | Player | Win rate | Evidence |
 |---|---|---|
 | Champion: round-2 out-of-combat PPO update 20 | 3.8% (156 of 4,096 second-DEV worlds, environment 0.1.5) | Current default |
+| Large-batch out-of-combat PPO from the champion, iteration 24 (3,072 games per iteration) | 6.7% (276 of the same worlds; +2.9 points, p < 0.001; mean floor +1.11 [+0.78, +1.44]) | Planned; confirmation on untouched worlds running |
 | Old-encoder combat distilled from the search teacher, with champion out-of-combat play | 4.8% (197 of the same worlds; +1.0 points [+0.2, +1.8]); a second training seed 5.4% (221) | Planned comparisons on worlds new to both; not yet on the confirmation worlds |
 | Champion plus search at Act 2 and 3 bosses and elites | 8.1% (333 of 4,096 fresh worlds, environment 0.1.4) | Confirmed, but search is not a pure policy |
 

@@ -64,7 +64,30 @@ small entropy bonus on strategic menus) add anything on top? (Approach:
 
 ## Results
 
-Pending.
+**Arm 1 (recipe at 3,072 games) wins 276 of 4,096 against the champion's
+156 under the study protocol.** Final checkpoint, iteration 24, on the
+second-DEV worlds, paired:
+
+| Checkpoint | Wins (rate) | Discordant, champion only / arm only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
+|---|---:|---:|---:|---|---|
+| Champion | 156 (3.8%) | | | 35.08 | |
+| Iteration 24 (final, pre-registered) | 276 (6.7%) | 109 / 229 | < 0.001 | +1.11 [+0.78, +1.44] | +5.2 points [+3.1, +7.3] (2,661 worlds) |
+| Iteration 20 (best by the trainer's evaluation) | 224 (5.5%) | 109 / 177 | < 0.001 | +1.24 [+0.90, +1.57] | +5.3 points [+3.1, +7.4] (2,652 worlds) |
+
+- Run facts: 24 iterations of 3,072 games (about 259,000 out-of-combat
+  choice transitions and 192 optimizer steps each), 8 to 19 minutes per
+  iteration beside evaluations, no faults or collector restarts.
+- The trainer's own evaluation (1,024 worlds from seed 91,000,000,000, on
+  the potions-visible protocol) went 17, 13, 9, 9, 24, 31, 25 wins at
+  iterations 0 to 24 and mean floor 30.8 to 32.2: it understated the gain
+  by an order of magnitude and would have called the run a failure at
+  iteration 12.
+- Half-batch gradient cosines ranged from −0.43 to +0.54 with no trend;
+  entropy stayed near 0.18; KL per iteration 0.006 to 0.012.
+- Training behaviour (sampled): smith rate 0.25 to 0.28 and card skip rate
+  0.02 throughout.
+
+Arms 3 and 4: pending.
 
 ## Conclusion
 
@@ -76,9 +99,13 @@ Pending.
 
 ## Log
 
+- 20 Oct, 15:32: the recipe arm's final checkpoint wins 276 of 4,096 under
+  the study protocol; confirmation on untouched worlds (seeds from
+  91,200,000,000) queued at 15:33.
+- 20 Oct, 15:20: the recipe arm finished.
+- 20 Oct, 13:25: arms 3 and 4 queued after the recipe arm.
 - 20 Oct, 12:14: queued both arms; the hygiene arm cancelled at 12:16 after
   the potion-protocol finding, to be re-queued with the potion filter.
-- 20 Oct, 13:25: arms 3 and 4 queued after the recipe arm.
 - 20 Oct, 12:56: iteration 4 of the recipe arm evaluates at 13 wins of 1,024
   (17 at the start), mean floor 31.3 (30.8); cosines −0.43 and +0.48 at
   iterations 3 and 4.
