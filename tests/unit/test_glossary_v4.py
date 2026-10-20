@@ -27,6 +27,21 @@ class CombatV4RegressionTest(unittest.TestCase):
     def render(self, text: str = COMBAT_TEXT, actions: list[dict] | None = None) -> str:
         return glossary_v4.augment(text, PLAY if actions is None else actions, "combat")
 
+    def test_status_scans_preserve_legacy_boundaries_and_cache_ownership(self):
+        samples = ["Strength Dexterity No Block", "xStrength Strengthx _Strength Strength_",
+                   "Strength -2; Dexterity 1; No Block 1", "strength Strength2"]
+        samples += [text for text, _ in glossary.STATUS_DB.values()]
+        samples += list(glossary.INTENT_DB.values())
+        for text in samples:
+            self.assertEqual(glossary_v4._status_names_in_text(text),
+                             glossary._status_names_in_text(text))
+            self.assertEqual(glossary_v4._scan_status_names(text),
+                             glossary._scan_status_names(text))
+        names = glossary_v4._status_names_in_text("Strength and Duplication")
+        names.clear()
+        self.assertEqual(glossary_v4._status_names_in_text("Strength and Duplication"),
+                         {"Strength", "Duplication"})
+
     def test_action_is_explicitly_distinct_from_turn(self):
         output = self.render()
         self.assertIn("one legal action, not a whole turn", output)

@@ -6,12 +6,22 @@ mutating its dictionaries or changing historical prompt reconstruction.
 """
 from __future__ import annotations
 
+from functools import lru_cache
 import re
 
 from sts_env._backend import glossary as legacy
 
 
 _INTENT_RE = re.compile(r"\bintent\s+([A-Z][A-Z0-9_]*)\b")
+_UPGRADE_RE = re.compile(r"\+\d*$")
+_SELECTION_RE = re.compile(r"^Selection type:\s*(\S+)", re.MULTILINE)
+# Keep the frozen legacy tables/renderers untouched. These patterns implement
+# the same boundaries, with v4's extra status, without rebuilding them per scan.
+_STATUS_PATTERNS = tuple(
+    (name, re.compile(rf"(?<![A-Za-z]){re.escape(name)}(?![A-Za-z])"),
+     re.compile(rf"(?<![A-Za-z]){re.escape(name)}\s+-?\d+"))
+    for name in (*legacy.STATUS_DB, "Duplication")
+)
 _INTENT_ADDITIONS = {
     # MonsterSpecific.cpp, GREMLIN_NOB_SKULL_BASH (all ascensions).
     "GREMLIN_NOB_SKULL_BASH": "applies 2 Vulnerable to you",
@@ -56,17 +66,19 @@ _CARD_VALUE_LEGEND = (
 
 
 def _status_names_in_text(text: str) -> set[str]:
-    names = legacy._status_names_in_text(text)
-    if re.search(r"(?<![A-Za-z])Duplication(?![A-Za-z])", text):
-        names.add("Duplication")
-    return names
+    # Return an owned set; cached values cannot be mutated by callers.
+    return set(_referenced_statuses(text))
+
+
+@lru_cache(maxsize=2048)
+def _referenced_statuses(text: str) -> frozenset[str]:
+    return frozenset(name for name, pattern, _ in _STATUS_PATTERNS
+                     if name in text and pattern.search(text))
 
 
 def _scan_status_names(line: str) -> set[str]:
-    names = legacy._scan_status_names(line)
-    if re.search(r"(?<![A-Za-z])Duplication\s+-?\d+", line):
-        names.add("Duplication")
-    return names
+    return {name for name, _, pattern in _STATUS_PATTERNS
+            if name in line and pattern.search(line)}
 
 
 def _label_intent(line: str) -> tuple[str, set[str]]:
@@ -102,9 +114,14 @@ def _status_definition(name: str, relic_names: list[str]) -> str | None:
 
 
 def _card_definition(display_name: str, relic_names: list[str]) -> str | None:
+    return _cached_card_definition(display_name, "Blue Candle" in relic_names)
+
+
+@lru_cache(maxsize=2048)
+def _cached_card_definition(display_name: str, blue_candle: bool) -> str | None:
     # Keep instance labels on this corrected effect so a mixed base/upgraded
     # hand gets distinct, unambiguous definitions.
-    base = re.sub(r"\+\d*$", "", display_name)
+    base = _UPGRADE_RE.sub("", display_name)
     if base == "Flame Barrier":
         upgraded = display_name != base
         return (
@@ -112,7 +129,7 @@ def _card_definition(display_name: str, relic_names: list[str]) -> str | None:
             f"deal {6 if upgraded else 4} damage to any enemy that attacks you."
         )
     definition = legacy._card_definition(display_name)
-    if definition and "Blue Candle" in relic_names and ": Curse. " in definition:
+    if definition and blue_candle and ": Curse. " in definition:
         definition = definition.replace(
             "Unplayable.",
             "Playable with Blue Candle: lose 1 HP and Exhaust this card when played; other play restrictions still apply.",
@@ -156,7 +173,7 @@ def _build_key(state_text: str, statuses: set[str], legal_actions: list[dict]) -
 
 
 def _selection_note(state_text: str) -> str | None:
-    match = re.search(r"^Selection type:\s*(\S+)", state_text, re.MULTILINE)
+    match = _SELECTION_RE.search(state_text)
     if match is None and "(card select in progress)" not in state_text:
         return None
     note = (
@@ -185,6 +202,13 @@ def augment(
         return legacy.augment(
             state_text, legal_actions, phase, map_graph, damage_note, turn_math_lines,
         )
+    lines, statuses = _combat_lines(state_text, legal_actions, damage_note, turn_math_lines)
+    return "\n".join(lines) + _build_key(state_text, statuses, legal_actions)
+
+
+def _combat_lines(state_text: str, legal_actions: list[dict], damage_note: bool,
+                  turn_math_lines: list[str] | None) -> tuple[list[str], set[str]]:
+    """Shared combat body; v5 supplies its own key instead of rendering two."""
     statuses: set[str] = set()
     out_lines: list[str] = []
     for line in state_text.split("\n"):
@@ -212,4 +236,4 @@ def augment(
     if selection_note:
         notes.append(selection_note)
     notes.extend((_INTERACTION_NOTE, _CARD_VALUE_LEGEND))
-    return "\n".join(out_lines + notes) + _build_key(state_text, statuses, legal_actions)
+    return out_lines + notes, statuses
