@@ -99,9 +99,14 @@ Pending.
 
 ## Log
 
+- 20 Oct, 15:49: confirmation queued on 4,096 unused worlds from seed
+  94,000,000,000, with the champion on the same worlds. Two earlier
+  attempts were abandoned: the reserved set from 91,200,000,000 is
+  embargoed in code and Sid chose to keep it unopened, and the
+  93,000,000,000 namespace turned out to be reserved for probe states (its
+  partial output under `confirm93/` is void).
 - 20 Oct, 15:32: the recipe arm's final checkpoint wins 276 of 4,096 under
-  the study protocol; confirmation on untouched worlds (seeds from
-  91,200,000,000) queued at 15:33.
+  the study protocol.
 - 20 Oct, 15:20: the recipe arm finished.
 - 20 Oct, 13:25: arms 3 and 4 queued after the recipe arm.
 - 20 Oct, 12:14: queued both arms; the hygiene arm cancelled at 12:16 after

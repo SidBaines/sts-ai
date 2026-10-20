@@ -91,7 +91,8 @@ confirmation worlds apart.
 | 0.1.5 | Second DEV (representation controls) | 91,001,000,000 | 4,096 |
 | 0.1.5 | Confirmation (not yet opened) | 91,200,000,000 | |
 | 0.1.5 | Fight-panel source worlds (fresh start; representation controls) | 92,000,000,000; 92,100,000,000 | 1,024 in the second |
-| 0.1.5 | Fixed probe states | 93,000,000,000 | |
+| 0.1.5 | Fixed probe states (the 93,000,000,000 to 94,000,000,000 namespace is reserved for them) | 93,000,000,000 | |
+| 0.1.5.1 | Confirmation of the large-batch PPO final checkpoint, opened 20 October; the reserved 91,200,000,000 set stays unopened | 94,000,000,000 | 4,096 |
 
 ## Environment versions
 
