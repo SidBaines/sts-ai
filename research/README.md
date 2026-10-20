@@ -26,19 +26,23 @@ in the [results ledger](results.md).
 
 ## Now
 
-Codex is building the throughput changes; the deck-oracle spike is done.
-See [status](status.md) and the running [experiment log](log.md).
+Nothing is running. Throughput and PPO hygiene work landed on 20 October;
+the faster environment step waits for Sid to merge pull request
+[#8](https://github.com/SidBaines/sts-ai/pull/8). See [status](status.md)
+and the running [experiment log](log.md).
 
 ## Next
 
-1. **Throughput.** Move network inference into the simulator worker
-   processes and step several games per process, for three to ten times more
-   games per hour. Everything else needs this.
-2. **Deck-strength oracle as a teacher.** It measures decks well; next test
-   whether it separates the options at a card reward, shop, rest site or
-   removal, then distil its choices into the out-of-combat network.
-3. **PPO hygiene:** separate critic, normalised returns, exploration on
-   strategic menus, bigger batches, no silent weight decay.
+1. **Learn deck strength instead of simulating each choice.** The oracle
+   measures whole decks well but cannot separate single card rewards. Train
+   a deck-value network on oracle scores from many states, then use it to
+   score options; check first whether power cards and potions, which go with
+   strong decks, are under-picked.
+2. **Out-of-combat PPO with the hygiene options,** at larger batches now that
+   evaluation is about 3.4x faster: detached critic, strategic-menu entropy,
+   checkpoint choice on 4,096 worlds.
+3. Bring PPO collection onto the batched runner, for the same speed-up in
+   training.
 4. Confirm one old-encoder combat student, chosen in advance, on the
    confirmation worlds before promoting it.
 

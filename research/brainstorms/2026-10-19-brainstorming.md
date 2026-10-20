@@ -374,6 +374,17 @@ Decisions and notes added as the discussion continues:
 - The oracle needs no native patch: the game state can be copied, the act's
   boss fight entered and played from any out-of-combat decision. The spike
   is the [deck-oracle experiment](../experiments/2026-10-20-deck-oracle.md).
+- Outcomes of the 20 October plan:
+  - Representation controls written up: the old encoder's lead is real at
+    two seeds; rule features recover about a point, width none.
+  - Environment step 3.1x faster with identical output (pull request #8);
+    batched evaluator merged; together 3.4x faster full-game evaluation.
+  - Deck oracle (idea A): measures deck strength well (AUC 0.78 for the real
+    Act 2 boss outcome, independent of HP), correcting section 2.2's reading
+    that decks barely differ; but it cannot choose between single card
+    rewards, so idea A.1 (per-decision teacher) fails for card rewards and
+    A.3 (a learned deck-value network) becomes the next step.
+  - PPO hygiene (idea E) merged as options; not yet tested in training.
 
 ## Appendix: analyses behind the numbers
 

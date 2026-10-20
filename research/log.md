@@ -6,6 +6,13 @@ per entry; numbers and conclusions live in the linked pages.
 
 ## 20 October 2026
 
+- **Batched game runner merged into `ws/nonllm`** (Codex tasks 2 and 2b,
+  reviewed by Claude; 1,005 tests pass). `scripts/rl/fast_eval.py` plays many
+  games per process with batched inference; its stall detection ignores
+  battery pauses and it re-runs healthy peers of a failed process. On 7
+  processes: 6.7 games/s against 5.3 for the existing evaluator; with the
+  faster environment of PR #8, 18.2 games/s (3.4x), all 224 test games
+  identical. The speed-up needs PR #8 merged and tagged.
 - **What makes a deck strong (exploratory).** Across the 300 oracle decks,
   counts and boss explain 24% of deck strength; power cards matter most
   (r = +0.31; Demon Form +0.21, Juggernaut +0.15, Inflame +0.11 simulated win
@@ -24,12 +31,11 @@ per entry; numbers and conclusions live in the linked pages.
   entropy bonus on strategic menus only. Runs after this are not directly
   comparable with older ones on the first two points. No training yet.
 - **Batched game runner reviewed (Codex task 2).** At one game per process it
-  reproduces all 256 recorded champion games exactly; at four per process one
-  game in eight diverges at a near-tie (logit gap 5 x 10^-7). Three fixes
-  requested: pause-aware stall detection (a battery pause would otherwise
-  fault every in-flight game), re-running healthy peers instead of faulting
-  them, and recording the batch size and process count. Host benchmark
-  running.
+  reproduces all 256 recorded champion games exactly; larger batches flip
+  exact ties between equivalent actions in about 3% of games (same lengths,
+  floors and outcomes). Three fixes requested and made: pause-aware stall
+  detection, re-running healthy peers instead of faulting them, and recording
+  the batch size and process count.
 - **Oracle option test: the oracle cannot choose card rewards.** 160 Act 2
   card rewards, 4 options x 32 common-seed boss fights: best option clearly
   beats the champion's in 12% (rule 20%); gain from following it +0.002 boss

@@ -1,24 +1,21 @@
 # Status
 
-**Updated 20 October 2026, 01:30 BST.**
+**Updated 20 October 2026, 02:15 BST.** Nothing is running.
 
-Running:
+Waiting for Sid:
 
-- **Codex task 2, batched game runner** (branch `nonllm/throughput`, worktree
-  `.claude/worktrees/nonllm-throughput`). Log:
-  `codex/task2.log` in Claude's session scratchpad. Stop by ending the
-  `codex exec` process (find it with `ps -eo pid,args | grep codex`).
-
-Waiting for review:
-
-- **Codex task 1, environment step speed** (branch `env/fast-step`, worktree
-  `.claude/worktrees/env-fast-step`, uncommitted). Claude reviews, re-runs
-  tests, then opens a pull request to `main`.
+- Pull request [#8](https://github.com/SidBaines/sts-ai/pull/8): the 3.1x
+  faster environment step, byte-identical output. After merging, tag it
+  (suggested `env-v0.1.5.1`) and merge the tag into `ws/nonllm`.
+- Pull request [#7](https://github.com/SidBaines/sts-ai/pull/7): the
+  `brainstorms/` row in `main`'s `CLAUDE.md`.
 
 Idle: the representation-controls queue runner and two older ones in the
-`4a3c` and `slay-spire-rl-debug` worktrees.
+`4a3c` and `slay-spire-rl-debug` worktrees. Topic worktrees
+`nonllm-deck-oracle`, `nonllm-throughput`, `nonllm-ppo-hygiene` and
+`env-fast-step` hold merged or pushed work and can be removed.
 
 ## Next
 
-Review and land both throughput tasks, then the oracle's option test and
-PPO hygiene, as listed in the [README](README.md).
+See the [README](README.md): choose the next deck-building study, using the
+faster evaluator.
