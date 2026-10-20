@@ -8,6 +8,7 @@ in `CLAUDE.md`; other terms in [metrics](metrics.md).
 
 | Date | Experiment | Tested | Result | Evidence | Verdict |
 |---|---|---|---|---|---|
+| 2026-10-20 | [Oracle options](experiments/2026-10-20-oracle-options.md) | Deck oracle as a per-decision teacher at Act 2 card rewards (32 common-seed fights per option) vs the champion's choice | 0.1.5, 160 decisions: best option clearly better in 11.9% (rule: 20%); gain from following it +0.002 boss damage [−0.005, +0.009]; win share alike | Planned | No clear difference |
 | 2026-10-20 | [Deck oracle](experiments/2026-10-20-deck-oracle.md) | Full-HP boss-fight oracle just before the Act 2 boss (16 simulated fights, champion combat) added to entry HP, predicting the real Act 2 boss outcome | 0.1.5, 300 champion games: cross-validated AUC 0.83 vs 0.64 (entry HP only); log loss −0.127 [−0.182, −0.085]; oracle alone AUC 0.78; reliability 0.91; win-share and HP-lost scores alike | Planned | Better |
 | 2026-10-20 | [Deck oracle](experiments/2026-10-20-deck-oracle.md) | Same oracle at floor 25 of Act 2 | 0.1.5, same games: AUC alone 0.65; with entry HP 0.73 vs 0.64; log loss −0.028 | Exploratory | Better |
 | 2026-10-20 | [Deck oracle](experiments/2026-10-20-deck-oracle.md) | Same oracle at the start of Act 2 | 0.1.5, same games: AUC alone 0.60; with entry HP 0.71 vs 0.64; log loss −0.022 | Exploratory | Better |

@@ -59,8 +59,11 @@ deck-building, which full-game reward cannot.
   reliability 0.91, at about 1.1 s per state.
 - The champion's decks range from never to always beating the boss at full
   HP, though they look alike in simple counts.
-- Next: test whether it separates the options at a card reward, shop, rest
-  site or removal; then distil its choices.
+- It cannot choose between card rewards: one card moves the boss fight by
+  less than 32 simulated fights can resolve, and following its choice gained
+  nothing measurable ([oracle options](experiments/2026-10-20-oracle-options.md)).
+- Next: learn a deck-value network from oracle scores to pool information
+  across decisions; find which choices make decks strong.
 - [Deck oracle page](experiments/2026-10-20-deck-oracle.md).
 
 ## Out-of-combat PPO with macro credit

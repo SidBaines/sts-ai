@@ -6,10 +6,12 @@ per entry; numbers and conclusions live in the linked pages.
 
 ## 20 October 2026
 
-- **Oracle option test started:** every option at 160 Act 2 card rewards
-  scored with 32 common-seed boss fights, to see whether the oracle can
-  choose, not just measure. The oracle moved into the library
-  (`src/sts_rl/deck_oracle.py`, with a simulator test).
+- **Oracle option test: the oracle cannot choose card rewards.** 160 Act 2
+  card rewards, 4 options x 32 common-seed boss fights: best option clearly
+  beats the champion's in 12% (rule 20%); gain from following it +0.002 boss
+  damage [−0.005, +0.009]. One card moves the fight less than the noise.
+  The oracle mostly agrees with the champion's picks. The oracle moved into
+  the library (`src/sts_rl/deck_oracle.py`, with a simulator test).
   [Page](experiments/2026-10-20-oracle-options.md).
 - **Environment step 3.1x faster, byte-identical** (Codex task 1, reviewed by
   Claude). 1,119 -> 356 µs per decision; old and new code agree on all 18,344
