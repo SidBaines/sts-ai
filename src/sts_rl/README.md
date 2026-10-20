@@ -120,13 +120,29 @@ historical local defaults. These commands show the inner queued job.
 `distill_ooc.py --checkpoint MODEL.pt --records DIRECTORY --out DIRECTORY`
 fits collected label shards. The out-of-combat trainer exposes `--credit
 macro|micro`, `--combat greedy|sample`, `--lr`, `--eval-every`, `--eval-n`,
-`--seed` and `--resume`. Prefer `--gae-lambda 1.0` for delayed strategic
-credit; its default is 0.95. Combat training uses `--fights`, `--mix`,
+`--seed` and `--resume`. Out-of-combat `--gae-lambda` now defaults to 1.0
+(previously 0.95), matching the champion's delayed strategic credit recipe.
+Both trainers now pass explicit `--weight-decay` (default 0.0); older runs
+silently used AdamW's 0.01. These default changes break direct run comparability.
+
+Out-of-combat hygiene options are `--critic-gradient shared|detached`
+(default shared), `--value-weight` (0.5), `--normalize-returns` (off), and
+`--strategic-entropy` (0.0). Detached mode trains only the critic head from
+value loss. Normalization divides targets by the running population standard
+deviation of raw OOC choice returns, without centering; collection rescales
+OOC baselines to reward units. Statistics persist in trainer state in both
+resume and named checkpoints; legacy checkpoints start with scale 1. A
+normalized checkpoint requires normalization when continuing training.
+Strategic entropy adds to `--entropy` only on rest, shop, card reward, map
+and card-removal menus. Updates already log optimizer minibatch steps as
+`steps` and KL guard stopping as `early_stop` (including zero-step updates).
+
+Combat training uses `--fights`, `--mix`,
 `--holdout-fraction`, `--hp-weight`, `--shaping-hp` and `--shaping-enemy`;
 these change the objective or cohort. Resume uses `--out`'s `latest.pt`;
 branching requires copying it into a new output directory and passing
-`--resume`. The out-of-combat learning rate overrides the saved optimizer
-rate.
+`--resume`. The configured learning rate and weight decay override saved
+optimizer values in both trainers.
 
 Greedy evaluation uses exact logit argmax, including deterministic tie
 handling. `--baseline FILE` adds a paired comparison. `compare_evals.py`

@@ -48,6 +48,24 @@ so the network plays well without search.
   [fresh start](experiments/2026-10-15-fresh-start.md),
   [representation controls](experiments/2026-10-16-representation-controls.md).
 
+## Deck-strength oracle
+
+**Promising.** Score a deck by copying the game, entering the act's boss
+fight and playing it many times in the simulator. Use the score to teach
+deck-building, which full-game reward cannot.
+
+- Just before the Act 2 boss, 16 simulated full-HP fights predict the real
+  outcome with AUC 0.78 (entry HP: 0.68), independent of HP, with
+  reliability 0.91, at about 1.1 s per state.
+- The champion's decks range from never to always beating the boss at full
+  HP, though they look alike in simple counts.
+- It cannot choose between card rewards: one card moves the boss fight by
+  less than 32 simulated fights can resolve, and following its choice gained
+  nothing measurable ([oracle options](experiments/2026-10-20-oracle-options.md)).
+- Next: learn a deck-value network from oracle scores to pool information
+  across decisions; find which choices make decks strong.
+- [Deck oracle page](experiments/2026-10-20-deck-oracle.md).
+
 ## Out-of-combat PPO with macro credit
 
 **Working, now plateaued.** Freeze the combat network, treat everything

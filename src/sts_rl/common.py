@@ -69,12 +69,14 @@ def load_policy(path: str | Path) -> tuple[torch.nn.Module, dict[str, Any]]:
 
 def save_policy(path: str | Path, model: torch.nn.Module, template: dict[str, Any], *,
                 metadata: dict[str, Any], optimizer: torch.optim.Optimizer | None = None,
-                step: int = 0, rng: Any = None) -> None:
+                step: int = 0, rng: Any = None, trainer_state: dict[str, Any] | None = None) -> None:
     """Full loadable checkpoint (same format as sts_policy), atomic replace."""
     payload = dict(template)
     payload["model_state"] = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
     payload["optimizer_state"] = optimizer.state_dict() if optimizer is not None else None
     payload["step"] = step
+    if trainer_state is not None:
+        payload["trainer_state"] = trainer_state
     from .recording import capture_rng, file_identity
     inherited = template.get('metadata', {})
     payload['metadata'] = {'encoder_version': inherited.get('encoder_version', 'public_candidate_v2'),

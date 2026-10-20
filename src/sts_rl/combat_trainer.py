@@ -41,6 +41,7 @@ class CombatTrainConfig:
     epochs: int = 3
     minibatch: int = 4096
     lr: float = 1e-4
+    weight_decay: float = 0.0
     clip: float = 0.2
     entropy: float = 0.0
     value_weight: float = 0.25
@@ -171,7 +172,8 @@ def train(cfg: CombatTrainConfig, *, resume: bool = False) -> None:
     start = {k: v.clone() for k, v in model.state_dict().items()}
     for name, p in model.named_parameters():
         p.requires_grad_(name.startswith("combat."))
-    optimizer = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=cfg.lr)
+    optimizer = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=cfg.lr,
+                                  weight_decay=cfg.weight_decay)
     first, steps_total = 1, 0
     latest = out / "latest.pt"
     run_record = begin_run(out, {**asdict(cfg), 'resume': resume},
@@ -185,6 +187,7 @@ def train(cfg: CombatTrainConfig, *, resume: bool = False) -> None:
         saved_lr = optimizer.param_groups[0]["lr"]
         for group in optimizer.param_groups:
             group["lr"] = cfg.lr
+            group["weight_decay"] = cfg.weight_decay
         first, steps_total = state["iteration"] + 1, state["steps_total"]
         log.emit({"event": "resume", "iteration": state["iteration"], "saved_lr": saved_lr, "lr": cfg.lr,
                   'config': asdict(cfg), 'run_record': run_record, 'rng_restored': restore_rng(state, rng)})

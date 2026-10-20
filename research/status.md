@@ -1,15 +1,24 @@
 # Status
 
-**Updated 20 October 2026, 01:10 BST.** Nothing is running yet.
+**Updated 20 October 2026, 01:30 BST.**
 
-The [representation controls](experiments/2026-10-16-representation-controls.md)
-study is finished and written up. Its outputs, including the analysis report,
-are in run `representation_controls_20261016` in the worktree
-`~/.codex/worktrees/representation-controls/SlayTheSpireAI`. The study's
-queue runner (`queue_runner.py _run` there) is idle, as are two older ones in
-the `4a3c` and `slay-spire-rl-debug` worktrees.
+Running:
+
+- **Codex task 2, batched game runner** (branch `nonllm/throughput`, worktree
+  `.claude/worktrees/nonllm-throughput`). Log:
+  `codex/task2.log` in Claude's session scratchpad. Stop by ending the
+  `codex exec` process (find it with `ps -eo pid,args | grep codex`).
+
+Waiting for review:
+
+- **Codex task 1, environment step speed** (branch `env/fast-step`, worktree
+  `.claude/worktrees/env-fast-step`, uncommitted). Claude reviews, re-runs
+  tests, then opens a pull request to `main`.
+
+Idle: the representation-controls queue runner and two older ones in the
+`4a3c` and `slay-spire-rl-debug` worktrees.
 
 ## Next
 
-Start the throughput work (Codex), then the deck-strength oracle spike
-(Claude), as listed in the [README](README.md).
+Review and land both throughput tasks, then the oracle's option test and
+PPO hygiene, as listed in the [README](README.md).
