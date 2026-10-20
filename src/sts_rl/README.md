@@ -95,6 +95,9 @@ logit gaps for every difference.
 Timing includes diagnostic comparisons. It saves each configuration before
 starting the next and reports when the seven-process rate falls below 4.5
 games per second (1.5 times the approximate existing seven-lane rate).
+Measured on 20 October 2026 on Sid's laptop with environment 0.1.5.1 and the
+champion: 7 processes of 32 games made 18.8 games per second, against 5.3
+for seven per-decision evaluator processes; one process made 3.8.
 To finish a time-limited benchmark without repeating its slow baseline, pass
 `--skip-existing --single-records PREVIOUS/batched_p1_k1.json` with the same
 policy and world arguments and a fresh output directory.

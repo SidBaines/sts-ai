@@ -23,7 +23,11 @@ what failed. Commands and module usage: [src/sts_rl/README.md](../../src/sts_rl/
 - **Evaluation must be an exact argmax** (`evaluate(mode="greedy")`). Logit-scaled
   "greedy" sampling breaks exact ties (duplicate card copies) randomly, and the
   run diverges chaotically, so results become irreproducible. Argmax results
-  are identical across worker counts.
+  of the per-decision evaluator are identical across worker counts. The
+  batched evaluator (`fast_eval.py`) is reproducible only for a fixed
+  `--games-per-process` and `--processes`: batching can flip exact ties
+  between equivalent actions. With one game per process it reproduces the
+  per-decision evaluator exactly. Compare arms only at identical settings.
 - `dashboard.py` (rebuilt 2026-10-13; `dashboard.py restart` after edits) shows the win set first, then active jobs and key runs (`RUN_INFO`; others archived). It updates charts in place, polls
   `/api/state?since=<runs_sig>&max_points=N`, and pauses while the tab is hidden.
   Don't go back to destroying and recreating charts on every poll. Chrome
@@ -85,8 +89,11 @@ what failed. Commands and module usage: [src/sts_rl/README.md](../../src/sts_rl/
   tests included.** The runner pauses its jobs on battery and resumes them on
   AC. An ad-hoc `nohup` job keeps draining the battery, and a hand-rolled
   resume watcher dies with the agent session. Trainers survive a long SIGSTOP
-  (worker step timeouts fire as ordinary faults on resume). Panel and search
-  helpers with long RPC timeouts are better restarted than resumed.
+  (worker step timeouts fire as ordinary faults on resume). For evaluations
+  those faults leave the cohort incomplete: re-run each affected shard whole
+  into a new folder, or use `fast_eval.py`, whose stall check ignores time the
+  whole job spent paused. Panel and search helpers with long RPC timeouts are
+  better restarted than resumed.
 - **Search helpers:** `PanelWorker.search_votes` is privileged: it keeps the
   true battle RNG streams. `search_votes_public` re-seeds them and needs
   `build_pub`. Use only the public one for anything presented as agent

@@ -1,8 +1,9 @@
 # Experiment log
 
-A running, dated record of what was run, how it went and what came out,
-newest first, kept at Sid's request from 20 October 2026. One or two lines
-per entry; numbers and conclusions live in the linked pages.
+A temporary, running record of what was run and what came out, newest
+first, kept at Sid's request from 20 October 2026, one or two lines per
+entry. It will be deleted: everything that matters is also recorded in its
+home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
