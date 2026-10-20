@@ -60,6 +60,16 @@ class GlossaryV5Test(unittest.TestCase):
         self.assertIn("deal 8 damage", card_definition("Whirlwind+", []))
         self.assertIn("Deal 21 unmodified damage", card_definition("Ritual Dagger=21", []))
 
+    def test_cached_rules_follow_relic_context_and_full_instance_name(self):
+        for relics in ([], ["Blue Candle"], ["Burning Blood"], ["Blue Candle"]):
+            definition = card_definition("Injury", relics)
+            self.assertEqual("Playable with Blue Candle" in definition, "Blue Candle" in relics)
+        for name, damage in (("Rampage=5", 13), ("Rampage=9+", 17),
+                             ("Ritual Dagger=21", 21), ("Ritual Dagger=25+", 25)):
+            self.assertIn(f"{name}: Deal {damage} unmodified damage", card_definition(name, []))
+        self.assertIn("Deal 34 damage", card_definition("Searing Blow+4", []))
+        self.assertIn("Deal 51 damage", card_definition("Searing Blow+6", []))
+
     def test_pending_optional_exhaust_selection_is_clear(self):
         text = augment(state("Selection type: EXHAUST_MANY\n"),
                        [{"index": 0, "description": "exhaust no cards"}], "combat")

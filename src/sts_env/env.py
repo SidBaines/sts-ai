@@ -8,6 +8,7 @@ import operator
 import os
 from typing import Any, Callable
 
+from sts_env._copies import copy_tree
 from sts_env._backend.glossary import BURNING_ELITE_MARKER
 
 ENVIRONMENT_VERSION = "0.1.5"
@@ -64,14 +65,16 @@ class _Episode:
                 raise SimulatorError("Native out-of-combat policy exceeded 10000 actions")
 
     def _observe(self) -> dict[str, Any]:
-        state = deepcopy(self.env.summary())
+        # The v5 adapter already returns an owned tree, including card/history
+        # containers. Copying that snapshot again adds no isolation.
+        state = self.env.summary()
         # Seeds identify episodes in info; they are not policy observation data.
         state.pop("world_seed", None)
         state.pop("combat_observation", None)
         state["observation_version"] = OBSERVATION_VERSION
         graph = self.env.map_graph()
         if graph is not None:
-            state["map"] = deepcopy(graph)
+            state["map"] = copy_tree(graph)
         if state.get("undefined_behavior_evoked"):
             raise SimulatorError("Simulator reported undefined behavior; trajectory is invalid")
         actions = [] if self.env.is_terminal() else self.env.legal_actions()
@@ -123,7 +126,7 @@ class _Episode:
                 "outcome": outcome,
                 "termination_reason": reason, "ooc_seed": self._seed_native,
                 "ooc_effective_seed": self._seed_native & 0xFFFFFFFF,
-                "native_provenance": deepcopy(getattr(self.env, "native_provenance", {}))}
+                "native_provenance": copy_tree(getattr(self.env, "native_provenance", {}))}
 
     def reset(self) -> tuple[dict[str, Any], dict[str, Any]]:
         self._advance()
@@ -308,7 +311,7 @@ class SlayTheSpireEnv:
             raise ValueError("Action must be an integer legal-action index") from exc
         if not 0 <= index < len(self._observation["legal_actions"]):
             raise ValueError(f"Action {index} is outside the current legal-action menu")
-        previous = deepcopy(self._observation)
+        previous = deepcopy(self._observation) if self.reward_fn is not None else None
         observation, reward, terminated, truncated, info = self._call("step", index)
         self._observation, self._info = deepcopy(observation), deepcopy(info)
         self._finished = terminated or truncated

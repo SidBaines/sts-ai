@@ -148,6 +148,17 @@ and upstream source are ignored; never depend on an untracked edit for a fix.
 
 ## Release verification
 
+Step-path performance can be checked without IPC using
+`PYTHONPATH=src python scripts/benchmark_env_step.py` (`--profile` adds cProfile).
+It reuses the deterministic policy and eight complete worlds recorded by
+`tests/integration/test_step_equivalence.py` before the optimization. The fixture
+checks every observation, reward, info field and episode boundary, substituting
+only source/runtime/build identity values while separately checking live identity
+reporting. These worlds cover Act 1 and Act 2, including shops, events, rest sites,
+card selections and boss relic rewards; they do not reach Act 3 or a victory.
+The optimization changes no public versions or gameplay/text output. Source
+identity still changes normally, so historical traces retain their replay boundary.
+
 Run these checks from a fresh source checkout before tagging. The build must be
 present; `STS_REQUIRE_SIMULATOR=1` prevents missing binaries from being silently
 accepted as skipped integration tests.
