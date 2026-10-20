@@ -117,5 +117,5 @@ Caveats:
   results were seen.
 - 20 Oct: full run finished in 9 minutes on 4 cores; decision rule met.
 
-Code: `experiments/2026-10-20-deck-oracle/` at commit COMMIT. Data: run
+Code: `experiments/2026-10-20-deck-oracle/` at commit `6ef9999`. Data: run
 `deck_oracle_20261020` (local), analysis in its `analysis.json`.
