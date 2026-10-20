@@ -1,5 +1,6 @@
 """Research-child native exception boundaries; Python defects still propagate."""
 from functools import wraps
+from contextlib import contextmanager
 
 from sts_env.env import SimulatorError
 
@@ -22,24 +23,26 @@ def native_call(operation, function, *args, **kwargs):
         raise SimulatorError(f"{operation}: {type(exc).__name__}: {exc}") from exc
 
 
-def install_native_guards(sts):
-    """Wrap the explicit binding calls used by reset/replay/step/search/observe.
+_GUARDED_METHODS = {
+    "GameContext": ("__init__", "copy", "legal_actions", "describe_state", "keys", "map_graph", "public_event"),
+    "BattleContext": ("__init__", "copy", "init", "exit_battle", "legal_actions", "describe_state",
+                      "public_cards", "public_player", "public_relics", "public_potions", "enemies",
+                      "reseed_rngs", "search_best_action"),
+    "GameAction": ("execute", "describe"),
+    "BattleAction": ("execute", "describe"),
+    "Agent": ("__init__", "seed", "select_out_of_combat_action", "preview_out_of_combat_action"),
+}
 
-    Installed once, only inside FreshPanelEpisode's disposable child. Objects
-    retain their real native types, including GameContext.copy and init inputs.
+
+def install_native_guards(sts):
+    """Wrap explicit native boundaries, retaining the real native object types.
+
+    Disposable children install once. Direct runners use native_guard_scope so
+    callers outside a run retain the native module's original exception API.
     """
     if getattr(sts, "_fresh_native_guards", False):
         return
-    methods = {
-        "GameContext": ("__init__", "copy", "legal_actions", "describe_state", "keys", "map_graph", "public_event"),
-        "BattleContext": ("__init__", "copy", "init", "exit_battle", "legal_actions", "describe_state",
-                          "public_cards", "public_player", "public_relics", "public_potions", "enemies",
-                          "reseed_rngs", "search_best_action"),
-        "GameAction": ("execute", "describe"),
-        "BattleAction": ("execute", "describe"),
-        "Agent": ("__init__", "seed", "select_out_of_combat_action", "preview_out_of_combat_action"),
-    }
-    for name, names in methods.items():
+    for name, names in _GUARDED_METHODS.items():
         cls = getattr(sts, name)
         for method in names:
             original = getattr(cls, method)
@@ -49,3 +52,25 @@ def install_native_guards(sts):
 
             setattr(cls, method, wraps(original)(guarded))
     sts._fresh_native_guards = True
+
+
+@contextmanager
+def native_guard_scope(sts):
+    """Temporarily install guards when sharing an interpreter with other code."""
+    if getattr(sts, "_fresh_native_guards", False):
+        yield
+        return
+    originals = {(getattr(sts, cls), name): getattr(getattr(sts, cls), name)
+                 for cls, names in _GUARDED_METHODS.items() for name in names}
+    had_flag = hasattr(sts, "_fresh_native_guards")
+    previous_flag = getattr(sts, "_fresh_native_guards", None)
+    try:
+        install_native_guards(sts)
+        yield
+    finally:
+        for (cls, name), original in originals.items():
+            setattr(cls, name, original)
+        if had_flag:
+            sts._fresh_native_guards = previous_flag
+        elif hasattr(sts, "_fresh_native_guards"):
+            del sts._fresh_native_guards

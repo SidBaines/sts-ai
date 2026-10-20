@@ -16,6 +16,7 @@ experiment folders under the code-placement convention.
 | `common` | Workers, checkpoints, public menu filters and tasks; contains historical study defaults that callers must override. |
 | `recording` | Launch snapshots, input identities, resumable optimizer/random state and compressed collection records. |
 | `evaluate`, `parallel_collect` | Fixed-world evaluation, paired comparisons and persistent parallel collectors. |
+| `batched_runner` | In-process greedy game batches and spawned runners with decision-progress timeouts and worker recovery. |
 | `panel`, `teacher` | Privileged scratch-fight panels and an out-of-combat afterstate teacher. |
 | `ooc_trainer`, `combat_trainer`, `distill` | Proximal policy optimization (PPO) for one phase, or supervised distillation with rehearsal; the other phase stays frozen by default. |
 
@@ -54,6 +55,49 @@ export PYTHONPATH=src
 logs live under `data/rl_runs/<queue name>/`; trainer artifacts follow
 `--out`. Use the same queue wrapper and explicit build selection for all heavy
 commands below.
+
+## Batched greedy evaluation
+
+`fast_eval.py` accepts the same champion and optional `--combat` / `--ooc`
+replacements as `controlled_eval.py --mode eval`. Each spawned process owns its
+policy and several native games. The output directory must be new or empty;
+use an artifact directory distinct from the queue's log directory.
+
+```sh
+.venv/bin/python scripts/rl/fast_eval.py --checkpoint MODEL.pt \
+  --world-start 91001000000 --n 256 --processes 7 --games-per-process 8 \
+  --out data/rl_runs/fast-eval/artifacts
+.venv/bin/python scripts/rl/benchmark_batched_runner.py --checkpoint MODEL.pt \
+  --world-start 91001000000 --n 256 --processes 7 \
+  --reference EXISTING_EVAL/summary.json --out data/rl_runs/fast-benchmark/artifacts
+```
+
+The evaluator writes per-world records and original outcome totals in
+`summary.json`, plus configuration, git commit, native identity and checkpoint
+SHA-256s in `run.json`. The run record includes K (`--games-per-process`), the
+process count and the round-robin world assignment to each process. Cuts (4,096
+decisions), simulator errors and timeouts never count as losses. A simulator
+error faults its world and retires the process; each in-flight peer restarts
+once. A world in flight during a second process failure becomes a fault. Each
+record and the summary include `requeues` counts. The timeout defaults to 120
+seconds without a completed decision per process, excluding long gaps when the
+parent itself was paused. Partial snapshots on process faults are diagnostic.
+
+Use `run_in_process(seeds, policy, games_per_process=K)` for direct library use;
+it provides no native crash or timeout containment. K=1 reproduces the
+per-decision evaluator exactly. Larger batches can change near-tied logits
+through floating point rounding. Two evaluations are directly comparable only
+with identical K and process count, alongside the same policy and ordered world
+cohort: splitting worlds across processes changes which games share a forward
+pass. Retries can also change batch composition. The benchmark compares every
+K=8/32 trajectory with K=1 and records the first differing decision and both
+logit gaps for every difference.
+Timing includes diagnostic comparisons. It saves each configuration before
+starting the next and reports when the seven-process rate falls below 4.5
+games per second (1.5 times the approximate existing seven-lane rate).
+To finish a time-limited benchmark without repeating its slow baseline, pass
+`--skip-existing --single-records PREVIOUS/batched_p1_k1.json` with the same
+policy and world arguments and a fresh output directory.
 
 ## Training, evaluation and collection
 
