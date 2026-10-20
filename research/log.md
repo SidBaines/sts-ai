@@ -6,6 +6,16 @@ per entry; numbers and conclusions live in the linked pages.
 
 ## 20 October 2026
 
+- **Oracle option test started:** every option at 160 Act 2 card rewards
+  scored with 32 common-seed boss fights, to see whether the oracle can
+  choose, not just measure. The oracle moved into the library
+  (`src/sts_rl/deck_oracle.py`, with a simulator test).
+  [Page](experiments/2026-10-20-oracle-options.md).
+- **Environment step 3.1x faster, byte-identical** (Codex task 1, reviewed by
+  Claude). 1,119 -> 356 µs per decision; old and new code agree on all 18,344
+  steps of 40 complete champion games (22 reaching Act 3, 2 wins); 266 tests
+  pass. End to end with the policy, 2.5x faster. Pull request
+  [#8](https://github.com/SidBaines/sts-ai/pull/8) to `main`, awaiting Sid.
 - **Deck-strength oracle spike: worth building on.** Simulated Act 2 boss
   fights (16 per state, full HP, champion's combat network) from the last
   decision before the boss predict the real outcome with AUC 0.78 against
@@ -13,8 +23,6 @@ per entry; numbers and conclusions live in the linked pages.
   −0.09], reliability 0.91, independent of HP. 300 worlds, 9 minutes on 4
   cores. Decks differ a lot in strength after all; next is whether it
   separates options. [Page](experiments/2026-10-20-deck-oracle.md).
-- **Codex task 1 finished** (environment step speed, branch `env/fast-step`);
-  review in progress.
 - **Codex tasks started** for throughput: (1) remove redundant deep copies and
   speed up text rendering in the environment step, output byte-identical
   (branch `env/fast-step` from `main`); (2) a batched in-process game runner
