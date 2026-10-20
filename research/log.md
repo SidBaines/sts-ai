@@ -15,10 +15,15 @@ home file (experiment pages, the results ledger, strategies, README).
   near-zero probability on the declined ones. Boss card rewards are skipped
   72% of the time in Act 1 and 58% in Act 2. Figure and CSVs in
   `figures/2026-10-20-power-picks/`.
-- **In-process PPO collection started** with Codex on
-  `nonllm/batched-collection` (morning): an in-process game worker behind
-  `collect_rollouts`, `--in-process-games`, collector restarts, exactness
-  test against the subprocess path, and a throughput measurement.
+- **In-process PPO collection merged** (`nonllm/batched-collection`, built by
+  Codex, reviewed by two Claude reviewers). `--in-process-games` runs the
+  games inside each collector process with no native RPC; at the same slot
+  count it reproduces the subprocess path exactly (2,911 transitions, 8
+  episodes, 8 greedy records). On 256 games, 12 collectors of 32 in-process
+  games make 27.5 games/s, against 13.1 for 12 collectors of 2 subprocess
+  workers and 8.6 for the 4-collector recipe (3.2 times). A dead collector is
+  restarted once; a native crash now takes a whole collector's games with it.
+  Numbers in `src/sts_rl/README.md`.
 - **Instruction updates agreed with Sid.** `log.md` is now a recognised but
   temporary document (`main` via pull request
   [#7](https://github.com/SidBaines/sts-ai/pull/7), `ws/nonllm`, `ws/llm`),

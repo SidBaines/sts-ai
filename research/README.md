@@ -26,13 +26,14 @@ in the [results ledger](results.md).
 
 ## Now
 
-In-process PPO collection (games inside the collector process, many per
-process, one batched forward per tick) is being built on
-`nonllm/batched-collection`. The [power picks](experiments/2026-10-20-power-picks.md)
-study finished on 20 October: powers are not under-picked as a class; the
-champion's power count is set by whether three favourite powers are offered,
-and it skips about two thirds of boss card rewards. See [status](status.md)
-and the temporary [experiment log](log.md).
+Nothing is running. Two things landed on 20 October: in-process PPO
+collection (`--in-process-games`: games inside each collector process, no
+native RPC; 27.5 games/s on 12 collectors against 8.6 for the old recipe,
+with identical games at equal slot counts), and the
+[power picks](experiments/2026-10-20-power-picks.md) study: powers are not
+under-picked as a class; the champion's power count is set by whether three
+favourite powers are offered, and it skips about two thirds of boss card
+rewards. See [status](status.md) and the temporary [experiment log](log.md).
 
 ## Next
 
@@ -44,8 +45,8 @@ and the temporary [experiment log](log.md).
    measures whole decks well but cannot separate single card rewards. Train
    a deck-value network on oracle scores from many states, then use it to
    score options. To discuss with Sid.
-3. **Out-of-combat PPO with the hygiene options,** at larger batches once
-   in-process collection lands: detached critic, strategic-menu entropy,
+3. **Out-of-combat PPO with the hygiene options,** at larger batches with
+   in-process collection: detached critic, strategic-menu entropy,
    checkpoint choice on 4,096 worlds.
 4. Confirm one old-encoder combat student, chosen in advance, on the
    confirmation worlds before promoting it.
