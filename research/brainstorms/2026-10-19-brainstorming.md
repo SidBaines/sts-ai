@@ -353,7 +353,27 @@ Sid's responses to the first version of this document:
 
 Decisions and notes added as the discussion continues:
 
-- (to be filled in)
+- 20 October: Sid approved carrying out the plan in order: write up
+  representation controls, start the throughput work with Codex, run the
+  oracle spike, then PPO hygiene. Sid approved the `brainstorms/` document
+  type, now in `CLAUDE.md`.
+- Correction to section 4D: a profile of champion games puts the realistic
+  gain from Python-side changes at about 2 to 3 times per core, not 3 to 10.
+  Per decision through the worker process: about 0.58 ms in the environment
+  step (over half of it `copy.deepcopy` of the observation and act map, plus
+  observation text rendering), 0.32 ms round trip to the worker process,
+  0.19 ms encoding and 0.20 ms network forward. On an idle machine one
+  evaluator process makes about 635 decisions per second; seven at once fall
+  to about 285 each, so contention matters as much as per-process speed.
+- Throughput is two Codex tasks: removing redundant copies and text work from
+  the environment step (branch `env/fast-step` from `main`, for a pull
+  request and a new environment tag), and a batched in-process game runner
+  for evaluation (branch `nonllm/throughput`). Claude reviews the diffs and
+  re-runs tests and benchmarks instead of using reviewer subagents, following
+  Sid's earlier preference.
+- The oracle needs no native patch: the game state can be copied, the act's
+  boss fight entered and played from any out-of-combat decision. The spike
+  is the [deck-oracle experiment](../experiments/2026-10-20-deck-oracle.md).
 
 ## Appendix: analyses behind the numbers
 
