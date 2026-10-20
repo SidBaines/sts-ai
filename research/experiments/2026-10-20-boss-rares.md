@@ -1,9 +1,10 @@
 # Boss rares: does taking a rare at boss card rewards help the champion?
 
 **Status:** finished 20 October 2026. **Verdict:** taking Demon Form whenever
-it is offered wins more games (179 against 156 of 4,096, p = 0.010); forcing
-any rare at boss rewards helps the boss fight and the floor reached but not
-clearly the win count.
+it is offered wins more games (179 against 156 of 4,096, p = 0.010, and 230
+against 198 with the better combat head, p = 0.001); forcing any rare at
+boss rewards helps the boss fight and the floor reached but not clearly the
+win count.
 
 ## Question
 
@@ -61,6 +62,23 @@ reproduces the study's 156 wins exactly.
   rares is a mixed bag.
 - Every arm reaches further and passes the Act 2 boss more often; the boss
   pass gain is the clearest effect of all.
+**With the better combat head, Demon Form is worth more** (added after the
+main result, as a test of the reading that the out-of-combat head learned
+its habits against a weak combat player; exploratory). The same worlds,
+with the old-encoder combat student (`fit_old_combat_lr1e3_v1/best.pt`) in
+place of the champion's combat head:
+
+| Arm | Wins (rate) | Discordant, baseline only / arm only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
+|---|---:|---:|---:|---|---|
+| Student combat, champion out-of-combat (baseline) | 198 (4.8%) | 105 / 147 against the champion | 0.010 | +0.93 [+0.60, +1.26] against the champion | +3.9 points [+1.8, +6.0] |
+| Student combat, take Demon Form | 230 (5.6%) | 30 / 62 | 0.001 | +0.15 [+0.03, +0.27] | +1.5 points [+0.7, +2.4] (3,142 worlds) |
+| Student combat, both rules | 224 (5.5%) | 108 / 134 | 0.11 | +0.26 [+0.03, +0.48] | +3.5 points [+1.9, +5.2] (3,001 worlds) |
+
+The Demon Form rule gains 32 wins with the student's combat against 23 with
+the champion's (62 worlds won only with the rule against 48), so the card is
+worth more to the better combat player. Student combat plus the rule wins
+5.6% against the champion's 3.8% on the same worlds.
+
 - A first pass of the same four arms through `scripts/rl/eval_policy.py`
   gave the same directions, weaker: wins 70, 74, 79 and 72 of 4,096 (McNemar
   p = 0.74, 0.11 and 0.91), floors +0.15 [−0.04, +0.35], +0.25 [+0.15,
@@ -76,12 +94,13 @@ reproduces the study's 156 wins exactly.
 
 Declining Demon Form is a real cost: forced to take it, the champion wins
 0.6 points more (3.8% to 4.4%) on the same worlds, passes the Act 2 boss
-2.4 points more often, and reaches 0.2 floors further. This is the first
+2.4 points more often, and reaches 0.2 floors further; with the better
+combat head the gain grows to 0.8 points (4.8% to 5.6%). This is the first
 single deck-building habit shown to change the win count, and it supports
-the reading that the out-of-combat head is locked into choices that a
-better-informed policy would not make. Forcing any rare at boss rewards is
-not the same lever: it helps the next boss fight but trades away enough
-elsewhere that wins rise only within noise.
+the reading that the out-of-combat head is locked into choices it learned
+against a weaker combat player. Forcing any rare at boss rewards is not the
+same lever: it helps the next boss fight but trades away enough elsewhere
+that wins rise only within noise.
 
 Caveats:
 - DEV worlds reused: a distilled rule must be confirmed on the confirmation
@@ -90,13 +109,11 @@ Caveats:
   keep it.
 - The batched evaluator at 32 games per process can flip exact ties between
   equivalent actions; all arms share the setting.
-- The gain is specific to this combat head; whether Demon Form is worth more
-  with a better combat player is being tested.
+- The combat-head comparison was added after the main result and is
+  exploratory; the two combat heads were not chosen in advance for it.
 
 ## Next
 
-- Test the co-adaptation reading: the same overlays with the old-encoder
-  combat student in place of the champion's combat head.
 - Distil "take Demon Form" into the out-of-combat head
   (`collect_rule_labels.py`, `distill_ooc.py`), confirm on confirmation
   worlds, and continue PPO from it with the potion filter on.
@@ -105,6 +122,8 @@ Caveats:
 
 ## Log
 
+- 20 Oct, 12:55: the combat-head arms finished; Demon Form gains more with
+  the old-encoder combat student (230 against 198 wins).
 - 20 Oct, 12:34: all four study-protocol arms finished; Demon Form passes
   the decision rule.
 - 20 Oct, 12:04: the first pass (per-decision evaluator) showed the champion

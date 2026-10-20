@@ -27,11 +27,11 @@ in the [results ledger](results.md).
 ## Now
 
 Running: [large-batch PPO](experiments/2026-10-20-large-batch-ppo.md)
-(the champion's recipe at 3,072 games per iteration) and the boss-rares
-rules with the better combat head. Finished on 20 October:
+(the champion's recipe at 3,072 games per iteration). Finished on 20 October:
 [boss rares](experiments/2026-10-20-boss-rares.md): forcing Demon Form
-whenever offered wins 179 against 156 of 4,096 games (p = 0.010), the first
-single deck-building habit shown to change wins;
+whenever offered wins 179 against 156 of 4,096 games (p = 0.010), and 230
+against 198 with the old-encoder combat head, the first single deck-building
+habit shown to change wins;
 [power picks](experiments/2026-10-20-power-picks.md): powers are not
 under-picked as a class, the champion's power count is set by whether three
 favourite powers are offered, and it skips about two thirds of boss card

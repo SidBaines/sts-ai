@@ -7,6 +7,11 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 20 October 2026
 
+- **Co-adaptation test finished**, 12:55: with the old-encoder combat
+  student in place of the champion's combat head, the Demon Form rule wins
+  230 against 198 of 4,096 (p = 0.001), a larger gain than with the
+  champion's combat (179 against 156); student plus rule is 5.6% against the
+  champion's 3.8%.
 - **Boss rares finished** ([page](experiments/2026-10-20-boss-rares.md)),
   12:34: on the 4,096 second-DEV worlds under the study protocol, forcing
   Demon Form wins 179 against the champion's 156 (p = 0.010, +0.21 floors,
