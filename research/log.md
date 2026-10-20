@@ -6,6 +6,28 @@ per entry; numbers and conclusions live in the linked pages.
 
 ## 20 October 2026
 
+- **What makes a deck strong (exploratory).** Across the 300 oracle decks,
+  counts and boss explain 24% of deck strength; power cards matter most
+  (r = +0.31; Demon Form +0.21, Juggernaut +0.15, Inflame +0.11 simulated win
+  share), then potions held (+0.25). Correlational only.
+  [Deck-oracle page](experiments/2026-10-20-deck-oracle.md).
+- **Batched runner benchmark (host, 256 worlds).** 7 processes x 32 games:
+  6.68 games/s against 5.31 for the existing evaluator on 7 processes
+  (1.26x). One process: 1.19 -> 1.32 games/s with batching. The environment
+  step dominates, which task 1 cuts 3x; the combination is to be measured.
+  Batch-size divergences (7 of 256 worlds) were between equivalent actions:
+  same lengths, floors and outcomes.
+- **PPO hygiene started (Codex task 3,** branch `nonllm/ppo-hygiene`): explicit
+  weight decay (default 0), lambda default 1, an option to keep the value loss
+  out of the actor's trunk, optional return normalisation, and an entropy
+  bonus on strategic menus only. Options and tests only; no training.
+- **Batched game runner reviewed (Codex task 2).** At one game per process it
+  reproduces all 256 recorded champion games exactly; at four per process one
+  game in eight diverges at a near-tie (logit gap 5 x 10^-7). Three fixes
+  requested: pause-aware stall detection (a battery pause would otherwise
+  fault every in-flight game), re-running healthy peers instead of faulting
+  them, and recording the batch size and process count. Host benchmark
+  running.
 - **Oracle option test: the oracle cannot choose card rewards.** 160 Act 2
   card rewards, 4 options x 32 common-seed boss fights: best option clearly
   beats the champion's in 12% (rule 20%); gain from following it +0.002 boss

@@ -74,6 +74,17 @@ picture as boss damage.
 - Cost: about 0.07 s per simulated fight on one core, so 16 fights cost about
   1.1 s per evaluated state.
 
+**What goes with a strong deck (exploratory, added after the results).**
+Joining the oracle scores with the decks replayed at the Act 2 boss for the
+same 300 worlds: deck counts and boss identity explain 24% of the variance
+(cross-validated R²); adding which of 42 common cards and 72 relics are
+present explains no more (0.14, overfitting). The strongest simple signal is
+the number of power cards (correlation +0.31), then potions held (+0.25).
+Decks with Demon Form score +0.21 in simulated win share (24 decks),
+Juggernaut +0.15 (82), Inflame +0.11 (103); decks with Immolate −0.15 (43)
+and Flex −0.10 (27). These are correlations across runs, open to confounding
+by run luck, and many were compared.
+
 ## Conclusion
 
 Deck strength varies widely between the champion's games, and a cheap,
@@ -116,6 +127,8 @@ Caveats:
 - 20 Oct: boss damage chosen as the decision rule's score before any full-run
   results were seen.
 - 20 Oct: full run finished in 9 minutes on 4 cores; decision rule met.
+- 20 Oct: added the exploratory deck-feature analysis after the card-reward
+  option test failed.
 
 Code: `experiments/2026-10-20-deck-oracle/` at commit `6ef9999`. Data: run
 `deck_oracle_20261020` (local), analysis in its `analysis.json`.
