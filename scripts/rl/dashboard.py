@@ -1,18 +1,28 @@
 #!/usr/bin/env python3
 """Read-only live dashboard for data/rl_runs (http://127.0.0.1:8791).
 
-    dashboard.py serve [--port 8791]     run in foreground
-    dashboard.py start                   launch detached (idempotent)
-    dashboard.py restart                 stop the running server, then start
+    dashboard.py serve [--port 8791] [--root DIR ...]    run in foreground
+    dashboard.py start [--port 8791] [--root DIR ...]    launch detached (idempotent)
+    dashboard.py restart [--port 8791] [--root DIR ...]  stop that port, then start
+
+For a separate port and worktree:
+    dashboard.py start --port 8795 --root /other/worktree/data/rl_runs
+
+The default data/rl_runs and every extra --root are read together, including
+each queue and runner heartbeat. Runs may be direct children or nested two
+directories deep, named relative to their root (e.g. batch/recipe).
 
 What it shows, most important first:
   1. Win rate on the 4,096-world win set (data/rl_runs/win_eval/*.json), with
      Wilson 95% intervals. The objective is an A0 Act 3 boss win.
   2. Fresh-world confirmations (data/rl_runs/fresh_eval/*.json).
-  3. Jobs that are running, pending or paused now, with trainer progress.
+  3. Jobs that are running, pending or paused now, with trainer health and ETA
+     from the last three iteration times (including any pauses).
   4. Training runs: the key lineage (RUN_INFO) and anything active by default;
      every other run is "archived" behind a toggle.
-  5. Charts for the selected runs.
+  5. Charts for the selected runs: floors, wins, boss outcomes, behaviour,
+     gradient cosine, entropy, KL, value loss, iteration/collect/update time,
+     and collection versus evaluation win rates.
 
 Labels for runs and eval files live in RUN_INFO and EVAL_LABELS below. Add an
 entry when a run or eval matters. Unlisted runs are archived, and unlisted eval
@@ -23,6 +33,7 @@ file has changed since <sig>, so an idle poll is ~1-2 KB.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -42,6 +53,9 @@ PORT = 8791
 
 # Key runs, shown by default (in this order). Everything else is archived unless active.
 RUN_INFO = {
+    "large_batch_20261020/recipe": "Large batch: champion recipe at 3,072 games/iteration (potions visible out of combat during collection and eval)",
+    "large_batch_20261020/recipe_hidden": "Large batch: same recipe with --hide-ooc-potions (deployment protocol)",
+    "large_batch_20261020/hygiene_hidden": "Large batch: recipe + hide-ooc-potions + detached critic, normalised returns, strategic entropy 0.01",
     "ooc_r2_lam1": "Round 2: smith + elite distilled → PPO λ=1 (current best lineage)",
     "ooc_pfd_lam1": "Smith distilled → PPO λ=1 (keeps smithing, improves)",
     "ooc_pfd_lam099": "Smith distilled → PPO λ=0.99",
@@ -66,9 +80,10 @@ EVAL_LABELS = {
 }
 KEEP_TRAIN = ("iteration", "collect_floor", "collect_wins", "games", "grad_cosine_half", "approx_kl", "entropy",
               "smith_rate", "map_elite", "card_skip_rate", "shop_potion", "fights_per_run", "iteration_seconds",
-              "collect_win", "faults")
+              "collect_win", "faults", "value_loss", "clip_fraction", "early_stop", "collector_restarts",
+              "update_seconds", "collect_seconds", "ooc_choice_transitions", "return_scale", "steps")
 KEEP_EVAL = ("iteration", "n", "mean_floor", "se", "wins", "act1_boss_pass", "act2_boss_pass", "act3_boss_reach",
-             "act3_boss_pass", "paired")
+             "act3_boss_pass", "paired", "act2_boss_reach", "faults", "collector_restarts")
 ACTIVE = ("running", "pending", "paused")
 _CACHE: dict[Path, tuple[tuple[int, int], object]] = {}
 
@@ -100,15 +115,18 @@ def _parse_log(log: Path) -> dict:
         except json.JSONDecodeError:
             continue
         event = r.get("event")
-        if event in ("start", "resume") and r.get("config"):
-            config = r["config"]  # a resume may change iterations (extended runs)
+        if event in ("start", "resume"):
+            if r.get("config"):
+                config = r["config"]  # a resume may change iterations (extended runs)
+            done = False
         elif event == "train":
             train.append({k: r.get(k) for k in KEEP_TRAIN if k in r})
         elif event == "eval":
             evals.append({k: r.get(k) for k in KEEP_EVAL if k in r})
         elif event == "done":
             done = True
-    return {"config": {k: config.get(k) for k in ("iterations", "notes", "gae_lambda", "seed", "checkpoint")},
+    return {"config": {k: config[k] for k in ("iterations", "games", "notes", "gae_lambda", "seed", "checkpoint",
+                                             "hide_ooc_potions") if k in config},
             "train": train, "evals": evals, "done": done, "mtime": log.stat().st_mtime}
 
 
@@ -152,77 +170,108 @@ def _thin(rows: list, cap: int) -> list:
     return [rows[round(i * last / (cap - 1))] for i in range(cap)]
 
 
-def _out_dir(cmd: list[str]) -> str | None:
-    return Path(cmd[cmd.index("--out") + 1]).name if "--out" in cmd and cmd.index("--out") + 1 < len(cmd) else None
+def _out_dir(cmd: list[str], root: Path | None = None) -> str | None:
+    if "--out" not in cmd or cmd.index("--out") + 1 == len(cmd):
+        return None
+    path = Path(cmd[cmd.index("--out") + 1]).expanduser()
+    try:
+        return path.resolve().relative_to((root or RUNS).resolve()).as_posix()
+    except ValueError:
+        return path.name
 
 
-def state(max_points: int | None = None, since: str | None = None) -> dict:
+def _progress(run: dict, now: float) -> dict:
+    """Use iteration numbers so resumed logs need not contain the whole history."""
+    train = run["train"]
+    done = max((r.get("iteration", 0) for r in train), default=0)
+    total = run["config"].get("iterations")
+    times = [r["iteration_seconds"] for r in train[-3:]
+             if isinstance(r.get("iteration_seconds"), (int, float))
+             and math.isfinite(r["iteration_seconds"]) and r["iteration_seconds"] > 0]
+    mean = sum(times) / len(times) if times else None
+    remaining = max(0, total - done) * mean if total is not None and mean is not None else None
+    return {"iterations_done": done, "mean_iteration_seconds": mean, "remaining_seconds": remaining,
+            "eta": now + remaining if remaining and not run["done"] else None,
+            "last_train": train[-1] if train else None, "last_eval": run["evals"][-1] if run["evals"] else None}
+
+
+def state(max_points: int | None = None, since: str | None = None, extra_roots=()) -> dict:
     now = time.time()
-    queue = _read_json(RUNS / "queue.json", {"runs": []}).get("runs", [])
-    status = _read_json(RUNS / "runner_status.json", None)
+    roots = list(dict.fromkeys(Path(p).expanduser().resolve() for p in (RUNS, *extra_roots)))
     sig: list[str] = []
     runs: dict[str, dict] = {}
-    for directory in sorted(p for p in RUNS.iterdir() if p.is_dir() and not p.name.startswith("_")) if RUNS.exists() else []:
-        log = directory / "log.jsonl"
-        if not log.exists():
-            continue
-        try:
-            key, run = _cached(log, _parse_log)
-        except FileNotFoundError:
-            continue
-        sig.append(f"{directory.name}:{key[0]}:{key[1]}")
-        runs[directory.name] = run
-    win = _eval_table(RUNS / "win_eval", sig)
-    fresh = _eval_table(RUNS / "fresh_eval", sig)
+    run_keys = {}
+    queue, runners, win, fresh = [], [], [], []
+    for root in roots:
+        sig.append(str(root))
+        queue.extend((root, q) for q in _read_json(root / "queue.json", {"runs": []}).get("runs", []))
+        runners.append({"root": str(root), "status": _read_json(root / "runner_status.json", None)})
+        logs = sorted([*root.glob("*/log.jsonl"), *root.glob("*/*/log.jsonl")])
+        for log in logs:
+            name = log.parent.relative_to(root).as_posix()
+            if any(part.startswith("_") for part in log.parent.relative_to(root).parts):
+                continue
+            try:
+                key, run = _cached(log, _parse_log)
+            except FileNotFoundError:
+                continue
+            sig.append(f"{log}:{key[0]}:{key[1]}")
+            run_key = name if name not in runs else f"{name} [{root}]"
+            run_keys[root, name] = run_key
+            runs[run_key] = dict(run, name=name, root=str(root))
+        win.extend(dict(row, root=str(root)) for row in _eval_table(root / "win_eval", sig))
+        fresh.extend(dict(row, root=str(root)) for row in _eval_table(root / "fresh_eval", sig))
 
-    active = []
-    for q in queue:
+    active, history = [], {}
+    for root, q in queue:
         if q.get("status") not in ACTIVE:
+            status = q.get("status", "?")
+            history[status] = history.get(status, 0) + 1
             continue
-        out = _out_dir(q.get("cmd", []))
-        run = runs.get(out) if out else None
-        last = (run["evals"][-1] if run and run["evals"] else None)
-        active.append({"name": q["name"], "status": q["status"], "lane": q.get("lane", "main"),
-                       "elapsed": now - q["started"] if q.get("started") else None, "run": out if run else None,
-                       "progress": [len(run["train"]), run["config"].get("iterations")] if run else None,
-                       "last_eval": ({"iteration": last.get("iteration"), "mean_floor": last.get("mean_floor"),
-                                      "wins": last.get("wins"), "n": last.get("n")} if last else None)})
-    history: dict[str, int] = {}
-    for q in queue:
-        if q.get("status") not in ACTIVE:
-            history[q.get("status", "?")] = history.get(q.get("status", "?"), 0) + 1
+        out = _out_dir(q.get("cmd", []), root)
+        run_key = run_keys.get((root, out))
+        run = runs.get(run_key)
+        progress = _progress(run, now) if run else {}
+        active.append({"name": q["name"], "root": str(root), "status": q["status"], "lane": q.get("lane", "main"),
+                       "elapsed": now - q["started"] if q.get("started") else None, "run": run_key,
+                       "out": out, "progress": [progress["iterations_done"], run["config"].get("iterations")] if run else None,
+                       **progress})
     active_runs = {a["run"] for a in active if a["run"]}
-    sig.append("active:" + ",".join(sorted(active_runs)))
+    statuses = {a["run"]: a["status"] for a in active if a["run"]}
+    sig.append("active:" + json.dumps([(a["root"], a["name"], a["run"], a["status"]) for a in active]))
     state_sig = hashlib.sha1("\n".join(sig).encode()).hexdigest()[:16]
-    out = {"now": now, "runner": status, "active": active, "history": history, "sig": state_sig,
+    out = {"now": now, "runner": runners[0]["status"], "runners": runners,
+           "active": active, "history": history, "sig": state_sig,
            "runs": None, "win": None, "fresh": None}
     if since == state_sig:
         return out
-    order = list(RUN_INFO) + sorted(n for n in runs if n not in RUN_INFO)
+    priority = {name: i for i, name in enumerate(RUN_INFO)}
+    order = sorted(runs, key=lambda n: (priority.get(runs[n]["name"], len(priority)), n))
     shown = {}
     for name in order:
-        if name not in runs:
-            continue
         run = runs[name]
-        entry = {"label": RUN_INFO.get(name) or (run["config"].get("notes") or "")[:90],
-                 "key": name in RUN_INFO, "active": name in active_runs, "done": run["done"],
+        entry = {"name": run["name"], "root": run["root"],
+                 "label": RUN_INFO.get(run["name"]) or (run["config"].get("notes") or "")[:90],
+                 "key": run["name"] in RUN_INFO, "active": name in active_runs, "done": run["done"],
+                 "status": statuses.get(name, "done" if run["done"] else "stopped"), "config": run["config"],
                  "iterations": run["config"].get("iterations"), "n_train": len(run["train"]),
-                 "train": run["train"], "evals": run["evals"]}
+                 "train": run["train"], "evals": run["evals"], **_progress(run, now)}
         if max_points is not None:
             entry["train"] = _thin(entry["train"], max_points)
         shown[name] = entry
-    out.update(runs=shown, win=win, fresh=fresh)
+    out.update(runs=shown, win=sorted(win, key=lambda r: -(r["rate"] or 0)),
+               fresh=sorted(fresh, key=lambda r: -(r["rate"] or 0)))
     return out
 
 
-def state_payload(path: str) -> bytes:
+def state_payload(path: str, extra_roots=()) -> bytes:
     query = parse_qs(urlsplit(path).query)
     since = query.get("since", [""])[0] or None
     try:
         max_points = max(2, int(query["max_points"][0])) if "max_points" in query else None
     except ValueError:
         max_points = None
-    return json.dumps(state(max_points=max_points, since=since), separators=(",", ":")).encode()
+    return json.dumps(state(max_points=max_points, since=since, extra_roots=extra_roots), separators=(",", ":")).encode()
 
 
 PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>StS RL dashboard</title>
@@ -238,6 +287,7 @@ h1{font-size:20px;margin:0 0 2px}.mut{color:var(--mut)}.small{font-size:12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px;margin-top:12px}
 table{border-collapse:collapse;width:100%;font-size:13px}td,th{padding:4px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 th{color:var(--mut);font-weight:500}td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.desc{white-space:normal;min-width:200px;max-width:280px}
 .pill{padding:1px 7px;border-radius:9px;font-size:12px;border:1px solid var(--line)}
 .running{color:var(--good)}.paused{color:var(--warn)}.pending{color:var(--mut)}
 .ci{position:relative;height:10px;width:180px;background:transparent}.ci .r{position:absolute;top:3px;height:4px;background:var(--bar);border-radius:2px}
@@ -255,14 +305,21 @@ button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(-
 <div class="card"><h2>Active now</h2><div class="tw"><table id="active"></table></div><div class="mut small" id="hist"></div></div>
 <div class="card"><h2>Fresh-world confirmations (1,024 untouched worlds)</h2><div class="tw"><table id="fresh"></table></div></div>
 </div>
-<div class="card"><h2>Training runs <button id="arch">show archived</button></h2><div class="tw"><table id="runs"></table></div></div>
+<div class="card"><h2>Training runs <button id="arch">show archived</button></h2><div class="tw"><table id="runs"></table></div>
+<div class="mut small" id="protocol"></div>
+<div class="mut small">ETA uses the last three completed iteration times, including pauses; future eval time is excluded.</div></div>
 <div class="grid">
 <div class="card"><h2>Paired gain vs original (floors, ±1.96 SE; 1,024 standard worlds)</h2><canvas id="c_paired"></canvas></div>
 <div class="card"><h2>Wins per 1,024-world eval (noisy; see the win set above)</h2><canvas id="c_wins"></canvas></div>
 <div class="card"><h2>Training-time floor (sampled collection policy)</h2><canvas id="c_train"></canvas></div>
-<div class="card"><h2>Sampled behaviour: smith rate (solid), elite path rate (dashed)</h2><canvas id="c_beh"></canvas></div>
+<div class="card"><h2>Sampled behaviour: smith (solid), elite path (dashed), card skip (dotted)</h2><canvas id="c_beh"></canvas></div>
 <div class="card"><h2>Act 2 boss pass (solid), Act 3 boss reach (dashed), per eval</h2><canvas id="c_boss"></canvas></div>
 <div class="card"><h2>Learning health: half-batch gradient cosine</h2><canvas id="c_cos"></canvas></div>
+<div class="card"><h2>Entropy</h2><canvas id="c_entropy"></canvas></div>
+<div class="card"><h2>KL per update (approx_kl)</h2><canvas id="c_kl"></canvas></div>
+<div class="card"><h2>Value loss</h2><canvas id="c_value"></canvas></div>
+<div class="card"><h2>Iteration minutes (solid), collect (dashed), update (dotted)</h2><canvas id="c_time"></canvas></div>
+<div class="card"><h2>Win rate: collection (solid), eval (dashed)</h2><canvas id="c_rate"></canvas></div>
 </div>
 <script>
 const POLL_MS=30000, MAX_POINTS=400;
@@ -272,14 +329,25 @@ const prev={};
 function set(id,html){if(prev[id]!==html){document.getElementById(id).innerHTML=html;prev[id]=html}}
 function fmt(v,d=2){return v==null||v!==v?'–':Number(v).toFixed(d)}
 function pct(v,d=1){return v==null?'–':(100*v).toFixed(d)+'%'}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function dur(s){if(s==null)return'–';s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h}h${String(m).padStart(2,'0')}m`:`${m}m`}
+function rootCell(root){const label=root.replace(/\/data\/rl_runs\/?$/,'').split('/').pop();return `<td class="mut small" title="${esc(root)}">${esc(label)}</td>`}
+function progressText(r){return r.iterations_done==null?'–':`${r.iterations_done} / ${r.iterations??r.progress?.[1]??'?'} iterations`}
+function timing(r){if(r.mean_iteration_seconds==null)return'–';let text=`${fmt(r.mean_iteration_seconds,0)} s/iteration (last 3)`;
+ if(r.status==='running'&&r.eta)text+=`<br>~${dur(r.remaining_seconds)} left · finish ${new Date(r.eta*1000).toLocaleString()}`;
+ else if(['pending','paused'].includes(r.status)&&r.remaining_seconds)text+=`<br>~${dur(r.remaining_seconds)} left once resumed`;
+ return text}
+function faults(r){return (r.faults?` · faults ${r.faults}`:'')+(r.collector_restarts?` · collector_restarts ${r.collector_restarts}`:'')}
+function trainText(t){return t?`floor ${fmt(t.collect_floor)} · wins ${t.collect_wins??'–'}/${t.games??'?'}<br>cosine ${fmt(t.grad_cosine_half,3)} · KL ${fmt(t.approx_kl,4)} · entropy ${fmt(t.entropy,3)}${t.early_stop?' · early stop':''}${faults(t)}`:'–'}
+function evalText(e){return e?`u${e.iteration}: ${e.wins??'–'}/${e.n??'?'} wins · floor ${fmt(e.mean_floor)}${faults(e)}`:'–'}
 function visible(){return Object.keys(runs).filter(n=>showArchived||runs[n].key||runs[n].active)}
 function color(n){return COLORS[Object.keys(runs).indexOf(n)%COLORS.length]}
 function mk(id,ds,opts={}){const c=charts[id];
  if(c){const hidden=new Set(c.data.datasets.filter((d,i)=>!c.isDatasetVisible(i)).map(d=>d.label));ds.forEach(d=>{if(hidden.has(d.label))d.hidden=true});c.data.datasets=ds;c.update('none');return}
  charts[id]=new Chart(document.getElementById(id),{type:'line',data:{datasets:ds},options:Object.assign({animation:false,parsing:false,
   plugins:{legend:{labels:{boxWidth:10,font:{size:11}}}},scales:{x:{type:'linear',title:{display:true,text:'update'}}}},opts)})}
-function pts(a,x,y){return a.filter(r=>r[y]!=null&&r[y]===r[y]).map(r=>({x:r[x],y:r[y]}))}
+function pts(a,x,y,scale=1){return a.filter(r=>r[y]!=null&&Number.isFinite(r[y])).map(r=>({x:r[x],y:r[y]*scale}))}
+function rates(a,numerator,denominator){return a.filter(r=>r[numerator]!=null&&r[denominator]>0).map(r=>({x:r.iteration,y:100*r[numerator]/r[denominator]}))}
 function winTable(rows,id,maxHi){
  const top=rows.length?Math.max(...rows.map(r=>r.hi)):1;const W=180;
  let h='<tr><th>agent</th><th class="num">wins / n</th><th class="num">win rate</th><th>95% CI</th><th class="num">mean floor</th><th class="num">Act 2 boss pass</th><th class="num">Act 3 boss reach</th><th class="num">Act 3 boss pass</th><th class="mut">file</th></tr>';
@@ -291,23 +359,26 @@ function winTable(rows,id,maxHi){
 async function load(){
  const res=await fetch(`/api/state?max_points=${MAX_POINTS}&since=${encodeURIComponent(sig)}`,{cache:'no-store',signal:AbortSignal.timeout(20000)});
  if(!res.ok)throw new Error(`HTTP ${res.status}`);
- const s=await res.json();lastOk=s.now;const rn=s.runner;
- document.getElementById('hdr').textContent=(rn?`queue runner: heartbeat ${Math.round(s.now-rn.heartbeat)}s ago · ${rn.on_battery?'ON BATTERY: jobs paused':'AC power'}`:'queue runner not started')+` · updated ${new Date(s.now*1000).toLocaleTimeString()}`;
- let a='<tr><th>job</th><th>status</th><th>lane</th><th class="num">elapsed</th><th>progress</th><th>last eval (1,024)</th></tr>';
- s.active.forEach(j=>{const p=j.progress?`${j.progress[0]} / ${j.progress[1]??'?'} updates`:'';const e=j.last_eval?`u${j.last_eval.iteration}: ${fmt(j.last_eval.mean_floor)} floors, ${j.last_eval.wins} wins`:'';
-  a+=`<tr><td>${j.name}</td><td><span class="pill ${j.status}">${j.status}</span></td><td class="mut">${j.lane}</td><td class="num">${dur(j.elapsed)}</td><td>${p}</td><td class="mut">${e}</td></tr>`});
+ const s=await res.json();lastOk=s.now;
+ document.getElementById('hdr').textContent=s.runners.map(({root,status:rn})=>`${root}: `+(rn?`heartbeat ${fmt(s.now-rn.heartbeat,0)}s ago · ${rn.on_battery==null?'power unknown':rn.on_battery?'ON BATTERY: jobs paused':'AC power'}`:'queue runner not started')).join(' | ')+` · updated ${new Date(s.now*1000).toLocaleTimeString()}`;
+ let a='<tr><th>job</th><th>root / queue</th><th>status</th><th>lane</th><th class="num">elapsed</th><th>progress</th><th>timing / estimated finish</th><th>latest train</th><th>latest eval</th></tr>';
+ s.active.forEach(j=>{
+  a+=`<tr><td title="${esc(j.out)}">${esc(j.name)}</td>${rootCell(j.root)}<td><span class="pill ${j.status}">${j.status}</span></td><td class="mut">${esc(j.lane)}</td><td class="num">${dur(j.elapsed)}</td><td>${progressText(j)}</td><td>${timing(j)}</td><td>${trainText(j.last_train)}</td><td class="mut">${evalText(j.last_eval)}</td></tr>`});
  set('active',s.active.length?a:'<tr><td class="mut">nothing running</td></tr>');
  set('hist','History: '+Object.entries(s.history).map(([k,v])=>`${v} ${k}`).join(', '));
- if(s.runs!==null){runs=s.runs;sig=s.sig;winTable(s.win,'win');winTable(s.fresh,'fresh');renderRuns();draw()}
+ if(s.runs!==null){runs=s.runs;sig=s.sig;winTable(s.win,'win');winTable(s.fresh,'fresh');draw()}
+ s.active.forEach(j=>{if(runs[j.run])runs[j.run].eta=j.eta});renderRuns();
 }
 function renderRuns(){
  const names=visible();const n=Object.keys(runs).length;
  document.getElementById('arch').textContent=showArchived?`hide archived`:`show archived (${n-Object.keys(runs).filter(k=>runs[k].key||runs[k].active).length})`;
- let h='<tr><th>run</th><th>description</th><th>status</th><th class="num">updates</th><th class="num">last eval floor</th><th class="num">paired vs orig</th><th class="num">wins (1,024)</th></tr>';
- names.forEach(nm=>{const r=runs[nm];const e=r.evals[r.evals.length-1]||{};const p=e.paired;const st=r.active?'running':(r.done?'done':'stopped');
-  h+=`<tr><td style="color:${color(nm)}">■ ${nm}</td><td class="mut">${r.label}</td><td><span class="pill ${st}">${st}</span></td><td class="num">${r.n_train} / ${r.iterations??'?'}</td>
-  <td class="num">${fmt(e.mean_floor)}</td><td class="num">${p?(p.diff>=0?'+':'')+fmt(p.diff)+' ± '+fmt(p.se):'–'}</td><td class="num">${e.wins??'–'}</td></tr>`});
- set('runs',h)}
+ let h='<tr><th>run</th><th>root / queue</th><th>description</th><th>status</th><th>progress</th><th>timing / estimated finish</th><th>latest train</th><th>latest eval</th><th class="num">paired vs orig</th></tr>';
+ names.forEach(nm=>{const r=runs[nm];const p=r.last_eval?.paired;const st=r.status;
+  h+=`<tr><td style="color:${color(nm)}">■ ${esc(r.name)}</td>${rootCell(r.root)}<td class="mut desc">${esc(r.label)}</td><td><span class="pill ${st}">${st}</span></td><td>${progressText(r)}</td><td>${timing(r)}</td><td>${trainText(r.last_train)}</td><td class="mut">${evalText(r.last_eval)}</td>
+  <td class="num">${p?(p.diff>=0?'+':'')+fmt(p.diff)+' ± '+fmt(p.se):'–'}</td></tr>`});
+ set('runs',h);
+ const protocols=new Set(Object.values(runs).map(r=>!!r.config.hide_ooc_potions));
+ set('protocol',protocols.size>1?'Eval numbers with out-of-combat potions visible are not comparable with those using --hide-ooc-potions (different protocols).':'')}
 document.getElementById('arch').addEventListener('click',()=>{showArchived=!showArchived;renderRuns();draw()});
 function draw(){
  const names=visible();const ds=f=>names.flatMap(n=>f(n,color(n),runs[n]));
@@ -319,10 +390,20 @@ function draw(){
  mk('c_wins',ds((n,c,r)=>[{label:n,data:pts(r.evals,'iteration','wins'),borderColor:c,backgroundColor:c}]));
  mk('c_train',ds((n,c,r)=>[{label:n,data:pts(r.train,'iteration','collect_floor'),borderColor:c,pointRadius:1}]));
  mk('c_beh',ds((n,c,r)=>[{label:n+' smith',data:pts(r.train,'iteration','smith_rate'),borderColor:c,pointRadius:1},
-  {label:n+' elite',data:pts(r.train,'iteration','map_elite'),borderColor:c,borderDash:[5,4],pointRadius:1}]));
+  {label:n+' elite',data:pts(r.train,'iteration','map_elite'),borderColor:c,borderDash:[5,4],pointRadius:1},
+  {label:n+' card skip',data:pts(r.train,'iteration','card_skip_rate'),borderColor:c,borderDash:[2,3],pointRadius:1}]));
  mk('c_boss',ds((n,c,r)=>[{label:n+' A2 pass',data:pts(r.evals,'iteration','act2_boss_pass'),borderColor:c},
   {label:n+' A3 reach',data:pts(r.evals,'iteration','act3_boss_reach'),borderColor:c,borderDash:[5,4]}]));
  mk('c_cos',ds((n,c,r)=>[{label:n,data:pts(r.train,'iteration','grad_cosine_half'),borderColor:c,pointRadius:1}]));
+ for(const [id,field] of [['c_entropy','entropy'],['c_kl','approx_kl'],['c_value','value_loss']])
+  mk(id,ds((n,c,r)=>[{label:n,data:pts(r.train,'iteration',field),borderColor:c,pointRadius:1}]));
+ mk('c_time',ds((n,c,r)=>[
+  {label:n+' total',data:pts(r.train,'iteration','iteration_seconds',1/60),borderColor:c,pointRadius:1},
+  {label:n+' collect',data:pts(r.train,'iteration','collect_seconds',1/60),borderColor:c,borderDash:[5,4],pointRadius:1},
+  {label:n+' update',data:pts(r.train,'iteration','update_seconds',1/60),borderColor:c,borderDash:[2,3],pointRadius:1}]));
+ mk('c_rate',ds((n,c,r)=>[
+  {label:n+' collect %',data:rates(r.train,'collect_wins','games'),borderColor:c,pointRadius:1},
+  {label:n+' eval %',data:rates(r.evals,'wins','n'),borderColor:c,borderDash:[5,4]}]));
 }
 async function poll(){
  if(document.hidden||inflight)return;inflight=true;
@@ -335,9 +416,11 @@ poll();
 
 
 class Handler(BaseHTTPRequestHandler):
+    extra_roots = ()
+
     def do_GET(self):
         if self.path.startswith("/api/state"):
-            body, kind = state_payload(self.path), "application/json"
+            body, kind = state_payload(self.path, self.extra_roots), "application/json"
         elif self.path in ("/", "/index.html"):
             body, kind = PAGE.encode(), "text/html; charset=utf-8"
         else:
@@ -359,36 +442,54 @@ def _server_pids(port: int) -> list[int]:
     pids = []
     for line in out[1:]:
         pid, _, args = line.strip().partition(" ")
-        if "dashboard.py serve" in args and f"--port {port}" in args and int(pid) != os.getpid():
+        parts = args.split()
+        serves = any(Path(p).name == "dashboard.py" and parts[i + 1:i + 2] == ["serve"]
+                     for i, p in enumerate(parts))
+        ports = [parts[i + 1] for i, p in enumerate(parts[:-1]) if p == "--port"]
+        ports.extend(p.split("=", 1)[1] for p in parts if p.startswith("--port="))
+        if serves and str(port) in ports and int(pid) != os.getpid():
             pids.append(int(pid))
     return pids
 
 
-def _start(port: int) -> None:
+def _start(port: int, extra_roots=()) -> None:
     RUNS.mkdir(parents=True, exist_ok=True)
-    subprocess.Popen([sys.executable, __file__, "serve", "--port", str(port)], cwd=ROOT, start_new_session=True,
-                     stdin=subprocess.DEVNULL, stdout=(RUNS / "dashboard.log").open("a"), stderr=subprocess.STDOUT)
+    cmd = [sys.executable, __file__, "serve", "--port", str(port)]
+    for root in extra_roots:
+        cmd.extend(["--root", str(Path(root).expanduser().resolve())])
+    with (RUNS / "dashboard.log").open("a") as log:
+        subprocess.Popen(cmd, cwd=ROOT, start_new_session=True, stdin=subprocess.DEVNULL,
+                         stdout=log, stderr=subprocess.STDOUT)
     print(f"dashboard started at http://127.0.0.1:{port}")
 
 
-def main() -> None:
-    command = sys.argv[1] if len(sys.argv) > 1 else "serve"
-    port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else PORT
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("command", nargs="?", default="serve", choices=("serve", "start", "restart"))
+    parser.add_argument("--port", type=int, default=PORT)
+    parser.add_argument("--root", type=Path, action="append", default=[], help="additional data/rl_runs root (repeatable)")
+    args = parser.parse_args(argv)
+    command, port = args.command, args.port
     if command == "start":
         try:
-            urllib.request.urlopen(f"http://127.0.0.1:{port}/api/state", timeout=3)
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/state", timeout=3):
+                pass
             print(f"dashboard already up at http://127.0.0.1:{port}")
             return
         except Exception:
             pass
-        _start(port)
+        if _server_pids(port):
+            print(f"dashboard already starting at http://127.0.0.1:{port}")
+            return
+        _start(port, args.root)
         return
     if command == "restart":
         for pid in _server_pids(port):
             os.kill(pid, signal.SIGTERM)
         time.sleep(1)
-        _start(port)
+        _start(port, args.root)
         return
+    Handler.extra_roots = tuple(args.root)
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
 
 
