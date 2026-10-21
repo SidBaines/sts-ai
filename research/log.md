@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Combat student round 2 passes on DEV**, 19:37: the student refitted to
+  174,859 teacher labels from the current champion's games wins 576
+  against 527 (p = 0.047; floor +0.69). Confirmation on new worlds from
+  97,000,000,000 queued.
 - **Demon Form distilled, second attempt**, 18:52: with labels at real card
   decisions the distilled policy matches the overlay (562 against 550 on
   DEV, 489 against 490 on new worlds) and keeps 99.2% of other choices;

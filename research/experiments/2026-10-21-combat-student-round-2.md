@@ -44,7 +44,18 @@ This is the planned step D of the fresh-start study (expert iteration).
 
 ## Results
 
-Pending.
+**The refitted combat student passes on second DEV: 576 against the
+champion's 527 wins of 4,096.** The new student replaces the champion's
+combat head; out-of-combat head unchanged; paired:
+
+| Worlds | Wins | Discordant, champion only / candidate only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
+|---|---:|---:|---:|---|---|
+| Second DEV | 527 → 576 (12.9% → 14.1%) | 268 / 317 | 0.047 | +0.69 [+0.35, +1.03] | +1.6 points [−0.2, +3.4] (3,159 worlds) |
+
+- Fit: 122,769 fit rows, early-stopped at step 4,900 (best validation loss
+  1.41; the 15 October student's was 1.30 on its own, different validation
+  worlds, so the two are not comparable); 7 minutes on the GPU.
+- Confirmation on 4,096 unused worlds from 97,000,000,000: running.
 
 ## Conclusion
 
@@ -56,6 +67,8 @@ Pending.
 
 ## Log
 
+- 21 Oct, 19:37: DEV result 576 against 527 (p = 0.047): Better under the
+  pre-set rule; confirmation on the worlds from 97,000,000,000 queued.
 - 21 Oct, 19:27: deviation from the plan. The training library refuses to
   mix corpora collected by different players (a safeguard of the fresh-start
   pipeline), so the student is fitted on the new corpus alone: 2,000 worlds,
