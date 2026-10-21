@@ -165,7 +165,38 @@ paired:
   nothing: it gave fewer wins at no clear difference in floor. The filter
   is a monitoring and deployment fix, not a training improvement.
 
-Arms 4 to 6: pending.
+**Arm 4 (arm 3 plus the hygiene options) wins 256 of 4,096 on the
+second-DEV worlds, more than arm 3's 208, and is level with arm 1, the new
+champion.** Final checkpoint, iteration 24 (also the best by the trainer's
+evaluation), paired:
+
+| Baseline, worlds | Wins | Discordant, baseline only / arm 4 only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
+|---|---:|---:|---:|---|---|
+| Arm 3, second DEV | 208 → 256 (5.1% → 6.3%) | 137 / 185 | 0.009 | +0.21 [−0.12, +0.55] | +1.4 points [−0.6, +3.5] (2,717 worlds) |
+| Arm 3, fresh worlds | 197 → 228 (4.8% → 5.6%) | 139 / 170 | 0.088 | −0.08 [−0.43, +0.26] | +1.3 points [−0.9, +3.5] (2,703 worlds) |
+| Arm 1 (new champion), second DEV | 276 → 256 | 206 / 186 | 0.34 | +0.08 [−0.27, +0.42] | +0.3 points [−1.9, +2.5] (2,701 worlds) |
+| Arm 1 (new champion), fresh worlds | 232 → 228 | 177 / 173 | 0.87 | −0.19 [−0.54, +0.16] | +2.0 points [−0.2, +4.2] (2,687 worlds) |
+| Previous champion, second DEV | 156 → 256 | 101 / 201 | < 0.001 | +1.19 [+0.86, +1.51] | +5.0 points [+2.8, +7.1] (2,667 worlds) |
+| Previous champion, fresh worlds | 152 → 228 | 97 / 173 | < 0.001 | +1.05 [+0.73, +1.38] | +6.1 points [+3.9, +8.2] (2,637 worlds) |
+
+- The entropy bonus did what it was for: out-of-combat entropy rose from
+  0.153 to 0.192 over the run, where arm 3, without it, fell from 0.152 to
+  0.129. Wins in the sampled training games rose from 109 to 188 of 3,072
+  (arm 3: 109 to about 125), a larger gain than greedy play shows.
+- The trainer's own evaluation (study protocol) went 35, 32, 37, 34, 45,
+  47, 52 wins of 1,024 at iterations 0 to 24, still rising at the end.
+- Health: half-batch cosines −0.37 to +0.71, KL 0.005 to 0.012, clip
+  fraction 0.04 to 0.05, no faults or collector restarts; value loss is on
+  normalised targets and not comparable with arms 1 and 3. Median 6.1
+  minutes per iteration, 2 hours 25 minutes in all.
+- Training behaviour: the smith rate went 0.31, 0.42 (iteration 4), 0.28
+  (iteration 9), 0.33 (iteration 24); the card skip rate 0.023 to 0.020.
+- Reading: the hygiene options recover the wins that arm 3 lacked, clearly
+  on the DEV worlds and in the same direction on the fresh worlds, at no
+  clear difference in floor. They do not beat the new champion, which was
+  trained with potions visible and no hygiene options. One run per arm.
+
+Arms 5 and 6: pending.
 
 ## Conclusion
 
@@ -177,6 +208,10 @@ Pending.
 
 ## Log
 
+- 21 Oct, 01:53: arm 4's final checkpoint evaluated: 256 of 4,096 on the
+  second-DEV worlds and 228 on the fresh worlds; more wins than arm 3, no
+  clear difference from arm 1.
+- 21 Oct, 01:42: arm 4 finished; round 3 started.
 - 20 Oct, 23:23: arm 3's final checkpoint evaluated: 208 of 4,096 on the
   second-DEV worlds and 197 on the fresh worlds, better than the previous
   champion but fewer wins than arm 1 with no clear difference in floor.

@@ -1,25 +1,24 @@
 # Status
 
-**Updated 20 October 2026, 23:50 BST.** Three training arms run overnight,
-one after another, with watchers and an hourly check-in; nothing waits for
+**Updated 21 October 2026, 02:00 BST.** Two training arms run overnight,
+one after another, with a watcher and an hourly check-in; nothing waits for
 Sid until morning.
 
 - **Running: large-batch out-of-combat PPO**
   ([page](experiments/2026-10-20-large-batch-ppo.md)) on lane `train` of the
-  queue in worktree `nonllm-large-batch`: `lb-hygiene-hidden` (iteration 4
-  of 24 at 23:36, about 6 minutes per iteration, ends about 01:40), then
-  `lb-round3-student` (24 iterations of 3,072 games, about 2.5 hours) and
-  `lb-small-hidden` (96 iterations of 768 games, about 2.5 hours), so the
-  last ends about 06:40 if the laptop stays on power; the queue pauses jobs
-  on battery and resumes on power. All three run `train_ooc.py` from the
-  frozen checkout `nonllm-large-batch-hidden` at `ws/nonllm` 8aca4e4. Done
-  today: `lb-recipe` (the new champion) and `lb-recipe-hidden` (arm 3: 208
-  of 4,096 on second DEV and 197 on the fresh worlds, better than the
-  previous champion, fewer wins than arm 1 at no clear difference in floor).
-- **Watchers:** two zsh scripts in the Claude session's scratchpad
-  (`eval_hidden_arms.sh`, waiting for the hygiene arm, and
-  `eval_overnight_arms.sh`, for round 3 then the control; logs beside
-  them). When an arm finishes they queue its final and best-by-trainer
+  queue in worktree `nonllm-large-batch`: `lb-round3-student` (started
+  01:42, 24 iterations of 3,072 games, about 6 minutes each, ends about
+  04:20), then `lb-small-hidden` (96 iterations of 768 games, about 2.5
+  hours), so the last ends about 07:00 if the laptop stays on power; the
+  queue pauses jobs on battery and resumes on power. Both run
+  `train_ooc.py` from the frozen checkout `nonllm-large-batch-hidden` at
+  `ws/nonllm` 8aca4e4. Done and evaluated: `lb-recipe` (the new champion),
+  `lb-recipe-hidden` (arm 3: 208 of 4,096 on second DEV, 197 on the fresh
+  worlds) and `lb-hygiene-hidden` (arm 4: 256 and 228).
+- **Watcher:** a zsh script in the Claude session's scratchpad
+  (`eval_overnight_arms.sh`, waiting for round 3 then the control; log
+  `overnight_arms_eval.log` beside it; the hidden-arms watcher has
+  finished). When an arm finishes they queue its final and best-by-trainer
   checkpoints with `fast_eval.py` as `lbeval-*` (second DEV) and
   `lbconfirm-*` (fresh worlds from 94,000,000,000) on the `eval` lane of
   the queue in worktree `nonllm-boss-rares`, then print paired comparisons

@@ -5,6 +5,15 @@ first, kept at Sid's request from 20 October 2026, one or two lines per
 entry. It will be deleted: everything that matters is also recorded in its
 home file (experiment pages, the results ledger, strategies, README).
 
+## 21 October 2026
+
+- **Arm 4 (the potion filter plus the hygiene options) evaluated**, 01:53:
+  final checkpoint 256 of 4,096 on second DEV (arm 3 208, p = 0.009; new
+  champion 276, p = 0.34) and 228 on the fresh worlds (arm 3 197, p =
+  0.088; new champion 232, p = 0.87); no clear difference in floor from
+  either. Its entropy rose from 0.15 to 0.19 under the entropy bonus,
+  where arm 3's fell to 0.13. Round 3 started at 01:42.
+
 ## 20 October 2026
 
 - **Arm 3 (the recipe with the potion filter) evaluated**, 23:23: final

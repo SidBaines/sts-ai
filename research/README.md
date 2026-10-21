@@ -29,11 +29,11 @@ in the [results ledger](results.md).
 ## Now
 
 Running overnight: [large-batch PPO](experiments/2026-10-20-large-batch-ppo.md)
-arms 4 to 6 (the hygiene options with the potion filter, round 3 from the
-new champion with the combat student spliced in, and a batch-size control).
-Arm 3, the recipe with the potion filter, won 208 of 4,096 against the
-previous champion's 156 but fewer than arm 1's 276, at no clear difference
-in floor. Finished on 20 October:
+arms 5 and 6 (round 3 from the new champion with the combat student
+spliced in, and a batch-size control). With the potion filter on during
+training, the recipe alone won 208 of 4,096 and the recipe plus the
+hygiene options 256 (p = 0.009 between them), against the new champion's
+276 and the previous champion's 156. Finished on 20 October:
 [boss rares](experiments/2026-10-20-boss-rares.md): forcing Demon Form
 whenever offered wins 179 against 156 of 4,096 games (p = 0.010), and 230
 against 198 with the old-encoder combat head, the first single deck-building
