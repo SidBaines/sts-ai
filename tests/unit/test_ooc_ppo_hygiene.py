@@ -251,6 +251,7 @@ class OOCPPOHygieneTests(unittest.TestCase):
         self.assertEqual(kept.returns, 8.)
         self.assertNotIn("text", kept.observation)
         self.assertTrue(kept.strategic_menu)
+        self.assertEqual(kept.menu_kind, "removal")
 
     def test_empty_update_logs_zero_steps_and_no_early_stop(self):
         result = update_ppo(self.model(), [], collate=collate_public, forward=phase_forward())
@@ -271,6 +272,7 @@ class OOCPPOHygieneTests(unittest.TestCase):
                     "faults": 0, "fault_records": [], "stats": {}}
 
         def update(*args, **kwargs):
+            self.assertEqual(exploration.call_count, min(len(updates) + 1, 2))
             updates.append(kwargs)
             return {"optimizer": kwargs["optimizer"], "steps": 2, "early_stop": True}
 
@@ -284,15 +286,25 @@ class OOCPPOHygieneTests(unittest.TestCase):
                     patch.object(ooc_trainer, "evaluate", return_value={"summary": {}, "records": []}), \
                     patch.object(ooc_trainer, "collect_ooc_batch", side_effect=collect), \
                     patch.object(ooc_trainer, "write_collection"), \
+                    patch.object(ooc_trainer, "exploration_stats", wraps=ooc_trainer.exploration_stats) as exploration, \
                     patch.object(ooc_trainer, "update_ppo", side_effect=update):
                 ooc_trainer.train(cfg)
                 first = torch.load(Path(directory) / "latest.pt", weights_only=False)
-                ooc_trainer.train(replace(cfg, iterations=2), resume=True)
+                # Both saved configs predate exploration tracking; defaults fill the new field.
+                first["config"].pop("exploration_stats")
+                torch.save(first, Path(directory) / "latest.pt")
+                (Path(directory) / "config.json").write_text(json.dumps(first["config"]))
+                legacy_cfg = OOCTrainConfig(**first["config"])
+                self.assertTrue(legacy_cfg.exploration_stats)
+                ooc_trainer.train(replace(legacy_cfg, iterations=2), resume=True)
+                ooc_trainer.train(replace(cfg, iterations=3, exploration_stats=False), resume=True)
+                self.assertEqual(exploration.call_count, 2)
+                self.assertEqual([call.kwargs["chunk"] for call in exploration.call_args_list], [cfg.micro_batch] * 2)
             latest = torch.load(Path(directory) / "latest.pt", weights_only=False)
             self.assertEqual(first["trainer_state"]["return_normalizer"]["count"], 4)
-            self.assertEqual(latest["trainer_state"]["return_normalizer"]["count"], 8)
-            self.assertEqual(latest["steps_total"], 4)
-            self.assertEqual(collection_scales, [1., np.std([2., 4., 6., 8.])])
+            self.assertEqual(latest["trainer_state"]["return_normalizer"]["count"], 12)
+            self.assertEqual(latest["steps_total"], 6)
+            self.assertEqual(collection_scales, [1., np.std([2., 4., 6., 8.]), np.std([2., 4., 6., 8.])])
             for kwargs in updates:
                 self.assertEqual(kwargs["config"].value_weight, .7)
                 self.assertEqual(kwargs["return_scale"], np.std([2., 4., 6., 8.]))
@@ -302,6 +314,12 @@ class OOCPPOHygieneTests(unittest.TestCase):
                 self.assertEqual(row["steps"], 2)
                 self.assertTrue(row["early_stop"])
                 self.assertEqual(row["collector_restarts"], 0)
+                if row["iteration"] < 3:
+                    self.assertEqual(row["explore_n"], 4)
+                    self.assertIsNotNone(row["explore_entropy"])
+                    self.assertGreaterEqual(row["explore_seconds"], 0.)
+                else:
+                    self.assertFalse(any(key.startswith("explore_") for key in row))
             for row in [r for r in records if r["event"] == "eval"]:
                 self.assertEqual(row["collector_restarts"], 0)
 

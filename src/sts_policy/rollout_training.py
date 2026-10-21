@@ -39,6 +39,7 @@ class Transition:
     encoding_observation_id: int | None = field(default=None, repr=False, compare=False)
     # OOC menu classification captured before collection slims public text.
     strategic_menu: bool | None = None
+    menu_kind: str | None = None
 
 
 def _public_number(value: Any) -> int | float | None:

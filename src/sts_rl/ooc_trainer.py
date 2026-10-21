@@ -33,6 +33,9 @@ from .evaluate import evaluate, paired
 from .recording import begin_run, resume_payload, restore_rng, write_collection, require_fresh_or_resume
 
 
+MENU_KINDS = ("rest_site", "card_reward", "map", "shop", "removal", "other")
+
+
 @dataclass(frozen=True)
 class OOCTrainConfig:
     out: str
@@ -73,6 +76,7 @@ class OOCTrainConfig:
     in_process_games: bool = False
     seed: int = 0
     health_every: int = 1
+    exploration_stats: bool = True
     collect_chunk: int = 128
     micro_batch: int = 1024         # PPO forward/backward chunk (same update, bounded activation memory)
     collectors: int = 1             # >1: data-parallel collector processes (workers split between them)
@@ -267,6 +271,22 @@ def behaviour_stats(episodes: Sequence[Sequence[Any]]) -> dict[str, float]:
             "fights_per_run": float(np.mean(fights)) if fights else 0.0}
 
 
+def menu_kind(observation: dict[str, Any]) -> str:
+    """Classify a public OOC menu before collection removes its text."""
+    if re.search(r"^Choose a card to REMOVE\b", observation.get("text", ""), re.MULTILINE):
+        return "removal"
+    descs = [a.get("description", "") for a in observation["legal_actions"]]
+    if any(d.startswith("rest") or d.startswith("smith") for d in descs):
+        return "rest_site"
+    if any(d.startswith("skip card") for d in descs):
+        return "card_reward"
+    if any("map node" in d for d in descs):
+        return "map"
+    if any(d.startswith("leave shop") for d in descs):
+        return "shop"
+    return "other"
+
+
 def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequence[Any], *, forward,
                       ppo: PPOConfig, credit: str, gae_lambda: float, chunk: int,
                       value_scale: float = 1.0) -> dict[str, Any]:
@@ -296,6 +316,7 @@ def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Seq
             for t in ep:
                 obs = t.observation
                 t.strategic_menu = is_strategic_menu(obs, t.encoded_observation)
+                t.menu_kind = menu_kind(obs)
                 if "text" in obs:
                     obs.pop("text")
                     obs["state"] = {}
@@ -308,6 +329,49 @@ def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Seq
         del result, episodes
         gc.collect()
     return {"kept": kept, "game_episodes": game_episodes, "faults": faults, 'fault_records': fault_records, "stats": stats_acc}
+
+
+@torch.no_grad()
+def exploration_stats(model: torch.nn.Module, forward, transitions: Sequence[Any], *,
+                      chunk: int) -> dict[str, float | int | None]:
+    """Measure the sampling policy on kept choices without sampling or updating it."""
+    if chunk <= 0:
+        raise ValueError("chunk must be positive")
+    totals = {kind: Counter() for kind in MENU_KINDS}
+    collate = cached_public_collator([t.observation for t in transitions],
+                                    preencoded=[t.encoded_observation for t in transitions])
+    was_training = model.training
+    model.eval()
+    try:
+        for start in range(0, len(transitions), chunk):
+            part = transitions[start:start + chunk]
+            logits, _, mask = forward(model, collate([t.observation for t in part], "cpu"))
+            dist = masked_distribution(logits, mask)
+            for t, legal, entropy, maxprob in zip(part, mask.sum(-1).tolist(), dist.entropy().tolist(),
+                                                  dist.probs.max(-1).values.tolist()):
+                if legal < 2:
+                    continue
+                taken_prob = math.exp(t.behavior_log_prob)
+                values = totals[t.menu_kind or "other"]
+                values["n"] += 1
+                values["entropy"] += entropy
+                values["maxprob"] += maxprob
+                values["saturated"] += int(maxprob > .99)
+                values["rare05"] += int(taken_prob < .05)
+                values["rare01"] += int(taken_prob < .01)
+    finally:
+        model.train(was_training)
+    result: dict[str, float | int | None] = {}
+    for kind, values in totals.items():
+        n = values["n"]
+        result[f"explore_n_{kind}"] = n
+        for metric in ("entropy", "maxprob", "saturated", "rare05"):
+            result[f"explore_{metric}_{kind}"] = values[metric] / n if n else None
+    n = sum(values["n"] for values in totals.values())
+    result["explore_n"] = n
+    for metric in ("entropy", "rare05", "rare01"):
+        result[f"explore_{metric}"] = sum(values[metric] for values in totals.values()) / n if n else None
+    return result
 
 
 def ooc_parameter_blocks(model: torch.nn.Module) -> dict[str, list[str]]:
@@ -467,6 +531,15 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             # would be silently re-encoded from an empty state. Fail loudly instead.
             if any(t.encoded_observation is None for t in flat):
                 raise RuntimeError("kept OOC transition lacks its sampling-time encoding")
+            exploration: dict[str, float | int | None] = {}
+            if cfg.exploration_stats:
+                explore_started = time.time()
+                sampling_forward = ooc_forward(forward, value_scale=normalizer.scale if cfg.normalize_returns else 1.0)
+                if cfg.update_threads:
+                    torch.set_num_threads(cfg.update_threads)
+                exploration = exploration_stats(model, sampling_forward, flat, chunk=cfg.micro_batch)
+                torch.set_num_threads(cfg.threads)
+                exploration["explore_seconds"] = time.time() - explore_started
             if cfg.normalize_returns:
                 normalizer.update([t.returns for t in flat])
             return_scale = normalizer.scale if cfg.normalize_returns else 1.0
@@ -484,7 +557,7 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 "ooc_choice_transitions": len(flat), "collect_seconds": collect_seconds,
                 "adv_raw_std": float(np.std([t.advantage for t in flat])) if flat else 0.0,
                 "return_scale": return_scale,
-                **behaviour}
+                **behaviour, **exploration}
             update_started = time.time()
             if cfg.update_threads:
                 torch.set_num_threads(cfg.update_threads)
