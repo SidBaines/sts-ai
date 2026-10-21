@@ -97,6 +97,9 @@ confirmation worlds apart.
 | 0.1.5.1 | Confirmation for the second continued training, opened 21 October afternoon | 96,000,000,000 | 4,096 |
 | 0.1.5.1 | Reserved for confirming the combat student round 2 and any card rule that passes | 97,000,000,000 | 4,096 |
 | 0.1.5.1 | Teacher labels, second corpus (current champion's states) | 90,500,100,000 | 2,000 |
+| 0.1.5.1 | Teacher labels, third corpus (round 2 candidate's states) | 90,500,200,000 | 2,000 |
+| 0.1.5.1 | Confirmation for combat student round 3 | 98,000,000,000 | 4,096 |
+| 0.1.5.1 | Probe worlds for the round 2 and round 3 fits (unlabelled, movement monitoring only) | 93,000,000,100; 93,000,000,200 | 8 each |
 | All | Out-of-combat PPO training worlds (`train_ooc.py`): 7,000,000,000 plus 500,000,000 per training seed plus 10,000,000 per iteration | 7,000,000,000 | games per iteration |
 
 ## Environment versions
