@@ -52,9 +52,12 @@ not under-picked as a class). See [status](status.md) and the temporary
 2. **Read the exploration statistics** from that run: which menus are
    saturated, and whether never-sampled actions (shop card removals) stay
    at zero.
-3. **Exploration for a saturated policy:** paired counterfactual
-   exploration or an ε-mixture behaviour policy on strategic menus, with a
-   fresh out-of-combat lineage held in reserve.
+3. **Card rule grid:** measure the champion's take rate for every card,
+   test forcing the most-declined strong cards with menu overlays, and
+   distil the ones that help; an ε-mixture behaviour policy was dropped
+   because PPO cannot raise near-zero probabilities (see
+   [strategies](strategies.md)). A counterfactual teacher for card rewards
+   is the general version.
 4. **Learn deck strength instead of simulating each choice:** a deck-value
    network trained on oracle scores. To discuss with Sid.
 

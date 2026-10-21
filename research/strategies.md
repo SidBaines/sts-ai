@@ -105,6 +105,15 @@ large batches of whole games.
 - Why it works: it removes combat noise and cross-phase critic bias from
   strategic credit. Without an entropy bonus, entropy fell in every arm
   (to 0.10 to 0.17), so exploration is the open risk.
+- Why PPO cannot fix saturation by itself (analysis, 21 October, not yet
+  tested): 78% of card-reward decisions have one option above 99%
+  probability. Sampling those options more often (an ε-mixture behaviour
+  policy) does not help: with correct importance weighting the push on a
+  rare action's logit is scaled by its own probability, and without it
+  PPO's clipping still limits growth to about 20% per update. Rare
+  strategic actions have to come from supervised routes: menu-overlay
+  tests distilled into the policy (Demon Form), or a counterfactual
+  teacher.
 - [OOC PPO page](experiments/2026-10-13-ooc-macro-credit-ppo.md).
 
 ## Distilling strategy rules
