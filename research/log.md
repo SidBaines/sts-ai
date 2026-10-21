@@ -7,6 +7,9 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Combat student round 2 confirmed**, 19:46: 571 against the champion's
+  512 on unused worlds from 97,000,000,000 (p = 0.017; floor +0.84; Act 2
+  boss pass +2.3 points). Candidate for champion, for Sid.
 - **Combat student round 2 passes on DEV**, 19:37: the student refitted to
   174,859 teacher labels from the current champion's games wins 576
   against 527 (p = 0.047; floor +0.69). Confirmation on new worlds from

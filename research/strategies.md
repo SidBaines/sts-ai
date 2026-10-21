@@ -118,6 +118,19 @@ large batches of whole games.
   ([card rule grid](experiments/2026-10-21-card-rule-grid.md)).
 - [OOC PPO page](experiments/2026-10-13-ooc-macro-credit-ppo.md).
 
+## Expert iteration for combat
+
+**Working.** Let the current player play, label its combat decisions with
+the search teacher, refit the old-encoder combat student from scratch, and
+splice it into the player.
+
+- Round 2 (21 October): 174,859 labels from the afternoon champion's
+  games; 571 against 512 of 4,096 unused worlds (+1.4 points, p = 0.017;
+  floor +0.84) ([page](experiments/2026-10-21-combat-student-round-2.md)).
+- Round 1 was the 15 October student, which added about 2 points to the
+  previous champion ([fresh start](experiments/2026-10-15-fresh-start.md)).
+- Cheap: about 1.7 hours of labelling and 7 minutes of fitting per round.
+
 ## Distilling strategy rules
 
 **Working, used selectively.** Measure a strategic habit with a menu overlay

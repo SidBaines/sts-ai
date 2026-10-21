@@ -1,6 +1,6 @@
 # Combat student, round 2: teacher labels on the current champion's states
 
-**Status:** running. **Verdict:** pending.
+**Status:** finished 21 October 2026. **Verdict:** confirmed: refitting the combat student to teacher labels from the current champion's own games raises wins from 12.5% to 13.9% on unused worlds (p = 0.017; mean floor +0.84). Expert iteration works for combat.
 
 ## Question
 
@@ -44,29 +44,48 @@ This is the planned step D of the fresh-start study (expert iteration).
 
 ## Results
 
-**The refitted combat student passes on second DEV: 576 against the
-champion's 527 wins of 4,096.** The new student replaces the champion's
+**The refitted combat student passes on second DEV and is confirmed on
+unused worlds.** The new student replaces the champion's
 combat head; out-of-combat head unchanged; paired:
 
 | Worlds | Wins | Discordant, champion only / candidate only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
 |---|---:|---:|---:|---|---|
 | Second DEV | 527 → 576 (12.9% → 14.1%) | 268 / 317 | 0.047 | +0.69 [+0.35, +1.03] | +1.6 points [−0.2, +3.4] (3,159 worlds) |
+| From 97,000,000,000 (unused before) | 512 → 571 (12.5% → 13.9%) | 268 / 327 | 0.017 | +0.84 [+0.48, +1.19] | +2.3 points [+0.5, +4.1] (3,116 worlds) |
 
 - Fit: 122,769 fit rows, early-stopped at step 4,900 (best validation loss
   1.41; the 15 October student's was 1.30 on its own, different validation
   worlds, so the two are not comparable); 7 minutes on the GPU.
-- Confirmation on 4,096 unused worlds from 97,000,000,000: running.
+- The champion wins 512 (12.5%) on the new worlds, in line with 476 and 527 elsewhere.
+- Candidate checkpoint: `combat_round2_20261021/champion_with_student_r2_newonly.pt` (SHA-256 prefix `623b01850482`); student `fit_old_combat_r2_newonly_v1/best.pt`.
 
 ## Conclusion
 
-Pending.
+- Expert iteration works for combat: labelling the states the current
+  player reaches, then refitting from scratch, gained +1.2 to +1.4 points
+  of wins and +0.7 to +0.8 floors on two world sets.
+- The gain arrived although the out-of-combat head was trained alongside
+  the previous combat student; no retraining of the rest was needed.
+- The loop is cheap: about 1.7 hours of labelling on the laptop and 7
+  minutes of fitting.
+
+Caveats:
+- One fit, one seed; the old and new corpora could not be combined (the
+  library refuses to mix players' corpora), so whether more data would
+  help more is untested.
+- The teacher is privileged (it searches copies of the game); the player
+  stays a pure policy.
 
 ## Next
 
-Pending.
+1. Sid to decide whether the candidate becomes the champion.
+2. Splice the new student with the second continued training's
+   out-of-combat head, which was trained alongside the old student.
+3. Another round of expert iteration from the candidate's own games.
 
 ## Log
 
+- 21 Oct, 19:46: confirmed on unused worlds: 571 against 512 (p = 0.017).
 - 21 Oct, 19:37: DEV result 576 against 527 (p = 0.047): Better under the
   pre-set rule; confirmation on the worlds from 97,000,000,000 queued.
 - 21 Oct, 19:27: deviation from the plan. The training library refuses to
