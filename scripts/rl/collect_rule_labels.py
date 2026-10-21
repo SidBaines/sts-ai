@@ -8,7 +8,12 @@ states visited are the rule-policy's), and writes:
     rule's choice as a hard label (label_index = native action index);
   - type "elite" (with --elite-above): every map menu offering an elite, labelled
     with the policy's best elite node at HP >= threshold, else the policy's own pick;
+  - type "take_card" (with --take-card NAME, repeatable): every card-reward menu
+    offering a named card, labelled with the policy's preferred offer of that card
+    (upgraded copies count), so play follows "take NAME whenever offered";
   - type "rehearsal": a sample of other OOC decisions, for the KL anchor.
+--no-rest-rule leaves rest sites to the policy; --hide-ooc-potions plays under the
+study protocol (out-of-combat potion actions hidden, as in fast_eval.py).
 Format matches sts_rl.distill (shard_*.jsonl). TRAIN worlds only.
 """
 from __future__ import annotations
@@ -26,7 +31,7 @@ import torch
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from sts_policy.model_agent import collate_public, forward_policy  # noqa: E402
-from sts_rl.common import hp_fraction, load_policy, make_workers, train_tasks  # noqa: E402
+from sts_rl.common import _CARD_OFFER, hp_fraction, load_policy, make_workers, train_tasks  # noqa: E402
 
 from sts_rl.recording import begin_run
 from sts_env.env import SimulatorError
@@ -41,6 +46,9 @@ def main() -> None:
     p.add_argument("--world-start", type=int, default=8_500_000_000)
     p.add_argument("--smith-above", type=float, default=0.85)
     p.add_argument("--elite-above", type=float, default=None)
+    p.add_argument("--no-rest-rule", action="store_true", help="do not label or override rest sites")
+    p.add_argument("--take-card", action="append", default=[], help="card name to take whenever offered")
+    p.add_argument("--hide-ooc-potions", action="store_true")
     p.add_argument("--rehearsal-rate", type=float, default=0.1)
     p.add_argument("--threads", type=int, default=8)
     p.add_argument("--output", required=True)
@@ -54,12 +62,13 @@ def main() -> None:
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
     tasks = train_tasks(args.world_start, args.n)
+    take_names = {name.rstrip("+") for name in args.take_card}
 
     def play(slot: int) -> dict[str, int]:
         rng = random.Random(slot)
-        worker = make_workers(1, dead_action_filter=True)[0]
-        counts = {"games": 0, "rest": 0, "smith_labels": 0, "elite": 0, "elite_labels": 0, "rehearsal": 0,
-                  "faults": 0}
+        worker = make_workers(1, dead_action_filter=True, hide_ooc_potions=args.hide_ooc_potions)[0]
+        counts = {"games": 0, "rest": 0, "smith_labels": 0, "elite": 0, "elite_labels": 0, "take_card": 0,
+                  "take_card_changed": 0, "rehearsal": 0, "faults": 0}
         with (out / f"shard_{slot:03d}.jsonl").open("w") as sink:
             for task in tasks[slot::args.threads]:
                 rows = []
@@ -74,7 +83,16 @@ def main() -> None:
                         if obs.get("phase") != "combat" and len(legal) > 1:
                             rest = [i for i, d in enumerate(legal) if d.startswith("rest")]
                             smith = [i for i, d in enumerate(legal) if d.startswith("smith")]
-                            if rest and smith:
+                            wanted = [i for i, d in enumerate(legal)
+                                      if (m := _CARD_OFFER.match(d)) and m[1].rstrip("+") in take_names]
+                            if wanted:
+                                choice = max(wanted, key=lambda i: float(logits[0][i]))
+                                counts["take_card"] += 1
+                                counts["take_card_changed"] += choice != pos
+                                pos = choice
+                                rows.append({"type": "take_card", "seed": task.seed, "obs": obs,
+                                             "label_index": int(obs["legal_actions"][pos]["index"])})
+                            elif rest and smith and not args.no_rest_rule:
                                 fraction = hp_fraction(obs)
                                 pos = smith[0] if fraction is not None and fraction >= args.smith_above else rest[0]
                                 rows.append({"type": "rest", "seed": task.seed, "obs": obs,
@@ -102,7 +120,7 @@ def main() -> None:
                         raise  # simulator fault: drop the whole game
                     counts["faults"] += 1
                     worker.close()
-                    worker = make_workers(1, dead_action_filter=True)[0]
+                    worker = make_workers(1, dead_action_filter=True, hide_ooc_potions=args.hide_ooc_potions)[0]
         worker.close()
         return counts
 

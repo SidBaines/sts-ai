@@ -34,6 +34,18 @@ still add anything on the new champion? (Approach:
   Demon Form overlay, is *Better* if it wins more than the champion on
   second DEV with exact McNemar p < 0.05; confirmed if it also wins more
   with p < 0.05 on the new worlds. A confirmed Demon Form gain is distilled.
+- **Demon Form distillation** (added after the retest, by Sid's decision
+  although the retest missed confirmation at p = 0.054): the champion plays
+  6,144 training worlds from 8,500,000,000 under the study protocol,
+  following "take Demon Form whenever offered"; every card reward offering
+  Demon Form is a label, and 2% of other out-of-combat decisions are kept
+  as rehearsal (a divergence penalty of weight 1 keeps those choices
+  unchanged). Distilled into the out-of-combat head for 12 epochs at
+  learning rate 0.0003, batch 256, as for the smithing rule on 13 October;
+  combat head frozen. The distilled checkpoint is evaluated on second DEV
+  and the worlds from 95,000,000,000, paired with the champion and with the
+  champion plus the overlay; it should match the overlay and beat the
+  champion.
 - **Approval:** Sid, 21 October ("make the continued-training final
   checkpoint the new champion, then retest Demon Form on it and start the
   next round of training with the exploration statistics").
@@ -68,6 +80,9 @@ Pending.
 
 ## Log
 
+- 21 Oct, 16:09: Sid chose to distil the Demon Form rule despite the
+  narrow miss; labels, distillation and evaluations queued. In a smoke test
+  of 48 games the champion declined Demon Form at all 16 offers.
 - 21 Oct, 15:51: Demon Form retest: 550 against 527 on second DEV (p =
   0.003), 490 against 476 on the new worlds (p = 0.054): not confirmed by
   the rule fixed in advance.
