@@ -62,6 +62,19 @@ what failed. Commands and module usage: [src/sts_rl/README.md](../../src/sts_rl/
 
   `--strategic-temperature` explores those menus, but on its own it learned
   the wrong lesson: low-HP smiths are very costly.
+- **Measure on the study protocol: pass `--hide-ooc-potions`.** Since
+  environment 0.1.5 the menu offers out-of-combat potion drinks and
+  discards. Our policies discard almost every potion they hold when offered
+  (588 discards in 64 games on 20 October), and the habit does not unlearn
+  under PPO. `eval_policy.py` and `train_ooc.py` show those actions by
+  default, which roughly halves the measured win rate (the 19 October
+  champion: 1.7% against 3.8%) and hid a confirmed +2-point gain in a
+  trainer's own evaluation. Pass `--hide-ooc-potions` to both so they match
+  `fast_eval.py`, and never compare numbers across the two protocols.
+- **Cut topic branches from `origin/ws/nonllm`.** The local `ws/nonllm`
+  branch (checked out in an old worktree under `/private/tmp`) lags the
+  remote, so a branch cut from it silently misses recent work. Run
+  `git fetch` first.
 - **Selection bias:** every comparison reuses the same DEV worlds. After
   choosing among variants, confirm the winner on fresh confirmation worlds.
   The world ranges depend on the environment version: see

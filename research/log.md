@@ -7,6 +7,14 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Round 3 promoted to champion** by Sid, 09:33
+  (`champion_7d876c939a74.pt`). Queued: round 4 (24 iterations of 3,072
+  games from the champion, potion filter and hygiene options, training seed
+  1), the champion with and without the Demon Form rule on second DEV and
+  on new confirmation worlds from 95,000,000,000. The stale note edits in
+  worktree `nonllm-large-batch` were discarded (copies in the session
+  scratchpad); `scripts/rl/CLAUDE.md` gained the potion-protocol and
+  branching traps.
 - **All large-batch arms evaluated; the study is finished**, 06:49. The
   batch-size control (96 iterations of 768 games) won 212 of 4,096 on
   second DEV and 190 on the fresh worlds, no clear difference from arm 3's

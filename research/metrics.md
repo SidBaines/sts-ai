@@ -92,7 +92,9 @@ confirmation worlds apart.
 | 0.1.5 | Confirmation (not yet opened) | 91,200,000,000 | |
 | 0.1.5 | Fight-panel source worlds (fresh start; representation controls) | 92,000,000,000; 92,100,000,000 | 1,024 in the second |
 | 0.1.5 | Fixed probe states (the 93,000,000,000 to 94,000,000,000 namespace is reserved for them) | 93,000,000,000 | |
-| 0.1.5.1 | Confirmation of the large-batch PPO final checkpoint, opened 20 October; the reserved 91,200,000,000 set stays unopened | 94,000,000,000 | 4,096 |
+| 0.1.5.1 | Confirmation of the large-batch PPO final checkpoint, opened 20 October and reused for every arm of that study; the reserved 91,200,000,000 set stays unopened | 94,000,000,000 | 4,096 |
+| 0.1.5.1 | Confirmation for round 4 and the Demon Form test on the 21 October champion, opened 21 October | 95,000,000,000 | 4,096 |
+| All | Out-of-combat PPO training worlds (`train_ooc.py`): 7,000,000,000 plus 500,000,000 per training seed plus 10,000,000 per iteration | 7,000,000,000 | games per iteration |
 
 ## Environment versions
 
@@ -111,13 +113,17 @@ release changed game behaviour.
 
 ## Players, teachers and encoders
 
-- **Champion:** the best retained learned player. From 20 October it is
-  the large-batch out-of-combat PPO checkpoint at iteration 24, trained
-  from the previous champion (`champion_ba2fa6a2987d.pt`, SHA-256 prefix
-  `ba2fa6a2987d`, in run `large_batch_20261020/inputs`), with the same
-  combat weights; confirmed at 232 against 152 wins of 4,096 fresh worlds
+- **Champion:** the best retained learned player. From 21 October it is
+  round 3 (`champion_7d876c939a74.pt`, SHA-256 prefix `7d876c939a74`, in
+  runs `large_batch_20261020/inputs` and `round4_20261021/inputs`): the
+  20 October champion's out-of-combat head with the old-encoder combat
+  student as its combat head, trained for 24 more iterations with the
+  potion filter; confirmed at 394 against 232 wins of 4,096 fresh worlds
   ([large-batch PPO page](experiments/2026-10-20-large-batch-ppo.md)).
-  Comparisons before 20 October use the **previous champion**: round-2
+- **Champion of 20 October:** the large-batch out-of-combat PPO checkpoint
+  at iteration 24 (`champion_ba2fa6a2987d.pt`), trained from the previous
+  champion with the same combat weights.
+- Comparisons before 20 October use the **previous champion**: round-2
   out-of-combat PPO update 20 (`champion_3d135d9bd53b.pt`), with combat
   weights from the first curriculum; lineage on the
   [out-of-combat PPO page](experiments/2026-10-13-ooc-macro-credit-ppo.md).
