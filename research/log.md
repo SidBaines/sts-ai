@@ -7,6 +7,12 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Demon Form on the new champion**, 10:20: 434 against 413 of 4,096 on
+  second DEV (p = 0.033), 391 against 379 on new worlds from
+  95,000,000,000 (p = 0.18); a small effect, shrinking as the policy
+  improves. The champion wins 379 (9.3%) on the new worlds. Exploration
+  statistics landed in the trainer (`ws/nonllm` 3ca1562), reviewed; round
+  4 itself runs the older frozen trainer.
 - **Round 3 promoted to champion** by Sid, 09:33
   (`champion_7d876c939a74.pt`). Queued: round 4 (24 iterations of 3,072
   games from the champion, potion filter and hygiene options, training seed
