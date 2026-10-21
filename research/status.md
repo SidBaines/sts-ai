@@ -1,6 +1,6 @@
 # Status
 
-**Updated 21 October 2026, 05:30 BST.** The last training arm runs, with a
+**Updated 21 October 2026, 05:21 BST.** The last training arm runs, with a
 watcher and an hourly check-in. Waiting for Sid: whether round 3's final
 checkpoint (394 of 4,096 fresh worlds, 9.6%) becomes the champion.
 
