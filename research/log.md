@@ -7,6 +7,11 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Continued-training checkpoint promoted** by Sid, 15:40
+  (`champion_2835f40fa439.pt`). Queued: a second continued training
+  (seed 2, frozen checkout `ws/nonllm` a33bd2b with exploration
+  statistics), the Demon Form retest on the new champion, and the champion
+  on new confirmation worlds from 96,000,000,000.
 - **Continued training evaluated**, 13:40: 527 against the champion's 413
   of 4,096 on second DEV and 476 against 379 on new worlds from
   95,000,000,000 (both p < 0.001; 11.6% on new worlds). Candidate for

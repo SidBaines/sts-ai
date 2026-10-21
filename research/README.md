@@ -9,8 +9,8 @@ everything is measured.
 
 | Player | Win rate | Evidence |
 |---|---|---|
-| **Candidate, awaiting Sid:** continued training with the hygiene options (run `round4`, `round4_20261021/round4/iter_0024.pt`) | 11.6% on 4,096 new worlds from 95,000,000,000 (476 against the champion's 379, p < 0.001); 12.9% on the second-DEV worlds (527 against 413) | Confirmed; pure policy |
-| **Champion from 21 October:** combat student plus retraining (run `round3_student`): the 20 October champion's out-of-combat head with the old-encoder combat student as its combat head, plus 24 more iterations of out-of-combat PPO with the potion filter (`champion_7d876c939a74.pt`) | 9.6% on 4,096 fresh worlds (394 against its start's 315, the harvest stack's 346 and the 20 October champion's 232); 10.1% on the second-DEV worlds (413) | Confirmed; current default |
+| **Champion from 21 October, afternoon:** continued training with the hygiene options (run `round4`, `champion_2835f40fa439.pt`) | 11.6% on 4,096 new worlds from 95,000,000,000 (476 against the champion's 379, p < 0.001); 12.9% on the second-DEV worlds (527 against 413) | Confirmed; current default |
+| Champion of 21 October, morning: combat student plus retraining (run `round3_student`): the 20 October champion's out-of-combat head with the old-encoder combat student as its combat head, plus 24 more iterations of out-of-combat PPO with the potion filter (`champion_7d876c939a74.pt`) | 9.6% on 4,096 fresh worlds (394 against its start's 315, the harvest stack's 346 and the 20 October champion's 232); 10.1% on the second-DEV worlds (413) | Confirmed |
 | Champion of 20 October: large-batch out-of-combat PPO from the previous champion, iteration 24 (`champion_ba2fa6a2987d.pt`) | 5.7% on 4,096 fresh worlds (232 against the previous champion's 152; +2.0 points, p < 0.001; mean floor +1.24 [+0.91, +1.58]); 6.7% on the second-DEV worlds (276) | Confirmed |
 | Champion of 20 October with the old-encoder combat student and the Demon Form rule (an overlay, not yet distilled) | 8.4% on 4,096 fresh worlds (346 against the 20 October champion's 232 and the previous champion's 152); 8.1% on the second-DEV worlds (333 against 276; student alone 316, rule alone 292) | Confirmed; the rule must be distilled before this is a pure policy |
 | Previous champion: round-2 out-of-combat PPO update 20 | 3.8% (156 of 4,096 second-DEV worlds; 3.7% on the fresh worlds above) | Baseline of every comparison before 20 October |
@@ -30,16 +30,11 @@ in the [results ledger](results.md).
 
 ## Now
 
-Nothing is training. Waiting for Sid: whether the
-[continued training](experiments/2026-10-21-round-4.md) (run `round4`, 24
-more out-of-combat PPO iterations from the champion with the hygiene
-options) becomes the champion; it wins 11.6% on new worlds against 9.3%.
-The champion became "combat student plus retraining" on 21 October: the
-20 October champion's out-of-combat network with the combat student as its
-combat network, retrained for 24 iterations (run `round3_student`). Forcing
-Demon Form on top of it adds little (434 against 413 on DEV, p = 0.033;
-391 against 379 on new worlds, p = 0.18); by Sid's decision it is not
-distilled until the continued training is decided. [Large-batch PPO](experiments/2026-10-20-large-batch-ppo.md) finished on 21
+Running: a [second continued training](experiments/2026-10-21-continued-training-2.md)
+from the new champion, the first run to record exploration statistics,
+and a retest of the Demon Form rule on that champion. The champion became
+the first continued training's final checkpoint on the afternoon of 21
+October (11.6% against 9.3% on new worlds). [Large-batch PPO](experiments/2026-10-20-large-batch-ppo.md) finished on 21
 October: training the out-of-combat head for 73,728 more games improved
 every arm; batch size made no clear difference at equal games; the hygiene
 options helped under the potion filter; and the combat student plus retraining reached 9.6% on fresh
@@ -52,12 +47,11 @@ not under-picked as a class). See [status](status.md) and the temporary
 
 ## Next
 
-1. **Decide on the continued training** (finished: 11.6% against 9.3% on
-   new worlds), then retest the Demon Form rule on whichever checkpoint is
-   champion and distil it only if it still helps (Sid, 21 October).
-2. **Keep training from the champion**, now with the exploration
-   statistics recorded, to find where the gains flatten; the policy has
-   never bought a shop card removal in any iteration.
+1. **Second continued training and the Demon Form retest** (running);
+   distil the rule only if it still helps.
+2. **Read the exploration statistics** from that run: which menus are
+   saturated, and whether never-sampled actions (shop card removals) stay
+   at zero.
 3. **Exploration for a saturated policy:** paired counterfactual
    exploration or an ε-mixture behaviour policy on strategic menus, with a
    fresh out-of-combat lineage held in reserve.

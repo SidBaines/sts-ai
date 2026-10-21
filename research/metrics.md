@@ -94,6 +94,7 @@ confirmation worlds apart.
 | 0.1.5 | Fixed probe states (the 93,000,000,000 to 94,000,000,000 namespace is reserved for them) | 93,000,000,000 | |
 | 0.1.5.1 | Confirmation of the large-batch PPO final checkpoint, opened 20 October and reused for every arm of that study; the reserved 91,200,000,000 set stays unopened | 94,000,000,000 | 4,096 |
 | 0.1.5.1 | Confirmation for round 4 and the Demon Form test on the 21 October champion, opened 21 October | 95,000,000,000 | 4,096 |
+| 0.1.5.1 | Confirmation for the second continued training, opened 21 October afternoon | 96,000,000,000 | 4,096 |
 | All | Out-of-combat PPO training worlds (`train_ooc.py`): 7,000,000,000 plus 500,000,000 per training seed plus 10,000,000 per iteration | 7,000,000,000 | games per iteration |
 
 ## Environment versions
@@ -113,8 +114,14 @@ release changed game behaviour.
 
 ## Players, teachers and encoders
 
-- **Champion:** the best retained learned player. From 21 October it is
-  round 3 (`champion_7d876c939a74.pt`, SHA-256 prefix `7d876c939a74`, in
+- **Champion:** the best retained learned player. From the afternoon of 21
+  October it is the first continued training's final checkpoint
+  (`champion_2835f40fa439.pt`, SHA-256 prefix `2835f40fa439`, in runs
+  `round4_20261021/inputs` and `continued2_20261021/inputs`): the morning
+  champion trained for 24 more iterations with the potion filter and the
+  hygiene options; confirmed at 476 against 379 wins of 4,096 new worlds
+  ([continued training](experiments/2026-10-21-round-4.md)).
+- **Champion of 21 October, morning:** round 3 (`champion_7d876c939a74.pt`, SHA-256 prefix `7d876c939a74`, in
   runs `large_batch_20261020/inputs` and `round4_20261021/inputs`): the
   20 October champion's out-of-combat head with the old-encoder combat
   student as its combat head, trained for 24 more iterations with the
