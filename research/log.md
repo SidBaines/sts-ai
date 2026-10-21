@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Continued training evaluated**, 13:40: 527 against the champion's 413
+  of 4,096 on second DEV and 476 against 379 on new worlds from
+  95,000,000,000 (both p < 0.001; 11.6% on new worlds). Candidate for
+  champion, for Sid.
 - **Continued training resumed**, 10:51, from iteration 5: closing the
   Claude app at about 10:17 killed both queue runners and the trainer.
 - **Sid: wait for the continued training before distilling Demon Form**,

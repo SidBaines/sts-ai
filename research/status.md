@@ -1,41 +1,29 @@
 # Status
 
-**Updated 21 October 2026, 10:51 BST.** The continued training (run `round4`) trains, resumed from iteration 5 at 10:50 after the Claude app closed at about 10:17 and took both queue runners and the trainer with it; it ends about 13:00.
+**Updated 21 October 2026, 15:37 BST.** Nothing is training. Waiting for Sid: whether the
+continued training's final checkpoint (476 of 4,096 new worlds, 11.6%)
+becomes the champion.
 
-- **Running: [continued training](experiments/2026-10-21-round-4.md)** as `r4-train-resume` (the first launch, `r4-train`, is marked failed)
-  on lane `train` of the queue in worktree `nonllm-large-batch` (24
-  iterations of 3,072 games, about 6 minutes each, so about 2.5 hours);
-  output `data/rl_runs/round4_20261021/round4/` there. It runs
-  `train_ooc.py` from the frozen checkout `nonllm-large-batch-hidden` at
-  `ws/nonllm` 8aca4e4.
-- **Done:** the champion on the new worlds from 95,000,000,000 (379 wins)
-  and the Demon Form test (434 against 413 on DEV, p = 0.033; 391 against
-  379 on the new worlds, p = 0.18); outputs in
-  `round4_20261021/{study_eval,confirm95}/`. Sid decided to wait for the
-  continued training before distilling it.
-- **Landed:** exploration statistics in the trainer (`ws/nonllm` 3ca1562);
-  runs started from that code record them each iteration.
-- **Watcher:** `eval_round4.sh` in the Claude session's scratchpad (log
-  `round4_eval.log` beside it), detached from the app; when round 4
-  finishes it queues the final and best-by-trainer evaluations and prints
-  the comparisons with the champion.
-- **Check or stop:** `scripts/rl/queue_runner.py status` in either
-  worktree; `scripts/rl/queue_runner.py cancel NAME`. The queues pause jobs
-  on battery and resume on power. Dashboard: http://127.0.0.1:8795
-  (detached, from worktree `nonllm-dashboard`).
-- **Champion** (from 21 October): `champion_7d876c939a74.pt` in
-  `large_batch_20261020/inputs` and `round4_20261021/inputs`, worktree
-  `nonllm-large-batch`. Its paired games: second DEV
-  `large_batch_20261020/study_eval/round3_student_i0024` (413 wins);
-  fresh worlds from 94,000,000,000 `confirm94/round3_student_i0024` (394);
-  from 95,000,000,000 `round4_20261021/confirm95/champion` (379).
-- **Worktrees to keep:** `nonllm-large-batch` (every champion and arm),
-  `nonllm-large-batch-hidden` (the frozen trainer used by round 4),
-  `nonllm-fresh-start` (the native build and the combat student) and
-  `nonllm-boss-rares` (evaluations). Cut topic branches from
-  `origin/ws/nonllm`; the local branch is behind.
+- **Finished:** [continued training](experiments/2026-10-21-round-4.md),
+  run `round4_20261021/round4` in worktree `nonllm-large-batch`; candidate
+  checkpoint `iter_0024.pt` there. Its games: second DEV
+  `round4_20261021/study_eval/round4_i0024` (527 wins), new worlds
+  `round4_20261021/confirm95/round4_i0024` (476).
+- **Champion until Sid decides:** `champion_7d876c939a74.pt` (combat student
+  plus retraining), with games `large_batch_20261020/study_eval/round3_student_i0024`
+  (413) and `round4_20261021/confirm95/champion` (379).
+- **Idle:** both queue runners (`scripts/rl/queue_runner.py status` in
+  worktrees `nonllm-large-batch` and `nonllm-boss-rares`) and the
+  dashboard at http://127.0.0.1:8795 (restarted at 12:25 from worktree
+  `nonllm-dashboard` after the app closure killed it).
+- **Closing the Claude desktop app kills processes this session started,**
+  including detached queue runners, trainers and the dashboard; resume a
+  trainer with `--resume`.
+- **Worktrees to keep:** `nonllm-large-batch` (every champion and run),
+  `nonllm-large-batch-hidden` (the frozen trainer), `nonllm-fresh-start`
+  (the native build and the combat student) and `nonllm-boss-rares`
+  (evaluations). Cut topic branches from `origin/ws/nonllm`.
 
 ## Next
 
-When the evaluations land, apply the decision rules on the round 4 page;
-distil the Demon Form rule if it is confirmed.
+See the [README](README.md).

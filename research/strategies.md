@@ -87,7 +87,11 @@ large batches of whole games.
   at equal games (768 against 3,072 per iteration: 190 against 197). The
   hygiene options added wins under the potion filter (256 against 208 on
   DEV, p = 0.009). Round 3, on the old-encoder combat student, reached 394
-  of 4,096 fresh worlds (9.6%), the best pure policy so far.
+  of 4,096 fresh worlds (9.6%).
+- [Continued training](experiments/2026-10-21-round-4.md), 21 October: 24
+  more iterations from that champion with the hygiene options reached 476
+  of 4,096 new worlds (11.6%, against 379); the trainer's evaluation was
+  still rising, so the method has not plateaued.
 - The trainer's potions-visible evaluation understated gains by an order of
   magnitude; use `--hide-ooc-potions` so training is monitored on the
   study protocol.
