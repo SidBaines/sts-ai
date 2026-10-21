@@ -173,6 +173,12 @@ release changed game behaviour.
   visible information (damage, block, lethal targets and basic out-of-combat
   rules).
 - **Smithing:** upgrading a card at a rest site instead of resting to heal.
+- **Hygiene options:** three PPO settings tested together on 20 October: a
+  detached critic (the value loss trains only the critic head), normalised
+  value targets, and an entropy bonus of 0.01 on strategic menus (rest,
+  shop, card reward, map and removal).
+- **Harvest stack:** the champion of 20 October with the old-encoder combat
+  student as its combat head and the Demon Form rule as a menu overlay.
 - **Smith rate, card skip rate:** behaviour rates in the trainer's
   per-iteration record: the share of rest-site choices in that iteration's
   collected games that smith, and the share of card-reward choices that

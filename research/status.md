@@ -1,56 +1,33 @@
 # Status
 
-**Updated 21 October 2026, 05:21 BST.** The last training arm runs, with a
-watcher and an hourly check-in. Waiting for Sid: whether round 3's final
-checkpoint (394 of 4,096 fresh worlds, 9.6%) becomes the champion.
+**Updated 21 October 2026, 06:52 BST.** Nothing is training. Waiting for Sid: whether round 3's
+final checkpoint (394 of 4,096 fresh worlds, 9.6%) becomes the champion.
 
-- **Running: large-batch out-of-combat PPO**
-  ([page](experiments/2026-10-20-large-batch-ppo.md)) on lane `train` of the
-  queue in worktree `nonllm-large-batch`: `lb-small-hidden` (started
-  04:21, 96 iterations of 768 games, iteration 40 at 05:19, about 1.5
-  minutes each, ends about 06:45); the queue pauses jobs on battery and
-  resumes on power. It runs `train_ooc.py` from the frozen checkout
-  `nonllm-large-batch-hidden` at `ws/nonllm` 8aca4e4. Done and evaluated:
-  `lb-recipe` (the new champion), `lb-recipe-hidden` (arm 3: 208 of 4,096
-  on second DEV, 197 on the fresh worlds), `lb-hygiene-hidden` (arm 4:
-  256 and 228) and `lb-round3-student` (arm 5: 413 and 394; checkpoint
-  `large_batch_20261020/round3_student/iter_0024.pt`).
-- **Watcher:** a zsh script in the Claude session's scratchpad
-  (`eval_overnight_arms.sh`, now waiting for the control; log
-  `overnight_arms_eval.log` beside it; the hidden-arms watcher has
-  finished). When an arm finishes they queue its final and best-by-trainer
-  checkpoints with `fast_eval.py` as `lbeval-*` (second DEV) and
-  `lbconfirm-*` (fresh worlds from 94,000,000,000) on the `eval` lane of
-  the queue in worktree `nonllm-boss-rares`, then print paired comparisons
-  (`compare_arms.py`). Outputs: `large_batch_20261020/{study_eval,confirm94}/`.
-- **Hourly check-in:** a scheduled job in the Claude session (job
-  `1add53ef`, about 20 past each hour) re-checks both queues, the watchers
-  and the active arm's progress, records new comparisons in these notes,
-  and restarts a dead queue runner or watcher. It lives only while that
-  session is open.
-- **Dashboard:** http://127.0.0.1:8795 shows the arms live; it runs detached
-  from worktree `nonllm-dashboard` (restart with `scripts/rl/dashboard.py
-  restart --port 8795 --root <nonllm-large-batch>/data/rl_runs` there).
-- **Check or stop:** `scripts/rl/queue_runner.py status` in either worktree;
-  `scripts/rl/queue_runner.py cancel NAME` cancels a queued or running job.
-- **New champion** (promoted by Sid at 16:05): the recipe arm's iteration
-  24, `large_batch_20261020/inputs/champion_ba2fa6a2987d.pt` in worktree
-  `nonllm-large-batch`, which must be preserved. Paired baselines: second
-  DEV `study_eval/recipe_i0024/summary.json` (276 wins), fresh worlds
-  `confirm94/recipe_i0024/summary.json` (232). The harvest stack (plus the
-  combat student and the Demon Form rule) is at 333 on second DEV and 346
-  on the fresh worlds; round 3's start has its own baselines,
-  `harvest/student` (316) and `confirm94/student`.
-- Worktrees `nonllm-large-batch`, `nonllm-fresh-start` and
-  `nonllm-boss-rares` must stay; `nonllm-large-batch` also holds
-  uncommitted copies of research notes already merged, to discard when the
-  runs are over. The other topic worktrees hold only merged work. Cut topic
-  branches from `origin/ws/nonllm`; the local branch is behind.
+- **Finished overnight:** all arms of
+  [large-batch PPO](experiments/2026-10-20-large-batch-ppo.md), evaluated on
+  the second-DEV worlds and the fresh worlds from 94,000,000,000. Outputs in
+  worktree `nonllm-large-batch`, `data/rl_runs/large_batch_20261020/`:
+  one directory per arm (`log.jsonl`, `iter_XXXX.pt`), evaluations under
+  `study_eval/` and `confirm94/`.
+- **Round 3 candidate:** `large_batch_20261020/round3_student/iter_0024.pt`.
+  Its games, for paired comparisons: `study_eval/round3_student_i0024`
+  (413 wins) and `confirm94/round3_student_i0024` (394).
+- **Champion until Sid decides:** `large_batch_20261020/inputs/champion_ba2fa6a2987d.pt`
+  (arm 1, iteration 24), with baselines `study_eval/recipe_i0024` (276)
+  and `confirm94/recipe_i0024` (232).
+- **Idle:** the queue runners in worktrees `nonllm-large-batch` and
+  `nonllm-boss-rares` (check with `scripts/rl/queue_runner.py status`),
+  and the dashboard at http://127.0.0.1:8795, which runs detached from
+  worktree `nonllm-dashboard`.
+- **Worktrees to keep:** `nonllm-large-batch` (both champions' lineage and
+  every arm), `nonllm-fresh-start` (the previous champion, the combat
+  student and the native build) and `nonllm-boss-rares` (the evaluations).
+  `nonllm-large-batch` also holds uncommitted copies of research notes
+  already merged through `ws/nonllm`; they can now be discarded. The other
+  topic worktrees hold only merged work. Cut topic branches from
+  `origin/ws/nonllm`; the local branch is behind.
 
 ## Next
 
-In the morning: read the arms' comparisons from these notes or the watcher
-logs, finish the experiment page, and decide with Sid whether round 3's
-final checkpoint replaces the champion; then the plan in
-[README](README.md): distil the Demon Form rule, add exploration tracking,
-then the ε-mixture exploration arm.
+See the [README](README.md): decide on round 3, test the Demon Form rule on
+top of it, then round 4 with the hygiene options and exploration tracking.

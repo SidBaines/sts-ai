@@ -81,25 +81,26 @@ deck-building, which full-game reward cannot.
 out-of-combat (OOC) decisions as one transition, and train OOC choices with
 large batches of whole games.
 
-- At 3,072 games per iteration (four times the recipe), 24 iterations from
-  the champion won 276 of 4,096 second-DEV worlds against 156 under the
-  study protocol, and 232 against 152 on 4,096 fresh worlds (+2.0 points,
-  p < 0.001; floor +1.24 [+0.91, +1.58]), the largest confirmed pure-policy
-  gain so far ([large-batch PPO](experiments/2026-10-20-large-batch-ppo.md)). The arm
-  also set lambda 1 and weight decay 0 explicitly, so batch size alone is
-  not isolated. The trainer's own 1,024-world evaluation, on the
-  potions-visible protocol, showed only 17 to 25 wins and hid the gain.
-
+- [Large-batch PPO](experiments/2026-10-20-large-batch-ppo.md), 20 and 21
+  October: 73,728 more games of training improved every arm on fresh
+  worlds (+0.9 to +2.0 points of wins). Batch size made no clear difference
+  at equal games (768 against 3,072 per iteration: 190 against 197). The
+  hygiene options added wins under the potion filter (256 against 208 on
+  DEV, p = 0.009). Round 3, on the old-encoder combat student, reached 394
+  of 4,096 fresh worlds (9.6%), the best pure policy so far.
+- The trainer's potions-visible evaluation understated gains by an order of
+  magnitude; use `--hide-ooc-potions` so training is monitored on the
+  study protocol.
 - Update 36 gained 2.99 mean floors [2.39, 3.57] over the original
   composite on fresh worlds; a second training seed reproduced early gains.
 - With lambda 1 and distilled strategy rules, this lineage produced the
   champion: round-2 update 20, 213 wins of 4,096 fresh worlds on 0.1.4.
-- Continuing the same recipe from the champion at 768 games gave 58 and 57
-  wins against 57 on 1,024 DEV worlds: the plateau was the batch size and
-  the evaluation, not the method.
-- Why it worked: it removed combat noise and cross-phase critic bias from
-  strategic credit. Macro credit, frozen combat and larger batches changed
-  together, so their separate contributions are unknown.
+- An apparent plateau at 768 games (58 and 57 wins against 57 on 1,024 DEV
+  worlds) was most likely the evaluation, not the method or the batch
+  size (weight decay also changed).
+- Why it works: it removes combat noise and cross-phase critic bias from
+  strategic credit. Without an entropy bonus, entropy fell in every arm
+  (to 0.10 to 0.17), so exploration is the open risk.
 - [OOC PPO page](experiments/2026-10-13-ooc-macro-credit-ppo.md).
 
 ## Distilling strategy rules

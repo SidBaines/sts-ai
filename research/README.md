@@ -13,7 +13,7 @@ everything is measured.
 | **Champion from 20 October:** large-batch out-of-combat PPO from the previous champion, iteration 24 (`champion_ba2fa6a2987d.pt`) | 5.7% on 4,096 fresh worlds (232 against the previous champion's 152; +2.0 points, p < 0.001; mean floor +1.24 [+0.91, +1.58]); 6.7% on the second-DEV worlds (276) | Confirmed; current default |
 | New champion with the old-encoder combat student and the Demon Form rule (an overlay, not yet distilled) | 8.4% on 4,096 fresh worlds (346 against the new champion's 232 and the previous champion's 152); 8.1% on the second-DEV worlds (333 against 276; student alone 316, rule alone 292) | Confirmed; the rule must be distilled before this is a pure policy |
 | Previous champion: round-2 out-of-combat PPO update 20 | 3.8% (156 of 4,096 second-DEV worlds; 3.7% on the fresh worlds above) | Baseline of every comparison before 20 October |
-| Old-encoder combat distilled from the search teacher, with the previous champion's out-of-combat play | 4.8% (197 of the second-DEV worlds; +1.0 points [+0.2, +1.8]); a second training seed 5.4% (221) | Planned; being re-tested on the new champion |
+| Old-encoder combat distilled from the search teacher, with the previous champion's out-of-combat play | 4.8% (197 of the second-DEV worlds; +1.0 points [+0.2, +1.8]); a second training seed 5.4% (221) | Planned; on the new champion 316 against 276 (p = 0.050); round 3 is built on it |
 | Champion plus search at Act 2 and 3 bosses and elites | 8.1% (333 of 4,096 fresh worlds, environment 0.1.4) | Confirmed, but search is not a pure policy |
 
 Compare numbers only within one environment version and world set.
@@ -29,42 +29,31 @@ in the [results ledger](results.md).
 
 ## Now
 
-Running overnight: the batch-size control, the last arm of
-[large-batch PPO](experiments/2026-10-20-large-batch-ppo.md). Round 3 (the
-new champion with the combat student spliced in, plus 24 iterations) wins
-394 of 4,096 fresh worlds, 9.6%, and awaits Sid's decision on promotion.
-With the potion filter on during
-training, the recipe alone won 208 of 4,096 and the recipe plus the
-hygiene options 256 (p = 0.009 between them), against the new champion's
-276 and the previous champion's 156. Finished on 20 October:
-[boss rares](experiments/2026-10-20-boss-rares.md): forcing Demon Form
-whenever offered wins 179 against 156 of 4,096 games (p = 0.010), and 230
-against 198 with the old-encoder combat head, the first single deck-building
-habit shown to change wins;
-[power picks](experiments/2026-10-20-power-picks.md): powers are not
-under-picked as a class, the champion's power count is set by whether three
-favourite powers are offered, and it skips about two thirds of boss card
-rewards. Also landed: in-process PPO collection (`--in-process-games`; 27.5
-games/s on 12 collectors against 8.6 for the old recipe), and the finding
-that the trainer and `eval_policy.py` let the policy waste potions out of
-combat, under which the champion wins 1.7%, not 3.8% (`--hide-ooc-potions`
-restores the study protocol). See [status](status.md) and the temporary
+Nothing is training. Waiting for Sid: whether round 3 becomes the champion.
+[Large-batch PPO](experiments/2026-10-20-large-batch-ppo.md) finished on 21
+October: training the out-of-combat head for 73,728 more games improved
+every arm; batch size made no clear difference at equal games; the hygiene
+options helped under the potion filter; and round 3 reached 9.6% on fresh
+worlds. The earlier plateau was the potions-visible evaluation, not the
+method. Also on 20 October: [boss rares](experiments/2026-10-20-boss-rares.md)
+(forcing Demon Form helps; never skipping boss rares does not clearly
+help) and [power picks](experiments/2026-10-20-power-picks.md) (powers are
+not under-picked as a class). See [status](status.md) and the temporary
 [experiment log](log.md).
 
 ## Next
 
-1. **Distil the Demon Form rule** into the out-of-combat head, confirm it on
-   the confirmation worlds, and continue PPO from it with the potion filter
-   on; extend the rule grid to other declined powers and removals.
-2. **Exploration for a saturated policy** (discussion with Sid, 20 October):
-   track per-menu entropy and rare-action sampling in the trainer; then try
-   paired counterfactual exploration or an ε-mixture behaviour policy on
-   strategic menus, with a fresh out-of-combat lineage held in reserve.
-3. **Learn deck strength instead of simulating each choice.** Train a
-   deck-value network on oracle scores from many states, then use it to
-   score options. To discuss with Sid.
-4. Confirm one old-encoder combat student, chosen in advance, on the
-   confirmation worlds before promoting it.
+1. **Decide on round 3**, perhaps after a check on a further unused world
+   range; then test the Demon Form rule on top of it and distil the rule
+   if it still adds.
+2. **Round 4:** continue from round 3 with the potion filter and the
+   hygiene options, with exploration tracking (per-menu entropy,
+   rare-action sampling) in the trainer.
+3. **Exploration for a saturated policy:** paired counterfactual
+   exploration or an ε-mixture behaviour policy on strategic menus, with a
+   fresh out-of-combat lineage held in reserve.
+4. **Learn deck strength instead of simulating each choice:** a deck-value
+   network trained on oracle scores. To discuss with Sid.
 
 The agent must stay a pure policy; search may be used to make better
 teachers, not to play.

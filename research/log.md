@@ -7,6 +7,12 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **All large-batch arms evaluated; the study is finished**, 06:49. The
+  batch-size control (96 iterations of 768 games) won 212 of 4,096 on
+  second DEV and 190 on the fresh worlds, no clear difference from arm 3's
+  208 and 197 at equal games (p = 0.87 and 0.73), and beat its start (156,
+  152; p = 0.001 and 0.027). Batch size was not the limit; the earlier
+  plateau was the evaluation. The hourly check-in was removed.
 - **Round 3 evaluated**, 04:37: final checkpoint 413 of 4,096 on second
   DEV (its start 316, p < 0.001; the harvest stack 333; the new champion
   276) and 394 on the fresh worlds (start 315, p < 0.001; stack 346, p =
