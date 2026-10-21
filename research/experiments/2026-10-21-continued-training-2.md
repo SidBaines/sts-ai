@@ -75,6 +75,8 @@ labels sat at the wrong step.** Distilled checkpoint, second DEV, paired:
 |---|---:|---:|---:|---|
 | Distilled vs champion | 527 → 512 | 245 / 230 | 0.52 | −0.11 [−0.37, +0.13] |
 | Distilled vs champion plus overlay | 550 → 512 | 254 / 216 | 0.088 | −0.18 [−0.42, +0.07] |
+| Distilled vs champion, worlds from 95,000,000,000 | 476 → 485 | 218 / 227 | 0.71 | +0.17 [−0.10, +0.43] |
+| Distilled vs champion plus overlay, same worlds | 490 → 485 | 223 / 218 | 0.85 | +0.16 [−0.11, +0.42] |
 
 - The labels fitted perfectly (held-out label agreement 100%), but 2.4% of
   the champion's other out-of-combat choices changed, and about 470 games
