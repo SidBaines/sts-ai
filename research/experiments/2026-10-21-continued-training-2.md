@@ -40,7 +40,23 @@ still add anything on the new champion? (Approach:
 
 ## Results
 
-Pending.
+**The Demon Form rule passes on second DEV and narrowly misses
+confirmation on the new worlds.** Champion forced to take Demon Form
+whenever offered, paired with the champion:
+
+| Worlds | Wins | Discordant, champion only / rule only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
+|---|---:|---:|---:|---|---|
+| Second DEV | 527 → 550 (12.9% → 13.4%) | 17 / 40 | 0.003 | +0.06 [−0.01, +0.13] | +0.6 points [+0.1, +1.1] (3,396 worlds) |
+| From 95,000,000,000 | 476 → 490 (11.6% → 12.0%) | 16 / 30 | 0.054 | +0.01 [−0.06, +0.08] | +0.3 points [−0.2, +0.7] (3,358 worlds) |
+
+- Under the rule fixed in advance this is *Better* on DEV but not
+  confirmed (p = 0.054 against the 0.05 threshold), so it is not distilled
+  automatically.
+- The rule changes the outcome of only about 1% of games, and in each of
+  the four tests on the last two champions the changed games favoured the
+  rule (55 to 34, 40 to 28, 40 to 17, 30 to 16).
+
+Training: pending.
 
 ## Conclusion
 
@@ -52,6 +68,9 @@ Pending.
 
 ## Log
 
+- 21 Oct, 15:51: Demon Form retest: 550 against 527 on second DEV (p =
+  0.003), 490 against 476 on the new worlds (p = 0.054): not confirmed by
+  the rule fixed in advance.
 - 21 Oct, 15:40: champion promoted; training and evaluations queued.
 
 Code: `scripts/rl/train_ooc.py` from a frozen checkout of `ws/nonllm` at

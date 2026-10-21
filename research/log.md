@@ -7,6 +7,12 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Demon Form on the afternoon champion**, 15:51: 550 against 527 on
+  second DEV (p = 0.003), 490 against 476 on new worlds (p = 0.054); not
+  confirmed under the pre-set rule, so not distilled without Sid's say.
+  First exploration statistics: 78% of card-reward decisions and 81% of
+  other menus have one action above 99% probability; a below-5% action is
+  sampled in 0.5% of decisions.
 - **Continued-training checkpoint promoted** by Sid, 15:40
   (`champion_2835f40fa439.pt`). Queued: a second continued training
   (seed 2, frozen checkout `ws/nonllm` a33bd2b with exploration
