@@ -7,6 +7,8 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Continued training resumed**, 10:51, from iteration 5: closing the
+  Claude app at about 10:17 killed both queue runners and the trainer.
 - **Sid: wait for the continued training before distilling Demon Form**,
   then retest the rule on whichever checkpoint is champion. The front
   pages now name runs descriptively: "combat student plus retraining" (run

@@ -1,8 +1,8 @@
 # Status
 
-**Updated 21 October 2026, 10:49 BST.** The continued training (run `round4`) trains, ending about 12:15.
+**Updated 21 October 2026, 10:51 BST.** The continued training (run `round4`) trains, resumed from iteration 5 at 10:50 after the Claude app closed at about 10:17 and took both queue runners and the trainer with it; it ends about 13:00.
 
-- **Running: [round 4](experiments/2026-10-21-round-4.md)** as `r4-train`
+- **Running: [continued training](experiments/2026-10-21-round-4.md)** as `r4-train-resume` (the first launch, `r4-train`, is marked failed)
   on lane `train` of the queue in worktree `nonllm-large-batch` (24
   iterations of 3,072 games, about 6 minutes each, so about 2.5 hours);
   output `data/rl_runs/round4_20261021/round4/` there. It runs
