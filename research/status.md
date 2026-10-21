@@ -1,6 +1,6 @@
 # Status
 
-**Updated 21 October 2026, 10:20 BST.** Round 4 trains (ends about 12:00).
+**Updated 21 October 2026, 10:49 BST.** The continued training (run `round4`) trains, ending about 12:15.
 
 - **Running: [round 4](experiments/2026-10-21-round-4.md)** as `r4-train`
   on lane `train` of the queue in worktree `nonllm-large-batch` (24
@@ -11,8 +11,8 @@
 - **Done:** the champion on the new worlds from 95,000,000,000 (379 wins)
   and the Demon Form test (434 against 413 on DEV, p = 0.033; 391 against
   379 on the new worlds, p = 0.18); outputs in
-  `round4_20261021/{study_eval,confirm95}/`. Waiting for Sid: whether to
-  distil a rule this small.
+  `round4_20261021/{study_eval,confirm95}/`. Sid decided to wait for the
+  continued training before distilling it.
 - **Landed:** exploration statistics in the trainer (`ws/nonllm` 3ca1562);
   runs started from that code record them each iteration.
 - **Watcher:** `eval_round4.sh` in the Claude session's scratchpad (log

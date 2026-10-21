@@ -7,6 +7,11 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Sid: wait for the continued training before distilling Demon Form**,
+  then retest the rule on whichever checkpoint is champion. The front
+  pages now name runs descriptively: "combat student plus retraining" (run
+  `round3_student`) and "continued training with the hygiene options" (run
+  `round4`).
 - **Demon Form on the new champion**, 10:20: 434 against 413 of 4,096 on
   second DEV (p = 0.033), 391 against 379 on new worlds from
   95,000,000,000 (p = 0.18); a small effect, shrinking as the policy
