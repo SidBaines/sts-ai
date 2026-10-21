@@ -157,5 +157,5 @@ Caveats:
 Code: `scripts/rl/train_ooc.py` (library `src/sts_rl/ooc_trainer.py`) from
 the frozen checkout at `ws/nonllm` 8aca4e4 for arms 3 to 6; comparisons with
 `experiments/2026-10-20-boss-rares/compare_arms.py`; figure
-`experiments/2026-10-20-large-batch-ppo/plot_arms.py` at commit eae53d4.
+`experiments/2026-10-20-large-batch-ppo/plot_arms.py` at commit 133b5bd.
 Data: run `large_batch_20261020` (local, worktree `nonllm-large-batch`).
