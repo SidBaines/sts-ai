@@ -26,8 +26,9 @@ This is the planned step D of the fresh-start study (expert iteration).
 - **Student:** the old encoder, large size, trained from scratch at learning
   rate 0.001, batch 128, up to 12,000 steps with early stopping on
   validation loss (patience 6, at least 2,000 steps), seed 1919: the 15
-  October recipe unchanged, on the old corpus plus the new one. Splits are
-  by world hash, so the old corpus keeps its validation and test worlds.
+  October recipe unchanged. Planned on the old corpus plus the new one;
+  run on the new corpus only (see Log), split into fit, validation and
+  test worlds by world hash.
 - **Evaluation:** the new student replaces the champion's combat head
   (`combine_heads.py`); `fast_eval.py` under the study protocol on the
   4,096 second-DEV worlds, paired with the champion's 527 wins; teacher
@@ -55,6 +56,13 @@ Pending.
 
 ## Log
 
+- 21 Oct, 19:27: deviation from the plan. The training library refuses to
+  mix corpora collected by different players (a safeguard of the fresh-start
+  pipeline), so the student is fitted on the new corpus alone: 2,000 worlds,
+  no faults, 174,859 combat labels (the old corpus had 159,707). Its fixed
+  unlabelled probe states (movement monitoring only) must also come from
+  the same player, so 8 new probe worlds were collected from
+  93,000,000,100. Fitting started at 19:26 on the GPU.
 - 21 Oct, 17:31: labelling started at 17:28 (eight shards); a progress-tied
   keep-alive stops the queue's two-hour silence check from killing shards
   that print only at the end.
