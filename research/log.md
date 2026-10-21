@@ -7,6 +7,12 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Demon Form distillation, first attempt failed**, 17:31: 512 against the
+  champion's 527 on second DEV; its labels forced Demon Form before the
+  gold rather than at the card decision. Collector fixed, labels
+  recollected. Also started: a second teacher corpus for the combat
+  student (2,000 training worlds from 90,500,100,000, eight shards,
+  labelled by the search teacher on states the current champion reaches).
 - **Card rule grid**, 17:25: forcing any of eight strong cards the champion
   avoids (Shockwave, Barricade, Disarm, Limit Break, Battle Trance, Feel
   No Pain, Offering, Whirlwind) does not help; three are worse after Holm

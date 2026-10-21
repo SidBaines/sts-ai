@@ -68,6 +68,27 @@ whenever offered, paired with the champion:
   the four tests on the last two champions the changed games favoured the
   rule (55 to 34, 40 to 28, 40 to 17, 30 to 16).
 
+**The first Demon Form distillation lost the overlay's gain, because its
+labels sat at the wrong step.** Distilled checkpoint, second DEV, paired:
+
+| Comparison | Wins | Discordant | p | Mean floor, paired difference |
+|---|---:|---:|---:|---|
+| Distilled vs champion | 527 → 512 | 245 / 230 | 0.52 | −0.11 [−0.37, +0.13] |
+| Distilled vs champion plus overlay | 550 → 512 | 254 / 216 | 0.088 | −0.18 [−0.42, +0.07] |
+
+- The labels fitted perfectly (held-out label agreement 100%), but 2.4% of
+  the champion's other out-of-combat choices changed, and about 470 games
+  changed outcome against 57 for the overlay.
+- Diagnosis: a reward screen is visited several times (gold, potion, card).
+  The collector forced Demon Form at the first visit, where the champion's
+  own choice was nearly always to take the gold first; only 10 of 2,080
+  labels were at a step where the champion was choosing a card. The
+  student learnt "take a card before the gold", not "take Demon Form".
+- Fix: the collector now intervenes only where the policy itself would take
+  a card, skip, or proceed (in a 48-game smoke test, 16 labels, 6 of them
+  changing the choice). Labels recollected on new training worlds from
+  8,800,000,000 and 8,900,000,000, then distilled with the same settings.
+
 Training: pending.
 
 ## Conclusion
@@ -80,6 +101,9 @@ Pending.
 
 ## Log
 
+- 21 Oct, 17:31: first distillation lost the overlay's gain (512 against
+  527); labels were at the wrong reward-screen step. Collector fixed and
+  labels recollected.
 - 21 Oct, 16:09: Sid chose to distil the Demon Form rule despite the
   narrow miss; labels, distillation and evaluations queued. (A note here
   first said the champion declined Demon Form at all 16 offers of a smoke

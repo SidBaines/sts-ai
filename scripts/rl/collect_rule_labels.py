@@ -9,8 +9,10 @@ states visited are the rule-policy's), and writes:
   - type "elite" (with --elite-above): every map menu offering an elite, labelled
     with the policy's best elite node at HP >= threshold, else the policy's own pick;
   - type "take_card" (with --take-card NAME, repeatable): every card-reward menu
-    offering a named card, labelled with the policy's preferred offer of that card
-    (upgraded copies count), so play follows "take NAME whenever offered";
+    offering a named card at which the policy itself would take a card, skip the
+    reward or proceed (not, say, take the gold first), labelled with the policy's
+    preferred offer of that card (upgraded copies count), so play follows "take
+    NAME whenever offered" and labels sit at real card decisions;
   - type "rehearsal": a sample of other OOC decisions, for the KL anchor.
 --no-rest-rule leaves rest sites to the policy; --hide-ooc-potions plays under the
 study protocol (out-of-combat potion actions hidden, as in fast_eval.py).
@@ -37,6 +39,7 @@ from sts_rl.recording import begin_run
 from sts_env.env import SimulatorError
 
 LOCK = threading.Lock()
+CARD_DECISION = ("take card ", "skip card reward", "skip rewards / proceed")
 
 
 def main() -> None:
@@ -85,7 +88,7 @@ def main() -> None:
                             smith = [i for i, d in enumerate(legal) if d.startswith("smith")]
                             wanted = [i for i, d in enumerate(legal)
                                       if (m := _CARD_OFFER.match(d)) and m[1].rstrip("+") in take_names]
-                            if wanted:
+                            if wanted and legal[pos].startswith(CARD_DECISION):
                                 choice = max(wanted, key=lambda i: float(logits[0][i]))
                                 counts["take_card"] += 1
                                 counts["take_card_changed"] += choice != pos
