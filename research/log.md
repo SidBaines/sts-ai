@@ -7,6 +7,11 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Demon Form distilled, second attempt**, 18:52: with labels at real card
+  decisions the distilled policy matches the overlay (562 against 550 on
+  DEV, 489 against 490 on new worlds) and keeps 99.2% of other choices;
+  against the champion alone, 562 against 527 (p = 0.078) and 489 against
+  476 (p = 0.52).
 - **Demon Form distillation, first attempt failed**, 17:31: 512 against the
   champion's 527 on second DEV; its labels forced Demon Form before the
   gold rather than at the card decision. Collector fixed, labels

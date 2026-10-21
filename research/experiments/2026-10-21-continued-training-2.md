@@ -91,6 +91,26 @@ labels sat at the wrong step.** Distilled checkpoint, second DEV, paired:
   changing the choice). Labels recollected on new training worlds from
   8,800,000,000 and 8,900,000,000, then distilled with the same settings.
 
+**The corrected distillation reproduces the overlay.** 6,143 games gave
+2,048 labels at real card decisions, 543 of which changed the champion's
+choice (it takes Demon Form at 74% of offers on its own). After 12 epochs
+the student took Demon Form at every held-out label and kept 99.2% of the
+champion's other choices (97.6% in the first attempt).
+
+| Comparison | Wins | Discordant | p | Mean floor, paired difference |
+|---|---:|---:|---:|---|
+| Distilled vs champion, second DEV | 527 → 562 | 169 / 204 | 0.078 | −0.09 [−0.29, +0.12] |
+| Distilled vs champion plus overlay, second DEV | 550 → 562 | 168 / 180 | 0.56 | −0.15 [−0.35, +0.06] |
+| Distilled vs champion, worlds from 95,000,000,000 | 476 → 489 | 170 / 183 | 0.52 | +0.01 [−0.20, +0.24] |
+| Distilled vs champion plus overlay, same worlds | 490 → 489 | 165 / 164 | 1.00 | +0.01 [−0.21, +0.22] |
+
+- Against the pre-set rule it is not *Better* than the champion (p =
+  0.078 on DEV); it is indistinguishable from the champion plus the overlay
+  on both world sets, so it is a pure-policy version of the rule.
+- About 370 games still change outcome against 57 for the overlay: the
+  remaining 0.8% drift in other choices reshuffles games without a net
+  cost that these samples can see.
+
 Training: pending.
 
 ## Conclusion
@@ -103,6 +123,9 @@ Pending.
 
 ## Log
 
+- 21 Oct, 18:52: corrected distillation matches the overlay (562 and 489
+  wins against the overlay's 550 and 490); not significantly better than
+  the champion alone.
 - 21 Oct, 17:31: first distillation lost the overlay's gain (512 against
   527); labels were at the wrong reward-screen step. Collector fixed and
   labels recollected.
