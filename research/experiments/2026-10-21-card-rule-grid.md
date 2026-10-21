@@ -40,7 +40,34 @@ candidate for distillation. (Approach: distilling strategy rules.)
 
 ## Results
 
-Pending.
+**The champion never takes five strong cards.** In 1,024 games (16,871
+card-reward decisions; card rewards skipped 10.9% of the time), take rates
+of the pre-registered candidates:
+
+| Card | Offers | Taken | In the grid |
+|---|---:|---:|---|
+| Feel No Pain | 361 | 0% | yes |
+| Disarm | 361 | 0.3% | yes |
+| Shockwave | 343 | 0% | yes |
+| Limit Break | 342 | 0% | yes |
+| Offering | 326 | 0% | yes |
+| Barricade | 321 | 1.6% | yes |
+| Whirlwind | 361 | 23.5% | yes |
+| Battle Trance | 368 | 28.0% | yes |
+| Corruption | 340 | 24.4% | no (9th by declines) |
+| Feed | 317 | 28.7% | no |
+| Impervious | 345 | 37.1% | no |
+| Carnage | 351 | 42.7% | no |
+| Reaper | 346 | 49.4% | no |
+| Uppercut | 382 | 75.4% | no (taken over half the time) |
+| Inflame | 351 | 86.0% | no |
+| Flame Barrier | 331 | 75.2% | no |
+| Shrug It Off | 1,057 | 76.6% | no |
+| Pommel Strike | 1,053 | 73.0% | no |
+| Demon Form | 365 | 74.0% | excluded (tested separately) |
+
+Every card's rate is in `figures/2026-10-21-card-rule-grid/take_rates.csv`.
+Overlay tests: pending.
 
 ## Conclusion
 
@@ -52,6 +79,9 @@ Pending.
 
 ## Log
 
+- 21 Oct, 16:22: measurement done; the eight cards above queued for the
+  overlay tests. An 8-game smoke test had been printed before the list was
+  fixed; none of its rows were candidate cards.
 - 21 Oct, 16:13: page written and the candidate list fixed while the
   measurement ran, before any take rate was read.
 

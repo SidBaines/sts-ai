@@ -1,0 +1,206 @@
+card,type,rarity,offers,takes,take_rate,mean_policy_probability
+Sword Boomerang,Attack,Common,1080,323,0.2991,0.256
+True Grit,Skill,Common,1066,0,0.0,0.0004
+Armaments,Skill,Common,1060,270,0.2547,0.2221
+Shrug It Off,Skill,Common,1057,810,0.7663,0.7572
+Flex,Skill,Common,1057,3,0.0028,0.007
+Pommel Strike,Attack,Common,1053,769,0.7303,0.7286
+Anger,Attack,Common,1050,501,0.4771,0.4585
+Heavy Blade,Attack,Common,1046,272,0.26,0.2237
+Clothesline,Attack,Common,1046,901,0.8614,0.8531
+Wild Strike,Attack,Common,1029,434,0.4218,0.4088
+Warcry,Skill,Common,1025,0,0.0,0.001
+Twin Strike,Attack,Common,1024,567,0.5537,0.5473
+Clash,Attack,Common,1022,409,0.4002,0.371
+Havoc,Skill,Common,1020,0,0.0,0.0045
+Cleave,Attack,Common,1020,369,0.3618,0.3115
+Iron Wave,Attack,Common,1017,647,0.6362,0.6244
+Perfected Strike,Attack,Common,1010,1006,0.996,0.9867
+Body Slam,Attack,Common,1008,7,0.0069,0.0192
+Thunderclap,Attack,Common,988,138,0.1397,0.1248
+Headbutt,Attack,Common,987,42,0.0426,0.0807
+Second Wind,Skill,Uncommon,402,0,0.0,0.005
+Metallicize,Power,Uncommon,401,381,0.9501,0.9364
+Searing Blow,Attack,Uncommon,398,1,0.0025,0.0149
+Bloodletting,Skill,Uncommon,384,0,0.0,0.0019
+Hemokinesis,Attack,Uncommon,384,2,0.0052,0.032
+Evolve,Power,Uncommon,383,66,0.1723,0.1619
+Uppercut,Attack,Uncommon,382,288,0.7539,0.7452
+Dropkick,Attack,Uncommon,376,0,0.0,0.046
+Ghostly Armor,Skill,Uncommon,372,219,0.5887,0.5743
+Combust,Power,Uncommon,372,8,0.0215,0.036
+Dual Wield,Skill,Uncommon,371,0,0.0,0.0003
+Sentinel,Skill,Uncommon,370,0,0.0,0.002
+Rampage,Attack,Uncommon,368,14,0.038,0.0712
+Battle Trance,Skill,Uncommon,368,103,0.2799,0.2463
+Demon Form,Power,Rare,365,270,0.7397,0.7428
+Dark Embrace,Power,Uncommon,364,2,0.0055,0.0032
+Rupture,Power,Uncommon,362,1,0.0028,0.0038
+Feel No Pain,Power,Uncommon,361,0,0.0,0.0035
+Disarm,Skill,Uncommon,361,1,0.0028,0.0011
+Whirlwind,Attack,Uncommon,361,85,0.2355,0.2087
+Infernal Blade,Skill,Uncommon,361,1,0.0028,0.0017
+Blood for Blood,Attack,Uncommon,354,137,0.387,0.3342
+Seeing Red,Skill,Uncommon,352,0,0.0,0.0019
+Pummel,Attack,Uncommon,352,10,0.0284,0.0447
+Carnage,Attack,Uncommon,351,150,0.4274,0.403
+Inflame,Power,Uncommon,351,302,0.8604,0.8506
+Rage,Skill,Uncommon,351,9,0.0256,0.0392
+Bludgeon,Attack,Rare,350,56,0.16,0.1675
+Reckless Charge,Attack,Uncommon,347,72,0.2075,0.1876
+Power Through,Skill,Uncommon,347,206,0.5937,0.5842
+Reaper,Attack,Rare,346,171,0.4942,0.4716
+Spot Weakness,Skill,Uncommon,346,281,0.8121,0.8125
+Impervious,Skill,Rare,345,128,0.371,0.3679
+Shockwave,Skill,Uncommon,343,0,0.0,0.0018
+Exhume,Skill,Rare,343,0,0.0,0.0015
+Fiend Fire,Attack,Rare,342,0,0.0,0.0039
+Limit Break,Skill,Rare,342,0,0.0,0.0026
+Sever Soul,Attack,Uncommon,341,0,0.0,0.0106
+Corruption,Power,Rare,340,83,0.2441,0.2364
+Juggernaut,Power,Rare,339,335,0.9882,0.9741
+Double Tap,Skill,Rare,338,20,0.0592,0.0531
+Intimidate,Skill,Uncommon,334,4,0.012,0.0366
+Immolate,Attack,Rare,334,249,0.7455,0.7283
+Berserk,Power,Rare,333,7,0.021,0.0332
+Brutality,Power,Rare,332,1,0.003,0.0169
+Flame Barrier,Skill,Uncommon,331,249,0.7523,0.7574
+Burning Pact,Skill,Uncommon,327,0,0.0,0.0002
+Entrench,Skill,Uncommon,326,0,0.0,0.0012
+Offering,Skill,Rare,326,0,0.0,0.0106
+Fire Breathing,Power,Uncommon,324,42,0.1296,0.128
+Barricade,Power,Rare,321,5,0.0156,0.0236
+Feed,Attack,Rare,317,91,0.2871,0.2782
+Flex+,Skill,Common,297,36,0.1212,0.1211
+Havoc+,Skill,Common,294,2,0.0068,0.0166
+Cleave+,Attack,Common,286,115,0.4021,0.3883
+Warcry+,Skill,Common,282,0,0.0,0.0076
+Perfected Strike+,Attack,Common,281,271,0.9644,0.9548
+Clothesline+,Attack,Common,281,209,0.7438,0.7398
+Body Slam+,Attack,Common,278,66,0.2374,0.2052
+True Grit+,Skill,Common,278,1,0.0036,0.0251
+Headbutt+,Attack,Common,273,41,0.1502,0.1525
+Sword Boomerang+,Attack,Common,273,146,0.5348,0.5092
+Wild Strike+,Attack,Common,272,92,0.3382,0.3107
+Clash+,Attack,Common,270,136,0.5037,0.4922
+Pommel Strike+,Attack,Common,270,214,0.7926,0.8003
+Armaments+,Skill,Common,267,128,0.4794,0.469
+Iron Wave+,Attack,Common,266,233,0.8759,0.8723
+Shrug It Off+,Skill,Common,261,242,0.9272,0.9145
+Twin Strike+,Attack,Common,254,172,0.6772,0.6735
+Anger+,Attack,Common,246,120,0.4878,0.4668
+Thunderclap+,Attack,Common,239,89,0.3724,0.3563
+Heavy Blade+,Attack,Common,228,112,0.4912,0.4836
+Inflame+,Power,Uncommon,113,88,0.7788,0.7777
+Intimidate+,Skill,Uncommon,113,5,0.0442,0.0764
+Feel No Pain+,Power,Uncommon,110,17,0.1545,0.1536
+Disarm+,Skill,Uncommon,109,0,0.0,0.0018
+Battle Trance+,Skill,Uncommon,108,62,0.5741,0.5616
+Rupture+,Power,Uncommon,107,7,0.0654,0.0707
+Carnage+,Attack,Uncommon,107,35,0.3271,0.324
+Rage+,Skill,Uncommon,107,60,0.5607,0.5431
+Evolve+,Power,Uncommon,103,51,0.4951,0.4654
+Burning Pact+,Skill,Uncommon,102,2,0.0196,0.0254
+Seeing Red+,Skill,Uncommon,101,1,0.0099,0.0098
+Whirlwind+,Attack,Uncommon,100,30,0.3,0.2907
+Combust+,Power,Uncommon,100,0,0.0,0.0142
+Sentinel+,Skill,Uncommon,97,0,0.0,0.0077
+Power Through+,Skill,Uncommon,96,53,0.5521,0.5317
+Bloodletting+,Skill,Uncommon,96,1,0.0104,0.039
+Sever Soul+,Attack,Uncommon,96,2,0.0208,0.0381
+Second Wind+,Skill,Uncommon,95,0,0.0,0.0013
+Dropkick+,Attack,Uncommon,95,18,0.1895,0.1634
+Metallicize+,Power,Uncommon,94,88,0.9362,0.9328
+Uppercut+,Attack,Uncommon,94,50,0.5319,0.53
+Spot Weakness+,Skill,Uncommon,93,79,0.8495,0.839
+Dual Wield+,Skill,Uncommon,92,0,0.0,0.003
+Infernal Blade+,Skill,Uncommon,91,1,0.011,0.0054
+Ghostly Armor+,Skill,Uncommon,90,62,0.6889,0.6855
+Pummel+,Attack,Uncommon,89,0,0.0,0.0105
+Flame Barrier+,Skill,Uncommon,88,65,0.7386,0.7528
+Blood for Blood+,Attack,Uncommon,88,57,0.6477,0.6285
+Shockwave+,Skill,Uncommon,88,0,0.0,0.0189
+Fire Breathing+,Power,Uncommon,87,15,0.1724,0.1531
+Dark Embrace+,Power,Uncommon,84,0,0.0,0.0046
+Hemokinesis+,Attack,Uncommon,81,5,0.0617,0.0883
+Rampage+,Attack,Uncommon,81,30,0.3704,0.31
+Searing Blow+0,Attack,Uncommon,79,2,0.0253,0.0509
+Reckless Charge+,Attack,Uncommon,75,9,0.12,0.1111
+Entrench+,Skill,Uncommon,73,8,0.1096,0.1107
+Offering+,Skill,Rare,21,0,0.0,0.0247
+Immolate+,Attack,Rare,20,10,0.5,0.5028
+Madness,Skill,Uncommon,19,0,0.0,0.0012
+Trip,Skill,Uncommon,18,0,0.0,0.0039
+Demon Form+,Power,Rare,17,17,1.0,0.9869
+Searing Blow+1,Attack,Uncommon,17,0,0.0,0.0352
+Feed+,Attack,Rare,17,2,0.1176,0.1648
+Double Tap+,Skill,Rare,17,3,0.1765,0.1646
+Deep Breath,Skill,Uncommon,16,8,0.5,0.3878
+Impervious+,Skill,Rare,16,14,0.875,0.8218
+Limit Break+,Skill,Rare,16,0,0.0,0.0016
+Bludgeon+,Attack,Rare,16,11,0.6875,0.6516
+Panic Button,Skill,Uncommon,16,13,0.8125,0.6889
+Dark Shackles,Skill,Uncommon,16,0,0.0,0.0034
+Flash of Steel,Attack,Uncommon,15,4,0.2667,0.2612
+Exhume+,Skill,Rare,15,1,0.0667,0.0731
+Blind,Skill,Uncommon,15,6,0.4,0.3401
+Finesse,Skill,Uncommon,14,3,0.2143,0.251
+Juggernaut+,Power,Rare,14,10,0.7143,0.7304
+Impatience,Skill,Uncommon,13,10,0.7692,0.5784
+Corruption+,Power,Rare,12,4,0.3333,0.3416
+Bandage Up,Skill,Uncommon,12,0,0.0,0.0602
+Discovery,Skill,Uncommon,12,0,0.0,0.0003
+Swift Strike,Attack,Uncommon,12,4,0.3333,0.2957
+Berserk+,Power,Rare,12,5,0.4167,0.4034
+Fiend Fire+,Attack,Rare,12,0,0.0,0.0002
+Panacea,Skill,Uncommon,11,0,0.0,0.0052
+Forethought,Skill,Uncommon,11,0,0.0,0.0029
+Mind Blast,Attack,Uncommon,11,8,0.7273,0.7785
+Good Instincts,Skill,Uncommon,11,3,0.2727,0.25
+Reaper+,Attack,Rare,11,1,0.0909,0.2171
+Barricade+,Power,Rare,11,2,0.1818,0.1899
+Panache,Power,Rare,10,9,0.9,0.9312
+Purity,Skill,Uncommon,10,0,0.0,0.0027
+Enlightenment,Skill,Uncommon,9,0,0.0,0.0188
+Transmutation,Skill,Rare,9,0,0.0,0.02
+Secret Weapon,Skill,Rare,9,0,0.0,0.0007
+Hand of Greed,Attack,Rare,8,6,0.75,0.721
+Sadistic Nature,Power,Rare,8,8,1.0,0.9371
+Dramatic Entrance,Attack,Uncommon,7,0,0.0,0.0707
+Brutality+,Power,Rare,7,1,0.1429,0.1812
+Magnetism,Power,Rare,7,7,1.0,0.9875
+Master of Strategy,Skill,Rare,7,0,0.0,0.0531
+Secret Technique,Skill,Rare,7,0,0.0,0.0038
+Chrysalis,Skill,Rare,6,0,0.0,0.0003
+Thinking Ahead,Skill,Rare,6,0,0.0,0.0018
+The Bomb,Skill,Rare,6,2,0.3333,0.329
+Violence,Skill,Rare,6,0,0.0,0.0229
+Jack of All Trades,Skill,Uncommon,6,0,0.0,0.0041
+Dark Shackles+,Skill,Uncommon,5,0,0.0,0.0
+Apotheosis,Skill,Rare,5,0,0.0,0.0131
+Mayhem,Power,Rare,5,5,1.0,0.9043
+Master of Strategy+,Skill,Rare,3,0,0.0,0.0001
+Jack of All Trades+,Skill,Uncommon,2,0,0.0,0.0
+Thinking Ahead+,Skill,Rare,2,0,0.0,0.0
+Transmutation+,Skill,Rare,2,0,0.0,0.0012
+Chrysalis+,Skill,Rare,2,0,0.0,0.0021
+Bandage Up+,Skill,Uncommon,2,0,0.0,0.0002
+Impatience+,Skill,Uncommon,2,2,1.0,1.0
+Metamorphosis,Skill,Rare,2,0,0.0,0.0164
+Dramatic Entrance+,Attack,Uncommon,2,0,0.0,0.0
+Swift Strike+,Attack,Uncommon,2,1,0.5,0.5375
+Purity+,Skill,Uncommon,1,0,0.0,0.0
+The Bomb+,Skill,Rare,1,0,0.0,0.0252
+Madness+,Skill,Uncommon,1,0,0.0,0.0
+Mind Blast+,Attack,Uncommon,1,1,1.0,0.7201
+Secret Weapon+,Skill,Rare,1,0,0.0,0.0
+Metamorphosis+,Skill,Rare,1,0,0.0,0.0
+Discovery+,Skill,Uncommon,1,0,0.0,0.0
+Trip+,Skill,Uncommon,1,0,0.0,0.0
+Deep Breath+,Skill,Uncommon,1,0,0.0,0.0043
+Blind+,Skill,Uncommon,1,1,1.0,0.9999
+Forethought+,Skill,Uncommon,1,0,0.0,0.0021
+Violence+,Skill,Rare,1,0,0.0,0.0018
+Magnetism+,Power,Rare,1,1,1.0,1.0
+Flash of Steel+,Attack,Uncommon,1,1,1.0,0.8708
+Finesse+,Skill,Uncommon,1,0,0.0,0.4076

@@ -81,8 +81,13 @@ Pending.
 ## Log
 
 - 21 Oct, 16:09: Sid chose to distil the Demon Form rule despite the
-  narrow miss; labels, distillation and evaluations queued. In a smoke test
-  of 48 games the champion declined Demon Form at all 16 offers.
+  narrow miss; labels, distillation and evaluations queued. (A note here
+  first said the champion declined Demon Form at all 16 offers of a smoke
+  test; that counted reward-screen steps where it was about to take the
+  gold first. Measured properly it takes Demon Form at 74% of 365 offers;
+  see the [card rule grid](2026-10-21-card-rule-grid.md).) Labels are
+  written at every reward-screen step offering Demon Form, so some teach
+  taking it before the gold rather than taking it at all.
 - 21 Oct, 15:51: Demon Form retest: 550 against 527 on second DEV (p =
   0.003), 490 against 476 on the new worlds (p = 0.054): not confirmed by
   the rule fixed in advance.
