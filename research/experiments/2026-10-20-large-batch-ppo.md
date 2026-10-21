@@ -196,7 +196,44 @@ evaluation), paired:
   clear difference in floor. They do not beat the new champion, which was
   trained with potions visible and no hygiene options. One run per arm.
 
-Arms 5 and 6: pending.
+**Arm 5, round 3, wins 413 of 4,096 on the second-DEV worlds (10.1%) and
+394 on the fresh worlds (9.6%), the best pure policy so far.** It starts
+from the new champion with the old-encoder combat student spliced in (316
+and 315 wins), trains its out-of-combat head for 24 iterations of 3,072
+games with the potion filter, and uses no Demon Form rule. Final
+checkpoint, iteration 24, paired:
+
+| Baseline, worlds | Wins | Discordant, baseline only / arm 5 only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
+|---|---:|---:|---:|---|---|
+| Its start, second DEV | 316 → 413 (7.7% → 10.1%) | 153 / 250 | < 0.001 | +0.71 [+0.39, +1.05] | +4.0 points [+2.0, +5.9] (3,050 worlds) |
+| Its start, fresh worlds | 315 → 394 (7.7% → 9.6%) | 192 / 271 | < 0.001 | +1.18 [+0.86, +1.50] | +5.6 points [+3.7, +7.5] (3,104 worlds) |
+| Harvest stack (start plus the Demon Form rule), second DEV | 333 → 413 | 169 / 249 | < 0.001 | +0.52 [+0.20, +0.85] | +2.2 points [+0.3, +4.1] (3,037 worlds) |
+| Harvest stack, fresh worlds | 346 → 394 | 218 / 266 | 0.033 | +1.03 [+0.70, +1.35] | +3.9 points [+2.0, +5.8] (3,091 worlds) |
+| New champion, second DEV | 276 → 413 | 175 / 312 | < 0.001 | +1.82 [+1.45, +2.19] | +6.7 points [+4.5, +8.9] (2,861 worlds) |
+| New champion, fresh worlds | 232 → 394 | 139 / 301 | < 0.001 | +2.12 [+1.76, +2.49] | +7.4 points [+5.2, +9.6] (2,907 worlds) |
+| Previous champion, second DEV | 156 → 413 | 98 / 355 | < 0.001 | +2.93 [+2.56, +3.30] | +11.5 points [+9.2, +13.8] (2,712 worlds) |
+| Previous champion, fresh worlds | 152 → 394 | 99 / 341 | < 0.001 | +3.36 [+2.99, +3.74] | +11.1 points [+8.9, +13.3] (2,759 worlds) |
+
+- Iteration 20, the best by the trainer's evaluation, wins 403 on the
+  second-DEV worlds (against its start: discordant 167/254, p < 0.001;
+  floor +0.76 [+0.44, +1.09]); it is a selection, so the final checkpoint
+  is the candidate.
+- The trainer's own evaluation went 67, 66, 74, 67, 78, 85, 83 wins of
+  1,024 at iterations 0 to 24, mean floor 36.7 to 37.6.
+- Health: half-batch cosines −0.53 to +0.40, KL 0.005 to 0.010, clip
+  fraction 0.03 to 0.04, no faults or collector restarts; entropy fell
+  from 0.139 to 0.119, the lowest of any arm. Median 6.3 minutes per
+  iteration, 2 hours 28 minutes in all.
+- Training behaviour: the smith rate fell steadily from 0.49 to 0.38; the
+  card skip rate stayed near 0.02. Wins in the sampled training games
+  rose from 234 to 297 of 3,072.
+- Reading: out-of-combat PPO gained more on top of the better combat head
+  (+97 wins on DEV, +79 on fresh worlds) than any other arm did from the
+  previous champion, and the trained policy beats the start plus the Demon
+  Form rule without the rule. Whether the rule still adds on top of it has
+  not been tested.
+
+Arm 6: pending.
 
 ## Conclusion
 
@@ -208,6 +245,9 @@ Pending.
 
 ## Log
 
+- 21 Oct, 04:37: round 3's final checkpoint evaluated: 413 of 4,096 on the
+  second-DEV worlds and 394 on the fresh worlds (start 316 and 315).
+- 21 Oct, 04:21: round 3 finished; the batch-size control started.
 - 21 Oct, 01:53: arm 4's final checkpoint evaluated: 256 of 4,096 on the
   second-DEV worlds and 228 on the fresh worlds; more wins than arm 3, no
   clear difference from arm 1.

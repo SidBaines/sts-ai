@@ -1,22 +1,22 @@
 # Status
 
-**Updated 21 October 2026, 02:00 BST.** Two training arms run overnight,
-one after another, with a watcher and an hourly check-in; nothing waits for
-Sid until morning.
+**Updated 21 October 2026, 05:30 BST.** The last training arm runs, with a
+watcher and an hourly check-in. Waiting for Sid: whether round 3's final
+checkpoint (394 of 4,096 fresh worlds, 9.6%) becomes the champion.
 
 - **Running: large-batch out-of-combat PPO**
   ([page](experiments/2026-10-20-large-batch-ppo.md)) on lane `train` of the
-  queue in worktree `nonllm-large-batch`: `lb-round3-student` (started
-  01:42, 24 iterations of 3,072 games, about 6 minutes each, ends about
-  04:20), then `lb-small-hidden` (96 iterations of 768 games, about 2.5
-  hours), so the last ends about 07:00 if the laptop stays on power; the
-  queue pauses jobs on battery and resumes on power. Both run
-  `train_ooc.py` from the frozen checkout `nonllm-large-batch-hidden` at
-  `ws/nonllm` 8aca4e4. Done and evaluated: `lb-recipe` (the new champion),
-  `lb-recipe-hidden` (arm 3: 208 of 4,096 on second DEV, 197 on the fresh
-  worlds) and `lb-hygiene-hidden` (arm 4: 256 and 228).
+  queue in worktree `nonllm-large-batch`: `lb-small-hidden` (started
+  04:21, 96 iterations of 768 games, iteration 40 at 05:19, about 1.5
+  minutes each, ends about 06:45); the queue pauses jobs on battery and
+  resumes on power. It runs `train_ooc.py` from the frozen checkout
+  `nonllm-large-batch-hidden` at `ws/nonllm` 8aca4e4. Done and evaluated:
+  `lb-recipe` (the new champion), `lb-recipe-hidden` (arm 3: 208 of 4,096
+  on second DEV, 197 on the fresh worlds), `lb-hygiene-hidden` (arm 4:
+  256 and 228) and `lb-round3-student` (arm 5: 413 and 394; checkpoint
+  `large_batch_20261020/round3_student/iter_0024.pt`).
 - **Watcher:** a zsh script in the Claude session's scratchpad
-  (`eval_overnight_arms.sh`, waiting for round 3 then the control; log
+  (`eval_overnight_arms.sh`, now waiting for the control; log
   `overnight_arms_eval.log` beside it; the hidden-arms watcher has
   finished). When an arm finishes they queue its final and best-by-trainer
   checkpoints with `fast_eval.py` as `lbeval-*` (second DEV) and

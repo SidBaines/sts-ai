@@ -7,6 +7,12 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Round 3 evaluated**, 04:37: final checkpoint 413 of 4,096 on second
+  DEV (its start 316, p < 0.001; the harvest stack 333; the new champion
+  276) and 394 on the fresh worlds (start 315, p < 0.001; stack 346, p =
+  0.033; new champion 232): 9.6% confirmed, the best pure policy so far,
+  without the Demon Form rule. A candidate for champion, for Sid to
+  decide. The batch-size control started at 04:21.
 - **Arm 4 (the potion filter plus the hygiene options) evaluated**, 01:53:
   final checkpoint 256 of 4,096 on second DEV (arm 3 208, p = 0.009; new
   champion 276, p = 0.34) and 228 on the fresh worlds (arm 3 197, p =

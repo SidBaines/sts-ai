@@ -9,6 +9,7 @@ everything is measured.
 
 | Player | Win rate | Evidence |
 |---|---|---|
+| **Candidate, awaiting Sid:** round 3, the new champion with the old-encoder combat student spliced in plus 24 more iterations of out-of-combat PPO with the potion filter (`large_batch_20261020/round3_student/iter_0024.pt`) | 9.6% on 4,096 fresh worlds (394 against its start's 315, the harvest stack's 346 and the new champion's 232); 10.1% on the second-DEV worlds (413) | Confirmed; pure policy |
 | **Champion from 20 October:** large-batch out-of-combat PPO from the previous champion, iteration 24 (`champion_ba2fa6a2987d.pt`) | 5.7% on 4,096 fresh worlds (232 against the previous champion's 152; +2.0 points, p < 0.001; mean floor +1.24 [+0.91, +1.58]); 6.7% on the second-DEV worlds (276) | Confirmed; current default |
 | New champion with the old-encoder combat student and the Demon Form rule (an overlay, not yet distilled) | 8.4% on 4,096 fresh worlds (346 against the new champion's 232 and the previous champion's 152); 8.1% on the second-DEV worlds (333 against 276; student alone 316, rule alone 292) | Confirmed; the rule must be distilled before this is a pure policy |
 | Previous champion: round-2 out-of-combat PPO update 20 | 3.8% (156 of 4,096 second-DEV worlds; 3.7% on the fresh worlds above) | Baseline of every comparison before 20 October |
@@ -28,9 +29,11 @@ in the [results ledger](results.md).
 
 ## Now
 
-Running overnight: [large-batch PPO](experiments/2026-10-20-large-batch-ppo.md)
-arms 5 and 6 (round 3 from the new champion with the combat student
-spliced in, and a batch-size control). With the potion filter on during
+Running overnight: the batch-size control, the last arm of
+[large-batch PPO](experiments/2026-10-20-large-batch-ppo.md). Round 3 (the
+new champion with the combat student spliced in, plus 24 iterations) wins
+394 of 4,096 fresh worlds, 9.6%, and awaits Sid's decision on promotion.
+With the potion filter on during
 training, the recipe alone won 208 of 4,096 and the recipe plus the
 hygiene options 256 (p = 0.009 between them), against the new champion's
 276 and the previous champion's 156. Finished on 20 October:
