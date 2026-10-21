@@ -7,6 +7,11 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 21 October 2026
 
+- **Card rule grid**, 17:25: forcing any of eight strong cards the champion
+  avoids (Shockwave, Barricade, Disarm, Limit Break, Battle Trance, Feel
+  No Pain, Offering, Whirlwind) does not help; three are worse after Holm
+  correction. Demon Form distilled (2,080 labels; held-out labels fitted,
+  97.6% agreement elsewhere), evaluation running.
 - **Demon Form on the afternoon champion**, 15:51: 550 against 527 on
   second DEV (p = 0.003), 490 against 476 on new worlds (p = 0.054); not
   confirmed under the pre-set rule, so not distilled without Sid's say.

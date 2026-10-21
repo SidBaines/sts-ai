@@ -1,6 +1,6 @@
 # Card rule grid: which declined cards should the champion always take?
 
-**Status:** running. **Verdict:** pending.
+**Status:** finished 21 October 2026. **Verdict:** none of the eight cards the champion avoids helps when forced; three hurt. Its avoidance is mostly right, and Demon Form remains the only card rule that helps.
 
 ## Question
 
@@ -67,18 +67,51 @@ of the pre-registered candidates:
 | Demon Form | 365 | 74.0% | excluded (tested separately) |
 
 Every card's rate is in `figures/2026-10-21-card-rule-grid/take_rates.csv`.
-Overlay tests: pending.
+**No rule passes; three are worse.** Each card forced whenever offered,
+paired with the champion's 527 wins of 4,096 on second DEV, Holm-corrected
+across the eight:
+
+| Card forced | Wins | Discordant, champion only / rule only | p | Holm p | Mean floor, paired difference | Verdict |
+|---|---:|---:|---:|---:|---|---|
+| Shockwave | 561 | 79 / 113 | 0.017 | 0.085 | +0.16 [+0.00, +0.32] | No clear difference |
+| Barricade | 517 | 92 / 82 | 0.50 | 0.96 | −0.17 [−0.30, −0.06] | No clear difference |
+| Disarm | 516 | 105 / 94 | 0.48 | 0.96 | −0.13 [−0.28, +0.03] | No clear difference |
+| Limit Break | 502 | 94 / 69 | 0.060 | 0.18 | −0.31 [−0.43, −0.19] | No clear difference |
+| Battle Trance | 501 | 81 / 55 | 0.032 | 0.13 | −0.22 [−0.35, −0.08] | No clear difference |
+| Feel No Pain | 482 | 114 / 69 | 0.001 | 0.007 | −0.51 [−0.66, −0.35] | Worse |
+| Offering | 472 | 117 / 62 | < 0.001 | < 0.001 | −0.23 [−0.36, −0.09] | Worse |
+| Whirlwind | 463 | 123 / 59 | < 0.001 | < 0.001 | −0.11 [−0.25, +0.02] | Worse |
+
+- Seven of the eight rules lower mean floor; forcing a card also forces
+  every later copy and removes the option to skip, so a deck-dilution cost
+  is likely part of every result.
 
 ## Conclusion
 
-Pending.
+- The champion's near-zero take rates for these cards are not a
+  saturation bug worth fixing with a blunt rule: forcing them never helped
+  after correction, and three cost 1 to 1.6 points of wins.
+- Demon Form is the exception (it helped every champion), which fits its
+  reputation as a single card that wins boss fights on its own.
+- Saturation is therefore not always a problem: a near-zero probability can
+  be correct. Rules need measuring, as on 13 October.
+
+Caveats:
+- "Take whenever offered" is crude: it forces duplicates and removes
+  skipping. A softer rule (first copy only, or only instead of another
+  card) might reverse some results, notably Shockwave.
+- One pass on reused DEV worlds; the candidate list came from general
+  Ironclad knowledge, not from this agent.
 
 ## Next
 
-Pending.
+1. If card rules are pursued further, test "first copy only" for Shockwave,
+   the one positive direction, as a new exploratory test.
+2. Otherwise rely on the Demon Form distillation and continued training.
 
 ## Log
 
+- 21 Oct, 17:25: grid finished: no rule passes, three are worse.
 - 21 Oct, 16:22: measurement done; the eight cards above queued for the
   overlay tests. An 8-game smoke test had been printed before the list was
   fixed; none of its rows were candidate cards.

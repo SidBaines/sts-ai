@@ -113,7 +113,9 @@ large batches of whole games.
   PPO's clipping still limits growth to about 20% per update. Rare
   strategic actions have to come from supervised routes: menu-overlay
   tests distilled into the policy (Demon Form), or a counterfactual
-  teacher.
+  teacher. But a near-zero probability is often correct: forcing eight
+  strong cards the champion never takes helped none and hurt three
+  ([card rule grid](experiments/2026-10-21-card-rule-grid.md)).
 - [OOC PPO page](experiments/2026-10-13-ooc-macro-credit-ppo.md).
 
 ## Distilling strategy rules
