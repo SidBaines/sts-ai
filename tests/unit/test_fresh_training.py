@@ -26,6 +26,7 @@ from sts_rl.fresh_training import (FILTERS, MIN_DISK, TrainingControl, collate, 
     freeze_manifest, make_model, preencode, soft_cross_entropy, target_distribution, validate_source,
     validate_training_config, world_split, run_training, interleave_fit, iter_rows)
 from sts_rl.recording import file_identity
+from sts_rl.teacher_votes import RULES
 from tests.unit.test_entity_encoding import combat_observation, ooc_observation
 
 
@@ -81,10 +82,12 @@ def digest_public(o):
     return public_hash(o)
 
 
-def fixture(root, **source_options):
+def fixture(root, *, record_search=False, **source_options):
     root.mkdir(parents=True,exist_ok=True)
+    if record_search:
+        source_options['config'] = {**source_options.get('config',{}), 'record_search':True}
     source,provenance=synthetic_source(root, **source_options)
-    data=root/'data'
+    data=root/'shards'
     (data/'worlds').mkdir(parents=True)
     # Several worlds per split, both phases per world, real C1 raw shard format.
     seeds={s:[] for s in ('FIT','VALIDATION','TEST')}
@@ -100,6 +103,12 @@ def fixture(root, **source_options):
         o=ooc_observation()
         o['legal_actions'].append({'index':9,'description':'select card index 0: Strike [Attack, Basic]'})
         a=row(c,seed,source,provenance)
+        if record_search:
+            first,last=(c['legal_actions'][i]['index'] for i in (0,-1))
+            a['search_details']=[{'chosen':index,'edges':[
+                {'index':first,'visits':100,'evaluation_sum':100.,'mean_evaluation':1.},
+                {'index':last,'visits':20,'evaluation_sum':40.,'mean_evaluation':2.}]}
+                for index in (first,first,first,last)]
         b=row(o,seed,source,provenance,[a['source_action']])
         shard={'protocol':PROTOCOL,'world_seed':seed,'status':'completed','source':source,
                'expected_provenance':provenance,'action_prefix':[a['source_action'],b['source_action']],
@@ -132,6 +141,150 @@ class FreshTrainingTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         torch.set_num_threads(cls.threads)
+
+    def test_relabel_recomputes_votes_labels_and_encoded_targets_without_changing_sources(self):
+        expected={'best_line':({10:3,17:1},10), 'most_visited':({10:4},10),
+                  'mean_value':({17:4},17), 'pooled_mean':({17:4},17)}
+        with tempfile.TemporaryDirectory() as tmp:
+            data,_=fixture(Path(tmp),record_search=True)
+            stored=list(iter_rows([data]))
+            original_files=[file_identity(p) for p in sorted((data/'worlds').glob('*'))]
+            baseline=freeze_manifest([data])
+            identities={baseline['data_identity']}
+            self.assertNotIn('relabel_vote_rule',baseline)
+            for rule,(votes,label) in expected.items():
+                with self.subTest(rule=rule):
+                    relabelled=list(iter_rows([data],relabel_vote_rule=rule))
+                    for (raw,meta),(original,original_meta) in zip(relabelled,stored):
+                        if meta['phase']=='combat':
+                            self.assertEqual(raw['votes'],votes)
+                            self.assertEqual(raw['label'],label)
+                            self.assertEqual(raw['vote_rule'],rule)
+                            self.assertEqual(raw['source'],original['source'])
+                            self.assertEqual(meta['source_identity'],original_meta['source_identity'])
+                        else:
+                            self.assertEqual((raw,meta),(original,original_meta))
+                    manifest=freeze_manifest([data],relabel_vote_rule=rule)
+                    self.assertEqual(manifest['relabel_vote_rule'],rule)
+                    self.assertEqual(manifest['collection_sources'],baseline['collection_sources'])
+                    self.assertEqual(manifest['public_surface'],baseline['public_surface'])
+                    self.assertEqual(manifest['data_identity'],digest({k:v for k,v in manifest.items() if k!='data_identity'}))
+                    identities.add(manifest['data_identity'])
+                    for architecture in ('old','new','controlled'):
+                        dataset=preencode([data],manifest,'combat',architecture)
+                        for examples in dataset.values():
+                            for example in examples:
+                                indices=example.encoded.action_indices.tolist()
+                                np.testing.assert_array_equal(example.target,
+                                    np.array([votes.get(i,0)/4 for i in indices],dtype=np.float32))
+            self.assertEqual(len(identities),len(RULES)+1)
+            self.assertEqual(list(iter_rows([data])),stored)
+            self.assertEqual(freeze_manifest([data]),baseline)
+            self.assertEqual([file_identity(p) for p in sorted((data/'worlds').glob('*'))],original_files)
+
+    def test_relabel_uses_collector_plurality_tie_break_in_current_menu_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            source,prov=synthetic_source(root)
+            observation=combat_observation()
+            observation['legal_actions'].reverse()
+            raw=row(observation,92_000_000_000,source,prov)
+            raw['search_details']=[{'chosen':i} for i in (10,17,10,17)]
+            export=root/'rows.jsonl'
+            export.write_text(json.dumps(raw)+'\n')
+            from sts_rl.fresh_collection import plurality
+            with patch('sts_rl.fresh_training.plurality',wraps=plurality) as choose:
+                relabelled,_=next(iter_rows([export],relabel_vote_rule='best_line'))
+            choose.assert_called_once()
+            self.assertEqual(relabelled['votes'],{10:2,17:2})
+            self.assertEqual(relabelled['label'],17)
+
+    def test_relabel_requires_details_even_for_recorded_abstentions(self):
+        for abstention in (False,True):
+            with self.subTest(abstention=abstention),tempfile.TemporaryDirectory() as tmp:
+                data,_=fixture(Path(tmp))
+                if abstention:
+                    for path in (data/'worlds').glob('*'):
+                        shard=read_json(path)
+                        shard['labels'][0].update(label=None,votes={})
+                        atomic_json(path,shard,compressed=True)
+                freeze_manifest([data])  # Stored votes still permit legacy shards.
+                for load in (freeze_manifest,lambda s,**kw:list(iter_rows(s,**kw))):
+                    with self.assertRaisesRegex(ValueError,'requires search_details.*--record-search'):
+                        load([data],relabel_vote_rule='pooled_mean')
+
+    def test_relabel_preserves_empty_details_abstentions_and_rejects_empty_labelled_details(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data,_=fixture(Path(tmp),record_search=True)
+            seen=set()
+            for path in (data/'worlds').glob('*'):
+                shard=read_json(path)
+                split=world_split(shard['world_seed'])
+                if split not in seen:
+                    seen.add(split)
+                    shard['labels'][0].update(label=None,votes={},search_details=[])
+                shard['sampling']={shard['labels'][0]['group']+(
+                    ':abstain' if shard['labels'][0]['label'] is None else ':labelled'):1}
+                atomic_json(path,shard,compressed=True)
+            baseline=freeze_manifest([data])
+            manifest=freeze_manifest([data],relabel_vote_rule='pooled_mean')
+            self.assertEqual(manifest['counts'],baseline['counts'])
+            self.assertEqual(manifest['counts']['combat_abstentions'],3)
+            for raw,meta in iter_rows([data],relabel_vote_rule='pooled_mean'):
+                if meta['abstention']:
+                    self.assertEqual(raw['search_details'],[])
+                    self.assertEqual(raw['votes'],{})
+                    self.assertIsNone(raw['label'])
+            dataset=preencode([data],manifest,'combat','old')
+            self.assertEqual({s:len(rows) for s,rows in dataset.items()},
+                             {s:2 for s in ('FIT','VALIDATION','TEST')})
+            path=next((data/'worlds').glob('*'))
+            shard=read_json(path)
+            shard['labels'][0].update(label=10,votes={'10':4},search_details=[])
+            shard['sampling']={shard['labels'][0]['group']+':labelled':1}
+            for details,message in (([],'non-empty search_details'),(None,'search_details to be a list')):
+                shard['labels'][0]['search_details']=details
+                atomic_json(path,shard,compressed=True)
+                with self.subTest(details=details),self.assertRaisesRegex(ValueError,message):
+                    freeze_manifest([data],relabel_vote_rule='pooled_mean')
+
+    def test_mixed_sources_cannot_relax_differing_relabel_rules(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            first,_=fixture(root/'first',record_search=True,config={'relabel_vote_rule':'best_line'})
+            for rule in (None,'pooled_mean'):
+                second,_=fixture(root/str(rule),record_search=True,config={
+                    'world_start':92_000_001_000,**({'relabel_vote_rule':rule} if rule else {})})
+                for relabel in (None,'pooled_mean'):
+                    for mixed_sampling in (False,True):
+                        with self.subTest(rule=rule,relabel=relabel,mixed_sampling=mixed_sampling):
+                            with self.assertRaisesRegex(ValueError,'Incompatible mixed source field: config.relabel_vote_rule'):
+                                freeze_manifest([first,second],mixed_sources=True,
+                                    mixed_sampling=mixed_sampling,relabel_vote_rule=relabel)
+
+    def test_relabel_cli_and_config_are_combat_only_and_optin(self):
+        script=Path(__file__).resolve().parents[2]/'scripts/rl/fresh_train.py'
+        spec=importlib.util.spec_from_file_location('relabel_cli',script)
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        args=['--data','synthetic','--out','out','--architecture','old','--phase','combat',
+              '--deadline-utc','2099-01-01T00:00:00Z']
+        parser=module.parser()
+        self.assertNotIn('relabel_vote_rule',vars(parser.parse_args(args)))
+        for rule in RULES:
+            config=vars(parser.parse_args(args+['--relabel-vote-rule',rule]))
+            self.assertEqual(config['relabel_vote_rule'],rule)
+            validate_training_config(config,synthetic=True)
+            with self.assertRaisesRegex(ValueError,'only valid for combat fits'):
+                validate_training_config({**config,'phase':'ooc'},synthetic=True)
+        self.assertIn('--relabel-vote-rule',parser.format_help())
+        with self.assertRaisesRegex(ValueError,'relabel_vote_rule must be one of'):
+            validate_training_config({'relabel_vote_rule':'unknown'},synthetic=True)
+        with self.assertRaisesRegex(ValueError,'relabel_vote_rule must be one of'):
+            list(iter_rows([],relabel_vote_rule='unknown'))
+        with self.assertRaisesRegex(ValueError,'config/manifest relabel_vote_rule mismatch'):
+            fit(None,{}, {'relabel_vote_rule':'pooled_mean'},None,
+                {'relabel_vote_rule':'best_line'},{},None)
 
     def test_teacher_play_corpora_are_refused_even_without_samples(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -226,6 +379,8 @@ class FreshTrainingTests(unittest.TestCase):
             ({'config':{'self_consistency_every':7}},'config.self_consistency_every'),
             ({'config':{'teacher_probabilities':{'BOSS2':0.5},'samples':4.0}},'config.samples'),
             ({'config':{'new_scientific_setting':True}},'config.new_scientific_setting'),
+            ({'config':{'vote_rule':'pooled_mean'}},'config.vote_rule'),
+            ({'config':{'relabel_vote_rule':'pooled_mean'}},'config.relabel_vote_rule'),
             ({'environment_version':'0.1.6'},'provenance.environment_version'),
             ({'observation_version':'sts_env_public_v3'},'provenance.observation_version'),
             ({'runtime_python_version':'3.13'},'provenance.runtime_python_version'))
@@ -293,6 +448,8 @@ class FreshTrainingTests(unittest.TestCase):
                  patch('sts_rl.fresh_training.iter_rows',side_effect=lambda *a,**kw:iter([(raw,meta)])):
                 manifest=freeze_manifest(['synthetic'],mixed_sources=mixed_sources)
                 self.assertEqual(manifest,freeze_manifest(['synthetic'],mixed_sources=mixed_sources,mixed_sampling=False))
+                self.assertEqual(manifest,freeze_manifest(['synthetic'],mixed_sources=mixed_sources,relabel_vote_rule=None))
+                self.assertNotIn('relabel_vote_rule',manifest)
                 self.assertNotIn('mixed_sampling',manifest)
                 self.assertNotIn('teacher_probability_profiles',manifest)
                 self.assertEqual(manifest['data_identity'],expected)

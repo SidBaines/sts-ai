@@ -32,10 +32,12 @@ import torch
 from sts_policy.curriculum import public_hash
 from sts_policy.entity_encoding import VOCABULARY_SHA256
 from sts_policy.training import save_checkpoint, load_checkpoint, seed_training
+from sts_rl.fresh_collection import plurality
 from sts_rl.fresh_study import (PROTOCOL, FILTER_ID, DEAD_FILTER_ID, PUBLIC_CONTEXT_ID, INFERENCE, MIN_DISK,
                                 Interrupted, atomic_json, fit_manifest_path, read_json,
                                 on_ac, policy_observation, validate_world_range)
 from sts_rl.recording import begin_run, capture_rng, file_identity
+from sts_rl.teacher_votes import RULES, votes_from_details
 
 SPLIT_VERSION = 'fresh-start-split-v1'
 TEACHER_PROTOCOL = 'canonical_rng_resampled_native_v2'
@@ -259,10 +261,28 @@ def shard_files(sources):
     return paths
 
 
-def iter_rows(sources, *, control=None, mixed_sources=False, mixed_sampling=False):
+def _relabel_combat_row(row, rule):
+    if row['observation']['phase'] != 'combat':
+        return row
+    if 'search_details' not in row:
+        raise ValueError('Combat relabelling requires search_details on every combat row; collect with --record-search')
+    details = row['search_details']
+    if not isinstance(details, list):
+        raise ValueError('Combat relabelling requires search_details to be a list')
+    if not details:
+        if row.get('label') is not None or row.get('votes') != {}:
+            raise ValueError('Labelled combat row requires non-empty search_details for relabelling')
+        return row  # Preserve recorded abstentions and their exclusion from targets.
+    votes = votes_from_details(details, rule)
+    return {**row, 'votes': votes, 'label': plurality(votes, row['observation']), 'vote_rule': rule}
+
+
+def iter_rows(sources, *, control=None, mixed_sources=False, mixed_sampling=False, relabel_vote_rule=None):
     """Accept C1 world JSON objects and JSONL exports; hold at most one world."""
     if mixed_sampling and not mixed_sources:
         raise ValueError('mixed_sampling requires mixed_sources')
+    if relabel_vote_rule is not None and relabel_vote_rule not in RULES:
+        raise ValueError('relabel_vote_rule must be one of '+', '.join(RULES))
     verified, worlds = {}, set()
     scientific, expected = None, None
     for path in shard_files(sources):
@@ -341,6 +361,8 @@ def iter_rows(sources, *, control=None, mixed_sources=False, mixed_sampling=Fals
                     group = f"{str(state.get('room', '')).rsplit('.',1)[-1]}{int(state.get('act',0))}"
                     if row['group'] != group:
                         raise ValueError('Act/room group mismatch')
+                    if relabel_vote_rule is not None:
+                        row = _relabel_combat_row(row, relabel_vote_rule)
                     target, indices = target_distribution(row)
                     row_id = digest([world, len(row['prefix']), row['public_hash']])
                     yield row, {'source_row_id': row_id, 'world_seed': world, 'group': group,
@@ -383,11 +405,12 @@ def interleave_fit(rows):
     return result
 
 
-def freeze_manifest(sources, *, control=None, mixed_sources=False, mixed_sampling=False):
+def freeze_manifest(sources, *, control=None, mixed_sources=False, mixed_sampling=False, relabel_vote_rule=None):
     files = [file_identity(p) for p in shard_files(sources)]
     rows, seen, collection_sources = [], set(), {}
     interfaces = set()
-    for raw, meta in iter_rows(sources, control=control, mixed_sources=mixed_sources, mixed_sampling=mixed_sampling):
+    for raw, meta in iter_rows(sources, control=control, mixed_sources=mixed_sources, mixed_sampling=mixed_sampling,
+                               relabel_vote_rule=relabel_vote_rule):
         if meta['source_row_id'] in seen:
             raise ValueError('Duplicate source row identity')
         seen.add(meta['source_row_id'])
@@ -433,6 +456,8 @@ def freeze_manifest(sources, *, control=None, mixed_sources=False, mixed_samplin
         result['teacher_probability_profiles'] = sorted({
             json.dumps(s['config'].get('teacher_probabilities'), sort_keys=True, separators=(',', ':'), allow_nan=False)
             for s in collection_sources.values()})
+    if relabel_vote_rule is not None:
+        result['relabel_vote_rule'] = relabel_vote_rule
     result['data_identity'] = digest(result)
     if files != [file_identity(p) for p in shard_files(sources)]:
         raise ValueError('Data changed during manifest freeze')
@@ -472,7 +497,8 @@ def preencode(sources, manifest, phase, architecture, fit_size='full', *, contro
               (r['split']!='FIT' or r['source_row_id'] in fit_ids)}
     result = {s: [] for s in splits}
     for row, meta in iter_rows(sources, control=control, mixed_sources=manifest.get('mixed_sources',False),
-                              mixed_sampling=manifest.get('mixed_sampling',False)):
+                              mixed_sampling=manifest.get('mixed_sampling',False),
+                              relabel_vote_rule=manifest.get('relabel_vote_rule')):
         if meta['source_row_id'] not in wanted:
             continue
         if meta != wanted.pop(meta['source_row_id']):
@@ -741,6 +767,8 @@ def fit(model, dataset, config, out, manifest, receipt, control, *, probes=None)
     """Actual minibatch AdamW updates. Fresh-only, no implicit resume."""
     config = {**config, 'old_size':config.get('old_size','large'),
               'old_context':config.get('old_context','none'), 'defer_test':config.get('defer_test',False)}
+    if config.get('relabel_vote_rule') != manifest.get('relabel_vote_rule'):
+        raise ValueError('Fit config/manifest relabel_vote_rule mismatch')
     architecture, device = config['architecture'], config['device']
     if architecture == 'controlled':
         if config['defer_test'] is not True:
@@ -880,6 +908,8 @@ def checkpoint_training_condition(payload):
     condition = {k:config[k] for k in ('phase','lr','seed','steps','min_steps','eval_every','patience','device')}
     condition.update(fit_size=config.get('fit_size','full'), batch=config.get('batch') or 128,
                      defer_test=config.get('defer_test',False))
+    if config.get('relabel_vote_rule') is not None:
+        condition['relabel_vote_rule'] = config['relabel_vote_rule']
     if architecture in ('new','controlled'):
         actual = payload['metadata']['model_config']
         if actual['phase'] != config['phase']:
@@ -973,6 +1003,11 @@ def validate_training_config(config, *, synthetic=False):
     if config.get('mixed_sources') and config.get('phase') != 'combat':
         # OOC targets are each collecting champion's own choices; mixing would blend policies.
         raise ValueError('mixed_sources is only valid for combat fits')
+    if config.get('relabel_vote_rule') is not None:
+        if config['relabel_vote_rule'] not in RULES:
+            raise ValueError('relabel_vote_rule must be one of '+', '.join(RULES))
+        if config.get('phase') != 'combat':
+            raise ValueError('relabel_vote_rule is only valid for combat fits')
     for key in ('steps','min_steps','eval_every','patience','width','layers','heads'):
         if not isinstance(config[key],int) or config[key]<1:
             raise ValueError('Positive integer required: '+key)
@@ -1008,7 +1043,8 @@ def run_training(config):
     try:
         control.check()
         manifest = freeze_manifest(config['data'],control=control,mixed_sources=config.get('mixed_sources',False),
-                                  mixed_sampling=config.get('mixed_sampling',False))
+                                  mixed_sampling=config.get('mixed_sampling',False),
+                                  relabel_vote_rule=config.get('relabel_vote_rule'))
         if config.get('manifest'):
             frozen = read_json(config['manifest'])
             if frozen != manifest:

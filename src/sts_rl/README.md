@@ -312,6 +312,16 @@ Adding `--mixed-sampling` allows different `teacher_probabilities` collection
 profiles while every other setting, including teacher samples and simulations,
 still matches. The manifest records the flag and distinct profiles as canonical
 JSON strings in `teacher_probability_profiles`. Both options default off.
+
+Combat fits can pass `--relabel-vote-rule best_line|most_visited|mean_value|pooled_mean`
+to recompute votes and plurality labels from saved `search_details` using the
+collector's tie-break. Collect with `--record-search` first: missing details are
+an error, while empty details preserve recorded abstentions. The rule is recorded
+in the manifest and scientific fit configuration, giving each rule (including
+stored votes) a distinct data identity. `--mixed-sources` still requires matching
+scientific source settings. Omitting the option preserves stored targets and
+existing manifests; unlabelled probes are unaffected.
+
 Abstentions are excluded from targets; forced choices stay in evaluation but
 not optimization. Fixed unlabelled probes never supply targets or select
 weights. Use `--defer-test` until validation-only selection freezes. The

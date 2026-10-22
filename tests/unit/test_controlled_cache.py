@@ -395,12 +395,12 @@ class ControlledCacheTests(unittest.TestCase):
             with patch.dict(os.environ, STS_LIGHTSPEED_BUILD='/synthetic-unused'):
                 cc.build_cache(cfg)
 
-    def test_creator_passes_mixed_sampling_from_manifest(self):
-        first,_=fixture(self.out/'first',config={'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':.04}})
-        second,_=fixture(self.out/'second',config={'world_start':92_000_001_000,
+    def test_creator_passes_mixed_sampling_and_relabel_rule_from_manifest(self):
+        first,_=fixture(self.out/'first',record_search=True,config={'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':.04}})
+        second,_=fixture(self.out/'second',record_search=True,config={'world_start':92_000_001_000,
             'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':0.0}})
         sources=[str(first),str(second)]
-        manifest=ft.freeze_manifest(sources,mixed_sources=True,mixed_sampling=True)
+        manifest=ft.freeze_manifest(sources,mixed_sources=True,mixed_sampling=True,relabel_vote_rule='pooled_mean')
         path=self.out/'mixed_manifest.json'
         ft.atomic_json(path,manifest)
         cfg=dict(data=sources,manifest=str(path),out=str(self.out/'mixed_cache'),deadline_utc=None)
@@ -416,6 +416,7 @@ class ControlledCacheTests(unittest.TestCase):
                 cc.build_cache(cfg)
         self.assertIs(freeze.call_args.kwargs['mixed_sources'],True)
         self.assertIs(freeze.call_args.kwargs['mixed_sampling'],True)
+        self.assertEqual(freeze.call_args.kwargs['relabel_vote_rule'],'pooled_mean')
 
     def test_original_cli_defaults_and_cache_restrictions(self):
         train, creator = script('fresh_train'), script('fresh_cache')
