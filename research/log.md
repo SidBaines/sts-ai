@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 22 October 2026
 
+- **New champion**, 12:13: Sid promoted the second continued training's
+  out-of-combat head with the round 2 combat student
+  (`champion_85ea9019ff95.pt`, 18.4% on unused worlds); the third
+  continued training already starts from it.
 - **Best policy so far confirmed**, 11:36: the second continued training's
   out-of-combat head with the round 2 combat student wins 755 of 4,096
   unused worlds (18.4%) against 662 for the same head with the old student

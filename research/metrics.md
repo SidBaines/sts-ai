@@ -121,8 +121,13 @@ release changed game behaviour.
 
 ## Players, teachers and encoders
 
-- **Champion:** the best retained learned player. From the afternoon of 21
-  October it is the first continued training's final checkpoint
+- **Champion:** the best retained learned player. From 22 October it is
+  the second continued training's out-of-combat head with the round 2
+  combat student (`champion_85ea9019ff95.pt`, SHA-256 prefix
+  `85ea9019ff95`, in run `continued3_20261022/inputs`); confirmed at 755
+  against 662 wins of 4,096 unused worlds (18.4%)
+  ([second continued training](experiments/2026-10-21-continued-training-2.md)).
+- **Champion of 21 October, afternoon:** it is the first continued training's final checkpoint
   (`champion_2835f40fa439.pt`, SHA-256 prefix `2835f40fa439`, in runs
   `round4_20261021/inputs` and `continued2_20261021/inputs`): the morning
   champion trained for 24 more iterations with the potion filter and the

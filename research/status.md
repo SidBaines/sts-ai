@@ -1,9 +1,9 @@
 # Status
 
-**Updated 22 October 2026, 11:37 BST.** Two studies run; waiting for Sid on one decision:
-which checkpoint becomes the champion. The best confirmed policy is the
-second continued training's out-of-combat head with the round 2 combat
-student (18.4% on unused worlds).
+**Updated 22 October 2026, 12:13 BST.** Two studies run; nothing waits for Sid. Champion (promoted
+by Sid at 12:13): the second continued training's out-of-combat head with
+the round 2 combat student, `champion_85ea9019ff95.pt` (18.4% on unused
+worlds).
 
 - **[Third continued training](experiments/2026-10-22-continued-training-3.md)**
   (`c3-train`, lane `train` of the queue in worktree `nonllm-large-batch`;
@@ -19,11 +19,12 @@ student (18.4% on unused worlds).
 - **Keep-alives** (`teacher_keepalive_r3.py` and others in the session
   scratchpad) refresh quiet jobs' queue logs only while their own progress
   files advance.
-- **Candidates for Sid** (README table): the combination
-  `continued2_20261021/c2_ooc_with_student_r2.pt` (18.4%, confirmed); the
-  second continued training's checkpoint alone (16.9%); the round 2 combat
-  candidate (13.9%). The champion of record is still
-  `champion_2835f40fa439.pt`.
+- **Champion:** `continued3_20261022/inputs/champion_85ea9019ff95.pt`
+  (worktree `nonllm-large-batch`; the same bytes as
+  `continued2_20261021/c2_ooc_with_student_r2.pt`). Its games: second DEV
+  `continued2_20261021/study_eval/c2_ooc_with_student_r2` (701), unused
+  worlds `continued2_20261021/confirm99/c2_ooc_with_student_r2` (755) and
+  `continued3_20261022/confirm100/combination`.
 - **Check or stop:** `scripts/rl/queue_runner.py status` or `cancel NAME`
   in either worktree. Dashboard: http://127.0.0.1:8795.
 - **Closing the Claude desktop app kills processes this session started,**
