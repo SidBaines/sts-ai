@@ -1,6 +1,6 @@
 # Status
 
-**Updated 22 October 2026, 19:48 BST.** Several jobs run; nothing waits for Sid. Champion:
+**Updated 22 October 2026, 22:21 BST.** Several jobs run; nothing waits for Sid. Champion:
 `champion_af2fb9f1f260.pt` (21.1% on unused worlds).
 
 - **Champion promoted 22 October, 16:32:** the third continued training's
@@ -19,16 +19,16 @@
   (decisions in `joint_20261022/loop/decisions.jsonl`; create
   `joint_20261022/loop/STOP` to stop it between steps) when the trainer
   starts, and runs the final comparison on worlds from 103,000,000,000.
-- **[Better teacher](experiments/2026-10-22-better-teacher.md) benchmark**
-  (`bench-*` jobs, lanes `bench0` to `bench7` of the `nonllm-boss-rares`
-  queue; output `teacher_bench_20261022/<arm>/`): the teacher plays every
-  boss fight inside the champion's games on 1,024 second-DEV worlds. Done:
-  today's vote and best mean result. Running: pooled searches and most
-  visited (to about 21:15), then the new win-first score with exploration
-  1.0 and with today's exploration (native build
-  `nonllm-better-teacher/external/sts_lightspeed_teacher/build_teacher_v1`,
-  to about 23:00). A background watcher runs `analyse_benchmark.py` on all
-  arms when they finish; detached keep-alive `keepalive_bench.py`.
+- **[Better teacher](experiments/2026-10-22-better-teacher.md) benchmark
+  reruns** (`bench2-*` jobs, lanes `bench0` to `bench8` of the
+  `nonllm-boss-rares` queue; output `teacher_bench_20261022/`): pooled
+  searches and most visited in full (`*_full`, without per-search details),
+  and the 38 missing worlds of the win-first arm (`shard_03b`); about two
+  hours. A background watcher reruns `analyse_benchmark.py` on every arm;
+  detached keep-alive `keepalive_bench2.py`.
+- **Disk:** free space fell to 9.3 GiB at 22:00 and stopped two benchmark
+  arms (collectors stop below 6 GiB). With Sid's approval the pip, uv and
+  Homebrew download caches were cleared: 21 GiB free at 22:20.
 - **Finished today:** boss-label combat fits (no student beat the champion), combat fit variance (one fit in four collapses; round
   3's collapse was a bad fit), all-corpora fit (worse), the lineage plot
   (`scripts/rl/plot_lineage.py`), `--mixed-sources` and `--combat-follow`
