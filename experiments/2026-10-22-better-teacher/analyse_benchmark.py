@@ -138,8 +138,10 @@ def main():
     p.add_argument("champion")
     p.add_argument("bench", nargs="+")
     p.add_argument("--out")
+    p.add_argument("--vs", help="Also pair every arm with this reference arm (a BENCH_DIR)")
     args = p.parse_args()
     base = champion(args.champion)
+    reference = bench(args.vs) if args.vs else None
     report = {}
     for directory in args.bench:
         arm = bench(directory)
@@ -157,6 +159,12 @@ def main():
                   f"{100*d['winning_line_rate']:.0f}% of searches; top vote share {d['mean_top_vote_share']:.2f}, "
                   f"unanimous {100*d['unanimous_rate']:.0f}%; root visit entropy {d['mean_root_visit_entropy']:.2f} "
                   f"(1 = uniform), most-visited share {d['mean_top_visit_share']:.2f}; same choice as best line: {agree}")
+        if reference is not None and Path(directory).resolve() != Path(args.vs).resolve():
+            v = r["vs_reference"] = compare(reference, arm)
+            print(f"  vs {Path(args.vs).name}: wins {v['wins'][0]} -> {v['wins'][1]} "
+                  f"(discordant {v['only_champion']}/{v['only_teacher']}, McNemar p={v['mcnemar_p']:.3f}); " +
+                  "; ".join(f"Act {act} boss pass {100*b['difference']:+.1f} [{100*b['ci95'][0]:+.1f}, {100*b['ci95'][1]:+.1f}]"
+                            for act, b in v["bosses"].items()))
     if args.out:
         Path(args.out).write_text(json.dumps(report, indent=1))
 
