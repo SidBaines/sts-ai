@@ -1,6 +1,6 @@
 # Combat student: fit-to-fit variance, all corpora together, and boss-only labels
 
-**Status:** running. **Verdict:** pending.
+**Status:** running (boss-only corpus). **Verdict:** so far: fit variance is heavy-tailed, round 3's collapse was a bad fit, and pooling all corpora did not beat the champion's student.
 
 ## Question
 
@@ -51,7 +51,7 @@ combat head is the round 2 student, seed 1919):
 | Round 2 corpus, seed 2 | 681 | 337 / 317 | 0.46 | −0.47 [−0.80, −0.12] | −0.7 points [−2.3, +0.9] |
 | Round 3 corpus, seed 2 | 689 | 379 / 367 | 0.69 | −0.09 [−0.45, +0.26] | +3.4 points [+1.7, +5.0] |
 | Round 3 corpus, seed 1919 | 588 | 400 / 287 | < 0.001 | −1.96 [−2.33, −1.60] | −2.7 points [−4.4, −1.0] |
-| All three corpora, seed 1919 | running | | | | |
+| All three corpora (511,847 labels), seed 1919 | 647 | 358 / 304 | 0.039 | −0.47 [−0.80, −0.14] | −3.5 points [−5.2, −1.9] |
 
 - The two corpora look alike (2,000 worlds each; the collecting players won
   274 and 284; 174,859 and 177,281 labels with the same room mix), and
@@ -61,10 +61,22 @@ combat head is the round 2 student, seed 1919):
 - Fits: round 2 seed 2 stopped at step 3,400 (validation loss 1.418);
   round 3 seed 1919 at 3,300 (1.469); round 3 seed 2 is in the run's
   status file. Validation loss did not flag the bad fit clearly.
+- The all-corpora fit (357,792 fit rows, stopped at step 4,200, validation
+  loss 1.38) is worse than the champion's student under the rule fixed in
+  advance. One seed: it may be fit variance (it matches round 2 seed 2's
+  size) or the 15 October corpus, collected by a player winning 3.7%,
+  pulling the student towards states today's player rarely sees.
 
 ## Conclusion
 
-Pending.
+- A single refit cannot be trusted: three of four fits of one recipe lie
+  within half a floor of each other and one fell 2 floors.
+- The champion's combat student (round 2, seed 1919) is the best of the
+  five fits made; part of round 2's confirmed gain may be a good draw.
+- More labels from older, weaker players did not help in one fit.
+
+Caveats:
+- One or two seeds per condition; every comparison on second DEV only.
 
 ## Next
 

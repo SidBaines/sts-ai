@@ -7,6 +7,9 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 22 October 2026
 
+- **All-corpora combat fit**, 13:41: 647 against the champion's 701
+  (p = 0.039; floor −0.47): pooling didn't help in one fit. The joint loop
+  will use only the corpora from today's players.
 - **Combat fit variance**, 13:33: round 3's collapse was a bad fit: the same
   corpus with seed 2 wins 689 against the champion's 701 (p = 0.69; floor
   −0.09). Round 2 with seed 2: 681 (floor −0.47). Every refit needs a
