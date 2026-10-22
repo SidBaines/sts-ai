@@ -188,6 +188,27 @@ def validate_world_range(start, n):
         raise ValueError("Confirmation namespace is embargoed")
 
 
+def read_json(path, **kwargs):
+    """Read plain or gzip JSON; retain callers' strict JSON decoder hooks."""
+    import gzip
+    path = Path(path)
+    opener = gzip.open if path.suffix == '.gz' else open
+    with opener(path, 'rt', encoding='utf-8') as stream:
+        return json.load(stream, **kwargs)
+
+
+def fit_manifest_path(directory):
+    """Find the sole fit manifest, rejecting ambiguous or missing inputs."""
+    directory = Path(directory)
+    paths = [directory / name for name in ('manifest.json.gz', 'manifest.json')]
+    found = [path for path in paths if path.is_file()]
+    if len(found) == 2:
+        raise ValueError(f'Both fit manifests exist in {directory}')
+    if not found:
+        raise FileNotFoundError(f'No fit manifest in {directory}')
+    return found[0]
+
+
 def atomic_json(path, value, *, compressed=False):
     import gzip
     path = Path(path)

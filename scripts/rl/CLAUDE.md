@@ -6,6 +6,7 @@ what failed. Commands and module usage: [src/sts_rl/README.md](../../src/sts_rl/
 
 - **Run jobs through `queue_runner.py`** (detached, pauses on battery, one job
   per `--lane`). Run outputs and logs are in `data/rl_runs/<name>/`.
+- **Disk trap:** record-search outputs and fit manifests are large; collectors and fits stop below 6 GiB free. Run `disk_report.py` before launching big batches.
 - **Native build:** `build_native_rl.sh` applies the current environment patch
   plus `patches/sts_lightspeed_rl_panel.patch`
   (`GameContext.copy/enter_battle/upcoming_*_encounters`). The fight panel

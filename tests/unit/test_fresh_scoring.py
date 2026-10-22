@@ -15,7 +15,7 @@ from sts_policy import encoding, entity_encoding
 from sts_policy.model import CandidateActorCritic
 from sts_policy.training import load_checkpoint
 from sts_rl import fresh_training, fresh_scoring
-from sts_rl.fresh_study import atomic_json
+from sts_rl.fresh_study import atomic_json, fit_manifest_path, read_json
 from sts_rl.fresh_training import TrainingControl, make_model, run_training, validate_training_config
 from sts_rl.fresh_scoring import SELECTION_CRITERION, score_deferred
 from sts_rl.recording import file_identity
@@ -51,7 +51,7 @@ class FreshScoringTests(unittest.TestCase):
 
     def selection(self, root):
         selected={'selected_checkpoint':file_identity(root/'run'/'best.pt'),
-                  'manifest':file_identity(root/'run'/'manifest.json'),
+                  'manifest':file_identity(fit_manifest_path(root/'run')),
                   'selection_criterion':dict(SELECTION_CRITERION)}
         path=root/'selection.json'
         atomic_json(path,selected)
@@ -166,7 +166,7 @@ class FreshScoringTests(unittest.TestCase):
                     with self.subTest(key=key),self.assertRaises(ValueError):
                         score_deferred(path,root/'score')
                 # Even a self-consistent receipt cannot pair a checkpoint with another manifest.
-                manifest=json.loads((root/'run'/'manifest.json').read_text())
+                manifest=read_json(fit_manifest_path(root/'run'))
                 manifest['counts']['raw_rows']+=1
                 manifest['data_identity']=fresh_training.digest({k:v for k,v in manifest.items() if k!='data_identity'})
                 atomic_json(root/'other-manifest.json',manifest)
@@ -234,7 +234,7 @@ class FreshScoringTests(unittest.TestCase):
                 self.assertTrue(all(r['selected_checkpoint']==selection['selected_checkpoint']['sha256'] for r in rows))
                 self.assertTrue(all(r['architecture']==architecture and
                                     r['training_condition']==fresh_training.checkpoint_training_condition(before) for r in rows))
-                manifest=json.loads((root/'run'/'manifest.json').read_text())
+                manifest=read_json(fit_manifest_path(root/'run'))
                 by_id={r['source_row_id']:r for r in manifest['rows']}
                 self.assertTrue(all(r['data_identity']==manifest['data_identity'] and r['split']=='TEST' for r in rows))
                 self.assertTrue(all(r['source_identity']==by_id[r['source_row_id']]['source_identity'] for r in rows))

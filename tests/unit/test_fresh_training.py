@@ -20,7 +20,8 @@ from sts_policy import entity_encoding
 from sts_policy.entity_model import EntityActorCritic, policy_from_payload
 from sts_policy.model import CandidateActorCritic
 from sts_policy.training import load_checkpoint, save_checkpoint
-from sts_rl.fresh_study import INFERENCE, PROTOCOL, PUBLIC_CONTEXT_ID, StudyPolicy, Interrupted, atomic_json, policy_observation
+from sts_rl.fresh_study import (INFERENCE, PROTOCOL, PUBLIC_CONTEXT_ID, StudyPolicy, Interrupted,
+    atomic_json, fit_manifest_path, read_json, policy_observation)
 from sts_rl.fresh_training import (FILTERS, MIN_DISK, TrainingControl, collate, digest, fit,
     freeze_manifest, make_model, preencode, soft_cross_entropy, target_distribution, validate_source,
     validate_training_config, world_split, run_training, interleave_fit, iter_rows)
@@ -634,6 +635,9 @@ class FreshTrainingTests(unittest.TestCase):
             config=dict(data=[str(data)],out=str(root/'run'),architecture='new',phase='combat',
                 fit_size='full',width=16,layers=1,heads=4,steps=2,min_steps=2,batch=2,
                 eval_every=1,patience=6,lr=.001,seed=1919,device='cpu',deadline_utc=None)
+            frozen_path = root/'legacy-manifest.json'
+            atomic_json(frozen_path, freeze_manifest([str(data)]))
+            config['manifest'] = str(frozen_path)
             def control(out,deadline):
                 return TrainingControl(out,deadline,ac=lambda:True,caffeinate=False)
             with patch('sts_rl.fresh_training.validate_training_config',
@@ -643,6 +647,10 @@ class FreshTrainingTests(unittest.TestCase):
                 with patch('sts_rl.fresh_training.begin_run',side_effect=synthetic_begin_run(native)):
                     summary=run_training(config)
             self.assertEqual(summary['status'],'completed')
+            manifest_path = fit_manifest_path(root/'run')
+            self.assertEqual(manifest_path.name, 'manifest.json.gz')
+            self.assertFalse((root/'run'/'manifest.json').exists())
+            self.assertEqual(read_json(manifest_path), freeze_manifest([str(data)]))
             receipt=json.loads((root/'run'/'receipt.json').read_text())
             launch=json.loads(Path(receipt['launch']['path']).read_text())
             self.assertIsNone(launch['parent_checkpoint'])

@@ -19,7 +19,7 @@ from sts_rl.fresh_panel_grid import (HP_DEFINITION, SAMPLING_SPEC, SELECTION_PRO
                                      canonical_grid_hash)
 from sts_rl.fresh_statistics import BOOTSTRAPS, BOOTSTRAP_SEED, clustered_mean, _file_binding
 from sts_rl.fresh_study import (DEAD_FILTER_ID, FILTER_ID, INFERENCE, PROTOCOL,
-                                PUBLIC_CONTEXT_ID)
+                                PUBLIC_CONTEXT_ID, read_json)
 from sts_rl.recording import file_identity
 
 EXPECTATIONS_SCHEMA = "fresh_panel_student_contrast_expectations_v1"
@@ -91,8 +91,7 @@ class _Inputs:
         if expected is not None:
             _require(_same(identity, expected), f"File identity mismatch: {path}")
         self.verify(identity)
-        value = json.loads(Path(path).read_text(), object_pairs_hook=_json_object,
-                           parse_constant=_nonfinite)
+        value = read_json(path, object_pairs_hook=_json_object, parse_constant=_nonfinite)
         _require(_same(file_identity(path), identity), f"Input changed while reading: {path}")
         _require(isinstance(value, dict), f"Require JSON object: {path}")
         return value, identity
