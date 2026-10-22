@@ -1,6 +1,6 @@
 # Status
 
-**Updated 22 October 2026, 22:21 BST.** Several jobs run; nothing waits for Sid. Champion:
+**Updated 22 October 2026, 22:20 BST.** Several jobs run; nothing waits for Sid. Champion:
 `champion_af2fb9f1f260.pt` (21.1% on unused worlds).
 
 - **Champion promoted 22 October, 16:32:** the third continued training's
@@ -28,7 +28,7 @@
   detached keep-alive `keepalive_bench2.py`.
 - **Disk:** free space fell to 9.3 GiB at 22:00 and stopped two benchmark
   arms (collectors stop below 6 GiB). With Sid's approval the pip, uv and
-  Homebrew download caches were cleared: 21 GiB free at 22:20.
+  Homebrew download caches were cleared: 21 GiB free at 22:19.
 - **Finished today:** boss-label combat fits (no student beat the champion), combat fit variance (one fit in four collapses; round
   3's collapse was a bad fit), all-corpora fit (worse), the lineage plot
   (`scripts/rl/plot_lineage.py`), `--mixed-sources` and `--combat-follow`
