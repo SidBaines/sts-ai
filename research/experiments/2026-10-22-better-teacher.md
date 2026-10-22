@@ -203,22 +203,29 @@ champion's own games on the same worlds:
   scores differ by less than 0.000004 (equal cards to upgrade, equal map
   nodes); batched and single-game inference break such ties differently.
   This adds noise to the pairing, not bias.
-- **New native options (win-first score, HP ignored at bosses, potions kept
-  for Acts 1 and 2; vote by best mean result)**, paired with today's teacher
-  on the same worlds: with today's exploration constant, 346 against 320
-  wins of 986 worlds (discordant 67/93, p = 0.048; Act 3 boss pass +4.9
-  points [+1.1, +8.6], Act 2 +1.7 [−0.6, +4.0]); with exploration 1.0,
-  329 against 333 of 1,024 (p = 0.81), and Act 2 boss pass fell 3.3 points
-  [−5.8, −0.8]. Lower exploration hurts; the win-first score may help at
-  the Act 3 boss. Exploratory: five arms are compared with today's teacher,
-  and p = 0.048 does not survive a correction for that; one shard of the
-  default-exploration arm stopped at 218 of 256 worlds (a power-status
-  query timed out), hence 986 worlds.
-- Pooled searches and most visited: stopped early when free disk space fell
-  below 6 GiB (215 and 152 worlds; the first worlds to finish, which favour
-  short games). On those worlds both beat today's teacher (90 against 72,
-  p = 0.008; 64 against 53, p = 0.035), but the samples are small and
-  selected: inconclusive until rerun.
+- **All six vote rules, full reruns (finished 23 October, 00:21).** Each
+  arm plays the same first 1,024 second-DEV worlds (1,020 to 1,024
+  completed); paired with today's teacher on the same worlds:
+
+| Vote rule (24 searches × 1,000 simulations) | Wins | Paired difference vs today's vote | Act 1 / 2 / 3 boss pass vs today's vote |
+|---|---:|---|---|
+| Today's: first move of each search's luckiest playout | 331–333 | | |
+| **Pooled searches: add up root visits and values across the 24 searches, take the best mean** | **429** | **+9.6 points (discordant 42/140, p < 0.001)** | +1.9 [+0.9, +3.0] / **+5.3 [+3.1, +7.6]** / **+11.1 [+7.5, +14.7]** |
+| Most visited move per search | 361 | +2.9 (50/80, p = 0.011) | −0.5 / +0.6 / +4.0 [+1.0, +7.1] |
+| Best mean per search, win-first score | 362 | +3.0 (68/98, p = 0.024) | −0.1 / +2.1 / +5.1 [+1.4, +8.8] |
+| Best mean per search | 345 | +1.2 (61/73, p = 0.34) | −0.1 / +1.9 / −0.2 |
+| Best mean per search, win-first score, exploration 1.0 | 329 | −0.4 (81/77, p = 0.81) | −0.9 / −3.3 [−5.8, −0.8] / +1.9 |
+
+  - With pooled searches playing the boss fights, the champion's games win
+    429 of 1,020 (42%), against 203 for the champion alone (20%).
+  - Five rules are compared with today's; with a Holm correction, pooled
+    searches and most visited stay significant, the win-first arm does not.
+  - Pooling uses exactly the same searches as today's teacher; it only
+    reads them differently. A single search's vote is noisy (step 0), so
+    combining the evidence of all 24 before choosing beats letting each
+    cast one noisy vote.
+  - The two arms stopped by low disk space (215 and 152 worlds) are
+    superseded by these full reruns.
 
 ## Conclusion
 
@@ -249,6 +256,8 @@ Pending.
 - 2026-10-22, 19:35: benchmark: the teacher at bosses wins 32.5 to 33.7%
   against the champion's 20.0%; the student has not learned the teacher's
   boss play.
+- 2026-10-23, 00:21: full reruns: pooled searches win 429 against 331
+  (p < 0.001), the clear best rule.
 - 2026-10-22, 22:16: six arms analysed; pooled and most-visited arms
   stopped by low disk space (9.3 GiB free); rerun once space is freed.
 

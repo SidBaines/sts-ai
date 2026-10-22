@@ -5,6 +5,13 @@ first, kept at Sid's request from 20 October 2026, one or two lines per
 entry. It will be deleted: everything that matters is also recorded in its
 home file (experiment pages, the results ledger, strategies, README).
 
+## 23 October 2026
+
+- **Teacher vote rules**, 00:21: pooling the 24 searches' statistics before
+  choosing wins 429 against today's 331 of 1,020 worlds when the teacher
+  plays the bosses (p < 0.001; Act 3 boss pass +11 points). Same searches,
+  read differently.
+
 ## 22 October 2026
 
 - **Joint run**, 22:55: 945 against its control's 877 of 4,096 unused worlds
