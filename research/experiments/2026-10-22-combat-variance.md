@@ -40,7 +40,27 @@ labelling only boss fights, across more of the champion's games, help?
 
 ## Results
 
-Pending.
+**Fit-to-fit variance is heavy-tailed: three of four fits land within half
+a floor of each other, one collapsed.** Each student in the champion's
+out-of-combat head, second DEV, paired with the champion (701 wins; its
+combat head is the round 2 student, seed 1919):
+
+| Combat student | Wins | Discordant, champion only / student only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
+|---|---:|---:|---:|---|---|
+| Round 2 corpus, seed 1919 (the champion's own) | 701 | | | 40.16 | |
+| Round 2 corpus, seed 2 | 681 | 337 / 317 | 0.46 | −0.47 [−0.80, −0.12] | −0.7 points [−2.3, +0.9] |
+| Round 3 corpus, seed 2 | 689 | 379 / 367 | 0.69 | −0.09 [−0.45, +0.26] | +3.4 points [+1.7, +5.0] |
+| Round 3 corpus, seed 1919 | 588 | 400 / 287 | < 0.001 | −1.96 [−2.33, −1.60] | −2.7 points [−4.4, −1.0] |
+| All three corpora, seed 1919 | running | | | | |
+
+- The two corpora look alike (2,000 worlds each; the collecting players won
+  274 and 284; 174,859 and 177,281 labels with the same room mix), and
+  the round 3 corpus with seed 2 is as good as the champion's student.
+  The [round 3](2026-10-21-combat-student-round-3.md) failure was a bad fit,
+  not bad data.
+- Fits: round 2 seed 2 stopped at step 3,400 (validation loss 1.418);
+  round 3 seed 1919 at 3,300 (1.469); round 3 seed 2 is in the run's
+  status file. Validation loss did not flag the bad fit clearly.
 
 ## Conclusion
 
@@ -52,6 +72,8 @@ Pending.
 
 ## Log
 
+- 22 Oct, 13:33: round 3 seed 2 is fine (689 against 701): the round 3
+  collapse was fit variance. The all-corpora fit is being evaluated.
 - 22 Oct, 12:42: fits, splices and evaluations queued (detached
   `combat_variance.sh`); boss-only labelling started.
 

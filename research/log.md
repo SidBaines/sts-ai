@@ -7,6 +7,11 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 22 October 2026
 
+- **Combat fit variance**, 13:33: round 3's collapse was a bad fit: the same
+  corpus with seed 2 wins 689 against the champion's 701 (p = 0.69; floor
+  −0.09). Round 2 with seed 2: 681 (floor −0.47). Every refit needs a
+  check before use. `train_ooc --combat-follow` (adopt a new combat head
+  between iterations) merged after two reviews; `--mixed-sources` merged.
 - **Combat round 3 regressed**, 12:42: 438 against 576 on DEV and 388
   against 547 on unused worlds (floor −2). A fit-variance check and the
   all-corpora fit (option 3) are running, and boss-only labelling of 4,000

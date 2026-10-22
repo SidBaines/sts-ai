@@ -133,9 +133,11 @@ splice it into the player.
   previous champion ([fresh start](experiments/2026-10-15-fresh-start.md)).
 - Cheap: about 1.7 hours of labelling and 7 minutes of fitting per round.
 - But round 3 (22 October) was much worse (−2 floors, about −3.7 points of
-  wins on two world sets) with the same recipe; fit-to-fit variance is
-  being measured before any single refit is trusted
-  ([round 3](experiments/2026-10-21-combat-student-round-3.md)).
+  wins on two world sets) with the same recipe: a bad fit, since the same
+  corpus with another seed is as good as the champion's student. Fit
+  variance is heavy-tailed (three of four fits within half a floor, one
+  2 floors worse), so every refit must be checked against the current
+  head before use ([combat variance](experiments/2026-10-22-combat-variance.md)).
 
 ## Distilling strategy rules
 

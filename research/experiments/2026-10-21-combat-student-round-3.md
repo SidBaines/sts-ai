@@ -1,6 +1,6 @@
 # Combat student, round 3: another expert-iteration step
 
-**Status:** finished 22 October 2026. **Verdict:** worse, sharply: the round 3 student loses 2 floors and about 3.7 points of wins against the player whose games it was fitted to. The cause (fit variance or the data) is being tested.
+**Status:** finished 22 October 2026. **Verdict:** worse, sharply, but because of the fit, not the data: refitting the same corpus with another seed gives a student as good as the champion's ([combat variance](2026-10-22-combat-variance.md)).
 
 ## Question
 
