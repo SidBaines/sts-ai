@@ -95,6 +95,26 @@ run-win estimate. This needs network calls inside the native search; it is
 the larger project, and step 0 should show whether playouts or
 determinisation matter more at bosses.
 
+**Distillation with the pooled teacher (added 23 October, 00:40, before
+any labels existed).** The benchmark shows the pooled teacher plays bosses
+far better; the question for the agent is whether a student learns more
+from it.
+- Corpus (`combat_pooled_20261023`): the champion (`af2fb9f1f260`) plays
+  2,000 new worlds from 90,501,000,000; the teacher labels with round 2's
+  room probabilities, 24 searches of 1,000 simulations, votes by pooled
+  searches, with per-search details recorded so that today's luckiest-line
+  labels can be derived from the same searches (matched control, no extra
+  search). Probes: 8 unlabelled worlds from 93,000,000,300.
+- Fits: two seeds per label rule, each on this corpus only (as round 2),
+  spliced into the champion.
+- Decision rule: a pooled-label student is *Better* if it wins more than
+  the champion on second DEV (paired with its 899 wins) with exact McNemar
+  p < 0.05, and is then confirmed on 4,096 unused worlds from
+  106,000,000,000 before any promotion (Sid's decision). Secondary: pooled
+  against luckiest-line students from the same searches, same seeds,
+  paired on second DEV, reported with intervals; and Act 2 and Act 3 boss
+  pass rates.
+
 **Known top cards (after the vote, score and budget fixes; Sid, 22 October).**
 - The simulator tracks how many cards on top of the draw pile are known:
   Headbutt and Warcry add one, a draw removes one, a shuffle resets it, and

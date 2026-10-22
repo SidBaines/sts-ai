@@ -107,6 +107,9 @@ confirmation worlds apart.
 | 0.1.5.1 | Confirmation for the fourth continued training | 104,000,000,000 | 4,096 |
 | 0.1.5.1 | Teacher labels, boss-only corpus (champion of 22 October) | 90,500,300,000 | 4,000 |
 | 0.1.5.1 | Teacher labels, joint loop cycles | 90,500,500,000 + 10,000 per cycle | 1,000 per cycle |
+| 0.1.5.1 | Teacher labels, pooled-teacher corpus (champion of 22 October, 16:32) | 90,501,000,000 | 2,000 |
+| 0.1.5.1 | Probe worlds for the pooled-teacher fits | 93,000,000,300 | 8 |
+| 0.1.5.1 | Confirmation for pooled-teacher students | 106,000,000,000 | 4,096 |
 | 0.1.5.1 | Teacher labels, joint run 2 cycles | 90,500,700,000 + 10,000 per cycle | 1,000 per cycle |
 | 0.1.5.1 | Joint run 2 against its control, final comparison and two-by-two | 105,000,000,000 | 4,096 |
 | 0.1.5.1 | Probe worlds for the round 2 and round 3 fits (unlabelled, movement monitoring only) | 93,000,000,100; 93,000,000,200 | 8 each |
