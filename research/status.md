@@ -1,6 +1,6 @@
 # Status
 
-**Updated 22 October 2026, 16:33 BST.** Several jobs run; nothing waits for Sid. Champion:
+**Updated 22 October 2026, 16:53 BST.** Several jobs run; nothing waits for Sid. Champion:
 `champion_af2fb9f1f260.pt` (21.1% on unused worlds).
 
 - **Champion promoted 22 October, 16:32:** the third continued training's
@@ -19,11 +19,10 @@
   (decisions in `joint_20261022/loop/decisions.jsonl`; create
   `joint_20261022/loop/STOP` to stop it between steps) when the trainer
   starts, and runs the final comparison on worlds from 103,000,000,000.
-- **Boss-label combat fits** (`boss-fit-seed1`, then `boss-fit-seed2`, queue
-  in worktree `nonllm-large-batch`; output `combat_bosses_20261022/`): two
-  students on round 2, round 3 and boss-only labels, each then spliced into
-  the champion and evaluated on second DEV by the detached `boss_fit.sh`.
-  See the [combat variance page](experiments/2026-10-22-combat-variance.md).
+- **Exploratory check** (`boss-seed2-in-newchamp`, `nonllm-boss-rares`
+  queue, lane `eval`): the better boss-label student in the new champion,
+  on second DEV against its 899. The boss-label fits themselves finished
+  (seed 1 worse, seed 2 no clear difference).
 - **Finished today:** combat fit variance (one fit in four collapses; round
   3's collapse was a bad fit), all-corpora fit (worse), the lineage plot
   (`scripts/rl/plot_lineage.py`), `--mixed-sources` and `--combat-follow`

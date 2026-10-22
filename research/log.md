@@ -7,6 +7,9 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 22 October 2026
 
+- **Boss-only combat fits**, 16:52: seed 1 646 against 701 (worse, lost
+  hallway fights); seed 2 733 (p = 0.24; bosses passed slightly more
+  often). Seed 2 is being checked in the new champion (exploratory).
 - **Promotion**, 16:32: Sid promoted the third continued training's final
   checkpoint (`champion_af2fb9f1f260.pt`); a fourth continued training from
   it is queued after the joint run (seed 5; confirmation worlds from

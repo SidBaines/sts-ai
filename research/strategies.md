@@ -149,6 +149,9 @@ splice it into the player.
   variance is heavy-tailed (three of four fits within half a floor, one
   2 floors worse), so every refit must be checked against the current
   head before use ([combat variance](experiments/2026-10-22-combat-variance.md)).
+- Adding 4,000 worlds of boss-only labels did not clearly help: of two
+  fits, one was worse (it lost hallway fights) and one was not clearly
+  better (733 against 701), though it passed bosses slightly more often.
 
 ## Distilling strategy rules
 

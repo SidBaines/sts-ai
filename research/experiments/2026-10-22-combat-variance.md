@@ -1,6 +1,6 @@
 # Combat student: fit-to-fit variance, all corpora together, and boss-only labels
 
-**Status:** running (boss-only corpus). **Verdict:** so far: fit variance is heavy-tailed, round 3's collapse was a bad fit, and pooling all corpora did not beat the champion's student.
+**Status:** finished 22 October (one exploratory follow-up running). **Verdict:** fit variance is heavy-tailed; round 3's collapse was a bad fit; neither pooling all corpora nor adding boss-only labels beat the champion's student under the rule fixed in advance.
 
 ## Question
 
@@ -74,6 +74,27 @@ combat head is the round 2 student, seed 1919):
   size) or the 15 October corpus, collected by a player winning 3.7%,
   pulling the student towards states today's player rarely sees.
 
+**Boss-only labels: no student passes the rule; one is worse, one shows no
+clear difference but wins more boss fights.** Students fitted on the round 2,
+round 3 and boss-only corpora (435,285 fit rows), each in the champion's
+out-of-combat head, second DEV, paired with the champion's 701:
+
+| Seed | Wins | Discordant | McNemar p | Mean floor | Act 1 / 2 / 3 boss pass, paired difference (points) |
+|---|---:|---:|---:|---|---|
+| 1 | 646 | 350 / 295 | 0.033 | −0.78 [−1.13, −0.42] | +0.4 [−0.4, +1.2] / −0.5 [−2.2, +1.2] / −1.0 [−3.8, +1.7] |
+| 2 | 733 | 328 / 360 | 0.24 | +0.19 [−0.16, +0.53] | +1.0 [+0.3, +1.8] / +1.9 [+0.2, +3.6] / +1.4 [−1.4, +4.1] |
+
+- Seed 1 loses before the bosses, not at them: it reaches the Act 1, 2 and
+  3 bosses 1.7, 2.4 and 3.7 points less often, while its boss pass rates
+  barely move. Seed 2 reaches the bosses as often as the champion and
+  passes all three a little more often.
+- Fits stopped at steps 3,600 (seed 1, validation loss 1.418) and 6,900
+  (seed 2, 1.408). As before, validation loss did not separate the good fit
+  from the bad one.
+- Exploratory follow-up (chosen after seeing these results): seed 2's
+  student in the new champion's out-of-combat head, on second DEV paired
+  with the new champion's 899; running.
+
 ## Conclusion
 
 - A single refit cannot be trusted: three of four fits of one recipe lie
@@ -81,16 +102,28 @@ combat head is the round 2 student, seed 1919):
 - The champion's combat student (round 2, seed 1919) is the best of the
   five fits made; part of round 2's confirmed gain may be a good draw.
 - More labels from older, weaker players did not help in one fit.
+- Boss-only labels did not clearly help either: one of two fits was worse
+  (it lost hallway fights), the other was not clearly better overall,
+  though it passed bosses slightly more often. With fits this variable,
+  two seeds cannot separate a small benefit from luck; a better teacher
+  is the more promising lever ([better teacher](2026-10-22-better-teacher.md)).
 
 Caveats:
 - One or two seeds per condition; every comparison on second DEV only.
 
 ## Next
 
-Pending.
+- Check every refit before use, and fit at least two seeds per corpus.
+- Find a cheap check that flags bad fits before a full evaluation
+  (validation loss does not).
+- Improve the teacher before collecting more labels
+  ([better teacher](2026-10-22-better-teacher.md)).
 
 ## Log
 
+- 22 Oct, 16:52: boss-only fits evaluated: seed 1 worse (646), seed 2 no
+  clear difference (733 against 701); seed 2 queued in the new champion
+  as an exploratory check.
 - 22 Oct, 13:54: `--mixed-sampling` merged after review; boss-corpus fits
   armed to start when the corpus completes.
 - 22 Oct, 13:33: round 3 seed 2 is fine (689 against 701): the round 3
