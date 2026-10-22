@@ -1,6 +1,6 @@
 # Combat student: fit-to-fit variance, all corpora together, and boss-only labels
 
-**Status:** finished 22 October (one exploratory follow-up running). **Verdict:** fit variance is heavy-tailed; round 3's collapse was a bad fit; neither pooling all corpora nor adding boss-only labels beat the champion's student under the rule fixed in advance.
+**Status:** finished 22 October. **Verdict:** fit variance is heavy-tailed; round 3's collapse was a bad fit; neither pooling all corpora nor adding boss-only labels beat the champion's student under the rule fixed in advance.
 
 ## Question
 
@@ -92,8 +92,10 @@ out-of-combat head, second DEV, paired with the champion's 701:
   (seed 2, 1.408). As before, validation loss did not separate the good fit
   from the bad one.
 - Exploratory follow-up (chosen after seeing these results): seed 2's
-  student in the new champion's out-of-combat head, on second DEV paired
-  with the new champion's 899; running.
+  student in the new champion's out-of-combat head won 927 against the new
+  champion's 899 on second DEV (discordant 387/415, p = 0.34; floor −0.07
+  [−0.41, +0.28]; Act 2 boss pass +0.6 points [−1.0, +2.2]): no clear
+  difference. It is not adopted.
 
 ## Conclusion
 
@@ -124,6 +126,8 @@ Caveats:
 - 22 Oct, 16:52: boss-only fits evaluated: seed 1 worse (646), seed 2 no
   clear difference (733 against 701); seed 2 queued in the new champion
   as an exploratory check.
+- 22 Oct, 17:03: in the new champion seed 2 won 927 against 899 (p = 0.34):
+  no clear difference; not adopted.
 - 22 Oct, 13:54: `--mixed-sampling` merged after review; boss-corpus fits
   armed to start when the corpus completes.
 - 22 Oct, 13:33: round 3 seed 2 is fine (689 against 701): the round 3

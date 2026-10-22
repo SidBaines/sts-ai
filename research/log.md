@@ -7,6 +7,8 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 22 October 2026
 
+- **Boss-label student in the new champion**, 17:03: 927 against 899 (p =
+  0.34), no clear difference; not adopted.
 - **Boss-only combat fits**, 16:52: seed 1 646 against 701 (worse, lost
   hallway fights); seed 2 733 (p = 0.24; bosses passed slightly more
   often). Seed 2 is being checked in the new champion (exploratory).
