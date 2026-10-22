@@ -14,6 +14,7 @@ import torch
 from sts_policy import controlled_encoding
 from sts_policy.controlled_entity import ControlledEntityActorCritic, policy_from_payload
 from sts_policy.training import load_checkpoint
+from sts_rl.fresh_study import fit_manifest_path, read_json
 from sts_rl import fresh_training as ft
 from sts_rl.fresh_probes import encode_probes, ProbeMonitor
 from tests.unit.test_entity_encoding import combat_observation
@@ -91,7 +92,7 @@ class ControlledTrainingTests(unittest.TestCase):
                         ft.checkpoint_training_condition(bad)
                     with self.assertRaisesRegex(ValueError, 'legacy_action_features'):
                         policy_from_payload(bad)
-                manifest = json.loads((root / 'run' / 'manifest.json').read_text())
+                manifest = read_json(fit_manifest_path(root / 'run'))
                 examples = ft.preencode([data], manifest, phase, 'controlled', splits=('TEST',))['TEST']
                 before = (root / 'run' / 'best.pt').read_bytes()
                 score_out = root / 'synthetic-score'

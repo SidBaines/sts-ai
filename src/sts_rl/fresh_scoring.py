@@ -10,7 +10,7 @@ import torch
 
 from sts_policy.entity_encoding import VOCABULARY_SHA256
 from sts_policy.training import load_checkpoint
-from sts_rl.fresh_study import atomic_json
+from sts_rl.fresh_study import atomic_json, read_json
 from sts_rl.fresh_training import (FILTERS, TrainingControl, _verify_file, digest,
     freeze_manifest, preencode, score_test_checkpoint)
 from sts_rl.recording import begin_run, file_identity
@@ -36,7 +36,7 @@ def score_deferred(selection_path, out, *, deadline_utc=None):
             raise ValueError('Selection missing '+key+' identity')
         _verify_file(selection[key])
     checkpoint = selection['selected_checkpoint']
-    manifest = json.loads(Path(selection['manifest']['path']).read_text())
+    manifest = read_json(selection['manifest']['path'])
     if (manifest.get('schema') != 'fresh_data_manifest_v2' or manifest.get('filters') != FILTERS or
             manifest.get('data_identity') != digest({k:v for k,v in manifest.items() if k!='data_identity'})):
         raise ValueError('Frozen manifest identity/contract mismatch')

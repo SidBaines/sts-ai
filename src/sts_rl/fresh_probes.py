@@ -2,15 +2,13 @@
 from collections import Counter, defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
-import gzip
-import json
 
 import numpy as np
 import torch
 
 from sts_policy.curriculum import public_hash
 from sts_policy import entity_encoding
-from sts_rl.fresh_study import PROTOCOL, INFERENCE, policy_observation
+from sts_rl.fresh_study import PROTOCOL, INFERENCE, policy_observation, read_json
 from sts_rl.fresh_training import (_integer, _validate_collection_source, digest, shard_files,
                                    validate_provenance, public_surface, coverage, movement, observation_encoder)
 from sts_rl.recording import file_identity
@@ -25,9 +23,7 @@ def iter_probe_rows(sources, *, expected_surface=None, control=None):
     for path in shard_files(sources):
         if control:
             control.check()
-        opener = gzip.open if path.suffix == '.gz' else open
-        with opener(path, 'rt') as stream:
-            shard = json.load(stream)
+        shard = read_json(path)
         if shard.get('protocol') != PROTOCOL or shard.get('status') != 'completed' or 'labels' not in shard:
             raise ValueError('Probe requires a completed C3 world shard')
         world = _integer(shard['world_seed'], 'probe world')

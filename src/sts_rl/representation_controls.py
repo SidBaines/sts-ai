@@ -21,6 +21,8 @@ import subprocess
 import tempfile
 import time
 
+from sts_rl.fresh_study import read_json as _read_json
+
 
 DEFAULT_ROOT = Path('/Users/sidbaines/.codex/worktrees/representation-controls/SlayTheSpireAI')
 OLD = Path('/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start/data/rl_runs/fresh_start_20261015')
@@ -94,7 +96,7 @@ def _nonfinite(value):
 
 
 def read_json(path):
-    return json.loads(Path(path).read_text(), object_pairs_hook=_object, parse_constant=_nonfinite)
+    return _read_json(path, object_pairs_hook=_object, parse_constant=_nonfinite)
 
 
 def atomic_json(path, value):

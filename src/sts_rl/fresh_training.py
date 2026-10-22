@@ -33,7 +33,8 @@ from sts_policy.curriculum import public_hash
 from sts_policy.entity_encoding import VOCABULARY_SHA256
 from sts_policy.training import save_checkpoint, load_checkpoint, seed_training
 from sts_rl.fresh_study import (PROTOCOL, FILTER_ID, DEAD_FILTER_ID, PUBLIC_CONTEXT_ID, INFERENCE, MIN_DISK,
-                                Interrupted, atomic_json, on_ac, policy_observation, validate_world_range)
+                                Interrupted, atomic_json, fit_manifest_path, read_json,
+                                on_ac, policy_observation, validate_world_range)
 from sts_rl.recording import begin_run, capture_rng, file_identity
 
 SPLIT_VERSION = 'fresh-start-split-v1'
@@ -1009,12 +1010,12 @@ def run_training(config):
         manifest = freeze_manifest(config['data'],control=control,mixed_sources=config.get('mixed_sources',False),
                                   mixed_sampling=config.get('mixed_sampling',False))
         if config.get('manifest'):
-            frozen = json.loads(Path(config['manifest']).read_text())
+            frozen = read_json(config['manifest'])
             if frozen != manifest:
                 raise ValueError('Frozen manifest/source identities differ')
             if 'preencoded_cache' in config:
                 del frozen
-        atomic_json(out/'manifest.json',manifest)
+        atomic_json(out/'manifest.json.gz',manifest,compressed=True)
         probe_selection, probe_rows = None, None
         if config.get('probe'):
             from sts_rl.fresh_probes import select_probes, encode_probes
@@ -1038,7 +1039,7 @@ def run_training(config):
         if cache:
             effective['preencoded_cache_provenance'] = cache.provenance
         launch = begin_run(out,effective,checkpoint=None,
-            inputs=[out/'manifest.json',vocab,*teachers,*shard_files(config['data']),
+            inputs=[fit_manifest_path(out),vocab,*teachers,*shard_files(config['data']),
                     *([out/'probe_selection.json',*shard_files(config['probe'])] if probe_selection else []),
                     *(cache.input_paths if cache else [])])
         _verify_file(launch)

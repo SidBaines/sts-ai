@@ -19,6 +19,8 @@ import sys
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
+from sts_rl.fresh_study import read_json
+
 DEFAULT_STUDY = Path("/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start/data/rl_runs/fresh_start_20261015")
 SCHEMA = "fresh_gate_plot_data_v1"
 RUNS = ("new_combat_5000", "new_combat_20000", "new_combat_full", "new_ooc_full",
@@ -104,7 +106,7 @@ class Inputs:
 
     def json(self, path, expected=None):
         self.bind(path, expected)
-        result = decode(Path(path).read_text())
+        result = read_json(path, object_pairs_hook=_object, parse_constant=_nonfinite)
         self.bind(path, expected)
         return result
 

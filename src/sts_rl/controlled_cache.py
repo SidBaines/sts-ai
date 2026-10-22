@@ -21,6 +21,7 @@ import torch
 
 from sts_policy import controlled_encoding as ce, entity_encoding as ee
 from sts_rl import fresh_training as ft
+from sts_rl.fresh_study import read_json
 
 SCHEMA = 'controlled_preencoded_cache_v1'
 ENCODING = dict(architecture='controlled', phase='combat', fit_size='full', splits=['FIT', 'VALIDATION'])
@@ -421,8 +422,7 @@ def build_cache(config):
         start = time.monotonic()
         logic = logic_sources(control)
         manifest_id = identity(config['manifest'], control)
-        with Path(config['manifest']).open() as stream:
-            original = json.load(stream)
+        original = read_json(config['manifest'])
         original_identity = original['data_identity']
         mixed_sources = original.get('mixed_sources',False)
         mixed_sampling = original.get('mixed_sampling',False)

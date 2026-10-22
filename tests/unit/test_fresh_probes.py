@@ -13,7 +13,7 @@ import numpy as np
 import torch
 
 from sts_policy import entity_encoding
-from sts_rl.fresh_study import PROTOCOL, atomic_json, policy_observation
+from sts_rl.fresh_study import PROTOCOL, atomic_json, policy_observation, read_json
 from sts_rl.fresh_training import (TrainingControl, freeze_manifest, iter_rows, make_model,
     minibatch_order, preencode, fit, run_training, validate_training_config)
 from sts_rl.fresh_probes import (ProbeMonitor, encode_probes, iter_probe_rows, select_probes)
@@ -237,7 +237,7 @@ class FreshProbeTests(unittest.TestCase):
         out=root/'run'
         receipt=json.loads((out/'receipt.json').read_text())
         selection=json.loads((out/'probe_selection.json').read_text())
-        manifest=json.loads((out/'manifest.json').read_text())
+        manifest=read_json(out/'manifest.json.gz')
         launch=json.loads(Path(receipt['launch']['path']).read_text())
         self.assertEqual(manifest['collected_total'],36 if mixed else 18)
         self.assertEqual(receipt['teacher_checkpoints'],sorted(teachers))

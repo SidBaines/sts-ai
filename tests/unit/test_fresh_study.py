@@ -14,7 +14,7 @@ import torch
 
 from sts_rl.fresh_study import (DEAD_FILTER_ID, FILTER_ID, INFERENCE, Interrupted,
     MIN_DISK, PUBLIC_CONTEXT_ID, RunControl, StudyPolicy, atomic_json, filter_observation,
-    policy_observation, prepare_run, validate_world_range)
+    fit_manifest_path, read_json, policy_observation, prepare_run, validate_world_range)
 
 
 def obs(phase="out_of_combat"):
@@ -47,6 +47,30 @@ class Model:
 
 
 class StudyTests(unittest.TestCase):
+    def test_fit_manifest_plain_gzip_and_ambiguity(self):
+        from sts_rl.fresh_panel_comparison import _Inputs
+        from sts_rl.representation_controls import read_json as strict_read
+        from sts_rl.recording import file_identity
+        value = {'schema': 'fresh_data_manifest_v2', 'rows': [{'row': 1}], 'splits': ['FIT']}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaises(FileNotFoundError):
+                fit_manifest_path(root)
+            for name in ('manifest.json', 'manifest.json.gz'):
+                path = root / name
+                atomic_json(path, value, compressed=name.endswith('.gz'))
+                before = file_identity(path)
+                self.assertEqual(fit_manifest_path(root), path)
+                self.assertEqual(read_json(path), value)
+                self.assertEqual(strict_read(path), value)
+                self.assertEqual(_Inputs().read(path, before), (value, before))
+                self.assertEqual(file_identity(path), before)
+                path.unlink()
+            atomic_json(root/'manifest.json', value)
+            atomic_json(root/'manifest.json.gz', value, compressed=True)
+            with self.assertRaisesRegex(ValueError, 'Both'):
+                fit_manifest_path(root)
+
     def policy(self, model):
         with patch("sts_rl.common.load_policy", return_value=(model, {})), \
              patch("sts_rl.fresh_study.file_identity", return_value={"path": "fake", "sha256": "abc"}):
