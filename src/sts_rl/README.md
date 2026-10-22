@@ -231,7 +231,7 @@ Use `panel.PanelWorker` for privileged arbitrary-encounter deck diagnostics;
 it requires the research native build. `scripts/rl/panel_validate.py --probe
 FILE --checkpoint MODEL.pt --output FILE` relates panel scores to later boss
 outcomes. Scratch fights suppress post-battle callbacks. Native search votes
-retain hidden random streams; only `search_votes_public` resamples them.
+retain hidden random streams; `search_votes_public` and `search_details_public` resample them.
 Fresh-start panels instead replay stored fight entrances and use a frozen
 grid:
 
@@ -266,6 +266,23 @@ Singleton processor inference uses actor-only exact argmax; forced choices
 bypass the model. Load errors never trigger champion fallback. `fresh_merge.py
 --inputs A B --world-start N --n K` validates cohorts; `--out` publishes a
 merge. Faults/cuts quarantine whole worlds.
+
+`--vote-rule best_line|most_visited|mean_value|pooled_mean` compares rules over
+the same searches (default `best_line`); `--record-search` saves per-search
+choices and raw root-edge diagnostics, including native action bits. Alternative
+rules merge edges with the same displayed action index before scoring them.
+`--teacher-plays` lets selected combat labels
+choose actions for benchmarks, requires labelled collection, and marks played
+samples `use_for_training: false`, with `source_action` recording the champion's
+choice and `played_action` the action stepped. Teacher-played cohorts are refused
+by fitting, comparison and fight banks; fitting also rejects these marked samples.
+The cohort validator and comparison reader permit explicit analysis with the
+keyword `allow_teacher_plays=True`. Collection forbids `--bank` with teacher play.
+A boss benchmark needs
+`--teacher-plays --teacher-probabilities '{"BOSS1":1,"BOSS2":1,"BOSS3":1}' --self-consistency-every 0`;
+the default probabilities sample other rooms too. Self-consistency repeats always
+use `best_line` votes, regardless of `--vote-rule`. Defaults preserve the existing
+search and trajectory behavior.
 
 `fresh_train.py` requires `--data`, `--probe`, `--architecture`, `--phase`,
 `--out` and `--deadline-utc`. All models initialize from scratch; the old

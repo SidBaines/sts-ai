@@ -1,6 +1,7 @@
 """Completed receipts and exact process-shard unions, using tiny pure worlds."""
 from copy import deepcopy
 import gzip
+import importlib.util
 import json
 from pathlib import Path
 import tempfile
@@ -8,7 +9,7 @@ import unittest
 
 from sts_rl.fresh_cohort import SHARD_FIELDS, merge_cohorts, validate_cohorts
 from sts_rl.fresh_collection import play_world
-from sts_rl.fresh_panel import load_bank
+from sts_rl.fresh_panel import _bank_rows, bank_files, load_bank
 from sts_rl.fresh_study import atomic_json
 from sts_rl.recording import file_identity
 from tests.unit.fresh_cohort_fixture import reseal_summary, write_cohort
@@ -36,6 +37,42 @@ def rewrite_world(directory, change):
 
 
 class CohortTests(unittest.TestCase):
+    def test_teacher_played_cohorts_require_explicit_analysis_optin(self):
+        path = Path(__file__).resolve().parents[2]/"scripts"/"rl"/"fresh_compare.py"
+        spec = importlib.util.spec_from_file_location("fresh_compare_cli", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            champion = write_cohort(root/"champion", [world()])
+            teacher = write_cohort(root/"teacher", [world(SEED+1)],
+                                   config={"mode": "collect", "teacher_plays": True})
+            for paths in (teacher, [champion, teacher], [teacher, champion]):
+                with self.subTest(paths=paths), self.assertRaisesRegex(ValueError, "teacher_plays true"):
+                    validate_cohorts(paths)
+            for path in (teacher, teacher/"summary.json"):
+                with self.subTest(path=path):
+                    with self.assertRaisesRegex(ValueError, "teacher_plays true"):
+                        module.read_games(path)
+                    with self.assertRaisesRegex(ValueError, "teacher_plays true"):
+                        module.read_rows(path, "games")
+                    self.assertEqual(module.read_games(path, allow_teacher_plays=True)[0]["world_seed"], SEED+1)
+            cohort = validate_cohorts(teacher, allow_teacher_plays=True)
+            self.assertIs(cohort["config"]["teacher_plays"], True)
+            self.assertEqual(len(module.read_games(champion)), 1)
+
+    def test_fight_banks_refuse_teacher_played_cohorts_even_after_optin(self):
+        for bank in (False, True):
+            with self.subTest(bank=bank), tempfile.TemporaryDirectory() as temporary:
+                directory = write_cohort(Path(temporary)/"teacher", [world()],
+                                         config={"mode": "collect", "bank": bank, "teacher_plays": True})
+                for load in (bank_files, load_bank):
+                    with self.assertRaisesRegex(ValueError, "teacher_plays true"):
+                        load(directory)
+                cohort = validate_cohorts(directory, allow_teacher_plays=True)
+                with self.assertRaisesRegex(ValueError, "teacher_plays true cannot be used for a fight bank"):
+                    _bank_rows(cohort)
+
     def test_merge_exact_grid_preserves_bytes_sources_and_comparison_records(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

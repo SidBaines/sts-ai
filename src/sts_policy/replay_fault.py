@@ -39,7 +39,7 @@ def replay_fault(record, *, build_dir=None, allow_native_change=False, timeout=3
     else:
         raise ValueError('Unknown fault worker class')
     allowed = {'reset', 'step', 'teacher_action', 'panel', 'afterstates', 'encounters', 'menu',
-               'search_votes', 'search_votes_public'}
+               'search_votes', 'search_votes_public', 'search_details_public'}
     calls = record['successful_rpcs'] + [record['attempted_rpc']]
     started = time.monotonic()
     with cls(config, timeout=min(timeout, seconds)) as worker:

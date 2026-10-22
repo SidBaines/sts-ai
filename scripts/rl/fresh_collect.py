@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from sts_rl.fresh_collection import DEFAULT_PROBABILITIES, run_collection, validate_config
 from sts_rl.fresh_study import StudyPolicy
+from sts_rl.teacher_votes import RULES
 
 
 def parser():
@@ -32,6 +33,9 @@ def parser():
     p.add_argument("--max-labels", type=int, default=0, help="Combat labels; stop between worlds, 0=unbounded")
     p.add_argument("--samples", type=int, default=24)
     p.add_argument("--simulations", type=int, default=1000)
+    p.add_argument("--vote-rule", choices=RULES, default=argparse.SUPPRESS, help="Default best_line")
+    p.add_argument("--teacher-plays", action="store_true", default=argparse.SUPPRESS, help="Benchmark only; exclude corpus from training")
+    p.add_argument("--record-search", action="store_true", default=argparse.SUPPRESS, help="Save per-search diagnostics")
     p.add_argument("--self-consistency-every", type=int, default=100,
                    help="TEST worlds only, hash-selected fraction 1/N, disjoint draw/RNG/search seeds; 0=disabled")
     return p
@@ -39,6 +43,8 @@ def parser():
 
 def main(argv=None):
     config = vars(parser().parse_args(argv))
+    if config.get("vote_rule") == "best_line":
+        config.pop("vote_rule")
     validate_config(config)
     policy = StudyPolicy(config["checkpoint"], config["combat"], config["ooc"])
     summary = run_collection(config, policy)

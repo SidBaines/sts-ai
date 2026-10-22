@@ -143,6 +143,8 @@ def _archived_policy_contract(archive):
 
 
 def validate_source(source):
+    if source.get('config', {}).get('teacher_plays') is True:
+        raise ValueError('Benchmark corpus with teacher_plays true cannot be used for training')
     return _validate_collection_source(source, labelled=True)
 
 
@@ -273,6 +275,8 @@ def iter_rows(sources, *, control=None, mixed_sources=False, mixed_sampling=Fals
                 shard = json.loads(line)
                 nested = 'labels' in shard
                 if nested:
+                    if shard.get('source', {}).get('config', {}).get('teacher_plays') is True:
+                        raise ValueError('Benchmark corpus with teacher_plays true cannot be used for training')
                     if shard.get('protocol') != PROTOCOL or shard.get('status') != 'completed':
                         raise ValueError('Nonterminal/faulted source world')
                     world = _integer(shard['world_seed'], 'world')
@@ -294,6 +298,8 @@ def iter_rows(sources, *, control=None, mixed_sources=False, mixed_sampling=Fals
                 else:
                     rows = [shard]
                 for position, row in enumerate(rows):
+                    if row.get('use_for_training') is False:
+                        raise ValueError('Sample with use_for_training false cannot be used for training')
                     if control and position % 128 == 0:
                         control.check()
                     world = _integer(row['world_seed'], 'world')

@@ -149,11 +149,12 @@ def _directory(directory):
             "inputs": [directory / name for name in ("receipt.json", "completion.json", "summary.json")]}
 
 
-def validate_cohorts(paths, *, world_start=None, n=None):
+def validate_cohorts(paths, *, world_start=None, n=None, allow_teacher_plays=False):
     """Validate exact contiguous union, optionally against a caller's seedgrid.
 
     Only the five SHARD_FIELDS may differ. All other config keys, source archive
     SHA, environment/native provenance, policy/filter identities and runtime agree.
+    Teacher-played benchmarks require an explicit opt-in.
     """
     if isinstance(paths, (str, Path)):
         paths = [paths]
@@ -161,6 +162,8 @@ def validate_cohorts(paths, *, world_start=None, n=None):
         cohorts = [_directory(path) for path in paths]
         if not cohorts:
             raise ValueError("No cohort directories")
+        if not allow_teacher_plays and any(c["config"].get("teacher_plays") is True for c in cohorts):
+            raise ValueError("Benchmark cohort with teacher_plays true requires allow_teacher_plays=True")
         identity = cohorts[0]["science_identity"]
         if any(c["science_identity"] != identity for c in cohorts):
             raise ValueError("Science identity differs across source/config/provenance")

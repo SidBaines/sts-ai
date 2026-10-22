@@ -365,7 +365,7 @@ def finish_run(out, summary, source, progress):
     atomic_json(out / "summary.json", summary)
     fields = {k: summary[k] for k in ("status", "cohort_complete", "confidence_claims_allowed",
               "faults", "cuts", "censored", "unstarted", "stop_reasons")}
-    fields.update({k: summary[k] for k in ("completed", "grid_complete", "valid") if k in summary})
+    fields.update({k: summary[k] for k in ("completed", "grid_complete", "valid", "teacher_plays") if k in summary})
     atomic_json(out / "completion.json", {"protocol": PROTOCOL, "event": "done", **fields,
                 "source": source, "summary": file_identity(out / "summary.json"),
                 "run_control": summary["run_control"]})

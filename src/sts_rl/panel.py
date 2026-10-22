@@ -107,6 +107,44 @@ class PanelEpisode(CurriculumEpisode):
             votes[index] = votes.get(index, 0) + 1
         return votes
 
+    def search_details_public(self, simulations: int, futures: list[int], search_seeds: list[int],
+                              rng_base: int) -> list[dict[str, Any]]:
+        """Canonical scratch searches with independent future and search seeds."""
+        from sts_env._backend.lightspeed import _TYPED_COMBAT_OBSERVATIONS
+        if len(futures) != len(search_seeds):
+            raise ValueError("futures and search_seeds must have equal lengths")
+        env = self.episode.env
+        raw = env._env
+        raw.advance_to_decision()
+        if raw.bc is None:
+            raise RuntimeError("search_details_public requires a pending combat decision")
+        include = raw.combat_observation in _TYPED_COMBAT_OBSERVATIONS
+        details = []
+        for future, search_seed in zip(futures, search_seeds):
+            scratch = raw.bc.copy()
+            scratch.reseed_rngs(int(rng_base) * 1009 + int(future))
+            try:
+                result = scratch.search_best_action(simulations, search_seed=search_seed,
+                                                    draw_order_seed=future, include_card_type=include)
+            except ValueError as exc:
+                if "draw_order_seed" in str(exc):
+                    return []
+                raise
+            if not result.get("provenance", {}).get("hidden_pile_order_canonicalized"):
+                raise RuntimeError("Canonical search requires the 0.1.4 sampling patch")
+            details.append({"future": int(future), "search_seed": int(search_seed),
+                "chosen": int(env.display_index_for_bits(int(result["bits"]))),
+                "selection_method": str(result["selection_method"]),
+                "winning_sequence_found": bool(result["winning_sequence_found"]),
+                "root_simulations": int(result["root_simulations"]),
+                "best_evaluation": float(result["best_evaluation"]),
+                "min_evaluation": float(result["min_evaluation"]),
+                "edges": [{"index": int(env.display_index_for_bits(int(edge["bits"]))), "bits": int(edge["bits"]),
+                           "visits": int(edge["visits"]), "evaluation_sum": float(edge["evaluation_sum"]),
+                           "mean_evaluation": float(edge["mean_evaluation"])}
+                          for edge in result["root_edges"] if edge["valid"]]})
+        return details
+
     def menu(self, spec: TaskSpec | dict[str, Any]) -> list[dict[str, Any]]:
         observation, _ = self.reset(spec)
         self.finished = True
@@ -253,6 +291,10 @@ class PanelWorker(CurriculumWorker):
     def search_votes_public(self, simulations: int, samples: Sequence[int], search_seed: int = 0) -> dict[int, int]:
         return {int(k): v for k, v in self._call("search_votes_public", simulations, list(samples), search_seed).items()}
 
+    def search_details_public(self, simulations: int, futures: list[int], search_seeds: list[int],
+                              rng_base: int) -> list[dict[str, Any]]:
+        return self._call("search_details_public", simulations, list(futures), list(search_seeds), rng_base)
+
     def panel(self, spec: TaskSpec, fights: Sequence[tuple[str, str, int]], checkpoint: str,
               sample: bool = False, full_hp_rooms: Sequence[str] = ()) -> list[dict[str, Any]]:
         self._ensure()
@@ -265,7 +307,8 @@ class PanelWorker(CurriculumWorker):
                           list(full_hp_rooms))
 
     def submit(self, method: str, *args: Any) -> Future[Any]:
-        if method in {"panel", "encounters", "afterstates", "menu", "search_votes", "search_votes_public"}:
+        if method in {"panel", "encounters", "afterstates", "menu", "search_votes", "search_votes_public",
+                      "search_details_public"}:
             return self._executor.submit(getattr(self, method), *args)
         return super().submit(method, *args)
 
