@@ -101,6 +101,11 @@ confirmation worlds apart.
 | 0.1.5.1 | Confirmation for combat student round 3 | 98,000,000,000 | 4,096 |
 | 0.1.5.1 | Confirmation of the second continued training combined with the round 2 combat student | 99,000,000,000 | 4,096 |
 | 0.1.5.1 | Confirmation for the third continued training | 100,000,000,000 | 4,096 |
+| 0.1.5.1 | Joint loop gate (reused every cycle; selection set, not confirmation) | 101,000,000,000 | 2,048 |
+| 0.1.5.1 | Joint loop smoke test gate | 102,000,000,000 | 256 |
+| 0.1.5.1 | Joint run against its control, final comparison | 103,000,000,000 | 4,096 |
+| 0.1.5.1 | Teacher labels, boss-only corpus (champion of 22 October) | 90,500,300,000 | 4,000 |
+| 0.1.5.1 | Teacher labels, joint loop cycles | 90,500,500,000 + 10,000 per cycle | 1,000 per cycle |
 | 0.1.5.1 | Probe worlds for the round 2 and round 3 fits (unlabelled, movement monitoring only) | 93,000,000,100; 93,000,000,200 | 8 each |
 | All | Out-of-combat PPO training worlds (`train_ooc.py`): 7,000,000,000 plus 500,000,000 per training seed plus 10,000,000 per iteration | 7,000,000,000 | games per iteration |
 
