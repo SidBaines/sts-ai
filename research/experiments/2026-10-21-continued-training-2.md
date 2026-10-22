@@ -1,6 +1,6 @@
 # Continued out-of-combat training, second pass, with exploration statistics
 
-**Status:** finished 22 October 2026. **Verdict:** a second 24 iterations raised the champion from 12.4% to 16.9% on unused worlds; with the round 2 combat student spliced in it reaches 701 of 4,096 on DEV (17.1%). The Demon Form rule, distilled correctly, matches its overlay but adds little.
+**Status:** finished 22 October 2026. **Verdict:** a second 24 iterations raised the champion from 12.4% to 16.9% on unused worlds; with the round 2 combat student spliced in it reaches 18.4%, confirmed (755 against 662, p = 0.001). The Demon Form rule, distilled correctly, matches its overlay but adds little.
 
 ## Question
 
@@ -125,7 +125,12 @@ the trained out-of-combat head with the [round 2
 student](2026-10-21-combat-student-round-2.md) wins 701 (17.1%): against the
 trained checkpoint with the old student, 701 against 672 (discordant
 342/313, p = 0.27; floor +0.71 [+0.35, +1.05]); against the round 2
-candidate, 701 against 576 (p < 0.001).
+candidate, 701 against 576 (p < 0.001). **Confirmed on 4,096 unused worlds
+from 99,000,000,000:** 755 against the trained checkpoint's 662 (18.4%
+against 16.2%; discordant 406/313, p = 0.001; mean floor +0.70 [+0.33,
++1.05]; Act 2 boss pass +1.6 points [−0.2, +3.3]). Combination checkpoint
+`continued2_20261021/c2_ooc_with_student_r2.pt` (SHA-256 prefix
+`85ea9019ff95`).
 
 - The trainer's evaluation went 118, 121, 127, 142, 146, 139, 152 wins of
   1,024 at iterations 0 to 24.
@@ -144,9 +149,9 @@ candidate, 701 against 576 (p < 0.001).
 
 - Continued out-of-combat PPO has still not plateaued: three rounds from
   the 20 October champion gained 9.3% → 11.6% → 16.9% on unused worlds.
-- The combat and out-of-combat improvements look additive: the round 2
-  student lifts the newly trained head as it lifted the old one (+29 wins
-  on DEV, not significant alone, floor +0.71).
+- The combat and out-of-combat improvements add up: the round 2 student
+  lifts the newly trained head as it lifted the old one (+93 wins on unused
+  worlds, p = 0.001; +29 on DEV).
 - Saturation moved little: the entropy bonus loosened shops and maps a
   little, card rewards hardly at all, yet play improved a lot.
 - The Demon Form rule, distilled at real card decisions, matches its
@@ -168,6 +173,8 @@ Caveats:
 
 ## Log
 
+- 22 Oct, 11:36: combination confirmed on the worlds from 99,000,000,000:
+  755 against 662 (p = 0.001).
 - 22 Oct, 11:27: confirmation of the combination queued on 4,096 unused
   worlds from 99,000,000,000, with the trained checkpoint (old student) on
   the same worlds. Decision rule, fixed now: the combination is confirmed

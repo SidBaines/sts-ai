@@ -9,6 +9,7 @@ everything is measured.
 
 | Player | Win rate | Evidence |
 |---|---|---|
+| **Best candidate, awaiting Sid:** the second continued training's out-of-combat head with the round 2 combat student (`continued2_20261021/c2_ooc_with_student_r2.pt`) | 18.4% on 4,096 unused worlds from 99,000,000,000 (755 against the trained checkpoint's 662, p = 0.001); 17.1% on second DEV (701) | Confirmed; pure policy |
 | **Candidate, awaiting Sid:** the second continued training's final checkpoint (`continued2_20261021/train/iter_0024.pt`) | 16.9% on 4,096 unused worlds from 96,000,000,000 (691 against the champion's 507, p < 0.001); 16.4% on second DEV (672 against 527); with the round 2 combat student 701 on DEV (exploratory) | Confirmed; pure policy |
 | **Candidate, awaiting Sid:** the afternoon champion with its combat head refitted to teacher labels from its own games (`combat_round2_20261021/champion_with_student_r2_newonly.pt`) | 13.9% on 4,096 unused worlds from 97,000,000,000 (571 against the champion's 512, p = 0.017); 14.1% on second DEV (576 against 527) | Confirmed; pure policy |
 | **Champion from 21 October, afternoon:** continued training with the hygiene options (run `round4`, `champion_2835f40fa439.pt`) | 11.6% on 4,096 new worlds from 95,000,000,000 (476 against the champion's 379, p < 0.001); 12.9% on the second-DEV worlds (527 against 413) | Confirmed; current default |
