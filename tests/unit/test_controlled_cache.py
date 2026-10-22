@@ -395,6 +395,28 @@ class ControlledCacheTests(unittest.TestCase):
             with patch.dict(os.environ, STS_LIGHTSPEED_BUILD='/synthetic-unused'):
                 cc.build_cache(cfg)
 
+    def test_creator_passes_mixed_sampling_from_manifest(self):
+        first,_=fixture(self.out/'first',config={'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':.04}})
+        second,_=fixture(self.out/'second',config={'world_start':92_000_001_000,
+            'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':0.0}})
+        sources=[str(first),str(second)]
+        manifest=ft.freeze_manifest(sources,mixed_sources=True,mixed_sampling=True)
+        path=self.out/'mixed_manifest.json'
+        ft.atomic_json(path,manifest)
+        cfg=dict(data=sources,manifest=str(path),out=str(self.out/'mixed_cache'),deadline_utc=None)
+        original_control=ft.TrainingControl
+        with ExitStack() as stack:
+            stack.enter_context(patch.dict(os.environ,STS_LIGHTSPEED_BUILD='/synthetic-unused'))
+            stack.enter_context(patch.object(ft,'TrainingControl',side_effect=lambda out,deadline:
+                original_control(out,deadline,ac=lambda:True,caffeinate=False)))
+            stack.enter_context(patch.object(cc,'manifest_rows'))
+            stack.enter_context(patch.object(ft,'begin_run',side_effect=ft.Interrupted('STOP after manifest validation')))
+            freeze=stack.enter_context(patch.object(ft,'freeze_manifest',wraps=ft.freeze_manifest))
+            with self.assertRaisesRegex(ft.Interrupted,'STOP after manifest validation'):
+                cc.build_cache(cfg)
+        self.assertIs(freeze.call_args.kwargs['mixed_sources'],True)
+        self.assertIs(freeze.call_args.kwargs['mixed_sampling'],True)
+
     def test_original_cli_defaults_and_cache_restrictions(self):
         train, creator = script('fresh_train'), script('fresh_cache')
         args = ['--data', 'fixture', '--out', 'out', '--architecture', 'old', '--phase', 'combat',

@@ -79,7 +79,8 @@ def score_deferred(selection_path, out, *, deadline_utc=None):
     control.start()
     try:
         control.check()
-        if freeze_manifest(sources,control=control,mixed_sources=manifest.get('mixed_sources',False)) != manifest:
+        if freeze_manifest(sources,control=control,mixed_sources=manifest.get('mixed_sources',False),
+                           mixed_sampling=manifest.get('mixed_sampling',False)) != manifest:
             raise ValueError('Frozen manifest/source identities differ')
         effective = {'stage':'deferred_test_scoring','training':False,'weight_updates':0,
                      'architecture':architecture,'phase':phase,'device':'cpu',

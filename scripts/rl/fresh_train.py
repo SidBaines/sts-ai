@@ -17,6 +17,8 @@ def parser():
     p.add_argument('--manifest',help='Require this exact frozen common manifest')
     p.add_argument('--mixed-sources',action='store_true',default=argparse.SUPPRESS,
                    help='Allow different collecting champions and Python source hashes with matching collection settings and versioned public/native contracts')
+    p.add_argument('--mixed-sampling',action='store_true',default=argparse.SUPPRESS,
+                   help='With --mixed-sources, also allow different teacher-probability sampling profiles; all other teacher settings must match')
     p.add_argument('--preencoded-cache',default=argparse.SUPPRESS,metavar='RECEIPT.json',
                    help='Opt-in lossless controlled/combat/full FIT+VALIDATION cache; requires --manifest and --defer-test')
     p.add_argument('--probe',nargs='+',help='Required for production: immutable unlabelled 93e9 world shards; movement monitoring only')

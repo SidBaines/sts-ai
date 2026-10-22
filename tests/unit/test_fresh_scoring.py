@@ -178,17 +178,19 @@ class FreshScoringTests(unittest.TestCase):
             self.assertFalse((root/'score').exists())
 
     def test_deferred_scoring_reopens_mixed_manifest(self):
-        with tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:
-            root=Path(tmp)
-            first,source=fixture(root/'first')
-            second,_=fixture(root/'second',interface_suffix=b'# faster interface\n',
-                             config={'world_start':92_000_001_000})
-            self.runtime(stack,source)
-            self.train(root,[first,second],mixed_sources=True)
-            path,_=self.selection(root)
-            summary=score_deferred(path,root/'score')
-            self.assertEqual(summary['status'],'completed')
-            self.assertEqual(summary['test_rows'],6)
+        for mixed_sampling in (False,True):
+            with self.subTest(mixed_sampling=mixed_sampling),tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:
+                root=Path(tmp)
+                first,source=fixture(root/'first',config={'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':.04}})
+                second,_=fixture(root/'second',interface_suffix=b'# faster interface\n',
+                    config={'world_start':92_000_001_000,
+                            'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':0.0 if mixed_sampling else .04}})
+                self.runtime(stack,source)
+                self.train(root,[first,second],mixed_sources=True,mixed_sampling=mixed_sampling)
+                path,_=self.selection(root)
+                summary=score_deferred(path,root/'score')
+                self.assertEqual(summary['status'],'completed')
+                self.assertEqual(summary['test_rows'],6)
 
     def test_finalizer_cpu_singletons_actor_only_no_updates_and_fresh_output(self):
         for architecture in ('new','old'):

@@ -425,11 +425,13 @@ def build_cache(config):
             original = json.load(stream)
         original_identity = original['data_identity']
         mixed_sources = original.get('mixed_sources',False)
+        mixed_sampling = original.get('mixed_sampling',False)
         _require(original_identity == ft.digest({k: v for k, v in original.items() if k != 'data_identity'}),
                  'original manifest self identity mismatch')
         manifest_rows(original)
         del original  # Never keep two parsed copies of the large original manifest.
-        manifest = ft.freeze_manifest(config['data'], control=control, mixed_sources=mixed_sources)
+        manifest = ft.freeze_manifest(config['data'], control=control, mixed_sources=mixed_sources,
+                                      mixed_sampling=mixed_sampling)
         _require(manifest['data_identity'] == original_identity, 'Frozen manifest/source identities differ')
         _verify(manifest_id, control)
         freeze_seconds = time.monotonic()-start

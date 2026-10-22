@@ -275,6 +275,10 @@ prefixes shared across encoders; out-of-combat fitting is full-only.
 `--mixed-sources` opts into fitting multiple collecting champions and Python
 source hashes; native identities, collection settings, environment/observation
 versions, Python runtime versions and public policy contracts must still match.
+Adding `--mixed-sampling` allows different `teacher_probabilities` collection
+profiles while every other setting, including teacher samples and simulations,
+still matches. The manifest records the flag and distinct profiles as canonical
+JSON strings in `teacher_probability_profiles`. Both options default off.
 Abstentions are excluded from targets; forced choices stay in evaluation but
 not optimization. Fixed unlabelled probes never supply targets or select
 weights. Use `--defer-test` until validation-only selection freezes. The

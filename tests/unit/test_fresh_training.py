@@ -157,6 +157,29 @@ class FreshTrainingTests(unittest.TestCase):
             dataset=preencode(sources,manifest,'combat','old')
             self.assertEqual({x.meta['source_identity'] for rows in dataset.values() for x in rows},identities)
 
+    def test_mixed_sampling_optin_accepts_and_records_distinct_profiles(self):
+        standard={'BOSS2':1.0,'MONSTER1':.04}
+        bosses={'MONSTER1':0.0,'BOSS2':1.0}
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            first,source1=fixture(root/'first',config={'teacher_probabilities':standard,'samples':4,'simulations':50})
+            second,source2=fixture(root/'second',config={'world_start':92_000_001_000,
+                'teacher_probabilities':bosses,'samples':4,'simulations':50})
+            sources=[first,second]
+            for load in (freeze_manifest,lambda s,**kw:list(iter_rows(s,**kw))):
+                with self.assertRaisesRegex(ValueError,'Incompatible mixed source field: config.teacher_probabilities'):
+                    load(sources,mixed_sources=True)
+            manifest=freeze_manifest(sources,mixed_sources=True,mixed_sampling=True)
+            self.assertIs(manifest['mixed_sampling'],True)
+            self.assertEqual(manifest['teacher_probability_profiles'],sorted(
+                json.dumps(p,sort_keys=True,separators=(',',':')) for p in (standard,bosses)))
+            self.assertEqual(manifest['collection_sources'],{digest(s):s for s in (source1,source2)})
+            self.assertEqual(manifest['data_identity'],digest({k:v for k,v in manifest.items() if k!='data_identity'}))
+            single=freeze_manifest([first],mixed_sources=True,mixed_sampling=True)
+            self.assertEqual(len(single['teacher_probability_profiles']),1)
+            dataset=preencode(sources,manifest,'combat','old')
+            self.assertEqual({s:len(rows) for s,rows in dataset.items()},{s:6 for s in ('FIT','VALIDATION','TEST')})
+
     def test_mixed_sources_reject_other_scientific_differences_by_field(self):
         config={'teacher_probabilities':{'BOSS1':.5},'samples':4,'simulations':50}
         changes=(
@@ -165,6 +188,8 @@ class FreshTrainingTests(unittest.TestCase):
             ({'config':{'simulations':51}},'config.simulations'),
             ({'config':{'samples':5}},'config.samples'),
             ({'config':{'samples':4.0}},'config.samples'),
+            ({'config':{'self_consistency_every':7}},'config.self_consistency_every'),
+            ({'config':{'teacher_probabilities':{'BOSS2':0.5},'samples':4.0}},'config.samples'),
             ({'config':{'new_scientific_setting':True}},'config.new_scientific_setting'),
             ({'environment_version':'0.1.6'},'provenance.environment_version'),
             ({'observation_version':'sts_env_public_v3'},'provenance.observation_version'),
@@ -175,8 +200,12 @@ class FreshTrainingTests(unittest.TestCase):
             for i,(options,field) in enumerate(changes):
                 second,_=fixture(root/str(i),**{**options,'config':{
                     **config,'world_start':92_000_001_000,**options.get('config',{})}})
-                with self.subTest(field=field),self.assertRaisesRegex(ValueError,'Incompatible mixed source field: '+field):
-                    freeze_manifest([first,second],mixed_sources=True)
+                for mixed_sampling in (False,True):
+                    if mixed_sampling and field.startswith('config.teacher_probabilities'):
+                        continue
+                    with self.subTest(field=field,mixed_sampling=mixed_sampling),self.assertRaisesRegex(
+                            ValueError,'Incompatible mixed source field: '+field):
+                        freeze_manifest([first,second],mixed_sources=True,mixed_sampling=mixed_sampling)
 
     def test_mixed_sources_still_verify_each_source_and_provenance(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -197,7 +226,10 @@ class FreshTrainingTests(unittest.TestCase):
             data,source=fixture(Path(tmp))
             manifest=freeze_manifest([data])
             self.assertEqual(manifest,freeze_manifest([data],mixed_sources=False))
+            self.assertEqual(manifest,freeze_manifest([data],mixed_sampling=False))
             self.assertNotIn('mixed_sources',manifest)
+            self.assertNotIn('mixed_sampling',manifest)
+            self.assertNotIn('teacher_probability_profiles',manifest)
             launch=json.loads(Path(source['launch']['path']).read_text())
             legacy_config={k:v for k,v in source['config'].items() if k not in {
                 'out','n','world_start','workers','deadline_utc','max_labels'}}
@@ -207,6 +239,30 @@ class FreshTrainingTests(unittest.TestCase):
             self.assertEqual({m['source_identity'] for m in manifest['rows']},{legacy_identity})
             self.assertEqual(manifest['data_identity'],digest({k:v for k,v in manifest.items() if k!='data_identity'}))
 
+    def test_mixed_sampling_off_keeps_legacy_manifest_snapshots(self):
+        # Fixed raw-reader output makes complete pre-option manifest digests reproducible.
+        source={'policy':{'protocol':PROTOCOL,'filter_ids':FILTERS,
+                         'public_context_id':PUBLIC_CONTEXT_ID,'inference':INFERENCE},
+                'config':{'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':.04}}}
+        raw={'source':source,'expected_provenance':{'python_interface_sha256':'interface'}}
+        meta=dict(source_row_id='row',world_seed=92_000_000_000,group='BOSS2',phase='combat',
+                  has_target=True,abstention=False,choice=True,split='FIT',source_identity='source')
+        identity=dict(path='synthetic',sha256='shard',bytes=1)
+        # Captured from freeze_manifest before mixed_sampling was added.
+        for mixed_sources,expected in (
+                (False,'306ba46541b788feac972a2fcc79aa039ffa413effe02f55ea5e4bea2707fcb7'),
+                (True,'343cd6fe02cc7afd0082f6068678f1093ada62b77bb756eb7730a284927b126f')):
+            with self.subTest(mixed_sources=mixed_sources), \
+                 patch('sts_rl.fresh_training.shard_files',return_value=[Path('synthetic')]), \
+                 patch('sts_rl.fresh_training.file_identity',return_value=identity), \
+                 patch('sts_rl.fresh_training.iter_rows',side_effect=lambda *a,**kw:iter([(raw,meta)])):
+                manifest=freeze_manifest(['synthetic'],mixed_sources=mixed_sources)
+                self.assertEqual(manifest,freeze_manifest(['synthetic'],mixed_sources=mixed_sources,mixed_sampling=False))
+                self.assertNotIn('mixed_sampling',manifest)
+                self.assertNotIn('teacher_probability_profiles',manifest)
+                self.assertEqual(manifest['data_identity'],expected)
+                self.assertEqual(digest({k:v for k,v in manifest.items() if k!='data_identity'}),expected)
+
     def test_mixed_sources_cli_is_optin(self):
         script=Path(__file__).resolve().parents[2]/'scripts/rl/fresh_train.py'
         spec=importlib.util.spec_from_file_location('mixed_sources_cli',script)
@@ -215,11 +271,25 @@ class FreshTrainingTests(unittest.TestCase):
         args=['--data','synthetic','--out','out','--architecture','old','--phase','combat',
               '--deadline-utc','2099-01-01T00:00:00Z']
         self.assertNotIn('mixed_sources',vars(module.parser().parse_args(args)))
+        self.assertNotIn('mixed_sampling',vars(module.parser().parse_args(args)))
         self.assertIs(module.parser().parse_args(args+['--mixed-sources']).mixed_sources,True)
+        config=vars(module.parser().parse_args(args+['--mixed-sources','--mixed-sampling']))
+        self.assertIs(config['mixed_sampling'],True)
+        validate_training_config(config,synthetic=True)
         with self.assertRaisesRegex(ValueError,'mixed_sources must be boolean'):
             validate_training_config({'mixed_sources':'yes'},synthetic=True)
         with self.assertRaisesRegex(ValueError,'only valid for combat fits'):
             validate_training_config({'mixed_sources':True,'phase':'ooc'},synthetic=True)
+        with self.assertRaisesRegex(ValueError,'mixed_sampling must be boolean'):
+            validate_training_config({'mixed_sampling':'yes'},synthetic=True)
+        for mixed_sources in (False,None):
+            config={'mixed_sampling':True}
+            if mixed_sources is not None:
+                config['mixed_sources']=mixed_sources
+            with self.subTest(config=config),self.assertRaisesRegex(ValueError,'mixed_sampling requires mixed_sources'):
+                validate_training_config(config,synthetic=True)
+        with self.assertRaisesRegex(ValueError,'mixed_sampling requires mixed_sources'):
+            list(iter_rows([],mixed_sampling=True))
 
     def test_collection_checkpoint_must_match_recorded_champion(self):
         with tempfile.TemporaryDirectory() as tmp:

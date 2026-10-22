@@ -222,10 +222,13 @@ def public_surface(source, prov):
             ('protocol', 'filter_ids', 'public_context_id', 'inference')}}
 
 
-def _mixed_source_contract(source, prov, launch):
-    # Only the collecting champion (policy and the collector's checkpoint path, each
-    # still validated per source) and archived Python bytes may differ.
+def _mixed_source_contract(source, prov, launch, *, mixed_sampling=False):
+    # By default, only the collecting champion (policy and the collector's checkpoint
+    # path, each still validated per source) and archived Python bytes may differ.
     config = {k:v for k,v in _scientific_collection_config(source['config']).items() if k != 'checkpoint'}
+    if mixed_sampling:
+        # Sampling selects states to label; it does not change their teacher targets.
+        config.pop('teacher_probabilities', None)
     return {'native': launch['native'], 'config': config,
             'provenance': {k:v for k,v in prov.items() if k!='python_interface_sha256'},
             'policy': {k:v for k,v in source['policy'].items() if k!='champion'}}
@@ -253,8 +256,10 @@ def shard_files(sources):
     return paths
 
 
-def iter_rows(sources, *, control=None, mixed_sources=False):
+def iter_rows(sources, *, control=None, mixed_sources=False, mixed_sampling=False):
     """Accept C1 world JSON objects and JSONL exports; hold at most one world."""
+    if mixed_sampling and not mixed_sources:
+        raise ValueError('mixed_sampling requires mixed_sources')
     verified, worlds = {}, set()
     scientific, expected = None, None
     for path in shard_files(sources):
@@ -303,7 +308,7 @@ def iter_rows(sources, *, control=None, mixed_sources=False):
                     prov = row['expected_provenance']
                     validate_provenance(prov, launch)
                     if mixed_sources:
-                        contract = _mixed_source_contract(source, prov, launch)
+                        contract = _mixed_source_contract(source, prov, launch, mixed_sampling=mixed_sampling)
                         if expected is None:
                             expected = contract
                         _require_mixed_match(contract, expected)
@@ -371,11 +376,11 @@ def interleave_fit(rows):
     return result
 
 
-def freeze_manifest(sources, *, control=None, mixed_sources=False):
+def freeze_manifest(sources, *, control=None, mixed_sources=False, mixed_sampling=False):
     files = [file_identity(p) for p in shard_files(sources)]
     rows, seen, collection_sources = [], set(), {}
     interfaces = set()
-    for raw, meta in iter_rows(sources, control=control, mixed_sources=mixed_sources):
+    for raw, meta in iter_rows(sources, control=control, mixed_sources=mixed_sources, mixed_sampling=mixed_sampling):
         if meta['source_row_id'] in seen:
             raise ValueError('Duplicate source row identity')
         seen.add(meta['source_row_id'])
@@ -416,6 +421,11 @@ def freeze_manifest(sources, *, control=None, mixed_sources=False):
         if rows:
             result['public_surface']['provenance'] = {**raw['expected_provenance'],
                 'python_interface_sha256': sorted(interfaces)}
+    if mixed_sampling:
+        result['mixed_sampling'] = True
+        result['teacher_probability_profiles'] = sorted({
+            json.dumps(s['config'].get('teacher_probabilities'), sort_keys=True, separators=(',', ':'), allow_nan=False)
+            for s in collection_sources.values()})
     result['data_identity'] = digest(result)
     if files != [file_identity(p) for p in shard_files(sources)]:
         raise ValueError('Data changed during manifest freeze')
@@ -454,7 +464,8 @@ def preencode(sources, manifest, phase, architecture, fit_size='full', *, contro
               r['phase']==phase and r['has_target'] and
               (r['split']!='FIT' or r['source_row_id'] in fit_ids)}
     result = {s: [] for s in splits}
-    for row, meta in iter_rows(sources, control=control, mixed_sources=manifest.get('mixed_sources',False)):
+    for row, meta in iter_rows(sources, control=control, mixed_sources=manifest.get('mixed_sources',False),
+                              mixed_sampling=manifest.get('mixed_sampling',False)):
         if meta['source_row_id'] not in wanted:
             continue
         if meta != wanted.pop(meta['source_row_id']):
@@ -948,6 +959,10 @@ def validate_training_config(config, *, synthetic=False):
         raise ValueError('defer_test must be boolean')
     if not isinstance(config.get('mixed_sources',False),bool):
         raise ValueError('mixed_sources must be boolean')
+    if not isinstance(config.get('mixed_sampling',False),bool):
+        raise ValueError('mixed_sampling must be boolean')
+    if config.get('mixed_sampling') and not config.get('mixed_sources'):
+        raise ValueError('mixed_sampling requires mixed_sources')
     if config.get('mixed_sources') and config.get('phase') != 'combat':
         # OOC targets are each collecting champion's own choices; mixing would blend policies.
         raise ValueError('mixed_sources is only valid for combat fits')
@@ -985,7 +1000,8 @@ def run_training(config):
     control.start()
     try:
         control.check()
-        manifest = freeze_manifest(config['data'],control=control,mixed_sources=config.get('mixed_sources',False))
+        manifest = freeze_manifest(config['data'],control=control,mixed_sources=config.get('mixed_sources',False),
+                                  mixed_sampling=config.get('mixed_sampling',False))
         if config.get('manifest'):
             frozen = json.loads(Path(config['manifest']).read_text())
             if frozen != manifest:
