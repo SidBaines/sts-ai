@@ -30,19 +30,25 @@ when labelled. Unlisted eval files show their file name.
 
 /api/state?since=<sig>&max_points=N omits the heavy fields when no log or eval
 file has changed since <sig>, so an idle poll is ~1-2 KB.
+With --lineage-roots PATH..., cumulative update axes follow checkpoint ancestry;
+lineage and its optional --lineage-cache hash cache refresh in the background every 10 minutes.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import importlib.util
 import json
+import logging
 import math
 import os
 from pathlib import Path
 import signal
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 import urllib.request
 from urllib.parse import parse_qs, urlsplit
@@ -94,6 +100,79 @@ KEEP_EVAL = ("iteration", "n", "mean_floor", "se", "wins", "act1_boss_pass", "ac
              "act3_boss_pass", "paired", "act2_boss_reach", "faults", "collector_restarts")
 ACTIVE = ("running", "pending", "paused")
 _CACHE: dict[Path, tuple[tuple[int, int], object]] = {}
+
+
+def _reconstruct_lineage(roots, extras, excludes, hash_cache) -> dict:
+    # Load the sibling by path: both direct CLI execution and importlib-based tests work.
+    spec = importlib.util.spec_from_file_location("dashboard_lineage", Path(__file__).with_name("plot_lineage.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.reconstruct(roots, extras, excludes, hash_cache)
+
+
+def _lineage_mapping(lineage: dict) -> dict[str, dict]:
+    nodes = {node["id"]: node for node in lineage["nodes"]}
+    mapping = {}
+    for node in nodes.values():
+        if node["kind"] != "ppo":
+            continue
+        parent = nodes[node["parent"]["node"]] if node.get("parent") else None
+        mapping[str(Path(node["path"]).expanduser().resolve())] = {
+            "x0": node["x0"], "parent": parent["label"] if parent else None}
+    return mapping
+
+
+class Lineage:
+    """Publish complete snapshots; checkpoint hashing never runs in a request."""
+
+    def __init__(self, roots, extra=None, excludes=(), cache=None):
+        self.roots = [Path(p).expanduser().resolve() for p in roots]
+        self.extra = Path(extra).expanduser().resolve() if extra else None
+        self.excludes = list(excludes)
+        self.cache = Path(cache).expanduser().resolve() if cache else None
+        self._cache_data = None
+        self._mapping = None
+        self._lock = threading.Lock()
+        self._stop = threading.Event()
+
+    def snapshot(self) -> dict[str, dict] | None:
+        with self._lock:
+            return self._mapping
+
+    def refresh(self) -> None:
+        if self._cache_data is None:
+            self._cache_data = json.loads(self.cache.read_text()) if self.cache and self.cache.exists() else {}
+        hashes = self._cache_data.setdefault("file_hashes", {})
+        extras = json.loads(self.extra.read_text()) if self.extra else {}
+        mapping = _lineage_mapping(_reconstruct_lineage(self.roots, extras, self.excludes, hashes))
+        if self.cache:
+            self.cache.parent.mkdir(parents=True, exist_ok=True)
+            # Preserve other JSON fields and replace atomically so a reader never sees a torn cache.
+            with tempfile.NamedTemporaryFile(mode="w", dir=self.cache.parent, delete=False) as handle:
+                temporary = Path(handle.name)
+                try:
+                    json.dump(self._cache_data, handle)
+                    handle.close()
+                    temporary.replace(self.cache)
+                finally:
+                    temporary.unlink(missing_ok=True)
+        with self._lock:
+            self._mapping = mapping
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            try:
+                self.refresh()
+            except Exception:
+                logging.exception("Lineage refresh failed; keeping the previous result")
+            if self._stop.wait(600):
+                break
+
+    def start(self) -> None:
+        threading.Thread(target=self._run, name="dashboard-lineage", daemon=True).start()
+
+    def stop(self) -> None:
+        self._stop.set()
 
 
 def _cached(path: Path, parse):
@@ -203,10 +282,12 @@ def _progress(run: dict, now: float) -> dict:
             "last_train": train[-1] if train else None, "last_eval": run["evals"][-1] if run["evals"] else None}
 
 
-def state(max_points: int | None = None, since: str | None = None, extra_roots=()) -> dict:
+def state(max_points: int | None = None, since: str | None = None, extra_roots=(), lineage: Lineage | None = None) -> dict:
     now = time.time()
     roots = list(dict.fromkeys(Path(p).expanduser().resolve() for p in (RUNS, *extra_roots)))
-    sig: list[str] = []
+    mapping = lineage.snapshot() if lineage is not None else None
+    lineage_status = {"enabled": lineage is not None, "ready": mapping is not None}
+    sig: list[str] = ["lineage:" + json.dumps(lineage_status)]
     runs: dict[str, dict] = {}
     run_keys = {}
     queue, runners, win, fresh = [], [], [], []
@@ -224,9 +305,12 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
             except FileNotFoundError:
                 continue
             sig.append(f"{log}:{key[0]}:{key[1]}")
+            ancestry = (mapping or {}).get(str(log.parent.resolve()), {})
+            lineage_fields = {"x0": ancestry.get("x0"), "lineage_parent": ancestry.get("parent")}
+            sig.append(json.dumps(lineage_fields, sort_keys=True))
             run_key = name if name not in runs else f"{name} [{root}]"
             run_keys[root, name] = run_key
-            runs[run_key] = dict(run, name=name, root=str(root))
+            runs[run_key] = dict(run, name=name, root=str(root), **lineage_fields)
         win.extend(dict(row, root=str(root)) for row in _eval_table(root / "win_eval", sig))
         fresh.extend(dict(row, root=str(root)) for row in _eval_table(root / "fresh_eval", sig))
 
@@ -250,6 +334,7 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
     state_sig = hashlib.sha1("\n".join(sig).encode()).hexdigest()[:16]
     out = {"now": now, "runner": runners[0]["status"], "runners": runners,
            "active": active, "history": history, "sig": state_sig,
+           "lineage": lineage_status,
            "runs": None, "win": None, "fresh": None}
     if since == state_sig:
         return out
@@ -259,6 +344,7 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
     for name in order:
         run = runs[name]
         entry = {"name": run["name"], "root": run["root"],
+                 "x0": run["x0"], "lineage_parent": run["lineage_parent"],
                  "label": LABELS.get(run["name"]) or (run["config"].get("notes") or "")[:90],
                  "key": run["name"] in KEY_RUNS, "active": name in active_runs, "done": run["done"],
                  "status": statuses.get(name, "done" if run["done"] else "stopped"), "config": run["config"],
@@ -272,14 +358,15 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
     return out
 
 
-def state_payload(path: str, extra_roots=()) -> bytes:
+def state_payload(path: str, extra_roots=(), lineage: Lineage | None = None) -> bytes:
     query = parse_qs(urlsplit(path).query)
     since = query.get("since", [""])[0] or None
     try:
         max_points = max(2, int(query["max_points"][0])) if "max_points" in query else None
     except ValueError:
         max_points = None
-    return json.dumps(state(max_points=max_points, since=since, extra_roots=extra_roots), separators=(",", ":")).encode()
+    return json.dumps(state(max_points=max_points, since=since, extra_roots=extra_roots, lineage=lineage),
+                      separators=(",", ":")).encode()
 
 
 PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>StS RL dashboard</title>
@@ -319,6 +406,9 @@ button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(-
 <div class="card"><h2>Training runs</h2>
 <div><button id="all">all</button> <button id="none">none</button> <button id="default">default</button>
 <button id="arch">show archived</button> <button id="reset-all">reset all zoom</button></div>
+<div><label for="axis-mode">x-axis</label><select id="axis-mode">
+<option value="per-run">per-run updates</option><option id="axis-cumulative" value="cumulative" disabled>cumulative updates</option>
+</select> <span class="mut small" id="lineage-note" role="status"></span></div>
 <div class="tw"><table id="runs"></table></div>
 <div class="mut small" id="protocol"></div>
 <div class="mut small">ETA uses the last three completed iteration times, including pauses; future eval time is excluded.</div></div>
@@ -341,6 +431,9 @@ const POLL_MS=30000, MAX_POINTS=400;
 const COLORS=['#2f6fdb','#d9480f','#2b8a3e','#ae3ec9','#e67700','#0b7285','#c2255c','#5c940d','#495057','#1971c2'];
 const charts={}; let runs={}, sig='', showArchived=false, timer=null, inflight=false, lastOk=null;
 const selected=new Map(), STORAGE_KEY='sts-rl-dashboard-runs';
+const AXIS_STORAGE_KEY='sts-rl-dashboard-axis';
+let axisMode='per-run', preferredAxisMode='per-run', lineageReady=false;
+try{if(localStorage.getItem(AXIS_STORAGE_KEY)==='cumulative')preferredAxisMode='cumulative'}catch(e){}
 try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));
  if(saved&&typeof saved==='object'&&!Array.isArray(saved)&&Object.values(saved).every(v=>typeof v==='boolean'))
   Object.entries(saved).forEach(([n,v])=>selected.set(n,v))}catch(e){}
@@ -367,16 +460,28 @@ function saveSelection(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(Obj
 function toggleRun(n){selected.set(n,!selected.get(n));saveSelection();renderRuns();draw()}
 function selectRuns(mode){Object.keys(runs).forEach(n=>selected.set(n,mode==='all'||mode==='default'&&(runs[n].key||runs[n].active)));saveSelection();renderRuns();draw()}
 function resetZoom(id){charts[id]?.resetZoom?.('none')}
+function axisTitle(){return axisMode==='cumulative'?'cumulative update':'update'}
+function changeAxis(mode){if(mode===axisMode)return;Object.keys(charts).forEach(resetZoom);axisMode=mode}
+function syncAxis(lineage){
+ lineageReady=!!lineage?.ready;
+ document.getElementById('axis-cumulative').disabled=!lineageReady;
+ document.getElementById('lineage-note').textContent=lineageReady?'':lineage?.enabled?'computing lineage…':'lineage unavailable';
+ changeAxis(lineageReady?preferredAxisMode:'per-run');
+ document.getElementById('axis-mode').value=axisMode}
+document.getElementById('axis-mode').addEventListener('change',e=>{
+ preferredAxisMode=lineageReady&&e.target.value==='cumulative'?'cumulative':'per-run';
+ try{localStorage.setItem(AXIS_STORAGE_KEY,preferredAxisMode)}catch(e){}
+ changeAxis(preferredAxisMode);renderRuns();draw()});
 function mk(id,ds,opts={}){const c=charts[id];
  // Keep scale options (including the plugin's min/max) untouched on refresh.
- if(c){c.data.datasets=ds;c.update('none');return}
+ if(c){c.data.datasets=ds;c.options.scales.x.title.text=axisTitle();c.update('none');return}
  opts.plugins??={};const legend=opts.plugins.legend||{};
  opts.plugins.legend={...legend,onClick:()=>{},labels:{boxWidth:10,font:{size:11},...legend.labels}};
  opts.plugins.zoom=zoomPlugin?{pan:{enabled:true,mode:'xy',modifierKey:'shift'},
   zoom:{mode:'xy',drag:{enabled:true,threshold:5},wheel:{enabled:true},
    onZoomStart:({event})=>event.type!=='wheel'||event.ctrlKey||event.metaKey}}:false;
  charts[id]=new Chart(document.getElementById(id),{type:'line',data:{datasets:ds},options:Object.assign({animation:false,parsing:false,
-  scales:{x:{type:'linear',title:{display:true,text:'update'}}}},opts)});
+  scales:{x:{type:'linear',title:{display:true,text:axisTitle()}}}},opts)});
  document.getElementById(id).addEventListener('dblclick',()=>resetZoom(id))}
 function pts(a,x,y,scale=1){return a.filter(r=>r[y]!=null&&Number.isFinite(r[y])).map(r=>({x:r[x],y:r[y]*scale}))}
 function rates(a,numerator,denominator){return a.filter(r=>r[numerator]!=null&&r[denominator]>0).map(r=>({x:r.iteration,y:100*r[numerator]/r[denominator]}))}
@@ -398,6 +503,7 @@ async function load(){
   a+=`<tr><td title="${esc(j.out)}">${esc(j.name)}</td>${rootCell(j.root)}<td><span class="pill ${j.status}">${j.status}</span></td><td class="mut">${esc(j.lane)}</td><td class="num">${dur(j.elapsed)}</td><td>${progressText(j)}</td><td>${timing(j)}</td><td>${trainText(j.last_train)}</td><td class="mut">${evalText(j.last_eval)}</td></tr>`});
  set('active',s.active.length?a:'<tr><td class="mut">nothing running</td></tr>');
  set('hist','History: '+Object.entries(s.history).map(([k,v])=>`${v} ${k}`).join(', '));
+ syncAxis(s.lineage);
  if(s.runs!==null){runs=s.runs;sig=s.sig;
   Object.keys(runs).forEach(n=>{if(!selected.has(n))selected.set(n,!!(runs[n].key||runs[n].active))});
   winTable(s.win,'win');winTable(s.fresh,'fresh');draw()}
@@ -405,10 +511,11 @@ async function load(){
 }
 function renderRuns(){
  const names=visible(), archived=Object.keys(runs).filter(n=>!runs[n].key&&!runs[n].active);
+ const cumulative=axisMode==='cumulative';
  document.getElementById('arch').textContent=`${showArchived?'hide':'show'} archived (${archived.length}, ${archived.filter(n=>selected.get(n)).length} checked)`;
- let h='<tr><th>show</th><th>run</th><th>root / queue</th><th>description</th><th>status</th><th>progress</th><th>timing / estimated finish</th><th>latest train</th><th>latest eval</th><th class="num">paired vs orig</th></tr>';
+ let h='<tr><th>show</th><th>run</th><th>root / queue</th><th>description</th>'+(cumulative?'<th>start</th>':'')+'<th>status</th><th>progress</th><th>timing / estimated finish</th><th>latest train</th><th>latest eval</th><th class="num">paired vs orig</th></tr>';
  names.forEach(nm=>{const r=runs[nm];const p=r.last_eval?.paired;const st=r.status;
-  h+=`<tr><td><input type="checkbox" data-run="${esc(nm)}" aria-label="Show ${esc(r.name)} in all charts"${selected.get(nm)?' checked':''}></td><td><button class="run-toggle" data-run="${esc(nm)}" style="color:${color(nm)}" aria-pressed="${!!selected.get(nm)}">■ ${esc(r.name)}</button></td>${rootCell(r.root)}<td class="mut desc">${esc(r.label)}</td><td><span class="pill ${st}">${st}</span></td><td>${progressText(r)}</td><td>${timing(r)}</td><td>${trainText(r.last_train)}</td><td class="mut">${evalText(r.last_eval)}</td>
+  h+=`<tr><td><input type="checkbox" data-run="${esc(nm)}" aria-label="Show ${esc(r.name)} in all charts"${selected.get(nm)?' checked':''}></td><td><button class="run-toggle" data-run="${esc(nm)}" style="color:${color(nm)}" aria-pressed="${!!selected.get(nm)}">■ ${esc(r.name)}</button></td>${rootCell(r.root)}<td class="mut desc">${esc(r.label)}</td>${cumulative?`<td class="mut desc">${r.x0==null?'(start unknown)':esc(`from ${r.lineage_parent??'root'} at update ${r.x0}`)}</td>`:''}<td><span class="pill ${st}">${st}</span></td><td>${progressText(r)}</td><td>${timing(r)}</td><td>${trainText(r.last_train)}</td><td class="mut">${evalText(r.last_eval)}</td>
   <td class="num">${p?(p.diff>=0?'+':'')+fmt(p.diff)+' ± '+fmt(p.se):'–'}</td></tr>`});
  set('runs',h);
  const protocols=new Set(Object.values(runs).map(r=>!!r.config.hide_ooc_potions));
@@ -421,7 +528,10 @@ document.querySelectorAll('[data-reset]').forEach(b=>{b.disabled=!zoomPlugin;b.a
 document.getElementById('reset-all').disabled=!zoomPlugin;
 document.getElementById('reset-all').addEventListener('click',()=>Object.keys(charts).forEach(resetZoom));
 function draw(){
- const names=Object.keys(runs).filter(n=>selected.get(n));const ds=f=>names.flatMap(n=>f(n,color(n),runs[n]));
+ const names=Object.keys(runs).filter(n=>selected.get(n));
+ // All chart datasets below use update/iteration coordinates, including bounds and rates.
+ const ds=f=>names.flatMap(n=>{const r=runs[n],offset=axisMode==='cumulative'?(r.x0??0):0;
+  return f(n,color(n),r).map(d=>({...d,data:d.data.map(p=>({...p,x:p.x+offset}))}))});
  mk('c_paired',ds((n,c,r)=>{const e=r.evals.filter(x=>x.paired);return[
   {label:n,data:e.map(x=>({x:x.iteration,y:x.paired.diff})),borderColor:c,backgroundColor:c},
   {label:n+' hi',data:e.map(x=>({x:x.iteration,y:x.paired.diff+1.96*x.paired.se})),borderColor:c,borderDash:[2,3],pointRadius:0,borderWidth:1},
@@ -457,10 +567,11 @@ poll();
 
 class Handler(BaseHTTPRequestHandler):
     extra_roots = ()
+    lineage = None
 
     def do_GET(self):
         if self.path.startswith("/api/state"):
-            body, kind = state_payload(self.path, self.extra_roots), "application/json"
+            body, kind = state_payload(self.path, self.extra_roots, self.lineage), "application/json"
         elif self.path in ("/", "/index.html"):
             body, kind = PAGE.encode(), "text/html; charset=utf-8"
         else:
@@ -492,11 +603,12 @@ def _server_pids(port: int) -> list[int]:
     return pids
 
 
-def _start(port: int, extra_roots=()) -> None:
+def _start(port: int, extra_roots=(), lineage_args=()) -> None:
     RUNS.mkdir(parents=True, exist_ok=True)
     cmd = [sys.executable, __file__, "serve", "--port", str(port)]
     for root in extra_roots:
         cmd.extend(["--root", str(Path(root).expanduser().resolve())])
+    cmd.extend(lineage_args)
     with (RUNS / "dashboard.log").open("a") as log:
         subprocess.Popen(cmd, cwd=ROOT, start_new_session=True, stdin=subprocess.DEVNULL,
                          stdout=log, stderr=subprocess.STDOUT)
@@ -508,8 +620,23 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("command", nargs="?", default="serve", choices=("serve", "start", "restart"))
     parser.add_argument("--port", type=int, default=PORT)
     parser.add_argument("--root", type=Path, action="append", default=[], help="additional data/rl_runs root (repeatable)")
+    parser.add_argument("--lineage-roots", type=Path, nargs="+", action="extend", default=[],
+                        help="directories to reconstruct lineage from (default: cumulative axis disabled)")
+    parser.add_argument("--lineage-extra", type=Path, help="lineage extra edges JSON")
+    parser.add_argument("--lineage-exclude", nargs="+", action="extend", default=[],
+                        help="skip lineage logs containing these patterns (repeatable)")
+    parser.add_argument("--lineage-cache", type=Path, help="JSON file with a persistent file_hashes cache")
     args = parser.parse_args(argv)
     command, port = args.command, args.port
+    lineage_args = []
+    if args.lineage_roots:
+        lineage_args.extend(["--lineage-roots", *(str(p.expanduser().resolve()) for p in args.lineage_roots)])
+    for flag, path in (("--lineage-extra", args.lineage_extra), ("--lineage-cache", args.lineage_cache)):
+        if path:
+            lineage_args.extend([flag, str(path.expanduser().resolve())])
+    for pattern in args.lineage_exclude:
+        lineage_args.extend(["--lineage-exclude", pattern])
+    start_options = {"lineage_args": lineage_args} if lineage_args else {}
     if command == "start":
         try:
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/state", timeout=3):
@@ -521,16 +648,25 @@ def main(argv: list[str] | None = None) -> None:
         if _server_pids(port):
             print(f"dashboard already starting at http://127.0.0.1:{port}")
             return
-        _start(port, args.root)
+        _start(port, args.root, **start_options)
         return
     if command == "restart":
         for pid in _server_pids(port):
             os.kill(pid, signal.SIGTERM)
         time.sleep(1)
-        _start(port, args.root)
+        _start(port, args.root, **start_options)
         return
     Handler.extra_roots = tuple(args.root)
-    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
+    Handler.lineage = Lineage(args.lineage_roots, args.lineage_extra, args.lineage_exclude,
+                              args.lineage_cache) if args.lineage_roots else None
+    with ThreadingHTTPServer(("127.0.0.1", port), Handler) as server:
+        if Handler.lineage:
+            Handler.lineage.start()
+        try:
+            server.serve_forever()
+        finally:
+            if Handler.lineage:
+                Handler.lineage.stop()
 
 
 if __name__ == "__main__":

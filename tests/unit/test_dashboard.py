@@ -246,6 +246,140 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(set(json.loads(handler.wfile.getvalue())["runs"]), {"batch/recipe"})
         handler.send_response.assert_called_once_with(200)
 
+    def test_lineage_mapping_resolves_paths_and_parent_labels_for_ppo_only(self):
+        nodes = [
+            {"id": "ppo:root", "kind": "ppo", "label": "Root training", "path": str(self.root / "a"),
+             "x0": 0, "parent": None},
+            {"id": "splice:student", "kind": "splice", "label": "Student splice", "path": "student.pt",
+             "x0": 24, "parent": {"node": "ppo:root"}},
+            {"id": "ppo:continued", "kind": "ppo", "label": "Continued", "path": str(self.extra / "a/../b"),
+             "x0": 24, "parent": {"node": "splice:student"}},
+            {"id": "distill:rule", "kind": "distill", "label": "Rule", "path": "rule", "x0": 24,
+             "parent": {"node": "ppo:continued"}},
+        ]
+        self.assertEqual(dashboard._lineage_mapping({"nodes": nodes}), {
+            str(self.root / "a"): {"x0": 0, "parent": None},
+            str(self.extra / "b"): {"x0": 24, "parent": "Student splice"}})
+
+    def test_lineage_refresh_reuses_and_saves_hash_cache_without_changing_other_fields(self):
+        cache = Path(self.tmp.name) / "cache.json"
+        cache.write_text(json.dumps({"file_hashes": {"old.pt": {"sha256": "old"}}, "other": [1, 2]}))
+        extra = Path(self.tmp.name) / "edges.json"
+        extra.write_text(json.dumps({"labels": {"a": "A"}}))
+        lineage = dashboard.Lineage([self.root], extra, ["_smoke"], cache)
+        self.assertIsNone(lineage.snapshot())
+        caches = []
+
+        def reconstruct(roots, extras, excludes, hashes):
+            self.assertEqual(roots, [self.root])
+            self.assertEqual(extras, {"labels": {"a": "A"}})
+            self.assertEqual(excludes, ["_smoke"])
+            self.assertEqual(hashes["old.pt"], {"sha256": "old"})
+            caches.append(hashes)
+            hashes["new.pt"] = {"sha256": "new"}
+            return {"nodes": [{"id": "ppo:a", "kind": "ppo", "path": str(self.root / "a"),
+                               "x0": 48, "parent": None}]}
+
+        with patch.object(dashboard, "_reconstruct_lineage", side_effect=reconstruct):
+            lineage.refresh()
+            self.assertEqual(lineage.snapshot(), {str(self.root / "a"): {"x0": 48, "parent": None}})
+            lineage.refresh()
+        self.assertIs(caches[0], caches[1])
+        saved = json.loads(cache.read_text())
+        self.assertEqual(saved, {"file_hashes": {"old.pt": {"sha256": "old"}, "new.pt": {"sha256": "new"}},
+                                 "other": [1, 2]})
+
+    def test_lineage_import_and_reconstruction_work_on_tiny_run(self):
+        checkpoint = Path(self.tmp.name) / "root.pt"
+        checkpoint.write_bytes(b"root checkpoint")
+        self.log(self.root, "a", [{"event": "start", "config": {"credit": "macro", "checkpoint": str(checkpoint)}},
+                                  {"event": "train", "iteration": 1, "games": 10}])
+        lineage = dashboard.Lineage([self.root])
+        lineage.refresh()
+        self.assertEqual(lineage.snapshot(), {str(self.root / "a"): {"x0": 0, "parent": "root.pt"}})
+
+    def test_lineage_worker_retries_after_failure_and_keeps_last_snapshot(self):
+        lineage = dashboard.Lineage([self.root])
+        initial = {"nodes": [{"id": "ppo:a", "kind": "ppo", "path": str(self.root / "a"),
+                               "x0": 24, "parent": None}]}
+        updated = {"nodes": [{**initial["nodes"][0], "x0": 48}]}
+        with patch.object(dashboard, "_reconstruct_lineage", side_effect=[initial, RuntimeError("broken"), updated]):
+            lineage.refresh()
+            previous = lineage.snapshot()
+            snapshots = []
+
+            def wait(seconds):
+                self.assertEqual(seconds, 600)
+                snapshots.append(lineage.snapshot())
+                return len(snapshots) >= 2
+
+            with patch.object(lineage._stop, "wait", side_effect=wait) as waits, \
+                    self.assertLogs(level="ERROR") as logs:
+                lineage._run()
+        self.assertIn("keeping the previous result", logs.output[0])
+        self.assertEqual(waits.call_count, 2)
+        self.assertEqual(waits.call_args_list[0].args, (600,))
+        self.assertEqual(waits.call_args_list[1].args, (600,))
+        self.assertIs(snapshots[0], previous)
+        self.assertEqual(previous[str(self.root / "a")]["x0"], 24)
+        self.assertEqual(lineage.snapshot()[str(self.root / "a")]["x0"], 48)
+
+    def test_state_lineage_fields_and_signature_only_change_with_relevant_mapping(self):
+        self.log(self.root, "same")
+        self.log(self.extra, "same")
+        off = dashboard.state(extra_roots=[self.extra])
+        self.assertEqual(off["lineage"], {"enabled": False, "ready": False})
+        self.assertIsNone(off["runs"]["same"]["x0"])
+        self.assertIsNone(off["runs"]["same"]["lineage_parent"])
+        lineage = dashboard.Lineage([self.root, self.extra])
+        pending = dashboard.state(extra_roots=[self.extra], lineage=lineage)
+        self.assertEqual(pending["lineage"], {"enabled": True, "ready": False})
+        nodes = [{"id": "ppo:parent", "kind": "ppo", "path": str(self.extra / "same"),
+                  "label": "Parent training", "x0": 24, "parent": None},
+                 {"id": "ppo:child", "kind": "ppo", "path": str(self.root / "same"),
+                  "x0": 48, "parent": {"node": "ppo:parent"}}]
+        with patch.object(dashboard, "_reconstruct_lineage", return_value={"nodes": nodes}) as reconstruct:
+            lineage.refresh()
+            handler = dashboard.Handler.__new__(dashboard.Handler)
+            handler.path = "/api/state?since=" + pending["sig"]
+            handler.extra_roots = (self.extra,)
+            handler.lineage = lineage
+            handler.wfile = io.BytesIO()
+            handler.send_response, handler.send_header, handler.end_headers = MagicMock(), MagicMock(), MagicMock()
+            handler.do_GET()
+            ready = json.loads(handler.wfile.getvalue())
+            self.assertEqual(ready["lineage"], {"enabled": True, "ready": True})
+            self.assertEqual(ready["runs"]["same"]["x0"], 48)
+            self.assertEqual(ready["runs"]["same"]["lineage_parent"], "Parent training")
+            self.assertEqual(ready["runs"][f"same [{self.extra}]"]["x0"], 24)
+            self.assertIsNone(ready["runs"][f"same [{self.extra}]"]["lineage_parent"])
+            reconstruct.assert_called_once()  # the HTTP request never reconstructs
+            lineage.refresh()
+            idle = dashboard.state(since=ready["sig"], extra_roots=[self.extra], lineage=lineage)
+            self.assertIsNone(idle["runs"])
+            nodes.append({"id": "ppo:unrelated", "kind": "ppo", "path": str(self.root / "elsewhere"),
+                          "x0": 99, "parent": None})
+            lineage.refresh()
+            self.assertIsNone(dashboard.state(since=ready["sig"], extra_roots=[self.extra], lineage=lineage)["runs"])
+            nodes[1]["x0"] = 72
+            lineage.refresh()
+            changed = dashboard.state(since=ready["sig"], extra_roots=[self.extra], lineage=lineage)
+            self.assertEqual(changed["runs"]["same"]["x0"], 72)
+            nodes[0]["label"] = "Renamed parent"
+            lineage.refresh()
+            renamed = dashboard.state(since=changed["sig"], extra_roots=[self.extra], lineage=lineage)
+            self.assertEqual(renamed["runs"]["same"]["lineage_parent"], "Renamed parent")
+
+    def test_ready_empty_lineage_exposes_unknown_starts(self):
+        self.log(self.root, "unmatched")
+        lineage = dashboard.Lineage([self.root])
+        pending = dashboard.state(lineage=lineage)
+        with patch.object(dashboard, "_reconstruct_lineage", return_value={"nodes": []}):
+            lineage.refresh()
+        ready = json.loads(dashboard.state_payload("/api/state?since=" + pending["sig"], lineage=lineage))
+        self.assertEqual(ready["lineage"], {"enabled": True, "ready": True})
+        self.assertIsNone(ready["runs"]["unmatched"]["x0"])
+
     def test_missing_roots_are_empty(self):
         with patch.object(dashboard, "RUNS", self.root / "missing"):
             state = dashboard.state(extra_roots=[self.extra / "missing"])
@@ -267,7 +401,7 @@ class DashboardPageTests(unittest.TestCase):
         self.assertIn("Drag to zoom · ctrl/⌘ + wheel to zoom · shift + drag to pan · double-click or reset to restore",
                       dashboard.PAGE)
 
-    def run_js(self, body, *, saved=None, blocked=False, zoom=True):
+    def run_js(self, body, *, saved=None, saved_axis=None, blocked=False, zoom=True, lineage=None):
         if not shutil.which("node"):
             self.skipTest("node is required for dashboard JavaScript checks")
         runs = {name: {"name": name, "root": "/tmp/data/rl_runs", "label": name, "config": {},
@@ -281,8 +415,8 @@ const elements=new Map();
 function element(id){if(!elements.has(id))elements.set(id,{id,innerHTML:'',textContent:'',dataset:{},handlers:{},
  addEventListener(type,fn){this.handlers[type]=fn}});return elements.get(id)}
 const buttons=input.canvases.map(id=>{const b=element('reset_'+id);b.dataset.reset=id;return b});
-let saved=input.saved;
-const storage={read:()=>saved};
+const saved=new Map([['sts-rl-dashboard-runs',input.saved],['sts-rl-dashboard-axis',input.saved_axis]]);
+const storage={read:(key='sts-rl-dashboard-runs')=>saved.get(key)};
 class Chart {
  static register(plugin){assert.equal(plugin.id,'zoom')}
  constructor(canvas,config){this.data=config.data;this.options=config.options;this.updates=[];this.resets=0;
@@ -293,8 +427,8 @@ class Chart {
 const context=vm.createContext({assert,Chart,buttons,element,storage,state:input.state,
  window:{ChartZoom:input.zoom?{id:'zoom'}:undefined},
  document:{hidden:false,getElementById:element,querySelectorAll:()=>buttons,addEventListener(){}},
- localStorage:{getItem(){if(input.blocked)throw Error('blocked');return saved},
-  setItem(key,value){if(input.blocked)throw Error('blocked');saved=value}},
+ localStorage:{getItem(key){if(input.blocked)throw Error('blocked');return saved.get(key)},
+  setItem(key,value){if(input.blocked)throw Error('blocked');saved.set(key,value)}},
  fetch:async()=>({ok:true,json:async()=>input.state}),AbortSignal:{timeout(){}},setTimeout:()=>0,clearTimeout(){}});
 vm.runInContext(input.script,context);
 (async()=>{await new Promise(setImmediate);await vm.runInContext('(async()=>{'+input.body+'})()',context)})()
@@ -303,8 +437,9 @@ vm.runInContext(input.script,context);
         payload = {"script": dashboard.PAGE.split("<script>")[1].split("</script>")[0], "body": body,
                    "canvases": re.findall(r'<canvas id="([^"]+)"', dashboard.PAGE),
                    "state": {"now": 1000, "sig": "test", "runs": runs, "runners": [],
-                             "active": [], "history": {}, "win": [], "fresh": []},
-                   "saved": saved, "blocked": blocked, "zoom": zoom}
+                             "active": [], "history": {}, "win": [], "fresh": [],
+                             "lineage": lineage or {"enabled": False, "ready": False}},
+                   "saved": saved, "saved_axis": saved_axis, "blocked": blocked, "zoom": zoom}
         result = subprocess.run(["node", "-e", harness], input=json.dumps(payload), capture_output=True,
                                 text=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -384,8 +519,120 @@ element('all').handlers.click();assert(Object.values(charts).every(c=>c.data.dat
 await load();assert(Object.values(charts).every(c=>c.updates.at(-1)==='none'));
 """, zoom=False)
 
+    def test_cumulative_axis_shifts_all_series_and_bounds_and_resets_zoom(self):
+        self.run_js(r"""
+state.lineage={enabled:true,ready:true};
+for(const [name,r] of Object.entries(state.runs)){
+ r.x0=name==='key'?144:name==='active'?0:null;r.lineage_parent='<parent>';
+ r.train=[{iteration:1,collect_floor:20,smith_rate:.5,map_elite:.2,card_skip_rate:.1,grad_cosine_half:.3,
+  entropy:.4,approx_kl:.01,value_loss:.02,iteration_seconds:60,collect_seconds:40,update_seconds:20,
+  collect_wins:10,games:100}];
+ r.evals=[{iteration:2,wins:12,n:100,paired:{diff:2,se:.1},act2_boss_pass:.4,act3_boss_reach:.2}];
+}
+await load();element('all').handlers.click();element('arch').handlers.click();
+const before=Object.fromEntries(Object.entries(charts).map(([id,c])=>[id,JSON.parse(JSON.stringify(c.data.datasets))]));
+const references=Object.values(charts);
+for(const c of references){c.options.scales.x.min=1;c.options.scales.x.max=2;c.options.scales.y={min:0,max:1}}
+element('axis-mode').handlers.change({target:{value:'cumulative'}});
+assert.equal(storage.read(AXIS_STORAGE_KEY),'cumulative');
+assert.equal(axisMode,'cumulative');assert(!element('axis-cumulative').disabled);
+for(const [id,c] of Object.entries(charts)){
+ assert.equal(c.options.scales.x.title.text,'cumulative update');assert.equal(c.resets,1);
+ assert.equal(c.options.scales.x.min,undefined);assert.equal(c.options.scales.y.min,undefined);
+ c.data.datasets.forEach((d,i)=>{
+  assert(d.data.length>0);
+  d.data.forEach((p,j)=>{assert.equal(p.x,before[id][i].data[j].x+(d.label.startsWith('key')?144:0));
+   assert.equal(p.y,before[id][i].data[j].y)});
+ });
+}
+assert(element('runs').innerHTML.includes('from &lt;parent&gt; at update 144'));
+assert(element('runs').innerHTML.includes('from &lt;parent&gt; at update 0'));
+assert(element('runs').innerHTML.includes('(start unknown)'));
+assert.equal(state.runs.key.train[0].iteration,1);assert.equal(state.runs.key.evals[0].iteration,2);
+await load();assert(Object.values(charts).every(c=>c.resets===1));assert.deepEqual(Object.values(charts),references);
+element('axis-mode').handlers.change({target:{value:'per-run'}});
+assert.equal(storage.read(AXIS_STORAGE_KEY),'per-run');
+for(const [id,c] of Object.entries(charts)){
+ assert.equal(c.options.scales.x.title.text,'update');assert.equal(c.resets,2);
+ assert.equal(JSON.stringify(c.data.datasets),JSON.stringify(before[id]));
+}
+assert(!element('runs').innerHTML.includes('<th>start</th>'));
+""")
+
+    def test_saved_cumulative_axis_waits_for_lineage_then_restores(self):
+        self.run_js(r"""
+assert.equal(axisMode,'per-run');assert.equal(preferredAxisMode,'cumulative');
+assert(element('axis-cumulative').disabled);assert.equal(element('lineage-note').textContent,'computing lineage…');
+assert.equal(charts.c_train.data.datasets[0].data[0].x,1);
+state.runs.key.x0=168;state.lineage.ready=true;await load();
+assert.equal(axisMode,'cumulative');assert.equal(element('axis-mode').value,'cumulative');
+assert(!element('axis-cumulative').disabled);assert.equal(element('lineage-note').textContent,'');
+assert.equal(charts.c_train.data.datasets[0].data[0].x,169);
+assert(Object.values(charts).every(c=>c.resets===1));
+await load();assert(Object.values(charts).every(c=>c.resets===1));
+""", saved_axis="cumulative", lineage={"enabled": True, "ready": False})
+
+    def test_axis_mode_handles_unavailable_storage_and_zoom_plugin(self):
+        self.run_js(r"""
+assert.equal(axisMode,'per-run');assert(!element('axis-cumulative').disabled);
+state.runs.key.x0=24;await load();
+element('axis-mode').handlers.change({target:{value:'cumulative'}});
+assert.equal(charts.c_train.data.datasets[0].data[0].x,25);
+assert.equal(charts.c_train.options.scales.x.title.text,'cumulative update');
+await load();assert.equal(axisMode,'cumulative');
+""", saved_axis="cumulative", blocked=True, zoom=False, lineage={"enabled": True, "ready": True})
+
+    def test_saved_cumulative_mode_is_disabled_when_feature_is_off(self):
+        self.run_js(r"""
+assert.equal(axisMode,'per-run');assert(element('axis-cumulative').disabled);
+assert.equal(element('lineage-note').textContent,'lineage unavailable');
+assert.equal(charts.c_train.data.datasets[0].data[0].x,1);
+assert.equal(charts.c_train.options.scales.x.title.text,'update');
+""", saved_axis="cumulative")
+
 
 class DashboardCommandTests(unittest.TestCase):
+    def test_serve_starts_background_lineage_only_when_roots_are_configured(self):
+        args = ["serve", "--port", "8899", "--root", "/runs", "--lineage-roots", "/one", "/two",
+                "--lineage-extra", "/extra.json", "--lineage-exclude", "repro", "--lineage-exclude", "smoke", "other",
+                "--lineage-cache", "/cache.json"]
+        with patch.object(dashboard, "ThreadingHTTPServer") as server, patch.object(dashboard, "Lineage") as lineage, \
+                patch.object(dashboard.Handler, "lineage", None), patch.object(dashboard.Handler, "extra_roots", ()):
+            dashboard.main(args)
+            lineage.assert_called_once_with([Path("/one"), Path("/two")], Path("/extra.json"),
+                                            ["repro", "smoke", "other"], Path("/cache.json"))
+            lineage.return_value.start.assert_called_once_with()
+            lineage.return_value.stop.assert_called_once_with()
+            server.assert_called_once_with(("127.0.0.1", 8899), dashboard.Handler)
+            server.return_value.__enter__.return_value.serve_forever.assert_called_once_with()
+        with patch.object(dashboard, "ThreadingHTTPServer"), patch.object(dashboard, "Lineage") as lineage, \
+                patch.object(dashboard.Handler, "lineage", None), patch.object(dashboard.Handler, "extra_roots", ()):
+            dashboard.main(["serve", "--port", "8899"])
+            lineage.assert_not_called()
+
+    def test_lineage_thread_is_daemon_and_can_be_stopped(self):
+        lineage = dashboard.Lineage([ROOT])
+        with patch.object(dashboard.threading, "Thread") as thread:
+            lineage.start()
+        thread.assert_called_once_with(target=lineage._run, name="dashboard-lineage", daemon=True)
+        thread.return_value.start.assert_called_once_with()
+        lineage.stop()
+        self.assertTrue(lineage._stop.is_set())
+
+    def test_start_forwards_lineage_cli_options(self):
+        flags = ["--lineage-roots", "/one", "/two", "--lineage-extra", "/extra.json",
+                 "--lineage-cache", "/cache.json", "--lineage-exclude", "repro", "--lineage-exclude", "/_smoke"]
+        with patch.object(dashboard.urllib.request, "urlopen", side_effect=OSError), \
+                patch.object(dashboard, "_server_pids", return_value=[]), patch.object(dashboard, "_start") as start:
+            dashboard.main(["start", "--port", "8899", *flags])
+        start.assert_called_once_with(8899, [], lineage_args=flags)
+        runs = MagicMock()
+        runs.__truediv__.return_value.open = mock_open()
+        with patch.object(dashboard, "RUNS", runs), patch.object(dashboard.subprocess, "Popen") as spawn, \
+                patch("sys.stdout", new_callable=io.StringIO):
+            dashboard._start(8899, lineage_args=flags)
+        self.assertEqual(spawn.call_args.args[0][5:], flags)
+
     def test_server_pids_match_exact_ports_with_root_arguments(self):
         output = "\n".join([
             "PID ARGS", "101 python scripts/rl/dashboard.py serve --port 8795 --root /tmp/extra",

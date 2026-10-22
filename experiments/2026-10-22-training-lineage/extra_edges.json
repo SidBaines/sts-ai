@@ -36,7 +36,7 @@
     },
     {
       "id": "c2_ooc_with_student_r2",
-      "label": "Splice: continued training 2 + round 2 combat student",
+      "label": "Splice: second continued training + round 2 combat student (champion 22 Oct midday)",
       "output": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/continued2_20261021/c2_ooc_with_student_r2.pt",
       "ooc": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/continued2_20261021/train/iter_0024.pt",
       "combat": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/combat_round2_20261021/fit_old_combat_r2_newonly_v1/best.pt",
@@ -115,11 +115,13 @@
     "large_batch_20261020/recipe_hidden": "Large batch recipe, potion filter",
     "large_batch_20261020/hygiene_hidden": "Large batch hygiene options, potion filter",
     "large_batch_20261020/small_hidden": "Small batch control (768 games), potion filter",
-    "large_batch_20261020/round3_student": "Round 3: OOC PPO with the combat student",
-    "round4_20261021/round4": "Round 4: continued training",
-    "continued2_20261021/train": "Continued training 2",
+    "large_batch_20261020/round3_student": "OOC PPO with the 15 Oct combat student (champion 21 Oct am)",
+    "round4_20261021/round4": "First continued training (champion 21 Oct pm)",
+    "continued2_20261021/train": "Second continued training",
     "continued2_20261021/demon_form_distil": "Distil Demon Form rule (v1)",
     "continued2_20261021/demon_form_distil_v3": "Distil Demon Form rule (v3)",
-    "continued3_20261022/train": "Continued training 3"
+    "continued3_20261022/train": "Third continued training (champion 22 Oct pm)",
+    "continued4_20261022/train": "Fourth continued training",
+    "joint_20261022/train": "Joint loop (control: third continued training)"
   }
 }
