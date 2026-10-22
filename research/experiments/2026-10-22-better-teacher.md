@@ -95,7 +95,7 @@ run-win estimate. This needs network calls inside the native search; it is
 the larger project, and step 0 should show whether playouts or
 determinisation matter more at bosses.
 
-**Known top cards (alongside).**
+**Known top cards (after the vote, score and budget fixes; Sid, 22 October).**
 - The simulator tracks how many cards on top of the draw pile are known:
   Headbutt and Warcry add one, a draw removes one, a shuffle resets it, and
   with Frozen Eye the whole order is known. Teacher samples shuffle only the
@@ -199,6 +199,8 @@ Pending.
 - 2026-10-22, 17:43: benchmark arms queued for four vote rules on the same
   1,024 second-DEV worlds. In the first 110 worlds, every trajectory matched
   the champion's own game up to the teacher's first move, as designed.
+- 2026-10-22: known top cards occur in about 0.03% of decisions; Sid agreed
+  to do that work after the vote rule, score and budget fixes.
 - 2026-10-22, 17:51: noise measurement done (table above). It changes the
   order of work: fix the vote rule and raise the budget before building
   information-set search.
