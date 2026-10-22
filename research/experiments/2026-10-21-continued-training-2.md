@@ -1,6 +1,6 @@
 # Continued out-of-combat training, second pass, with exploration statistics
 
-**Status:** running. **Verdict:** pending.
+**Status:** finished 22 October 2026. **Verdict:** a second 24 iterations raised the champion from 12.4% to 16.9% on unused worlds; with the round 2 combat student spliced in it reaches 701 of 4,096 on DEV (17.1%). The Demon Form rule, distilled correctly, matches its overlay but adds little.
 
 ## Question
 
@@ -111,18 +111,67 @@ champion's other choices (97.6% in the first attempt).
   remaining 0.8% drift in other choices reshuffles games without a net
   cost that these samples can see.
 
-Training: pending.
+**The second continued training gains as much as the first.** Final
+checkpoint, iteration 24 (also the best by the trainer's evaluation),
+paired with the champion:
+
+| Worlds | Wins | Discordant, champion only / trained only | McNemar p | Mean floor, paired difference | Act 2 boss pass, paired difference |
+|---|---:|---:|---:|---|---|
+| Second DEV | 527 → 672 (12.9% → 16.4%) | 263 / 408 | < 0.001 | +0.67 [+0.33, +1.02] | +4.2 points [+2.4, +6.0] (3,132 worlds) |
+| From 96,000,000,000 (unused before) | 507 → 691 (12.4% → 16.9%) | 253 / 437 | < 0.001 | +1.25 [+0.89, +1.62] | +5.7 points [+3.9, +7.7] (3,084 worlds) |
+
+**Combined with the round 2 combat student** (exploratory, second DEV):
+the trained out-of-combat head with the [round 2
+student](2026-10-21-combat-student-round-2.md) wins 701 (17.1%): against the
+trained checkpoint with the old student, 701 against 672 (discordant
+342/313, p = 0.27; floor +0.71 [+0.35, +1.05]); against the round 2
+candidate, 701 against 576 (p < 0.001).
+
+- The trainer's evaluation went 118, 121, 127, 142, 146, 139, 152 wins of
+  1,024 at iterations 0 to 24.
+- Exploration statistics, iteration 1 to 24: card rewards saturated 78% to
+  76% (entropy 0.124 to 0.141), map 58% to 54%, shop 36% to 29% (entropy
+  0.34 to 0.41), rest sites 53% to 59%, other menus 81% to 83%; a below-5%
+  action was sampled in about 0.5% of decisions throughout (1.8% at
+  shops). Overall entropy 0.154 to 0.165 under the entropy bonus.
+- Behaviour: smith rate 0.40 to 0.45; shop card removals still almost
+  never bought (0.1%); elite paths 7%.
+- Health: KL 0.004 to 0.008, clip fraction 0.03 to 0.04, cosines −0.39 to
+  +0.18, no faults; median 11.6 minutes per iteration under load (the
+  exploration statistics took 18 to 63 seconds of each).
 
 ## Conclusion
 
-Pending.
+- Continued out-of-combat PPO has still not plateaued: three rounds from
+  the 20 October champion gained 9.3% → 11.6% → 16.9% on unused worlds.
+- The combat and out-of-combat improvements look additive: the round 2
+  student lifts the newly trained head as it lifted the old one (+29 wins
+  on DEV, not significant alone, floor +0.71).
+- Saturation moved little: the entropy bonus loosened shops and maps a
+  little, card rewards hardly at all, yet play improved a lot.
+- The Demon Form rule, distilled at real card decisions, matches its
+  overlay; its gain over the champion is small and not significant.
+
+Caveats:
+- One training run; the combination with the round 2 student is a single
+  exploratory DEV comparison.
+- The run paused and slowed under other jobs; neither changes its training
+  worlds or updates.
 
 ## Next
 
-Pending.
+1. Sid to decide the champion: the trained checkpoint (691 of 4,096 on
+   unused worlds) or, after confirmation, its combination with the round 2
+   combat student.
+2. Confirm the combination on unused worlds; then continue both loops
+   (out-of-combat PPO and combat expert iteration) from it.
 
 ## Log
 
+- 22 Oct, 11:26: trained checkpoint 672 against 527 on DEV and 691 against
+  507 on unused worlds from 96,000,000,000; with the round 2 combat student
+  701 on DEV. The laptop ran on battery overnight, so the evaluations
+  finished at 11:19.
 - 21 Oct, 18:52: corrected distillation matches the overlay (562 and 489
   wins against the overlay's 550 and 490); not significantly better than
   the champion alone.

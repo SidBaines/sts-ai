@@ -9,6 +9,7 @@ everything is measured.
 
 | Player | Win rate | Evidence |
 |---|---|---|
+| **Candidate, awaiting Sid:** the second continued training's final checkpoint (`continued2_20261021/train/iter_0024.pt`) | 16.9% on 4,096 unused worlds from 96,000,000,000 (691 against the champion's 507, p < 0.001); 16.4% on second DEV (672 against 527); with the round 2 combat student 701 on DEV (exploratory) | Confirmed; pure policy |
 | **Candidate, awaiting Sid:** the afternoon champion with its combat head refitted to teacher labels from its own games (`combat_round2_20261021/champion_with_student_r2_newonly.pt`) | 13.9% on 4,096 unused worlds from 97,000,000,000 (571 against the champion's 512, p = 0.017); 14.1% on second DEV (576 against 527) | Confirmed; pure policy |
 | **Champion from 21 October, afternoon:** continued training with the hygiene options (run `round4`, `champion_2835f40fa439.pt`) | 11.6% on 4,096 new worlds from 95,000,000,000 (476 against the champion's 379, p < 0.001); 12.9% on the second-DEV worlds (527 against 413) | Confirmed; current default |
 | Champion of 21 October, morning: combat student plus retraining (run `round3_student`): the 20 October champion's out-of-combat head with the old-encoder combat student as its combat head, plus 24 more iterations of out-of-combat PPO with the potion filter (`champion_7d876c939a74.pt`) | 9.6% on 4,096 fresh worlds (394 against its start's 315, the harvest stack's 346 and the 20 October champion's 232); 10.1% on the second-DEV worlds (413) | Confirmed |

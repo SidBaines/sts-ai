@@ -5,6 +5,15 @@ first, kept at Sid's request from 20 October 2026, one or two lines per
 entry. It will be deleted: everything that matters is also recorded in its
 home file (experiment pages, the results ledger, strategies, README).
 
+## 22 October 2026
+
+- **Second continued training evaluated**, 11:26: 672 against the
+  champion's 527 on DEV and 691 against 507 on unused worlds (16.9%,
+  p < 0.001). With the round 2 combat student spliced in: 701 on DEV
+  (against 672, p = 0.27; floor +0.71). Overnight the laptop ran on
+  battery; jobs paused and resumed. A duplicate queue runner started at
+  about 20:30 was stopped (no job was launched twice).
+
 ## 21 October 2026
 
 - **Combat student round 2 confirmed**, 19:46: 571 against the champion's

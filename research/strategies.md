@@ -99,6 +99,8 @@ large batches of whole games.
   composite on fresh worlds; a second training seed reproduced early gains.
 - With lambda 1 and distilled strategy rules, this lineage produced the
   champion: round-2 update 20, 213 wins of 4,096 fresh worlds on 0.1.4.
+- Third round (22 October, [page](experiments/2026-10-21-continued-training-2.md)):
+  12.4% → 16.9% on unused worlds; the trainer's evaluation still rising.
 - An apparent plateau at 768 games (58 and 57 wins against 57 on 1,024 DEV
   worlds) was most likely the evaluation, not the method or the batch
   size (weight decay also changed).
