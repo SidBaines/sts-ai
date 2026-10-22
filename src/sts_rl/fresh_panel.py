@@ -131,6 +131,13 @@ class FreshPanelEpisode(PanelEpisode):
             raise RuntimeError("Public-search query mutated the live decision")
         return votes
 
+    def search_details_public(self, simulations, futures, search_seeds, rng_base):
+        before = public_hash(self.episode._observe())
+        details = super().search_details_public(simulations, futures, search_seeds, rng_base)
+        if public_hash(self.episode._observe()) != before:
+            raise RuntimeError("Public-search query mutated the live decision")
+        return details
+
     def _preinitialization(self, bank):
         from sts_rl.fresh_collection import task
         validate_world_range(bank["world_seed"], 1)
@@ -248,6 +255,8 @@ def _bank_rows(cohort):
     from sts_rl.fresh_cohort import read_shard
     from sts_rl.fresh_collection import task
     rows = []
+    if cohort["config"].get("teacher_plays") is True:
+        raise ValueError("Benchmark cohort with teacher_plays true cannot be used for a fight bank")
     if not cohort["config"].get("bank"):
         raise ValueError("Cohort did not collect a fight bank")
     for file in cohort["shards"]:

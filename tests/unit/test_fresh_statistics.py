@@ -176,7 +176,8 @@ class FreshStatisticsTests(unittest.TestCase):
                 atomic_json(directory/'summary.json',{'records':records})
                 cohorts[directory.resolve()]={'records':records,'science_identity':{'policy':expected[arm+'_policy']}}
             seen=[]
-            def validate(paths):
+            def validate(paths, *, allow_teacher_plays=False):
+                self.assertFalse(allow_teacher_plays)
                 seen.append(paths)
                 return cohorts[paths[0]]
             fake.validate_cohorts=validate
@@ -198,7 +199,7 @@ class FreshStatisticsTests(unittest.TestCase):
                     module.read_rows(root/'unbound.json','games')
                 for arm in ('student','champion'):
                     with self.subTest(arm=arm),patch.object(module,'compare_games',side_effect=AssertionError('CI started')):
-                        fake.validate_cohorts=lambda paths: (_ for _ in ()).throw(ValueError('Invalid completed cohort receipt'))
+                        fake.validate_cohorts=lambda paths, **kwargs: (_ for _ in ()).throw(ValueError('Invalid completed cohort receipt'))
                         with self.assertRaisesRegex(ValueError,'receipt'):
                             module.main(args)
                 fake.validate_cohorts=validate

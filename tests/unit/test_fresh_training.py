@@ -132,6 +132,40 @@ class FreshTrainingTests(unittest.TestCase):
     def tearDownClass(cls):
         torch.set_num_threads(cls.threads)
 
+    def test_teacher_play_corpora_are_refused_even_without_samples(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data,source=fixture(Path(tmp),config={'teacher_plays':True})
+            with self.assertRaisesRegex(ValueError,'teacher_plays true cannot be used for training'):
+                validate_source(source)
+            for load in (freeze_manifest,lambda s:list(iter_rows(s))):
+                with self.assertRaisesRegex(ValueError,'teacher_plays true cannot be used for training'):
+                    load([data])
+            for path in (data/'worlds').glob('*'):
+                with gzip.open(path,'rt') as stream:
+                    shard=json.load(stream)
+                shard['labels']=[]
+                atomic_json(path,shard,compressed=True)
+            with self.assertRaisesRegex(ValueError,'teacher_plays true cannot be used for training'):
+                freeze_manifest([data])
+
+    def test_nontraining_samples_refused_in_world_shards_and_row_exports(self):
+        for phase in ('combat','out_of_combat'):
+            with self.subTest(phase=phase),tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp)
+                data,_=fixture(root)
+                path=next((data/'worlds').glob('*'))
+                with gzip.open(path,'rt') as stream:
+                    shard=json.load(stream)
+                sample=next(r for r in shard['labels'] if r['observation']['phase']==phase)
+                sample['use_for_training']=False
+                atomic_json(path,shard,compressed=True)
+                export=root/'rows.jsonl'
+                export.write_text(json.dumps(sample)+'\n')
+                for sources in ([data],[export]):
+                    for load in (freeze_manifest,lambda s:list(iter_rows(s))):
+                        with self.assertRaisesRegex(ValueError,'use_for_training false cannot be used for training'):
+                            load(sources)
+
     def test_mixed_sources_optin_preserves_all_sources_and_individual_identities(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)

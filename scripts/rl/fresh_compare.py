@@ -12,7 +12,7 @@ from sts_rl.fresh_study import atomic_json, validate_world_range
 from sts_rl.recording import file_identity
 
 
-def read_games(path):
+def read_games(path, *, allow_teacher_plays=False):
     """C4 brief summaries omit source; recover it only after cohort validation."""
     path = Path(path).resolve()
     if path.is_dir():
@@ -24,7 +24,7 @@ def read_games(path):
     # D unit fixtures keep C3 dependencies. Root supplies C4 at integration;
     # importing it here keeps pure comparison helpers native/dependency-free.
     from sts_rl.fresh_cohort import validate_cohorts
-    cohort = validate_cohorts([directory])
+    cohort = validate_cohorts([directory], allow_teacher_plays=allow_teacher_plays)
     policy = cohort['science_identity']['policy']
     records = [{**r, 'source':{'policy':policy}} for r in cohort['records']]
     for row in records:

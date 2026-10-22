@@ -14,12 +14,14 @@ from unittest.mock import Mock, patch
 from sts_env.env import SimulatorError
 from sts_policy.curriculum import public_hash
 from sts_rl.fresh_collection import (DEFAULT_PROBABILITIES, FightBank, TEACHER_PROTOCOL,
-    MAX_SEARCH_SAMPLES, WorldMetrics, is_test_world, play_world, plurality, query_votes, run_collection, search_plan,
+    MAX_SEARCH_SAMPLES, WorldMetrics, is_test_world, play_world, plurality, query_details, query_votes, run_collection, search_plan,
     summarize, task, validate_config)
 from sts_rl.fresh_panel import (FreshPanelEpisode, FreshPanelWorker, WorkerProgrammingError,
                                freeze_grid, load_bank, paired_summary, run_panel)
 from sts_rl.fresh_study import Interrupted, MIN_DISK, PROTOCOL, RunControl, policy_observation
 from sts_rl.fresh_native import native_call
+from sts_rl.panel import PanelEpisode, PanelWorker
+from sts_rl.teacher_votes import RULES, votes_from_details
 from tests.unit.fresh_cohort_fixture import write_cohort
 
 EXPECTED = {"python_interface_sha256": "python", "runtime_python_version": "3.12",
@@ -93,7 +95,52 @@ class Worker:
         pass
 
 
+class DetailsWorker(Worker):
+    def __init__(self, states, **kwargs):
+        super().__init__(states, **kwargs)
+        self.detail_queries, self.played = [], []
+
+    def search_details_public(self, simulations, futures, search_seeds, rng_base):
+        self.detail_queries.append((simulations, futures, search_seeds, rng_base))
+        return [{"future": future, "search_seed": seed, "chosen": 2,
+                 "selection_method": "winning_sequence", "winning_sequence_found": True,
+                 "root_simulations": simulations, "best_evaluation": 3., "min_evaluation": 0.,
+                 "edges": [{"index": 2, "visits": 10, "evaluation_sum": 10., "mean_evaluation": 1.},
+                           {"index": 7, "visits": 20, "evaluation_sum": 40., "mean_evaluation": 2.}]}
+                for future, seed in zip(futures, search_seeds)]
+
+    def step(self, action):
+        self.played.append(action)
+        return super().step(action)
+
+
 class CliTests(unittest.TestCase):
+    def test_collect_cli_teacher_options_and_defaults(self):
+        root = Path(__file__).resolve().parents[2]
+        spec = importlib.util.spec_from_file_location("fresh_collect_cli", root/"scripts"/"rl"/"fresh_collect.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        args = ["--mode", "collect", "--checkpoint", "fake", "--out", "out",
+                "--world-start", str(SEED), "--n", "1"]
+        defaults = vars(module.parser().parse_args(args))
+        for key in ("vote_rule", "teacher_plays", "record_search"):
+            self.assertNotIn(key, defaults)
+        for rule in RULES:
+            value = vars(module.parser().parse_args([*args, "--vote-rule", rule, "--teacher-plays", "--record-search"]))
+            self.assertEqual((value["vote_rule"], value["teacher_plays"], value["record_search"]), (rule, True, True))
+            validate_config(value)
+        configs = []
+        summary = {key: 0 for key in ("completed", "faults", "cuts", "censored", "unstarted", "wins")}
+        summary.update(event="done", status="completed", cohort_complete=True)
+        for extra in ([], ["--vote-rule", "best_line"], ["--vote-rule", "mean_value"]):
+            with patch.object(module, "StudyPolicy"), \
+                 patch.object(module, "run_collection", return_value=summary) as run, redirect_stdout(io.StringIO()):
+                module.main([*args, *extra])
+            configs.append(run.call_args.args[0])
+        self.assertEqual(configs[0], defaults)
+        self.assertEqual(configs[1], defaults)
+        self.assertEqual(configs[2], {**defaults, "vote_rule": "mean_value"})
+
     def test_panel_cli_accepts_multiple_receipted_directories_and_expected_grid(self):
         root = Path(__file__).resolve().parents[2]
         spec = importlib.util.spec_from_file_location("fresh_panel_cli", root/"scripts"/"rl"/"fresh_panel.py")
@@ -213,6 +260,106 @@ class CollectionTests(LifecycleTests):
         row = play_world(Worker(self.states()), Policy(), SEED, config(), Control(1), Progress(), SOURCE, lambda _: None)
         self.assertEqual(row["status"], "censored")
         self.assertEqual(row["action_prefix"], [])
+
+    def test_explicit_defaults_keep_entire_record_and_vote_calls_unchanged(self):
+        first, second = DetailsWorker(self.states()), DetailsWorker(self.states())
+        baseline, _ = self.run_world(first)
+        explicit, _ = self.run_world(second, vote_rule="best_line", teacher_plays=False, record_search=False)
+        self.assertEqual(explicit, baseline)
+        self.assertEqual(first.queries, second.queries)
+        self.assertEqual(len(first.queries), 12)
+        self.assertEqual(first.detail_queries + second.detail_queries, [])
+
+    def test_alternative_rules_use_details_with_original_seeds_and_repeat_path(self):
+        for rule in RULES[1:]:
+            with self.subTest(rule=rule):
+                worker = DetailsWorker(self.states())
+                record, count = self.run_world(worker, vote_rule=rule)
+                sample = record["labels"][1]
+                self.assertEqual((sample["label"], sample["votes"], sample["vote_rule"]), (7, {7: 24}, rule))
+                self.assertNotIn("search_details", sample)
+                self.assertEqual(record["action_prefix"], [2, 2])
+                self.assertEqual(sample["self_consistency"]["votes"], {2: 24})
+                self.assertEqual(len(worker.queries), 6)
+                plan = sample["search"]
+                self.assertEqual([f for _, futures, _, _ in worker.detail_queries for f in futures], plan["samples"])
+                self.assertEqual([s for _, _, seeds, _ in worker.detail_queries for s in seeds], plan["effective_search_seeds"])
+                self.assertTrue(all(n == 1000 and base == plan["search_seed"] and len(futures) == 4
+                                    for n, futures, _, base in worker.detail_queries))
+                self.assertEqual(count, [1])
+
+    def test_record_search_keeps_details_for_default_and_alternative_rules(self):
+        for rule, index in (("best_line", 2), ("most_visited", 7)):
+            worker = DetailsWorker(self.states())
+            record, _ = self.run_world(worker, vote_rule=rule, record_search=True)
+            sample = record["labels"][1]
+            details = sample["search_details"]
+            self.assertEqual(sample["votes"], {index: 24})
+            self.assertEqual(len(details), 24)
+            self.assertEqual(details, json.loads(json.dumps(details, allow_nan=False)))
+            self.assertEqual(sample["votes"], votes_from_details(details, rule))
+            self.assertEqual("vote_rule" in sample, rule != "best_line")
+
+    def test_details_abstention_discards_previous_chunks_and_preserves_policy_action(self):
+        class Empty(DetailsWorker):
+            def search_details_public(self, *args):
+                details = super().search_details_public(*args)
+                return details if len(self.detail_queries) == 1 else []
+        worker = Empty(self.states())
+        record, count = self.run_world(worker, bank=False, record_search=True, teacher_plays=True, self_consistency_every=0)
+        sample = record["labels"][1]
+        self.assertEqual((sample["votes"], sample["search_details"], sample["label"]), ({}, [], None))
+        self.assertNotIn("played_by", sample)
+        self.assertNotIn("played_action", sample)
+        self.assertNotIn("use_for_training", sample)
+        self.assertNotIn("BOSS2:teacher_played", record["sampling"])
+        self.assertEqual(worker.played, [2, 2])
+        self.assertEqual(count, [])
+
+    def test_details_queries_check_control_and_reject_partial_searches(self):
+        worker = DetailsWorker(self.states())
+        worker.reset(task(SEED))
+        plan = search_plan(public_hash(self.states()[1]))
+        with self.assertRaisesRegex(Interrupted, "STOP"):
+            query_details(worker, self.states()[1], plan, config(), Control(1))
+        self.assertEqual(len(worker.detail_queries), 1)
+        with patch.object(worker, "search_details_public", return_value=[{"chosen": 2}]):
+            with self.assertRaisesRegex(ValueError, "incomplete search details"):
+                query_details(worker, self.states()[1], plan, config(), Control())
+
+    def test_teacher_plays_steps_label_marks_samples_and_completion(self):
+        worker = DetailsWorker(self.states())
+        record, count = self.run_world(worker, bank=False, vote_rule="most_visited", teacher_plays=True)
+        sample = record["labels"][1]
+        self.assertEqual(worker.played, [2, 7])
+        self.assertEqual(record["action_prefix"], [2, 7])
+        self.assertEqual((sample["label"], sample["source_action"], sample["played_action"],
+                          sample["played_by"], sample["use_for_training"]), (7, 2, 7, "teacher", False))
+        self.assertEqual(sample["played_action"], record["action_prefix"][len(sample["prefix"])])
+        self.assertEqual(record["sampling"]["BOSS2:teacher_played"], 1)
+        self.assertEqual(count, [1])
+        class Factory(DetailsWorker):
+            def __init__(self, **kwargs):
+                super().__init__([observation(), observation("combat", "BOSS"), observation(actions=[])])
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("sts_rl.fresh_collection.prepare_run", return_value=SOURCE):
+                summary = run_collection(config(out=directory, bank=False, vote_rule="most_visited", teacher_plays=True),
+                                         Policy(), worker_factory=Factory)
+            self.assertIs(summary["teacher_plays"], True)
+            for name in ("summary.json", "completion.json"):
+                self.assertIs(json.loads((Path(directory)/name).read_text())["teacher_plays"], True)
+
+    def test_new_config_validation_accepts_legacy_and_rejects_invalid_options(self):
+        original = config()
+        validate_config(original)
+        self.assertEqual(original, config())
+        validate_config(config(bank=False, teacher_plays=True))
+        for changes in ({"vote_rule": "unknown"}, {"vote_rule": None},
+                        {"teacher_plays": 1}, {"teacher_plays": "true"}, {"record_search": 0},
+                        {"record_search": None}, {"teacher_plays": True, "mode": "eval"},
+                        {"teacher_plays": True, "teacher_labels": False}, {"teacher_plays": True, "bank": True}):
+            with self.subTest(changes=changes), self.assertRaisesRegex(ValueError, "vote_rule|teacher_plays|record_search"):
+                validate_config(config(**changes))
 
     def test_programming_errors_propagate(self):
         class Bad(Policy):
@@ -346,11 +493,18 @@ class CollectionTests(LifecycleTests):
                 self.rng_seed = seed
             def search_best_action(self, simulations, *, search_seed, draw_order_seed, include_card_type):
                 calls.append((self.rng_seed, search_seed, draw_order_seed))
-                return {"bits": 2, "provenance": {"hidden_pile_order_canonicalized": True}}
+                return {"bits": 12, "provenance": {"hidden_pile_order_canonicalized": True},
+                        "selection_method": "most_visited_root", "winning_sequence_found": False,
+                        "root_simulations": simulations, "best_evaluation": 2., "min_evaluation": 0.,
+                        "root_edges": [{"bits": 12, "valid": True, "visits": 20,
+                                        "evaluation_sum": 40., "mean_evaluation": 2.},
+                                       {"bits": 13, "valid": True, "visits": 5,
+                                        "evaluation_sum": 15., "mean_evaluation": 3.},
+                                       {"bits": 999, "valid": False}]}
         raw = SimpleNamespace(bc=SimpleNamespace(copy=Scratch), combat_observation="unused",
                               advance_to_decision=lambda: None)
         episode = FreshPanelEpisode({})
-        episode.episode = SimpleNamespace(env=SimpleNamespace(_env=raw, display_index_for_bits=int),
+        episode.episode = SimpleNamespace(env=SimpleNamespace(_env=raw, display_index_for_bits=lambda bits: {12: 2, 13: 2}[bits]),
                                           _observe=lambda: value)
         first, repeat = search_plan(public_hash(value)), search_plan(public_hash(value), repeat=True)
         for plan in (first, repeat):
@@ -361,6 +515,53 @@ class CollectionTests(LifecycleTests):
             self.assertEqual([r[2] for r in actual], plan["draw_order_seeds"])
         for column in range(3):
             self.assertFalse({r[column] for r in calls[:24]} & {r[column] for r in calls[24:]})
+        for plan in (first, repeat):
+            details = episode.search_details_public(1000, plan["samples"], plan["effective_search_seeds"], plan["search_seed"])
+            self.assertEqual(votes_from_details(details, "best_line"), {2: 24})
+            self.assertEqual([r[0] for r in calls[-24:]], plan["effective_rng_seeds"])
+            self.assertEqual([r[1] for r in calls[-24:]], plan["effective_search_seeds"])
+            self.assertEqual([r[2] for r in calls[-24:]], plan["draw_order_seeds"])
+            self.assertEqual(details[0], {"future": plan["samples"][0], "search_seed": plan["effective_search_seeds"][0],
+                "chosen": 2, "selection_method": "most_visited_root", "winning_sequence_found": False,
+                "root_simulations": 1000, "best_evaluation": 2., "min_evaluation": 0.,
+                "edges": [{"index": 2, "bits": 12, "visits": 20, "evaluation_sum": 40., "mean_evaluation": 2.},
+                          {"index": 2, "bits": 13, "visits": 5, "evaluation_sum": 15., "mean_evaluation": 3.}]})
+            self.assertEqual(details, json.loads(json.dumps(details, allow_nan=False)))
+        episode.search_details_public(1000, [5, 5], [91, 92], 7)
+        self.assertEqual(calls[-2:], [(7068, 91, 5), (7068, 92, 5)])
+
+    def test_details_preconditions_abstention_and_canonicalisation(self):
+        search = Mock()
+        raw = SimpleNamespace(bc=SimpleNamespace(copy=lambda: SimpleNamespace(
+                              reseed_rngs=lambda seed: None, search_best_action=search)),
+                              combat_observation="unused", advance_to_decision=lambda: None)
+        episode = FreshPanelEpisode({})
+        episode.episode = SimpleNamespace(env=SimpleNamespace(_env=raw, display_index_for_bits=int),
+                                          _observe=lambda: self.states()[1])
+        with self.assertRaisesRegex(ValueError, "equal lengths"):
+            episode.search_details_public(10, [1], [], 0)
+        search.side_effect = ValueError("unsupported draw_order_seed")
+        self.assertEqual(episode.search_details_public(10, [1], [2], 0), [])
+        search.side_effect = ValueError("other failure")
+        with self.assertRaisesRegex(ValueError, "other failure"):
+            episode.search_details_public(10, [1], [2], 0)
+        search.side_effect, search.return_value = None, {"provenance": {}}
+        with self.assertRaisesRegex(RuntimeError, "Canonical search"):
+            episode.search_details_public(10, [1], [2], 0)
+        raw.bc = None
+        with self.assertRaisesRegex(RuntimeError, "pending combat decision"):
+            episode.search_details_public(10, [1], [2], 0)
+
+    def test_details_mutation_check_and_worker_proxy_submit(self):
+        episode = FreshPanelEpisode({})
+        episode.episode = SimpleNamespace(_observe=Mock(side_effect=[self.states()[1], self.states()[2]]))
+        with patch.object(PanelEpisode, "search_details_public", return_value=[]):
+            with self.assertRaisesRegex(RuntimeError, "mutated the live decision"):
+                episode.search_details_public(10, [1], [2], 0)
+        with PanelWorker({}) as worker, patch.object(worker, "_call", return_value=[{"chosen": 2}]) as call:
+            result = worker.submit("search_details_public", 10, [1], [2], 0).result()
+            self.assertEqual(result, [{"chosen": 2}])
+            call.assert_called_once_with("search_details_public", 10, [1], [2], 0)
 
     def test_boss_passage_secret_portal_and_final_victory(self):
         metrics = WorldMetrics()

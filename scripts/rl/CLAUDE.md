@@ -142,6 +142,9 @@ what failed. Commands and module usage: [src/sts_rl/README.md](../../src/sts_rl/
   Freeze panel grids before fitting or scoring students, defer test scoring until validation-only selection freezes,
   and compare exact cohorts with frozen expectations. Never use cohort intersections
   to repair incomplete fresh-start results.
+- **Teacher benchmarks are not champion games.** Set boss-only teacher
+  probabilities; never fit or compare these cohorts as the champion. See the
+  [collector options](../../src/sts_rl/README.md#fight-panels-and-fresh-start-tools).
 - **Final-boss scope:** identify final-boss fights from the public act and
   room fields, and verify the encounter when investigating anomalies. Do not
   assume the Act 3 final boss is on floor 50: Secret Portal can legally reach

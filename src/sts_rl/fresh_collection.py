@@ -2,7 +2,7 @@
 
 Only genuine terminals publish world shards. Cuts, faults and interrupted partial
 worlds publish diagnostic quarantine receipts, never labels or loss observations.
-Teacher queries label champion states and never choose trajectory actions.
+Teacher queries label champion states; benchmark-only teacher_plays can choose queried actions.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ import threading
 from sts_env.env import SimulatorError
 from sts_policy.curriculum import TaskSpec, player_hp, public_hash
 from sts_rl.recording import file_identity
+from sts_rl.teacher_votes import RULES, votes_from_details
 from sts_rl.fresh_study import (Interrupted, PROTOCOL, Progress, RunControl, atomic_json,
                                 finish_run, policy_observation, prepare_run, validate_world_range)
 
@@ -170,6 +171,24 @@ def query_votes(worker, observation, plan, config, control):
     return dict(votes)
 
 
+def query_details(worker, observation, plan, config, control):
+    if len(policy_observation(observation)["legal_actions"]) <= 1:
+        raise ValueError("Teacher queries require an informative combat menu")
+    details = []
+    for offset in range(0, len(plan["samples"]), 4):
+        control.check()
+        futures = plan["samples"][offset:offset+4]
+        chunk = worker.search_details_public(config["simulations"], futures,
+                                             [plan["search_seed"] + s for s in futures], plan["search_seed"])
+        if not chunk:
+            return []
+        if len(chunk) != len(futures):
+            raise ValueError("Teacher returned incomplete search details")
+        plurality(votes_from_details(chunk, "best_line"), observation)
+        details.extend(chunk)
+    return details
+
+
 def play_world(worker, policy, seed, config, control, progress, source, label_count):
     prefix, labels, sampling, attempted_action = [], [], Counter(), None
     metrics, expected, bank = WorldMetrics(), None, None
@@ -210,7 +229,16 @@ def play_world(worker, policy, seed, config, control, progress, source, label_co
                     uniform = int(hashlib.sha256((state_hash + ":sample").encode()).hexdigest()[:13], 16) / 16**13
                     if informative and uniform < probability:
                         plan = search_plan(state_hash, config["samples"])
-                        votes = query_votes(worker, observation, plan, config, control)
+                        vote_rule = config.get("vote_rule", "best_line")
+                        if vote_rule == "best_line" and not config.get("record_search", False):
+                            votes = query_votes(worker, observation, plan, config, control)
+                        else:
+                            details = query_details(worker, observation, plan, config, control)
+                            votes = votes_from_details(details, vote_rule)
+                            if config.get("record_search", False):
+                                sample["search_details"] = details
+                        if vote_rule != "best_line":
+                            sample["vote_rule"] = vote_rule
                         label = plurality(votes, observation)
                         sample.update(label=label, votes=votes, search=plan,
                                       label_kind=TEACHER_PROTOCOL,
@@ -225,6 +253,10 @@ def play_world(worker, policy, seed, config, control, progress, source, label_co
                         labels.append(sample)
                         if label is not None:
                             label_count(1)
+                            if config.get("teacher_plays", False):
+                                action = attempted_action = label
+                                sample.update(played_by="teacher", played_action=action, use_for_training=False)
+                                sampling[key + ":teacher_played"] += 1
             after, _, terminated, truncated, info = worker.step(action)
             win = info.get("task_outcome") in {"act_clear", "victory"}
             metrics.transition(observation, action, after, win=win)
@@ -392,6 +424,8 @@ def run_collection(config, policy, *, worker_factory=None):
         summary = summarize(records, config["n"], sampling, saved_labels)
         summary.update(queried_combat_labels=queried_labels, stop_reasons=sorted(stop_reasons),
                        max_labels_overshoot=max(0, saved_labels-config["max_labels"]) if config["max_labels"] else 0)
+        if config.get("teacher_plays", False):
+            summary["teacher_plays"] = True
         if error is not None:
             summary.update(programming_error=f"{type(error).__name__}: {error}", confidence_claims_allowed=False)
         finish_run(out, summary, source, progress)
@@ -405,6 +439,15 @@ def validate_config(config):
     validate_world_range(config["world_start"], config["n"])
     if config["mode"] not in {"eval", "collect"}:
         raise ValueError("mode must be eval or collect")
+    if config.get("vote_rule", "best_line") not in RULES:
+        raise ValueError("vote_rule must be one of " + ", ".join(RULES))
+    for key in ("teacher_plays", "record_search"):
+        if not isinstance(config.get(key, False), bool):
+            raise ValueError(key + " must be a bool")
+    if config.get("teacher_plays", False) and (config["mode"] != "collect" or not config["teacher_labels"]):
+        raise ValueError("teacher_plays requires mode collect with teacher_labels true")
+    if config.get("teacher_plays", False) and config["bank"]:
+        raise ValueError("teacher_plays cannot be combined with bank")
     if config["workers"] < 1 or not math.isfinite(config["timeout"]) or config["timeout"] <= 0:
         raise ValueError("Require workers >=1 and finite positive timeout")
     if (isinstance(config["samples"], bool) or not isinstance(config["samples"], int) or
