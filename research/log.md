@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 22 October 2026
 
+- **Promotion**, 16:32: Sid promoted the third continued training's final
+  checkpoint (`champion_af2fb9f1f260.pt`); a fourth continued training from
+  it is queued after the joint run (seed 5; confirmation worlds from
+  104,000,000,000).
 - **Third continued training**, 16:25: 899 against 701 on second DEV and 865
   against 707 on unused worlds (+3.9 points, p < 0.001), mostly at the Act 3
   boss. Awaiting Sid's promotion decision. The joint loop started at 16:11.

@@ -1,11 +1,18 @@
 # Status
 
-**Updated 22 October 2026, 16:28 BST.** Several jobs run; nothing waits for Sid. Champion:
-`champion_85ea9019ff95.pt` (18.4% on unused worlds).
+**Updated 22 October 2026, 16:36 BST.** Several jobs run; nothing waits for Sid. Champion:
+`champion_af2fb9f1f260.pt` (21.1% on unused worlds).
 
-- **[Third continued training](experiments/2026-10-22-continued-training-3.md)**
-  finished at 16:10: 21.1% against the champion's 17.3% on unused worlds
-  (confirmed). Awaiting Sid's promotion decision.
+- **Champion promoted 22 October, 16:32:** the third continued training's
+  final checkpoint (`champion_af2fb9f1f260.pt`, 21.1% on unused worlds).
+- **[Fourth continued training](experiments/2026-10-22-continued-training-4.md)**
+  (`c4-train`, queued on lane `train` of the queue in worktree
+  `nonllm-large-batch` after the joint run; output
+  `data/rl_runs/continued4_20261022/`). The champion's baseline games on
+  worlds from 104,000,000,000 (`c4-champion-confirm104`) are queued now in
+  the `nonllm-boss-rares` queue. Detached watcher `eval_continued4.sh`
+  (log `continued4_eval.log` in the session scratchpad) evaluates it when
+  training ends, about 4.5 hours after it starts.
 - **[Joint run](experiments/2026-10-22-joint-loop.md)** (`joint-train`,
   running on the `train` lane since 16:11; output `joint_20261022/`). Detached
   `joint_start_and_compare.sh` starts the orchestrator `joint_loop.py`

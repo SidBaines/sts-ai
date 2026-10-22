@@ -104,6 +104,7 @@ confirmation worlds apart.
 | 0.1.5.1 | Joint loop gate (reused every cycle; selection set, not confirmation) | 101,000,000,000 | 2,048 |
 | 0.1.5.1 | Joint loop smoke test gate | 102,000,000,000 | 256 |
 | 0.1.5.1 | Joint run against its control, final comparison | 103,000,000,000 | 4,096 |
+| 0.1.5.1 | Confirmation for the fourth continued training | 104,000,000,000 | 4,096 |
 | 0.1.5.1 | Teacher labels, boss-only corpus (champion of 22 October) | 90,500,300,000 | 4,000 |
 | 0.1.5.1 | Teacher labels, joint loop cycles | 90,500,500,000 + 10,000 per cycle | 1,000 per cycle |
 | 0.1.5.1 | Probe worlds for the round 2 and round 3 fits (unlabelled, movement monitoring only) | 93,000,000,100; 93,000,000,200 | 8 each |
@@ -126,10 +127,16 @@ release changed game behaviour.
 
 ## Players, teachers and encoders
 
-- **Champion:** the best retained learned player. From 22 October it is
-  the second continued training's out-of-combat head with the round 2
-  combat student (`champion_85ea9019ff95.pt`, SHA-256 prefix
-  `85ea9019ff95`, in run `continued3_20261022/inputs`); confirmed at 755
+- **Champion:** the best retained learned player. From 22 October, 16:32,
+  it is the third continued training's final checkpoint
+  (`champion_af2fb9f1f260.pt`, SHA-256 prefix `af2fb9f1f260`, in run
+  `continued4_20261022/inputs`): out-of-combat PPO from the previous
+  champion, with its round 2 combat student unchanged; confirmed at 865
+  against 707 wins of 4,096 unused worlds (21.1%)
+  ([third continued training](experiments/2026-10-22-continued-training-3.md)).
+- **Champion of 22 October, midday:** the second continued training's
+  out-of-combat head with the round 2 combat student
+  (`champion_85ea9019ff95.pt`, in run `continued3_20261022/inputs`); 755
   against 662 wins of 4,096 unused worlds (18.4%)
   ([second continued training](experiments/2026-10-21-continued-training-2.md)).
 - **Champion of 21 October, afternoon:** it is the first continued training's final checkpoint

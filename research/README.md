@@ -9,8 +9,8 @@ everything is measured.
 
 | Player | Win rate | Evidence |
 |---|---|---|
-| **Third continued training's final checkpoint** (`continued3_20261022/train/iter_0024.pt`; out-of-combat PPO from the champion, its round 2 combat student unchanged) | 21.1% on 4,096 unused worlds from 100,000,000,000 (865 against the champion's 707, p < 0.001); 21.9% on second DEV (899 against 701) | Confirmed; pure policy; awaiting Sid's promotion decision |
-| **Champion from 22 October:** the second continued training's out-of-combat head with the round 2 combat student (`champion_85ea9019ff95.pt`) | 18.4% on 4,096 unused worlds from 99,000,000,000 (755 against the trained checkpoint's 662, p = 0.001); 17.1% on second DEV (701) | Confirmed; current default |
+| **Champion from 22 October, 16:32:** the third continued training's final checkpoint (`champion_af2fb9f1f260.pt`; out-of-combat PPO from the previous champion, its round 2 combat student unchanged) | 21.1% on 4,096 unused worlds from 100,000,000,000 (865 against the previous champion's 707, p < 0.001); 21.9% on second DEV (899 against 701) | Confirmed; current default |
+| Champion of 22 October, midday: the second continued training's out-of-combat head with the round 2 combat student (`champion_85ea9019ff95.pt`) | 18.4% on 4,096 unused worlds from 99,000,000,000 (755 against the trained checkpoint's 662, p = 0.001); 17.1% on second DEV (701) | Confirmed |
 | The second continued training's final checkpoint alone (`continued2_20261021/train/iter_0024.pt`) | 16.9% on 4,096 unused worlds from 96,000,000,000 (691 against the champion's 507, p < 0.001); 16.4% on second DEV (672 against 527); with the round 2 combat student 701 on DEV (exploratory) | Confirmed; pure policy |
 | Round 2 combat candidate: the afternoon champion with its combat head refitted to teacher labels from its own games (`combat_round2_20261021/champion_with_student_r2_newonly.pt`) | 13.9% on 4,096 unused worlds from 97,000,000,000 (571 against the champion's 512, p = 0.017); 14.1% on second DEV (576 against 527) | Confirmed; pure policy |
 | Champion of 21 October, afternoon: continued training with the hygiene options (run `round4`, `champion_2835f40fa439.pt`) | 11.6% on 4,096 new worlds from 95,000,000,000 (476 against the champion's 379, p < 0.001); 12.9% on the second-DEV worlds (527 against 413) | Confirmed |
@@ -34,18 +34,18 @@ in the [results ledger](results.md).
 
 ## Now
 
-Running (see [status](status.md)): the [third continued training](experiments/2026-10-22-continued-training-3.md)
-of the out-of-combat head, which is also the control for the
-[joint loop](experiments/2026-10-22-joint-loop.md), queued next, in which
-out-of-combat PPO and teacher-labelled combat refits move together; and
-two combat students fitted on round 2, round 3 and boss-only labels
-([combat variance](experiments/2026-10-22-combat-variance.md)). Refits of
-the combat student vary a lot: one fit in four collapses by about two
-floors, so every refit is checked before use.
+Running (see [status](status.md)): the [joint loop](experiments/2026-10-22-joint-loop.md),
+in which out-of-combat PPO and teacher-labelled combat refits move
+together (control: the third continued training); two combat students
+fitted on round 2, round 3 and boss-only labels
+([combat variance](experiments/2026-10-22-combat-variance.md)); and,
+queued after the joint loop, a [fourth continued training](experiments/2026-10-22-continued-training-4.md)
+from the new champion. Refits of the combat student vary a lot: one fit in
+four collapses by about two floors, so every refit is checked before use.
 
 ## Next
 
-1. **Record the third continued training and the boss-label fits**, and
+1. **Record the boss-label fits and the fourth continued training**, and
    follow the joint loop's gate decisions.
 2. **[A better search teacher](experiments/2026-10-22-better-teacher.md)**
    (planned with Sid, 22 October): measure the teacher's noise and build a
