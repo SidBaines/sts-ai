@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 22 October 2026
 
+- **Joint run**, 22:55: 945 against its control's 877 of 4,096 unused worlds
+  (p = 0.029) with only one combat refit (the second cycle hung on a
+  disk-space stop the orchestrator missed). Two-by-two: refit +1.5 points,
+  co-adaptation +1.8 (borderline).
 - **Teacher benchmark**, 19:35: with the teacher playing boss fights inside
   the champion's games, wins rise from 205 to 333 (today's vote) or 345
   (best mean result) of 1,024; the two votes play about equally. Act 2 and
