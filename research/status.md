@@ -1,38 +1,29 @@
 # Status
 
-**Updated 21 October 2026, 17:32 BST.** Four studies run at once on the laptop; nothing waits
-for Sid. Sid's standing instruction (21 October): keep doing research until
-stopped.
+**Updated 22 October 2026, 11:37 BST.** Two studies run; waiting for Sid on one decision:
+which checkpoint becomes the champion. The best confirmed policy is the
+second continued training's out-of-combat head with the round 2 combat
+student (18.4% on unused worlds).
 
-- **[Second continued training](experiments/2026-10-21-continued-training-2.md)**
-  (`c2-train`, lane `train` of the queue in worktree `nonllm-large-batch`;
-  output `data/rl_runs/continued2_20261021/train/`): iteration 8 of 24 at
-  17:16, about 12 minutes per iteration under load, so it ends about 21:00.
-  Runs from the frozen worktree `nonllm-continued-frozen`; do not edit it.
-  A detached watcher (`eval_continued2.sh`, log `continued2_eval.log` in
-  the session scratchpad) evaluates it when it finishes.
-- **Demon Form distillation, second attempt** (`df3-*`, lane `eval` of the
-  queue in worktree `nonllm-boss-rares`): label collection on 6,144
-  training worlds, merge, distillation, then evaluation on second DEV and
-  the worlds from 95,000,000,000. The first attempt failed (512 against
-  527) and its last evaluation (`df-distilled-fresh95-v3`) is running.
-- **[Combat student round 2](experiments/2026-10-21-combat-student-round-2.md)**
-  (`teacher-r2-shard0` to `7`, lanes `teacher0` to `teacher7` of the same
-  queue; output `combat_round2_20261021/teacher_corpus_v1/` in worktree
-  `nonllm-large-batch`): about 2 worlds per minute per shard, ends about
-  19:30. Then the student is refitted and evaluated.
-- **Keep-alives:** `teacher_keepalive.py` and `df3_keepalive.py` in the
-  session scratchpad refresh those jobs' queue logs only while their own
-  progress files advance, so the queue's two-hour silence check still
-  catches a real stall.
-- **Finished today:** the [card rule grid](experiments/2026-10-21-card-rule-grid.md)
-  (no forced card helps; three hurt).
-- **Champion:** `champion_2835f40fa439.pt` in `round4_20261021/inputs`,
-  `continued2_20261021/inputs` and `combat_round2_20261021/inputs`
-  (worktree `nonllm-large-batch`). Paired games: second DEV
-  `round4_20261021/study_eval/round4_i0024` (527 wins), worlds from
-  95,000,000,000 `round4_20261021/confirm95/round4_i0024` (476), from
-  96,000,000,000 `continued2_20261021/confirm96/champion`.
+- **[Third continued training](experiments/2026-10-22-continued-training-3.md)**
+  (`c3-train`, lane `train` of the queue in worktree `nonllm-large-batch`;
+  output `data/rl_runs/continued3_20261022/train/`), from the best policy;
+  about 7 to 12 minutes per iteration, so 3 to 5 hours. Detached watcher
+  `eval_continued3.sh` (log `continued3_eval.log` in the session
+  scratchpad) evaluates it when it finishes.
+- **[Combat student round 3](experiments/2026-10-21-combat-student-round-3.md)**
+  (`teacher-r3-shard0` to `7`, lanes `teacher0` to `teacher7` of the queue
+  in worktree `nonllm-boss-rares`; output `combat_round3_20261021/`):
+  labelling about 60% done at 11:25; detached pipeline
+  `combat_r3_pipeline.sh` then fits, splices and evaluates.
+- **Keep-alives** (`teacher_keepalive_r3.py` and others in the session
+  scratchpad) refresh quiet jobs' queue logs only while their own progress
+  files advance.
+- **Candidates for Sid** (README table): the combination
+  `continued2_20261021/c2_ooc_with_student_r2.pt` (18.4%, confirmed); the
+  second continued training's checkpoint alone (16.9%); the round 2 combat
+  candidate (13.9%). The champion of record is still
+  `champion_2835f40fa439.pt`.
 - **Check or stop:** `scripts/rl/queue_runner.py status` or `cancel NAME`
   in either worktree. Dashboard: http://127.0.0.1:8795.
 - **Closing the Claude desktop app kills processes this session started,**
@@ -43,5 +34,5 @@ stopped.
 
 ## Next
 
-Record each result as it lands; refit the combat student when the corpus
-is complete.
+Record each result as it lands. If Sid promotes the combination, label its
+games for the next combat round.
