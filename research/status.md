@@ -1,6 +1,6 @@
 # Status
 
-**Updated 22 October 2026, 17:03 BST.** Several jobs run; nothing waits for Sid. Champion:
+**Updated 22 October 2026, 17:45 BST.** Several jobs run; nothing waits for Sid. Champion:
 `champion_af2fb9f1f260.pt` (21.1% on unused worlds).
 
 - **Champion promoted 22 October, 16:32:** the third continued training's
@@ -19,6 +19,14 @@
   (decisions in `joint_20261022/loop/decisions.jsonl`; create
   `joint_20261022/loop/STOP` to stop it between steps) when the trainer
   starts, and runs the final comparison on worlds from 103,000,000,000.
+- **[Better teacher](experiments/2026-10-22-better-teacher.md), step 0
+  benchmark** (`bench-*` jobs, lanes `bench0` to `bench7` of the
+  `nonllm-boss-rares` queue; output `teacher_bench_20261022/<vote rule>/`):
+  the champion plays 1,024 second-DEV worlds while the teacher plays every
+  boss fight, once per vote rule (best line, then best mean result, pooled
+  searches, most visited), with per-search details recorded. About 1.5
+  hours per pair of rules; detached keep-alive `keepalive_bench.py`.
+  Analyse with `experiments/2026-10-22-better-teacher/analyse_benchmark.py`.
 - **Finished today:** boss-label combat fits (no student beat the champion), combat fit variance (one fit in four collapses; round
   3's collapse was a bad fit), all-corpora fit (worse), the lineage plot
   (`scripts/rl/plot_lineage.py`), `--mixed-sources` and `--combat-follow`

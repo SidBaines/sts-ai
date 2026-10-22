@@ -1,7 +1,6 @@
 # A better search teacher for combat
 
-**Status:** planned (approved by Sid on 22 October; starts as compute frees
-up from the joint run). **Verdict:** pending.
+**Status:** running (step 0 benchmark started 22 October, 17:13). **Verdict:** pending.
 
 ## Question
 
@@ -156,5 +155,8 @@ Pending.
 - 2026-10-22: the search already returns per-move visits and values, so
   step 0 and the vote rules need no native work; the benchmark runs in the
   label collector (teacher-played decisions are marked never trainable).
+- 2026-10-22, 17:45: benchmark arms queued for four vote rules on the same
+  1,024 second-DEV worlds. In the first 110 worlds, every trajectory matched
+  the champion's own game up to the teacher's first move, as designed.
 
 Code: `experiments/2026-10-22-better-teacher/` (not yet written).
