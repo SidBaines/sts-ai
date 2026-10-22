@@ -1,23 +1,22 @@
 # Status
 
-**Updated 22 October 2026, 13:44 BST.** Several jobs run; nothing waits for Sid. Champion:
+**Updated 22 October 2026, 16:28 BST.** Several jobs run; nothing waits for Sid. Champion:
 `champion_85ea9019ff95.pt` (18.4% on unused worlds).
 
 - **[Third continued training](experiments/2026-10-22-continued-training-3.md)**
-  (`c3-train`, lane `train` of the queue in worktree `nonllm-large-batch`;
-  output `data/rl_runs/continued3_20261022/train/`), iteration 9 of 24 at
-  13:29, about 11.5 minutes each; ends about 16:25. Detached watcher
-  `eval_continued3.sh` evaluates it. It is also the control for the joint run.
+  finished at 16:10: 21.1% against the champion's 17.3% on unused worlds
+  (confirmed). Awaiting Sid's promotion decision.
 - **[Joint run](experiments/2026-10-22-joint-loop.md)** (`joint-train`,
-  queued on the same lane after it; output `joint_20261022/`). Detached
+  running on the `train` lane since 16:11; output `joint_20261022/`). Detached
   `joint_start_and_compare.sh` starts the orchestrator `joint_loop.py`
   (decisions in `joint_20261022/loop/decisions.jsonl`; create
   `joint_20261022/loop/STOP` to stop it between steps) when the trainer
   starts, and runs the final comparison on worlds from 103,000,000,000.
-- **Boss-only labelling** (`teacher-boss-shard0` to `7`, queue in worktree
-  `nonllm-boss-rares`; output `combat_bosses_20261022/`): about 140 of 500
-  worlds per shard at 13:34; ends about 15:50. See the
-  [combat variance page](experiments/2026-10-22-combat-variance.md).
+- **Boss-label combat fits** (`boss-fit-seed1`, then `boss-fit-seed2`, queue
+  in worktree `nonllm-large-batch`; output `combat_bosses_20261022/`): two
+  students on round 2, round 3 and boss-only labels, each then spliced into
+  the champion and evaluated on second DEV by the detached `boss_fit.sh`.
+  See the [combat variance page](experiments/2026-10-22-combat-variance.md).
 - **Finished today:** combat fit variance (one fit in four collapses; round
   3's collapse was a bad fit), all-corpora fit (worse), the lineage plot
   (`scripts/rl/plot_lineage.py`), `--mixed-sources` and `--combat-follow`

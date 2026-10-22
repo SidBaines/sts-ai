@@ -9,6 +9,7 @@ everything is measured.
 
 | Player | Win rate | Evidence |
 |---|---|---|
+| **Third continued training's final checkpoint** (`continued3_20261022/train/iter_0024.pt`; out-of-combat PPO from the champion, its round 2 combat student unchanged) | 21.1% on 4,096 unused worlds from 100,000,000,000 (865 against the champion's 707, p < 0.001); 21.9% on second DEV (899 against 701) | Confirmed; pure policy; awaiting Sid's promotion decision |
 | **Champion from 22 October:** the second continued training's out-of-combat head with the round 2 combat student (`champion_85ea9019ff95.pt`) | 18.4% on 4,096 unused worlds from 99,000,000,000 (755 against the trained checkpoint's 662, p = 0.001); 17.1% on second DEV (701) | Confirmed; current default |
 | The second continued training's final checkpoint alone (`continued2_20261021/train/iter_0024.pt`) | 16.9% on 4,096 unused worlds from 96,000,000,000 (691 against the champion's 507, p < 0.001); 16.4% on second DEV (672 against 527); with the round 2 combat student 701 on DEV (exploratory) | Confirmed; pure policy |
 | Round 2 combat candidate: the afternoon champion with its combat head refitted to teacher labels from its own games (`combat_round2_20261021/champion_with_student_r2_newonly.pt`) | 13.9% on 4,096 unused worlds from 97,000,000,000 (571 against the champion's 512, p = 0.017); 14.1% on second DEV (576 against 527) | Confirmed; pure policy |
