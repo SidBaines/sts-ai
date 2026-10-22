@@ -63,6 +63,8 @@ def main():
     p.add_argument("--threads", type=int, default=4)
     p.add_argument("--simulations", type=int, default=1000)
     p.add_argument("--timeout", type=float, default=120.)
+    p.add_argument("--any-build", action="store_true",
+                   help="Replay positions recorded on another native build (the public state hash is still checked)")
     args = p.parse_args()
     rows = positions(args.bench, args.per_act)
     out, lock = open(args.out, "a"), threading.Lock()
@@ -74,7 +76,8 @@ def main():
         worker = FreshPanelWorker(config={**WORKER_CONFIG, "fast_observations": False}, timeout=args.timeout)
         try:
             for r in todo[slot::args.threads]:
-                observation, _ = worker.reset(task(r["world_seed"], r["expected_provenance"], r["prefix"], r["public_hash"]))
+                observation, _ = worker.reset(task(r["world_seed"], None if args.any_build else r["expected_provenance"],
+                                                     r["prefix"], r["public_hash"]))
                 if public_hash(observation) != r["public_hash"]:
                     raise RuntimeError(f"Replay mismatch at world {r['world_seed']}")
                 base = int(r["public_hash"][:10], 16) * 4096

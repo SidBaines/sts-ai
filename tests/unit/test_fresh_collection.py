@@ -15,7 +15,7 @@ from sts_env.env import SimulatorError
 from sts_policy.curriculum import public_hash
 from sts_rl.fresh_collection import (DEFAULT_PROBABILITIES, FightBank, TEACHER_PROTOCOL,
     MAX_SEARCH_SAMPLES, WorldMetrics, is_test_world, play_world, plurality, query_details, query_votes, run_collection, search_plan,
-    summarize, task, validate_config)
+    search_options_for_group, summarize, task, validate_config)
 from sts_rl.fresh_panel import (FreshPanelEpisode, FreshPanelWorker, WorkerProgrammingError,
                                freeze_grid, load_bank, paired_summary, run_panel)
 from sts_rl.fresh_study import Interrupted, MIN_DISK, PROTOCOL, RunControl, policy_observation
@@ -98,10 +98,11 @@ class Worker:
 class DetailsWorker(Worker):
     def __init__(self, states, **kwargs):
         super().__init__(states, **kwargs)
-        self.detail_queries, self.played = [], []
+        self.detail_queries, self.detail_options, self.played = [], [], []
 
-    def search_details_public(self, simulations, futures, search_seeds, rng_base):
+    def search_details_public(self, simulations, futures, search_seeds, rng_base, options=None):
         self.detail_queries.append((simulations, futures, search_seeds, rng_base))
+        self.detail_options.append(deepcopy(options))
         return [{"future": future, "search_seed": seed, "chosen": 2,
                  "selection_method": "winning_sequence", "winning_sequence_found": True,
                  "root_simulations": simulations, "best_evaluation": 3., "min_evaluation": 0.,
@@ -123,12 +124,16 @@ class CliTests(unittest.TestCase):
         args = ["--mode", "collect", "--checkpoint", "fake", "--out", "out",
                 "--world-start", str(SEED), "--n", "1"]
         defaults = vars(module.parser().parse_args(args))
-        for key in ("vote_rule", "teacher_plays", "record_search"):
+        for key in ("vote_rule", "teacher_plays", "record_search", "search_options"):
             self.assertNotIn(key, defaults)
         for rule in RULES:
             value = vars(module.parser().parse_args([*args, "--vote-rule", rule, "--teacher-plays", "--record-search"]))
             self.assertEqual((value["vote_rule"], value["teacher_plays"], value["record_search"]), (rule, True, True))
             validate_config(value)
+        options = {"default": {}, "BOSS2": {"evaluation": 1, "hp_weight": 0}}
+        value = vars(module.parser().parse_args([*args, "--search-options", json.dumps(options)]))
+        self.assertEqual(value["search_options"], options)
+        validate_config(value)
         configs = []
         summary = {key: 0 for key in ("completed", "faults", "cuts", "censored", "unstarted", "wins")}
         summary.update(event="done", status="completed", cohort_complete=True)
@@ -299,6 +304,60 @@ class CollectionTests(LifecycleTests):
             self.assertEqual(details, json.loads(json.dumps(details, allow_nan=False)))
             self.assertEqual(sample["votes"], votes_from_details(details, rule))
             self.assertEqual("vote_rule" in sample, rule != "best_line")
+
+    def test_search_options_force_details_and_apply_to_repeats_for_all_vote_rules(self):
+        options = {"evaluation": 1, "exploration": .1, "hp_weight": 0}
+        for rule in RULES:
+            for setting in (options, {}, {"default": {"evaluation": 0}, "BOSS2": options}):
+                with self.subTest(rule=rule, setting=setting):
+                    worker = DetailsWorker(self.states())
+                    record, _ = self.run_world(worker, vote_rule=rule, search_options=setting)
+                    sample = record["labels"][1]
+                    selected = {} if setting == {} else options
+                    self.assertEqual(sample["search_options"], selected)
+                    self.assertEqual(worker.detail_options, [selected] * 12)
+                    self.assertEqual(worker.queries, [])
+                    self.assertEqual(sample["self_consistency"]["votes"], {2: 24})
+                    self.assertEqual([f for _, futures, _, _ in worker.detail_queries for f in futures],
+                                     sample["search"]["samples"] + sample["self_consistency"]["search"]["samples"])
+
+    def test_search_options_group_fallbacks_and_recording(self):
+        default, boss = {"exploration": .2}, {"evaluation": 1, "hp_weight": 0}
+        grouped = {"default": default, "BOSS2": boss, "ELITE1": {}}
+        for key, expected in (("BOSS2", boss), ("BOSS1", default), ("ELITE1", {}), ("EVENT3", default)):
+            self.assertEqual(search_options_for_group(grouped, key), expected)
+        self.assertIsNone(search_options_for_group({"BOSS1": boss}, "BOSS2"))
+        for flat in (None, {}, boss):
+            self.assertEqual(search_options_for_group(flat, "BOSS2"), flat)
+        for setting, expected in ((grouped, boss), ({"default": default}, default), ({"BOSS1": boss}, None)):
+            worker = DetailsWorker(self.states())
+            record, _ = self.run_world(worker, search_options=setting, record_search=True)
+            self.assertEqual(record["labels"][1]["search_options"], expected)
+            self.assertEqual(worker.detail_options, [expected] * (12 if expected is not None else 6))
+        baseline, _ = self.run_world(DetailsWorker(self.states()))
+        explicit, _ = self.run_world(DetailsWorker(self.states()), search_options=None)
+        self.assertEqual(explicit, baseline)
+
+    def test_search_options_validation(self):
+        defaults = {"evaluation": 0, "exploration": 3 * 2**.5, "hp_weight": 1.,
+                    "potion_weight": 4., "loss_credit": 1.}
+        for options in (None, {}, defaults, {"evaluation": 1, "hp_weight": 0, "loss_credit": 0},
+                        {"default": defaults, **{key: {} for key in DEFAULT_PROBABILITIES}}):
+            value = config(search_options=options)
+            before = deepcopy(value)
+            validate_config(value)
+            self.assertEqual(value, before)
+        invalid = [[], True, 1, "{}", {"unknown": 1}, {"BOSS4": {}}, {"boss2": {}},
+                   {"evaluation": 1, "BOSS2": {}}, {"default": None}, {"BOSS2": 1},
+                   {"BOSS2": {"default": {}}}, {"default": {"unknown": 0}},
+                   *({"evaluation": v} for v in (-1, 2, 1., True, "1", None)),
+                   {"exploration": 0}]
+        for key in ("exploration", "hp_weight", "potion_weight", "loss_credit"):
+            invalid.extend({key: v} for v in (-1, float("nan"), float("inf"), float("-inf"),
+                                              True, "1", None, [], 10**1000))
+        for options in invalid:
+            with self.subTest(options=options), self.assertRaisesRegex(ValueError, "search_options"):
+                validate_config(config(search_options=options))
 
     def test_details_abstention_discards_previous_chunks_and_preserves_policy_action(self):
         class Empty(DetailsWorker):
@@ -562,6 +621,54 @@ class CollectionTests(LifecycleTests):
             result = worker.submit("search_details_public", 10, [1], [2], 0).result()
             self.assertEqual(result, [{"chosen": 2}])
             call.assert_called_once_with("search_details_public", 10, [1], [2], 0)
+            call.reset_mock()
+            options = {"evaluation": 1}
+            self.assertEqual(worker.search_details_public(10, [1], [2], 0, options), [{"chosen": 2}])
+            call.assert_called_once_with("search_details_public", 10, [1], [2], 0, options)
+
+    def test_details_options_reset_on_success_abstention_and_failures(self):
+        options = {"evaluation": 1, "hp_weight": 0}
+        native = SimpleNamespace(set_search_options=Mock(), reset_search_options=Mock())
+        raw = SimpleNamespace(sts=native, bc=object(), combat_observation="unused", advance_to_decision=lambda: None)
+        episode = FreshPanelEpisode({})
+        episode.episode = SimpleNamespace(env=SimpleNamespace(_env=raw), _observe=lambda: self.states()[1])
+        for outcome in ([{"chosen": 2}], [], RuntimeError("native error"), ValueError("mapping error")):
+            native.set_search_options.reset_mock()
+            native.reset_search_options.reset_mock()
+            def query(*args):
+                native.set_search_options.assert_called_once_with(**options)
+                native.reset_search_options.assert_not_called()
+                if isinstance(outcome, Exception):
+                    raise outcome
+                return outcome
+            with patch.object(PanelEpisode, "_search_details", side_effect=query):
+                if isinstance(outcome, Exception):
+                    with self.assertRaisesRegex(type(outcome), str(outcome)):
+                        episode.search_details_public(10, [1], [2], 0, options)
+                else:
+                    self.assertEqual(episode.search_details_public(10, [1], [2], 0, options), outcome)
+            native.reset_search_options.assert_called_once_with()
+        native.reset_search_options.reset_mock()
+        native.set_search_options.side_effect = ValueError("invalid option")
+        with self.assertRaisesRegex(ValueError, "invalid option"):
+            episode.search_details_public(10, [1], [2], 0, options)
+        native.reset_search_options.assert_called_once_with()
+
+    def test_details_options_are_optional_on_old_modules_and_none_does_not_touch_them(self):
+        native = SimpleNamespace(set_search_options=Mock(), reset_search_options=Mock())
+        raw = SimpleNamespace(sts=native, bc=object(), combat_observation="unused", advance_to_decision=lambda: None)
+        episode = FreshPanelEpisode({})
+        episode.episode = SimpleNamespace(env=SimpleNamespace(_env=raw), _observe=lambda: self.states()[1])
+        with patch.object(PanelEpisode, "_search_details", return_value=[]) as query:
+            self.assertEqual(episode.search_details_public(10, [1], [2], 0), [])
+            native.set_search_options.assert_not_called()
+            native.reset_search_options.assert_not_called()
+            raw.sts = SimpleNamespace()
+            self.assertEqual(episode.search_details_public(10, [1], [2], 0), [])
+            query.reset_mock()
+            with self.assertRaisesRegex(RuntimeError, "native build with set_search_options"):
+                episode.search_details_public(10, [1], [2], 0, {})
+            query.assert_not_called()
 
     def test_boss_passage_secret_portal_and_final_victory(self):
         metrics = WorldMetrics()

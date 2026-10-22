@@ -108,7 +108,7 @@ class PanelEpisode(CurriculumEpisode):
         return votes
 
     def search_details_public(self, simulations: int, futures: list[int], search_seeds: list[int],
-                              rng_base: int) -> list[dict[str, Any]]:
+                              rng_base: int, options: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         """Canonical scratch searches with independent future and search seeds."""
         from sts_env._backend.lightspeed import _TYPED_COMBAT_OBSERVATIONS
         if len(futures) != len(search_seeds):
@@ -119,6 +119,18 @@ class PanelEpisode(CurriculumEpisode):
         if raw.bc is None:
             raise RuntimeError("search_details_public requires a pending combat decision")
         include = raw.combat_observation in _TYPED_COMBAT_OBSERVATIONS
+        if options is not None and not hasattr(raw.sts, "set_search_options"):
+            raise RuntimeError("Search options require a native build with set_search_options")
+        try:
+            if options is not None:
+                raw.sts.set_search_options(**options)
+            return self._search_details(raw, env, simulations, futures, search_seeds, rng_base, include)
+        finally:
+            if options is not None:
+                raw.sts.reset_search_options()
+
+    @staticmethod
+    def _search_details(raw, env, simulations, futures, search_seeds, rng_base, include):
         details = []
         for future, search_seed in zip(futures, search_seeds):
             scratch = raw.bc.copy()
@@ -292,8 +304,9 @@ class PanelWorker(CurriculumWorker):
         return {int(k): v for k, v in self._call("search_votes_public", simulations, list(samples), search_seed).items()}
 
     def search_details_public(self, simulations: int, futures: list[int], search_seeds: list[int],
-                              rng_base: int) -> list[dict[str, Any]]:
-        return self._call("search_details_public", simulations, list(futures), list(search_seeds), rng_base)
+                              rng_base: int, options: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        args = (simulations, list(futures), list(search_seeds), rng_base)
+        return self._call("search_details_public", *args, *(() if options is None else (options,)))
 
     def panel(self, spec: TaskSpec, fights: Sequence[tuple[str, str, int]], checkpoint: str,
               sample: bool = False, full_hp_rooms: Sequence[str] = ()) -> list[dict[str, Any]]:

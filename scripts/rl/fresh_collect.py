@@ -36,6 +36,8 @@ def parser():
     p.add_argument("--vote-rule", choices=RULES, default=argparse.SUPPRESS, help="Default best_line")
     p.add_argument("--teacher-plays", action="store_true", default=argparse.SUPPRESS, help="Benchmark only; exclude corpus from training")
     p.add_argument("--record-search", action="store_true", default=argparse.SUPPRESS, help="Save per-search diagnostics")
+    p.add_argument("--search-options", type=json.loads, default=argparse.SUPPRESS,
+                   help="Native search options as JSON; flat dict or default/encounter-group dicts")
     p.add_argument("--self-consistency-every", type=int, default=100,
                    help="TEST worlds only, hash-selected fraction 1/N, disjoint draw/RNG/search seeds; 0=disabled")
     return p

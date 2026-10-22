@@ -1,8 +1,88 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index 7dca98a..eb32fd7 100644
+index 5115165..cc74ec6 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -1573,6 +1573,20 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -9,6 +9,7 @@
+ 
+ #include <sstream>
+ #include <algorithm>
++#include <cmath>
+ #include <map>
+ #include <random>
+ #include <tuple>
+@@ -1525,7 +1526,8 @@ pybind11::dict searchBestBattleAction(
+ 
+     pybind11::dict provenance;
+     provenance["searcher"] = "BattleScumSearcher2";
+-    provenance["evaluation"] = "BattleScumSearcher2::evaluateEndState";
++    provenance["evaluation"] = searcher.options.evaluation == 0
++        ? "BattleScumSearcher2::evaluateEndState" : "win_first";
+     provenance["search_seed"] = effectiveSearchSeed;
+     provenance["draw_order_perturbed"] = drawOrderPerturbed;
+     provenance["hidden_pile_order_canonicalized"] = drawOrderPerturbed;
+@@ -1551,6 +1553,61 @@ pybind11::dict searchBestBattleAction(
+ 
+ PYBIND11_MODULE(slaythespire, m) {
+     m.doc() = "pybind11 example plugin"; // optional module docstring
++    m.def("set_search_options", [](pybind11::object evaluation, pybind11::object exploration,
++                                   pybind11::object hpWeight, pybind11::object potionWeight,
++                                   pybind11::object lossCredit) {
++        auto number = [](const pybind11::object &value, const char *name) {
++            const auto message = std::string(name) + " must be a finite non-negative number";
++            if (pybind11::isinstance<pybind11::bool_>(value) ||
++                !(pybind11::isinstance<pybind11::int_>(value) || pybind11::isinstance<pybind11::float_>(value))) {
++                throw pybind11::value_error(message);
++            }
++            double result;
++            try {
++                result = value.cast<double>();
++            } catch (const pybind11::cast_error &) {
++                throw pybind11::value_error(message);
++            } catch (const pybind11::error_already_set &) {
++                throw pybind11::value_error(message);
++            }
++            if (!std::isfinite(result) || result < 0) {
++                throw pybind11::value_error(message);
++            }
++            return result;
++        };
++        if (pybind11::isinstance<pybind11::bool_>(evaluation) ||
++            !pybind11::isinstance<pybind11::int_>(evaluation)) {
++            throw pybind11::value_error("evaluation must be 0 or 1");
++        }
++        const double mode = number(evaluation, "evaluation");
++        if (mode != 0 && mode != 1) {
++            throw pybind11::value_error("evaluation must be 0 or 1");
++        }
++        search::SearchOptions options;
++        options.evaluation = static_cast<int>(mode);
++        options.exploration = number(exploration, "exploration");
++        if (options.exploration == 0) {
++            throw pybind11::value_error("exploration must be positive");
++        }
++        options.hpWeight = number(hpWeight, "hp_weight");
++        options.potionWeight = number(potionWeight, "potion_weight");
++        options.lossCredit = number(lossCredit, "loss_credit");
++        search::g_search_options = options;
++    }, pybind11::arg("evaluation") = 0, pybind11::arg("exploration") = 3*sqrt(2),
++       pybind11::arg("hp_weight") = 1.0, pybind11::arg("potion_weight") = 4.0,
++       pybind11::arg("loss_credit") = 1.0,
++       "Set this thread's options for subsequently constructed combat searches.");
++    m.def("get_search_options", []() {
++        const auto &options = search::g_search_options;
++        pybind11::dict result;
++        result["evaluation"] = options.evaluation;
++        result["exploration"] = options.exploration;
++        result["hp_weight"] = options.hpWeight;
++        result["potion_weight"] = options.potionWeight;
++        result["loss_credit"] = options.lossCredit;
++        return result;
++    });
++    m.def("reset_search_options", []() { search::g_search_options = search::SearchOptions{}; });
+     m.def("play", &sts::py::play, "play Slay the Spire Console");
+     m.def("get_seed_str", &SeedHelper::getString, "gets the integral representation of seed string used in the game ui");
+     m.def("get_seed_long", &SeedHelper::getLong, "gets the seed string representation of an integral seed");
+@@ -1717,6 +1774,20 @@ PYBIND11_MODULE(slaythespire, m) {
  
      pybind11::class_<BattleContext> battleContext(m, "BattleContext");
      battleContext.def(pybind11::init<>())
@@ -23,7 +103,7 @@ index 7dca98a..eb32fd7 100644
          .def("init", [](BattleContext &bc, const GameContext &gc) { bc.init(gc); },
               "initialize the battle from the current GameContext; drains the engine to the first player decision or a decided outcome")
          .def("exit_battle", [](BattleContext &bc, GameContext &gc) { bc.exitBattle(gc); },
-@@ -1767,6 +1781,22 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -1944,6 +2015,22 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("cur_room", &GameContext::curRoom)
          .def_property_readonly("current_event", [](const GameContext &gc) { return std::string(publicEventNames[static_cast<int>(gc.curEvent)]); })
          .def("public_event", &publicEvent)
@@ -46,3 +126,112 @@ index 7dca98a..eb32fd7 100644
          .def_readwrite("boss", &GameContext::boss)
  
          .def_readwrite("cur_hp", &GameContext::curHp)
+diff --git a/include/sim/search/BattleScumSearcher2.h b/include/sim/search/BattleScumSearcher2.h
+index a037a29..ebabc25 100644
+--- a/include/sim/search/BattleScumSearcher2.h
++++ b/include/sim/search/BattleScumSearcher2.h
+@@ -15,6 +15,16 @@
+ 
+ namespace sts::search {
+ 
++    struct SearchOptions {
++        int evaluation = 0;
++        double exploration = 3*sqrt(2);
++        double hpWeight = 1;
++        double potionWeight = 4;
++        double lossCredit = 1;
++    };
++
++    extern thread_local SearchOptions g_search_options;
++
+     typedef std::function<double (const BattleContext&)> EvalFnc;
+ 
+     // to find a solution to a battle with tree pruning
+@@ -35,7 +45,8 @@ namespace sts::search {
+         Node root;
+ 
+         EvalFnc evalFnc;
+-        double explorationParameter = 3*sqrt(2);
++        const SearchOptions options;
++        double explorationParameter;
+ 
+         // `min()` is the smallest positive value, not the most negative value.
+         // Losing playout evaluations may be negative, so `min()` could leave the
+@@ -72,6 +83,7 @@ namespace sts::search {
+         void enumeratePotionActions(Node &node, const BattleContext &bc);
+         void enumerateCardSelectActions(Node &node, const BattleContext &bc);
+         static double evaluateEndState(const BattleContext &bc);
++        double evaluateSearchEndState(const BattleContext &bc) const;
+ 
+         void printSearchTree(std::ostream &os, int levels);
+         void printSearchStack(std::ostream &os, bool skipLast=false);
+diff --git a/src/sim/search/BattleScumSearcher2.cpp b/src/sim/search/BattleScumSearcher2.cpp
+index d715863..d86cb12 100644
+--- a/src/sim/search/BattleScumSearcher2.cpp
++++ b/src/sim/search/BattleScumSearcher2.cpp
+@@ -14,20 +14,22 @@ using namespace sts;
+ std::int64_t simulationIdx = 0; // for debugging
+ 
+ namespace sts::search {
++    thread_local SearchOptions g_search_options;
+     thread_local search::BattleScumSearcher2 *g_debug_scum_search;
+ }
+ 
+ 
+ 
+ search::BattleScumSearcher2::BattleScumSearcher2(const BattleContext &bc, search::EvalFnc _evalFnc)
+-    : rootState(new BattleContext(bc)), evalFnc(std::move(_evalFnc)), randGen(bc.seed+bc.floorNum) {
++    : rootState(new BattleContext(bc)), evalFnc(std::move(_evalFnc)),
++      options(g_search_options), explorationParameter(options.exploration), randGen(bc.seed+bc.floorNum) {
+ }
+ 
+ void search::BattleScumSearcher2::search(int64_t simulations) {
+     g_debug_scum_search = this;
+ 
+     if (isTerminalState(*rootState)) {
+-        auto evaluation = evaluateEndState(*rootState);
++        auto evaluation = evaluateSearchEndState(*rootState);
+         outcomePlayerHp = rootState->player.curHp;
+         bestActionSequence = {};
+ 
+@@ -93,7 +95,7 @@ void search::BattleScumSearcher2::step() {
+ }
+ 
+ void search::BattleScumSearcher2::updateFromPlayout(const std::vector<Node *> &stack, const std::vector<Action> &actionStack, const BattleContext &endState) {
+-    const auto evaluation = evaluateEndState(endState);
++    const auto evaluation = evaluateSearchEndState(endState);
+ 
+     if (evaluation > bestActionValue) {
+         bestActionSequence = actionStack;
+@@ -124,7 +126,12 @@ double search::BattleScumSearcher2::evaluateEdge(const search::BattleScumSearche
+     if (!bestActionSequence.empty()) {
+         auto avgEvaluation = edge.node.evaluationSum / (edge.node.simulationCount+1);
+         double evalRange = bestActionValue - minActionValue;
+-        qualityValue = avgEvaluation / evalRange;
++        // Win-first scores can deliberately tie (for example, ignoring HP).
++        // With no observed value difference, let exploration choose the edge.
++        // Preserve legacy arithmetic exactly for the default evaluator.
++        if (options.evaluation == 0 || evalRange > 0) {
++            qualityValue = avgEvaluation / evalRange;
++        }
+     }
+ 
+     double explorationValue = explorationParameter *
+@@ -438,6 +445,17 @@ double getNonMinionMonsterCurHpRatio(const BattleContext &bc) {
+     return (double)curHpTotal / maxHpTotal;
+ }
+ 
++double search::BattleScumSearcher2::evaluateSearchEndState(const BattleContext &bc) const {
++    if (options.evaluation == 1) {
++        if (bc.outcome == Outcome::PLAYER_VICTORY) {
++            return 1.0 + 0.1 * (options.hpWeight * bc.player.curHp + options.potionWeight * bc.potionCount)
++                / std::max(1, bc.player.maxHp);
++        }
++        return 0.1 * options.lossCredit * (1 - getNonMinionMonsterCurHpRatio(bc));
++    }
++    return evaluateEndState(bc);
++}
++
+ double search::BattleScumSearcher2::evaluateEndState(const BattleContext &bc) {
+     double potionScore = bc.potionCount * 4;
+ 

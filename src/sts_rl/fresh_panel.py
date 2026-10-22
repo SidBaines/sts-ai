@@ -131,9 +131,9 @@ class FreshPanelEpisode(PanelEpisode):
             raise RuntimeError("Public-search query mutated the live decision")
         return votes
 
-    def search_details_public(self, simulations, futures, search_seeds, rng_base):
+    def search_details_public(self, simulations, futures, search_seeds, rng_base, options=None):
         before = public_hash(self.episode._observe())
-        details = super().search_details_public(simulations, futures, search_seeds, rng_base)
+        details = super().search_details_public(simulations, futures, search_seeds, rng_base, options)
         if public_hash(self.episode._observe()) != before:
             raise RuntimeError("Public-search query mutated the live decision")
         return details
