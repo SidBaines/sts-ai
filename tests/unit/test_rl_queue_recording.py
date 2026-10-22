@@ -73,3 +73,18 @@ class QueueRecordingTests(unittest.TestCase):
         self.assertEqual(run['status'], 'failed')
         self.assertEqual(run['cmd'], ['python', 'fit.py'])
         self.assertNotIn('retried', run)
+
+
+class RunnerLockTests(unittest.TestCase):
+    def test_second_runner_cannot_take_the_lock_until_the_first_releases_it(self):
+        spec = importlib.util.spec_from_file_location('rl_queue_lock', Path(__file__).parents[2] / 'scripts/rl/queue_runner.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'runner.lock'
+            first = module.hold_runner_lock(path)
+            self.assertIsNotNone(first)
+            self.assertIsNone(module.hold_runner_lock(path))
+            first.close()
+            again = module.hold_runner_lock(path)
+            self.assertIsNotNone(again)
+            again.close()

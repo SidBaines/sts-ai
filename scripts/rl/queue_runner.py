@@ -27,6 +27,7 @@ RUNS = ROOT / "data" / "rl_runs"
 QUEUE = RUNS / "queue.json"
 LOCK = RUNS / "queue.lock"
 STATUS = RUNS / "runner_status.json"
+RUNNER_LOCK = RUNS / "runner.lock"
 STALL_MINUTES = 40
 LAUNCHED: dict[int, subprocess.Popen] = {}
 ENV = {"PYTHONPATH": str(ROOT / "src"),
@@ -43,6 +44,23 @@ class Locked:
     def __exit__(self, *_):
         fcntl.flock(self.fh, fcntl.LOCK_UN)
         self.fh.close()
+
+
+def hold_runner_lock(path: Path | None = None):
+    """Exclusive lock held for a runner's lifetime, or None if another runner holds it.
+
+    A stale heartbeat (a sleeping laptop, a slow loop) once let `start` launch a second
+    runner beside a live one; the lock makes a second runner exit at once instead.
+    """
+    path = path or RUNNER_LOCK
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = path.open("w")
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        handle.close()
+        return None
+    return handle
 
 
 def read_queue() -> dict:
@@ -233,8 +251,9 @@ def main() -> None:
     elif command == "start":
         if STATUS.exists():
             status = json.loads(STATUS.read_text())
-            if alive(status["pid"]) and time.time() - status["heartbeat"] < 120:
-                print("runner already alive", status["pid"])
+            if alive(status["pid"]):
+                stale = time.time() - status["heartbeat"] >= 120
+                print("runner already alive", status["pid"], "(heartbeat stale)" if stale else "")
                 return
         RUNS.mkdir(parents=True, exist_ok=True)
         proc = subprocess.Popen([sys.executable, __file__, "_run"], cwd=ROOT, start_new_session=True,
@@ -242,6 +261,10 @@ def main() -> None:
                                 stderr=subprocess.STDOUT)
         print("runner started", proc.pid)
     elif command == "_run":
+        lock = hold_runner_lock()
+        if lock is None:
+            print("another runner holds", RUNNER_LOCK, "- exiting")
+            return
         runner()
     else:
         print(json.dumps({"status": json.loads(STATUS.read_text()) if STATUS.exists() else None,

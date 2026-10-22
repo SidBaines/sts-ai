@@ -168,6 +168,11 @@ Caveats:
 
 ## Log
 
+- 22 Oct, 11:27: confirmation of the combination queued on 4,096 unused
+  worlds from 99,000,000,000, with the trained checkpoint (old student) on
+  the same worlds. Decision rule, fixed now: the combination is confirmed
+  if it wins more than the trained checkpoint there with exact McNemar
+  p < 0.05.
 - 22 Oct, 11:26: trained checkpoint 672 against 527 on DEV and 691 against
   507 on unused worlds from 96,000,000,000; with the round 2 combat student
   701 on DEV. The laptop ran on battery overnight, so the evaluations
