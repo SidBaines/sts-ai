@@ -132,6 +132,10 @@ splice it into the player.
 - Round 1 was the 15 October student, which added about 2 points to the
   previous champion ([fresh start](experiments/2026-10-15-fresh-start.md)).
 - Cheap: about 1.7 hours of labelling and 7 minutes of fitting per round.
+- But round 3 (22 October) was much worse (−2 floors, about −3.7 points of
+  wins on two world sets) with the same recipe; fit-to-fit variance is
+  being measured before any single refit is trusted
+  ([round 3](experiments/2026-10-21-combat-student-round-3.md)).
 
 ## Distilling strategy rules
 

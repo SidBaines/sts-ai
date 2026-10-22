@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 22 October 2026
 
+- **Combat round 3 regressed**, 12:42: 438 against 576 on DEV and 388
+  against 547 on unused worlds (floor −2). A fit-variance check and the
+  all-corpora fit (option 3) are running, and boss-only labelling of 4,000
+  of the champion's games has started.
 - **New champion**, 12:13: Sid promoted the second continued training's
   out-of-combat head with the round 2 combat student
   (`champion_85ea9019ff95.pt`, 18.4% on unused worlds); the third
