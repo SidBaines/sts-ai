@@ -6,7 +6,14 @@ what failed. Commands and module usage: [src/sts_rl/README.md](../../src/sts_rl/
 
 - **Run jobs through `queue_runner.py`** (detached, pauses on battery, one job
   per `--lane`). Run outputs and logs are in `data/rl_runs/<name>/`.
-- **Disk trap:** record-search outputs and fit manifests are large; collectors and fits stop below 6 GiB free. Run `disk_report.py` before launching big batches.
+- **Disk trap:** record-search outputs and fit manifests are large; collectors and fits stop below 6 GiB free, and
+  a busy day writes about 9 GiB of run data. Run `disk_report.py` before launching big batches.
+- **Check disk periodically** (at least daily during long sessions, and whenever free space is under about
+  30 GiB): run `disk_report.py <each data/rl_runs root> --out <nonllm-large-batch>/data/disk_reports`. Sid
+  approved applying `--apply compress-fit-manifests --apply interrupted-fit-outputs --apply
+  trainer-latest-duplicates` whenever the report finds candidates; every action is logged to
+  `cleanup_log.tsv` there. Anything beyond those three rules (deleting checkpoints, corpora, evaluation games
+  or benchmark details) needs Sid's approval. There is deliberately no scheduled job.
 - **Native build:** `build_native_rl.sh` applies the current environment patch
   plus `patches/sts_lightspeed_rl_panel.patch`
   (`GameContext.copy/enter_battle/upcoming_*_encounters`). The fight panel
