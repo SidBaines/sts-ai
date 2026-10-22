@@ -33,8 +33,15 @@ labelling only boss fights, across more of the champion's games, help?
 - **Boss-only corpus:** the champion plays 4,000 new training worlds from
   90,500,300,000 (eight shards of 500); the teacher labels every Act 1, 2
   and 3 boss decision and nothing else, so the same labelling time covers
-  about twice as many distinct boss arrivals. Its use is decided after the
-  variance check.
+  about twice as many distinct boss arrivals. Use, fixed before the corpus
+  finished: two students (seeds 1 and 2) fitted on the round 2 and round 3
+  corpora plus the boss-only corpus (new opt-in `--mixed-sampling`, which
+  pools corpora whose teacher-probability profiles differ), each in the
+  champion's out-of-combat head, on second DEV paired with the champion;
+  *Better* if a student wins more with exact McNemar p < 0.05, then
+  confirmed on unused worlds. Because two seeds are tried, a pass is
+  exploratory until confirmed. Early stopping uses pooled validation loss,
+  which the boss-only corpus tilts towards boss fights.
 - **Approval:** Sid, 22 October ("do option 3", "the boss-only labelling
   round next").
 
@@ -84,6 +91,8 @@ Pending.
 
 ## Log
 
+- 22 Oct, 13:54: `--mixed-sampling` merged after review; boss-corpus fits
+  armed to start when the corpus completes.
 - 22 Oct, 13:33: round 3 seed 2 is fine (689 against 701): the round 3
   collapse was fit variance. The all-corpora fit is being evaluated.
 - 22 Oct, 12:42: fits, splices and evaluations queued (detached
