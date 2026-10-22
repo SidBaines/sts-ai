@@ -192,6 +192,38 @@ class FreshScoringTests(unittest.TestCase):
                 self.assertEqual(summary['status'],'completed')
                 self.assertEqual(summary['test_rows'],6)
 
+    def test_relabelled_training_and_deferred_scoring_preserve_scientific_identity(self):
+        with tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:
+            root=Path(tmp)
+            data,source=fixture(root,record_search=True)
+            self.runtime(stack,source)
+            self.train(root,data,'old',old_size='small',relabel_vote_rule='pooled_mean')
+            manifest=read_json(fit_manifest_path(root/'run'))
+            self.assertEqual(manifest['relabel_vote_rule'],'pooled_mean')
+            payload=load_checkpoint(root/'run'/'best.pt')
+            condition=fresh_training.checkpoint_training_condition(payload)
+            self.assertEqual(condition['relabel_vote_rule'],'pooled_mean')
+            for config in (payload['metadata']['config'],read_json(root/'run'/'config.json')):
+                self.assertEqual(config['relabel_vote_rule'],'pooled_mean')
+                self.assertEqual(config['data_identity'],manifest['data_identity'])
+            launch=read_json(payload['metadata']['source_receipt']['launch']['path'])
+            self.assertEqual(launch['effective_config']['relabel_vote_rule'],'pooled_mean')
+            path,_=self.selection(root)
+            invalid=deepcopy(payload)
+            invalid['metadata']['config']['relabel_vote_rule']='best_line'
+            with patch.object(fresh_scoring,'load_checkpoint',return_value=invalid), \
+                 patch.object(fresh_scoring,'freeze_manifest',side_effect=AssertionError('raw data access')):
+                with self.assertRaisesRegex(ValueError,'config/manifest relabel_vote_rule mismatch'):
+                    score_deferred(path,root/'invalid-score')
+            self.assertFalse((root/'invalid-score').exists())
+            summary=score_deferred(path,root/'score')
+            self.assertEqual(summary['status'],'completed')
+            self.assertEqual(summary['test_rows'],3)
+            rows=[json.loads(line) for line in (root/'score'/'test_rows.jsonl').read_text().splitlines()]
+            for row in rows:
+                self.assertEqual(row['training_condition'],condition)
+                self.assertEqual(row['target'],[0.]*7+[1.])
+
     def test_finalizer_cpu_singletons_actor_only_no_updates_and_fresh_output(self):
         for architecture in ('new','old'):
             with self.subTest(architecture=architecture),tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:

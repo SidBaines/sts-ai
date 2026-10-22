@@ -43,6 +43,8 @@ def score_deferred(selection_path, out, *, deadline_utc=None):
     payload = load_checkpoint(checkpoint['path'],expected_data_identity=manifest['data_identity'])
     metadata = payload['metadata']
     config = metadata['config']
+    if config.get('relabel_vote_rule') != manifest.get('relabel_vote_rule'):
+        raise ValueError('Checkpoint config/manifest relabel_vote_rule mismatch')
     architecture, phase = config['architecture'], config['phase']
     controlled_inputs = None
     if architecture == 'controlled' or metadata.get('kind') == 'entity_controlled_v1':
@@ -80,7 +82,8 @@ def score_deferred(selection_path, out, *, deadline_utc=None):
     try:
         control.check()
         if freeze_manifest(sources,control=control,mixed_sources=manifest.get('mixed_sources',False),
-                           mixed_sampling=manifest.get('mixed_sampling',False)) != manifest:
+                           mixed_sampling=manifest.get('mixed_sampling',False),
+                           relabel_vote_rule=manifest.get('relabel_vote_rule')) != manifest:
             raise ValueError('Frozen manifest/source identities differ')
         effective = {'stage':'deferred_test_scoring','training':False,'weight_updates':0,
                      'architecture':architecture,'phase':phase,'device':'cpu',
