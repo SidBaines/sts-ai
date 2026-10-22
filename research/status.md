@@ -1,6 +1,6 @@
 # Status
 
-**Updated 22 October 2026, 23:35 BST.** Several jobs run; nothing waits for Sid. Champion:
+**Updated 22 October 2026, 23:51 BST.** Several jobs run; nothing waits for Sid. Champion:
 `champion_af2fb9f1f260.pt` (21.1% on unused worlds).
 
 - **Champion promoted 22 October, 16:32:** the third continued training's
@@ -34,9 +34,14 @@
   `scripts/rl/disk_report.py` (log `nonllm-large-batch/data/disk_reports/cleanup_log.tsv`).
   New fits write compressed manifests. See `scripts/rl/CLAUDE.md` for the
   periodic check.
-- **[Joint run 2](experiments/2026-10-22-joint-run-2.md):** planned; the
-  rewritten orchestrator is under review; the trainer will queue behind the
-  fourth continued training (iteration 5 of 24 at 23:10; ends about 03:00).
+- **[Joint run 2](experiments/2026-10-22-joint-run-2.md):** trainer
+  `joint2-train` queued on lane `train` of the `nonllm-large-batch` queue
+  behind the fourth continued training (ends about 03:00); output
+  `joint2_20261022/`. The detached watcher `joint2_start_and_compare.sh`
+  (session scratchpad, `joint2/`) starts the orchestrator when the trainer
+  starts and, when both runs finish, plays all arms on worlds from
+  105,000,000,000. Check `joint2_20261022/loop/heartbeat.json` and
+  `decisions.jsonl`; create `joint2_20261022/loop/STOP` to stop the loop.
 - **Finished today:** boss-label combat fits (no student beat the champion), combat fit variance (one fit in four collapses; round
   3's collapse was a bad fit), all-corpora fit (worse), the lineage plot
   (`scripts/rl/plot_lineage.py`), `--mixed-sources` and `--combat-follow`
