@@ -176,7 +176,34 @@ recent-action list). The champion rarely takes these cards, so the fix
 would change few labels now; it could matter more if a better teacher made
 the cards worth taking.
 
-**Step 0, benchmark:** running.
+**Step 0, benchmark: the teacher wins far more boss fights than the
+champion's own combat network, and the two vote rules play about equally
+well.** 1,024 second-DEV worlds (the first quarter of second DEV); the
+champion plays everything except boss fights, which the teacher plays
+(24 searches of 1,000 simulations per decision); paired with the
+champion's own games on the same worlds:
+
+| Boss fights played by | Wins | Paired difference in wins | Act 1 / Act 2 / Act 3 boss pass, paired difference |
+|---|---:|---|---|
+| Champion's combat network | 205 (20.0%) | | 95.1% / 67.9% / 38.4% |
+| Teacher, today's vote (luckiest line) | 333 (32.5%) | +12.5 points (discordant 44/172, p < 0.001) | +0.3 [−0.9, +1.5] / **+12.9 [+9.9, +15.8]** / **+16.2 [+12.0, +20.4]** |
+| Teacher, best mean result | 345 (33.7%) | +13.7 points (38/178, p < 0.001) | +0.2 [−1.0, +1.4] / **+14.7 [+12.0, +17.5]** / **+16.2 [+11.8, +20.5]** |
+
+- Best mean result against today's vote, paired: 345 against 333 wins
+  (+1.2 points [−1.0, +3.4], discordant 61/73, p = 0.34): no clear
+  difference as players. Aggregated over 24 searches, the luckiest-line
+  noise largely averages out in play; it remains in the vote shares the
+  student is trained on.
+- The gap at the Act 2 and Act 3 bosses is the room that distillation has
+  not captured: students trained on these teachers' labels, including 4,000
+  worlds of boss-only labels, came out level with the champion at bosses
+  ([combat variance](2026-10-22-combat-variance.md)).
+- Pairing check: 23 of 1,024 worlds left the champion's own game before the
+  teacher's first move, at out-of-combat choices where the network's top two
+  scores differ by less than 0.000004 (equal cards to upgrade, equal map
+  nodes); batched and single-game inference break such ties differently.
+  This adds noise to the pairing, not bias.
+- Most-visited and pooled-search arms: running.
 
 ## Conclusion
 
@@ -204,5 +231,8 @@ Pending.
 - 2026-10-22, 17:51: noise measurement done (table above). It changes the
   order of work: fix the vote rule and raise the budget before building
   information-set search.
+- 2026-10-22, 19:35: benchmark: the teacher at bosses wins 32.5 to 33.7%
+  against the champion's 20.0%; the student has not learned the teacher's
+  boss play.
 
 Code: `experiments/2026-10-22-better-teacher/` (not yet written).

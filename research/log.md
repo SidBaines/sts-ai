@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 22 October 2026
 
+- **Teacher benchmark**, 19:35: with the teacher playing boss fights inside
+  the champion's games, wins rise from 205 to 333 (today's vote) or 345
+  (best mean result) of 1,024; the two votes play about equally. Act 2 and
+  Act 3 boss pass +13 to +16 points: distillation has not captured this.
 - **Boss-label student in the new champion**, 17:03: 927 against 899 (p =
   0.34), no clear difference; not adopted.
 - **Boss-only combat fits**, 16:52: seed 1 646 against 701 (worse, lost
