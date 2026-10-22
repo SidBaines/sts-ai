@@ -1,6 +1,6 @@
 # Status
 
-**Updated 22 October 2026, 22:20 BST.** Several jobs run; nothing waits for Sid. Champion:
+**Updated 22 October 2026, 22:36 BST.** Several jobs run; nothing waits for Sid. Champion:
 `champion_af2fb9f1f260.pt` (21.1% on unused worlds).
 
 - **Champion promoted 22 October, 16:32:** the third continued training's
@@ -26,9 +26,15 @@
   and the 38 missing worlds of the win-first arm (`shard_03b`); about two
   hours. A background watcher reruns `analyse_benchmark.py` on every arm;
   detached keep-alive `keepalive_bench2.py`.
-- **Disk:** free space fell to 9.3 GiB at 22:00 and stopped two benchmark
-  arms (collectors stop below 6 GiB). With Sid's approval the pip, uv and
-  Homebrew download caches were cleared: 21 GiB free at 22:19.
+- **Disk:** 78 GiB free at 22:36. Free space fell to 9.3 GiB at 22:00 and
+  stopped two benchmark arms (collectors stop below 6 GiB). With Sid's
+  approval: the pip, uv and Homebrew download caches were cleared, and the
+  240 files over 20 MB in the old LLM-era data (`~/Documents/SlayTheSpireAI/data`)
+  and the earlier non-LLM curriculum runs (`nonllm-curriculum` checkout's
+  `data/`) were deleted, 66.7 GiB in all. Each folder has a manifest,
+  `DELETED_LARGE_FILES_2026-10-22.tsv`. Kept: the 13 October composite
+  (`joint_act3_0030.pt`, root of the champion lineage) and a file served
+  by a running fight-lab viewer.
 - **Finished today:** boss-label combat fits (no student beat the champion), combat fit variance (one fit in four collapses; round
   3's collapse was a bad fit), all-corpora fit (worse), the lineage plot
   (`scripts/rl/plot_lineage.py`), `--mixed-sources` and `--combat-follow`
