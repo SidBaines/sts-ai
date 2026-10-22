@@ -54,12 +54,21 @@ same benchmark before any labelling.
 - Count how often Headbutt, Warcry or Frozen Eye appear in labelled combat
   decisions, and how often a mid-turn draw follows a card being put on top,
   to size point 4.
-- **Teacher benchmark:** a fixed bank of Act 1, Act 2 and Act 3 boss arrival
-  states taken from the champion's own games on worlds set aside for it.
-  Each teacher variant plays every fight itself, using public information
-  only, with paired seeds. Metric: boss fights won (plus HP left in Act 1
-  and 2 boss fights as a secondary metric), compared by McNemar's test.
-  This is the yardstick for every step below.
+- **Teacher benchmark:** full games on the second-DEV worlds under the
+  study protocol, in which the champion plays everything except boss
+  fights and the teacher variant plays every boss fight decision (public
+  information only). Metrics: wins and boss pass rates by act, paired by
+  world with the champion's own games (899 wins) and with the current
+  teacher. A cheaper variant reuses the label collector, so it shares the
+  champion's protocol exactly. The old boss-search evaluator
+  (`eval_search_boss.py`) is not used: it keeps out-of-combat potion
+  actions visible, so its numbers are not comparable. The first question
+  it answers: does the current teacher still beat the champion's own
+  combat network at bosses? If not, distilling it cannot help there.
+- Steps 1 and 2's vote rules (most visited, best mean result, pooled
+  searches) can be computed from the root statistics each search already
+  returns, so they are benchmarked before any native change. Score fixes
+  need the native change.
 
 **1. Vote and score fixes (cheap, together).** These have to go together:
 averaging results under the current score would trade win chance for HP.
@@ -144,5 +153,8 @@ Pending.
   including the encoder, with step 4 as a follow-on. Secret Technique and
   Secret Weapon still get no labels (1 abstention in 35,054 round 2
   labels); no fix is planned.
+- 2026-10-22: the search already returns per-move visits and values, so
+  step 0 and the vote rules need no native work; the benchmark runs in the
+  label collector (teacher-played decisions are marked never trainable).
 
 Code: `experiments/2026-10-22-better-teacher/` (not yet written).
