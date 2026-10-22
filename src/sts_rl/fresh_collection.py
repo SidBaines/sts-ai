@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, wait
 import hashlib
+import math
 from pathlib import Path
 import threading
 
@@ -29,6 +30,43 @@ DEFAULT_PROBABILITIES = {f"{room}{act}": probability for act in (1, 2, 3)
                          for room, probability in (("BOSS", 1.0 if act > 1 else .25), ("ELITE", .6 if act > 1 else .2),
                                                    ("MONSTER", .08 if act > 1 else .04),
                                                    ("EVENT", .08 if act > 1 else .04))}
+SEARCH_OPTION_KEYS = {"evaluation", "exploration", "hp_weight", "potion_weight", "loss_credit"}
+
+
+def search_options_for_group(options, key):
+    """Select a complete group override, then default, then native defaults."""
+    if options is None or not options or SEARCH_OPTION_KEYS.intersection(options):
+        return options
+    return options.get(key, options.get("default"))
+
+
+def validate_search_options(options):
+    if options is None:
+        return
+    if not isinstance(options, dict):
+        raise ValueError("search_options must be a dict or None")
+    if not options or SEARCH_OPTION_KEYS.intersection(options):
+        if set(options) - SEARCH_OPTION_KEYS:
+            raise ValueError("Unknown search_options keys")
+        for key, value in options.items():
+            if key == "evaluation":
+                if isinstance(value, bool) or not isinstance(value, int) or value not in (0, 1):
+                    raise ValueError("search_options evaluation must be 0 or 1")
+            else:
+                try:
+                    valid = (not isinstance(value, bool) and isinstance(value, (int, float))
+                             and math.isfinite(value) and value >= 0 and (key != "exploration" or value > 0))
+                except OverflowError:
+                    valid = False
+                if not valid:
+                    raise ValueError("search_options " + key + " must be finite and non-negative (exploration > 0)")
+    else:
+        if set(options) - {"default", *DEFAULT_PROBABILITIES}:
+            raise ValueError("Unknown search_options encounter groups")
+        for value in options.values():
+            if not isinstance(value, dict) or set(value) - SEARCH_OPTION_KEYS:
+                raise ValueError("search_options group values must be flat option dicts")
+            validate_search_options(value)
 
 
 def provenance(info):
@@ -153,6 +191,8 @@ class FightBank:
 
 
 def query_votes(worker, observation, plan, config, control):
+    if search_options_for_group(config.get("search_options"), group(observation)) is not None:
+        return votes_from_details(query_details(worker, observation, plan, config, control), "best_line")
     if len(policy_observation(observation)["legal_actions"]) <= 1:
         raise ValueError("Teacher queries require an informative combat menu")
     votes = Counter()
@@ -175,11 +215,13 @@ def query_details(worker, observation, plan, config, control):
     if len(policy_observation(observation)["legal_actions"]) <= 1:
         raise ValueError("Teacher queries require an informative combat menu")
     details = []
+    options = search_options_for_group(config.get("search_options"), group(observation))
     for offset in range(0, len(plan["samples"]), 4):
         control.check()
         futures = plan["samples"][offset:offset+4]
         chunk = worker.search_details_public(config["simulations"], futures,
-                                             [plan["search_seed"] + s for s in futures], plan["search_seed"])
+                                             [plan["search_seed"] + s for s in futures], plan["search_seed"],
+                                             **({"options": options} if options is not None else {}))
         if not chunk:
             return []
         if len(chunk) != len(futures):
@@ -230,6 +272,8 @@ def play_world(worker, policy, seed, config, control, progress, source, label_co
                     if informative and uniform < probability:
                         plan = search_plan(state_hash, config["samples"])
                         vote_rule = config.get("vote_rule", "best_line")
+                        if config.get("search_options") is not None:
+                            sample["search_options"] = search_options_for_group(config["search_options"], key)
                         if vote_rule == "best_line" and not config.get("record_search", False):
                             votes = query_votes(worker, observation, plan, config, control)
                         else:
@@ -435,7 +479,7 @@ def run_collection(config, policy, *, worker_factory=None):
 
 
 def validate_config(config):
-    import math
+    validate_search_options(config.get("search_options"))
     validate_world_range(config["world_start"], config["n"])
     if config["mode"] not in {"eval", "collect"}:
         raise ValueError("mode must be eval or collect")

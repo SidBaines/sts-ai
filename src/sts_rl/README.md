@@ -284,6 +284,22 @@ the default probabilities sample other rooms too. Self-consistency repeats alway
 use `best_line` votes, regardless of `--vote-rule`. Defaults preserve the existing
 search and trajectory behavior.
 
+`--search-options JSON` (config key `search_options`) configures native searches
+through the details path and records the selected options on each teacher sample.
+Use a flat dict or group dicts, for example
+`'{"default":{},"BOSS1":{"evaluation":1,"hp_weight":0},"BOSS2":{"evaluation":1,"hp_weight":0}}'`;
+group overrides replace the default dict, and missing groups fall back to `default`,
+then no options. `evaluation` defaults to 0 (the existing score); 1 uses `win_first`:
+wins score `1 + 0.1 * (hp_weight * HP + potion_weight * potions) / max(1, max_HP)`
+and losses score `0.1 * loss_credit * (1 - remaining_enemy_HP_ratio)`.
+`exploration` sets the UCT exploration coefficient (default `3 * sqrt(2)`);
+`hp_weight`, `potion_weight` and `loss_credit` default to 1, 4 and 1 and affect
+evaluation 1 only. Defaults reproduce today's teacher. For bosses, use
+`evaluation: 1, hp_weight: 0` to ignore surviving HP; smaller exploration focuses
+visits more strongly. Keep `loss_credit < 10` to ensure every win outranks a loss.
+Options apply to all queries including self-consistency repeats and reset after
+each details call; older native modules support only calls without options.
+
 `fresh_train.py` requires `--data`, `--probe`, `--architecture`, `--phase`,
 `--out` and `--deadline-utc`. All models initialize from scratch; the old
 control defaults to large/no menu context. `--batch`, `--lr`, `--steps` and
