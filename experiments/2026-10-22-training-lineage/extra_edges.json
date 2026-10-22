@@ -1,0 +1,125 @@
+{
+  "_about": "Lineage facts plot_lineage.py cannot read from run logs. Splices: the outputs of combine_heads.py (their embedded metadata names ooc_source and combat_source; checked with torch on 22 October). Branches: runs made by copying a run's latest.pt into a new folder and resuming; the parent and iteration come from the run's own notes and its first resume event. Champions: promoted checkpoints (later ones also have inputs/champion_*.json promotion records, which the script reads itself). eval_worlds_without_potion_actions: evaluation world sets used on simulator versions before 0.1.5, which had no out-of-combat potion actions (research/metrics.md), so a missing hide_ooc_potions there does not mean the halved potions-visible protocol.",
+  "default_combat_label": "original combat head (13 October composite)",
+  "externals": {
+    "joint_act3_0030.pt": {
+      "label": "13 October composite (joint_act3_0030, long curricula)"
+    }
+  },
+  "eval_world_labels": {
+    "5000000000": "13-14 Oct: ~1,000 DEV worlds from 5,000,000,000, older simulator",
+    "5800000000": "14 Oct overnight: 1,024 worlds from 5,800,000,000",
+    "91000000000": "from 20 Oct: 1,024 DEV worlds from 91,000,000,000"
+  },
+  "eval_worlds_without_potion_actions": [
+    "5000000000",
+    "5800000000"
+  ],
+  "splices": [
+    {
+      "id": "champion_ba2fa6a2987d_student_combat",
+      "label": "Splice: 20 Oct champion + 15 Oct combat student",
+      "output": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/large_batch_20261020/inputs/champion_ba2fa6a2987d_student_combat.pt",
+      "ooc": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/large_batch_20261020/inputs/champion_ba2fa6a2987d.pt",
+      "combat": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start/data/rl_runs/fresh_start_20261015/fit_old_combat_lr1e3_v1/best.pt",
+      "combat_label": "15 October combat student",
+      "note": "combat head distilled from the search teacher (old encoder, learning rate 0.001)"
+    },
+    {
+      "id": "champion_with_student_r2_newonly",
+      "label": "Splice: 21 Oct pm champion + round 2 combat student",
+      "output": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/combat_round2_20261021/champion_with_student_r2_newonly.pt",
+      "ooc": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/combat_round2_20261021/inputs/champion_2835f40fa439.pt",
+      "combat": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/combat_round2_20261021/fit_old_combat_r2_newonly_v1/best.pt",
+      "combat_label": "round 2 combat student (21 October)",
+      "note": "evaluated as a candidate (13.9% on unused worlds); not trained further"
+    },
+    {
+      "id": "c2_ooc_with_student_r2",
+      "label": "Splice: continued training 2 + round 2 combat student",
+      "output": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/continued2_20261021/c2_ooc_with_student_r2.pt",
+      "ooc": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/continued2_20261021/train/iter_0024.pt",
+      "combat": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/combat_round2_20261021/fit_old_combat_r2_newonly_v1/best.pt",
+      "combat_label": "round 2 combat student (21 October)",
+      "note": "promoted 22 October as champion_85ea9019ff95"
+    }
+  ],
+  "branches": [
+    {
+      "run": "ooc_branch_lr6e4",
+      "parent_run": "ooc_main_s1",
+      "iteration": 28,
+      "note": "notes: branch of ooc_main_s1 at update 28 with learning rate 0.0006"
+    },
+    {
+      "run": "ooc_branch_strat8",
+      "parent_run": "ooc_main_s1",
+      "iteration": 32,
+      "note": "notes: branch of ooc_main_s1 at update 32 with strategic temperature 8"
+    },
+    {
+      "run": "ooc_branch_smith70",
+      "parent_run": "ooc_main_s1",
+      "iteration": 33,
+      "note": "notes: branch of ooc_main_s1 (smith at HP >= 70% overlay); first resume event is iteration 33"
+    }
+  ],
+  "champions": [
+    {
+      "label": "Champion of 14 October: round 2 OOC PPO update 20 (champion_3d135d9bd53b)",
+      "short": "14 Oct",
+      "promoted": "2026-10-14",
+      "path": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start/data/rl_runs/fresh_start_20261015/inputs/champion_3d135d9bd53b.pt"
+    },
+    {
+      "label": "Champion of 20 October: large-batch recipe iteration 24 (champion_ba2fa6a2987d)",
+      "short": "20 Oct",
+      "promoted": "2026-10-20",
+      "path": "/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch/data/rl_runs/large_batch_20261020/inputs/champion_ba2fa6a2987d.pt"
+    },
+    {
+      "label": "Champion of 21 October, morning: round 3 student iteration 24 (champion_7d876c939a74)",
+      "short": "21 Oct am",
+      "promoted": "2026-10-21 09:30 BST",
+      "sha256": "7d876c939a74d48601e07b2dffb2a1366759255c18ebe6286bdbc60e93fc954b"
+    },
+    {
+      "label": "Champion of 21 October, afternoon: round 4 iteration 24 (champion_2835f40fa439)",
+      "short": "21 Oct pm",
+      "promoted": "2026-10-21 15:38 BST",
+      "sha256": "2835f40fa439a99fbbd0ce3295a951e17b2c5ee4fe42ff1de367f8160a72684d"
+    },
+    {
+      "label": "Champion of 22 October: continued training 2 head + round 2 combat student (champion_85ea9019ff95)",
+      "short": "22 Oct",
+      "promoted": "2026-10-22 12:13 BST",
+      "sha256": "85ea9019ff955086a82f7fbea05bd06b1020007137332e7562e99642ee477320"
+    }
+  ],
+  "labels": {
+    "ooc_main_s1": "First OOC PPO run (lambda 0.95, seed 1)",
+    "ooc_rep_s2": "Replicate from the composite (seed 2)",
+    "ooc_branch_lr6e4": "Branch: learning rate 0.0006",
+    "ooc_branch_strat8": "Branch: strategic exploration temperature 8",
+    "ooc_branch_smith70": "Branch: smith-at-70%-HP overlay",
+    "ooc_discover_strat8_lam1": "Discovery: exploration temperature 8, lambda 1",
+    "distill_smith85_i36": "Distil smith-at-85%-HP rule",
+    "ooc_ppo_from_distilled": "PPO from distilled, lambda 0.95",
+    "ooc_pfd_lam099": "PPO from distilled, lambda 0.99",
+    "ooc_pfd_lam1": "PPO from distilled, lambda 1",
+    "distill_r2_lam1i12": "Round 2 distil: smith 85% + elite 90% rules",
+    "ooc_r2_lam1": "Round 2 PPO, lambda 1",
+    "overnight_20261014/train/control_s7": "14 Oct overnight: control (seed 7)",
+    "overnight_20261014/train/cards4_s7": "14 Oct overnight: card temperature 4 (seed 7)",
+    "large_batch_20261020/recipe": "Large batch recipe (potions visible)",
+    "large_batch_20261020/recipe_hidden": "Large batch recipe, potion filter",
+    "large_batch_20261020/hygiene_hidden": "Large batch hygiene options, potion filter",
+    "large_batch_20261020/small_hidden": "Small batch control (768 games), potion filter",
+    "large_batch_20261020/round3_student": "Round 3: OOC PPO with the combat student",
+    "round4_20261021/round4": "Round 4: continued training",
+    "continued2_20261021/train": "Continued training 2",
+    "continued2_20261021/demon_form_distil": "Distil Demon Form rule (v1)",
+    "continued2_20261021/demon_form_distil_v3": "Distil Demon Form rule (v3)",
+    "continued3_20261022/train": "Continued training 3"
+  }
+}
