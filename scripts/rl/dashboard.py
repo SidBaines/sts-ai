@@ -18,15 +18,15 @@ What it shows, most important first:
   2. Fresh-world confirmations (data/rl_runs/fresh_eval/*.json).
   3. Jobs that are running, pending or paused now, with trainer health and ETA
      from the last three iteration times (including any pauses).
-  4. Training runs: the key lineage (RUN_INFO) and anything active by default;
+  4. Training runs: the key lineage (KEY_RUNS) and anything active by default;
      every other run is "archived" behind a toggle.
   5. Charts for the selected runs: floors, wins, boss outcomes, behaviour,
      gradient cosine, entropy, KL, value loss, iteration/collect/update time,
      and collection versus evaluation win rates.
 
-Labels for runs and eval files live in RUN_INFO and EVAL_LABELS below. Add an
-entry when a run or eval matters. Unlisted runs are archived, and unlisted eval
-files show their file name.
+Labels for runs and eval files live in LABELS and EVAL_LABELS below. KEY_RUNS
+sets the default selection and order; other inactive runs are archived even
+when labelled. Unlisted eval files show their file name.
 
 /api/state?since=<sig>&max_points=N omits the heavy fields when no log or eval
 file has changed since <sig>, so an idle poll is ~1-2 KB.
@@ -51,8 +51,13 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNS = ROOT / "data" / "rl_runs"
 PORT = 8791
 
-# Key runs, shown by default (in this order). Everything else is archived unless active.
-RUN_INFO = {
+# Descriptions do not affect the default selection.
+LABELS = {
+    "round4_20261021/round4": "First continued training (from round 3 student champion)",
+    "continued2_20261021/train": "Second continued training",
+    "continued3_20261022/train": "Third continued training (champion from 22 Oct 16:32)",
+    "continued4_20261022/train": "Fourth continued training (from the 22 Oct champion)",
+    "joint_20261022/train": "Joint loop: out-of-combat PPO following teacher-refitted combat heads",
     "large_batch_20261020/recipe": "Large batch: champion recipe at 3,072 games/iteration (potions visible out of combat during collection and eval)",
     "large_batch_20261020/recipe_hidden": "Large batch: same recipe with --hide-ooc-potions (deployment protocol)",
     "large_batch_20261020/hygiene_hidden": "Large batch: recipe + hide-ooc-potions + detached critic, normalised returns, strategic entropy 0.01",
@@ -63,6 +68,9 @@ RUN_INFO = {
     "ooc_main_s1": "E8 OOC PPO from original, seed 1 (λ=0.95)",
     "ooc_rep_s2": "E8 replicate, seed 2",
 }
+# Key runs, shown by default (in this order). Everything else is archived unless active.
+KEY_RUNS = ("round4_20261021/round4", "continued2_20261021/train", "continued3_20261022/train",
+            "continued4_20261022/train", "joint_20261022/train")
 EVAL_LABELS = {
     "distilled": "Update 36 + smith rule distilled",
     "distilled_elite90": "Update 36 + smith distilled, + elite ≥90% overlay",
@@ -245,14 +253,14 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
            "runs": None, "win": None, "fresh": None}
     if since == state_sig:
         return out
-    priority = {name: i for i, name in enumerate(RUN_INFO)}
+    priority = {name: i for i, name in enumerate(KEY_RUNS)}
     order = sorted(runs, key=lambda n: (priority.get(runs[n]["name"], len(priority)), n))
     shown = {}
     for name in order:
         run = runs[name]
         entry = {"name": run["name"], "root": run["root"],
-                 "label": RUN_INFO.get(run["name"]) or (run["config"].get("notes") or "")[:90],
-                 "key": run["name"] in RUN_INFO, "active": name in active_runs, "done": run["done"],
+                 "label": LABELS.get(run["name"]) or (run["config"].get("notes") or "")[:90],
+                 "key": run["name"] in KEY_RUNS, "active": name in active_runs, "done": run["done"],
                  "status": statuses.get(name, "done" if run["done"] else "stopped"), "config": run["config"],
                  "iterations": run["config"].get("iterations"), "n_train": len(run["train"]),
                  "train": run["train"], "evals": run["evals"], **_progress(run, now)}
@@ -277,6 +285,8 @@ def state_payload(path: str, extra_roots=()) -> bytes:
 PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>StS RL dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <style>
 :root{--bg:#fbfaf7;--fg:#1d1d1b;--mut:#6b6a66;--card:#fff;--line:#e4e1da;--acc:#2f6fdb;--good:#1a8f3c;--warn:#c47f00;--bad:#c0392b;--bar:#d8e4fb}
 @media (prefers-color-scheme: dark){:root{--bg:#161615;--fg:#ecebe7;--mut:#9b9a95;--card:#1f1f1d;--line:#34332f;--acc:#7aa7ff;--bar:#22324f}}
@@ -294,6 +304,7 @@ td.desc{white-space:normal;min-width:200px;max-width:280px}
 .ci .p{position:absolute;top:0;width:2px;height:10px;background:var(--acc)}
 .best td{font-weight:600}label{margin-right:10px;white-space:nowrap}.tw{overflow-x:auto}
 button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;padding:2px 8px;cursor:pointer}
+.run-toggle{border:0;padding:0;background:transparent}.grid h2 button{float:right;margin-left:8px}button:disabled{opacity:.4;cursor:default}
 </style></head><body>
 <h1>Slay the Spire RL</h1>
 <div class="mut small">Objective: complete the game, i.e. an Ascension 0 Act 3 boss win. Write-up: research/README.md · results: research/results.md</div>
@@ -305,26 +316,36 @@ button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(-
 <div class="card"><h2>Active now</h2><div class="tw"><table id="active"></table></div><div class="mut small" id="hist"></div></div>
 <div class="card"><h2>Fresh-world confirmations (1,024 untouched worlds)</h2><div class="tw"><table id="fresh"></table></div></div>
 </div>
-<div class="card"><h2>Training runs <button id="arch">show archived</button></h2><div class="tw"><table id="runs"></table></div>
+<div class="card"><h2>Training runs</h2>
+<div><button id="all">all</button> <button id="none">none</button> <button id="default">default</button>
+<button id="arch">show archived</button> <button id="reset-all">reset all zoom</button></div>
+<div class="tw"><table id="runs"></table></div>
 <div class="mut small" id="protocol"></div>
 <div class="mut small">ETA uses the last three completed iteration times, including pauses; future eval time is excluded.</div></div>
 <div class="grid">
-<div class="card"><h2>Paired gain vs original (floors, ±1.96 SE; 1,024 standard worlds)</h2><canvas id="c_paired"></canvas></div>
-<div class="card"><h2>Wins per 1,024-world eval (noisy; see the win set above)</h2><canvas id="c_wins"></canvas></div>
-<div class="card"><h2>Training-time floor (sampled collection policy)</h2><canvas id="c_train"></canvas></div>
-<div class="card"><h2>Sampled behaviour: smith (solid), elite path (dashed), card skip (dotted)</h2><canvas id="c_beh"></canvas></div>
-<div class="card"><h2>Act 2 boss pass (solid), Act 3 boss reach (dashed), per eval</h2><canvas id="c_boss"></canvas></div>
-<div class="card"><h2>Learning health: half-batch gradient cosine</h2><canvas id="c_cos"></canvas></div>
-<div class="card"><h2>Entropy</h2><canvas id="c_entropy"></canvas></div>
-<div class="card"><h2>KL per update (approx_kl)</h2><canvas id="c_kl"></canvas></div>
-<div class="card"><h2>Value loss</h2><canvas id="c_value"></canvas></div>
-<div class="card"><h2>Iteration minutes (solid), collect (dashed), update (dotted)</h2><canvas id="c_time"></canvas></div>
-<div class="card"><h2>Win rate: collection (solid), eval (dashed)</h2><canvas id="c_rate"></canvas></div>
+<div class="card"><h2>Paired gain vs original (floors, ±1.96 SE; 1,024 standard worlds) <button data-reset="c_paired">reset</button></h2><canvas id="c_paired"></canvas></div>
+<div class="card"><h2>Wins per 1,024-world eval (noisy; see the win set above) <button data-reset="c_wins">reset</button></h2><canvas id="c_wins"></canvas></div>
+<div class="card"><h2>Training-time floor (sampled collection policy) <button data-reset="c_train">reset</button></h2><canvas id="c_train"></canvas></div>
+<div class="card"><h2>Sampled behaviour: smith (solid), elite path (dashed), card skip (dotted) <button data-reset="c_beh">reset</button></h2><canvas id="c_beh"></canvas></div>
+<div class="card"><h2>Act 2 boss pass (solid), Act 3 boss reach (dashed), per eval <button data-reset="c_boss">reset</button></h2><canvas id="c_boss"></canvas></div>
+<div class="card"><h2>Learning health: half-batch gradient cosine <button data-reset="c_cos">reset</button></h2><canvas id="c_cos"></canvas></div>
+<div class="card"><h2>Entropy <button data-reset="c_entropy">reset</button></h2><canvas id="c_entropy"></canvas></div>
+<div class="card"><h2>KL per update (approx_kl) <button data-reset="c_kl">reset</button></h2><canvas id="c_kl"></canvas></div>
+<div class="card"><h2>Value loss <button data-reset="c_value">reset</button></h2><canvas id="c_value"></canvas></div>
+<div class="card"><h2>Iteration minutes (solid), collect (dashed), update (dotted) <button data-reset="c_time">reset</button></h2><canvas id="c_time"></canvas></div>
+<div class="card"><h2>Win rate: collection (solid), eval (dashed) <button data-reset="c_rate">reset</button></h2><canvas id="c_rate"></canvas></div>
 </div>
+<div class="mut small">Drag to zoom · ctrl/⌘ + wheel to zoom · shift + drag to pan · double-click or reset to restore</div>
 <script>
 const POLL_MS=30000, MAX_POINTS=400;
 const COLORS=['#2f6fdb','#d9480f','#2b8a3e','#ae3ec9','#e67700','#0b7285','#c2255c','#5c940d','#495057','#1971c2'];
 const charts={}; let runs={}, sig='', showArchived=false, timer=null, inflight=false, lastOk=null;
+const selected=new Map(), STORAGE_KEY='sts-rl-dashboard-runs';
+try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));
+ if(saved&&typeof saved==='object'&&!Array.isArray(saved)&&Object.values(saved).every(v=>typeof v==='boolean'))
+  Object.entries(saved).forEach(([n,v])=>selected.set(n,v))}catch(e){}
+const zoomPlugin=window.ChartZoom;
+if(zoomPlugin)Chart.register(zoomPlugin);
 const prev={};
 function set(id,html){if(prev[id]!==html){document.getElementById(id).innerHTML=html;prev[id]=html}}
 function fmt(v,d=2){return v==null||v!==v?'–':Number(v).toFixed(d)}
@@ -342,10 +363,21 @@ function trainText(t){return t?`floor ${fmt(t.collect_floor)} · wins ${t.collec
 function evalText(e){return e?`u${e.iteration}: ${e.wins??'–'}/${e.n??'?'} wins · floor ${fmt(e.mean_floor)}${faults(e)}`:'–'}
 function visible(){return Object.keys(runs).filter(n=>showArchived||runs[n].key||runs[n].active)}
 function color(n){return COLORS[Object.keys(runs).indexOf(n)%COLORS.length]}
+function saveSelection(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(Object.fromEntries(selected)))}catch(e){}}
+function toggleRun(n){selected.set(n,!selected.get(n));saveSelection();renderRuns();draw()}
+function selectRuns(mode){Object.keys(runs).forEach(n=>selected.set(n,mode==='all'||mode==='default'&&(runs[n].key||runs[n].active)));saveSelection();renderRuns();draw()}
+function resetZoom(id){charts[id]?.resetZoom?.('none')}
 function mk(id,ds,opts={}){const c=charts[id];
- if(c){const hidden=new Set(c.data.datasets.filter((d,i)=>!c.isDatasetVisible(i)).map(d=>d.label));ds.forEach(d=>{if(hidden.has(d.label))d.hidden=true});c.data.datasets=ds;c.update('none');return}
+ // Keep scale options (including the plugin's min/max) untouched on refresh.
+ if(c){c.data.datasets=ds;c.update('none');return}
+ opts.plugins??={};const legend=opts.plugins.legend||{};
+ opts.plugins.legend={...legend,onClick:()=>{},labels:{boxWidth:10,font:{size:11},...legend.labels}};
+ opts.plugins.zoom=zoomPlugin?{pan:{enabled:true,mode:'xy',modifierKey:'shift'},
+  zoom:{mode:'xy',drag:{enabled:true,threshold:5},wheel:{enabled:true},
+   onZoomStart:({event})=>event.type!=='wheel'||event.ctrlKey||event.metaKey}}:false;
  charts[id]=new Chart(document.getElementById(id),{type:'line',data:{datasets:ds},options:Object.assign({animation:false,parsing:false,
-  plugins:{legend:{labels:{boxWidth:10,font:{size:11}}}},scales:{x:{type:'linear',title:{display:true,text:'update'}}}},opts)})}
+  scales:{x:{type:'linear',title:{display:true,text:'update'}}}},opts)});
+ document.getElementById(id).addEventListener('dblclick',()=>resetZoom(id))}
 function pts(a,x,y,scale=1){return a.filter(r=>r[y]!=null&&Number.isFinite(r[y])).map(r=>({x:r[x],y:r[y]*scale}))}
 function rates(a,numerator,denominator){return a.filter(r=>r[numerator]!=null&&r[denominator]>0).map(r=>({x:r.iteration,y:100*r[numerator]/r[denominator]}))}
 function winTable(rows,id,maxHi){
@@ -366,22 +398,30 @@ async function load(){
   a+=`<tr><td title="${esc(j.out)}">${esc(j.name)}</td>${rootCell(j.root)}<td><span class="pill ${j.status}">${j.status}</span></td><td class="mut">${esc(j.lane)}</td><td class="num">${dur(j.elapsed)}</td><td>${progressText(j)}</td><td>${timing(j)}</td><td>${trainText(j.last_train)}</td><td class="mut">${evalText(j.last_eval)}</td></tr>`});
  set('active',s.active.length?a:'<tr><td class="mut">nothing running</td></tr>');
  set('hist','History: '+Object.entries(s.history).map(([k,v])=>`${v} ${k}`).join(', '));
- if(s.runs!==null){runs=s.runs;sig=s.sig;winTable(s.win,'win');winTable(s.fresh,'fresh');draw()}
+ if(s.runs!==null){runs=s.runs;sig=s.sig;
+  Object.keys(runs).forEach(n=>{if(!selected.has(n))selected.set(n,!!(runs[n].key||runs[n].active))});
+  winTable(s.win,'win');winTable(s.fresh,'fresh');draw()}
  s.active.forEach(j=>{if(runs[j.run])runs[j.run].eta=j.eta});renderRuns();
 }
 function renderRuns(){
- const names=visible();const n=Object.keys(runs).length;
- document.getElementById('arch').textContent=showArchived?`hide archived`:`show archived (${n-Object.keys(runs).filter(k=>runs[k].key||runs[k].active).length})`;
- let h='<tr><th>run</th><th>root / queue</th><th>description</th><th>status</th><th>progress</th><th>timing / estimated finish</th><th>latest train</th><th>latest eval</th><th class="num">paired vs orig</th></tr>';
+ const names=visible(), archived=Object.keys(runs).filter(n=>!runs[n].key&&!runs[n].active);
+ document.getElementById('arch').textContent=`${showArchived?'hide':'show'} archived (${archived.length}, ${archived.filter(n=>selected.get(n)).length} checked)`;
+ let h='<tr><th>show</th><th>run</th><th>root / queue</th><th>description</th><th>status</th><th>progress</th><th>timing / estimated finish</th><th>latest train</th><th>latest eval</th><th class="num">paired vs orig</th></tr>';
  names.forEach(nm=>{const r=runs[nm];const p=r.last_eval?.paired;const st=r.status;
-  h+=`<tr><td style="color:${color(nm)}">■ ${esc(r.name)}</td>${rootCell(r.root)}<td class="mut desc">${esc(r.label)}</td><td><span class="pill ${st}">${st}</span></td><td>${progressText(r)}</td><td>${timing(r)}</td><td>${trainText(r.last_train)}</td><td class="mut">${evalText(r.last_eval)}</td>
+  h+=`<tr><td><input type="checkbox" data-run="${esc(nm)}" aria-label="Show ${esc(r.name)} in all charts"${selected.get(nm)?' checked':''}></td><td><button class="run-toggle" data-run="${esc(nm)}" style="color:${color(nm)}" aria-pressed="${!!selected.get(nm)}">■ ${esc(r.name)}</button></td>${rootCell(r.root)}<td class="mut desc">${esc(r.label)}</td><td><span class="pill ${st}">${st}</span></td><td>${progressText(r)}</td><td>${timing(r)}</td><td>${trainText(r.last_train)}</td><td class="mut">${evalText(r.last_eval)}</td>
   <td class="num">${p?(p.diff>=0?'+':'')+fmt(p.diff)+' ± '+fmt(p.se):'–'}</td></tr>`});
  set('runs',h);
  const protocols=new Set(Object.values(runs).map(r=>!!r.config.hide_ooc_potions));
  set('protocol',protocols.size>1?'Eval numbers with out-of-combat potions visible are not comparable with those using --hide-ooc-potions (different protocols).':'')}
-document.getElementById('arch').addEventListener('click',()=>{showArchived=!showArchived;renderRuns();draw()});
+document.getElementById('arch').addEventListener('click',()=>{showArchived=!showArchived;renderRuns()});
+for(const mode of ['all','none','default'])document.getElementById(mode).addEventListener('click',()=>selectRuns(mode));
+document.getElementById('runs').addEventListener('change',e=>{if(e.target.matches('input[data-run]'))toggleRun(e.target.dataset.run)});
+document.getElementById('runs').addEventListener('click',e=>{const b=e.target.closest('button[data-run]');if(b)toggleRun(b.dataset.run)});
+document.querySelectorAll('[data-reset]').forEach(b=>{b.disabled=!zoomPlugin;b.addEventListener('click',()=>resetZoom(b.dataset.reset))});
+document.getElementById('reset-all').disabled=!zoomPlugin;
+document.getElementById('reset-all').addEventListener('click',()=>Object.keys(charts).forEach(resetZoom));
 function draw(){
- const names=visible();const ds=f=>names.flatMap(n=>f(n,color(n),runs[n]));
+ const names=Object.keys(runs).filter(n=>selected.get(n));const ds=f=>names.flatMap(n=>f(n,color(n),runs[n]));
  mk('c_paired',ds((n,c,r)=>{const e=r.evals.filter(x=>x.paired);return[
   {label:n,data:e.map(x=>({x:x.iteration,y:x.paired.diff})),borderColor:c,backgroundColor:c},
   {label:n+' hi',data:e.map(x=>({x:x.iteration,y:x.paired.diff+1.96*x.paired.se})),borderColor:c,borderDash:[2,3],pointRadius:0,borderWidth:1},

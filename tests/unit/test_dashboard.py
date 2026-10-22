@@ -2,6 +2,9 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import re
+import shutil
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
@@ -49,8 +52,27 @@ class DashboardTests(unittest.TestCase):
             self.log(self.root, name)
         runs = dashboard.state()["runs"]
         self.assertEqual(set(runs), {"ooc_r2_lam1", "batch/recipe"})
-        self.assertTrue(runs["ooc_r2_lam1"]["key"])
+        self.assertFalse(runs["ooc_r2_lam1"]["key"])
+        self.assertEqual(runs["ooc_r2_lam1"]["label"], dashboard.LABELS["ooc_r2_lam1"])
         self.assertEqual(runs["batch/recipe"]["name"], "batch/recipe")
+
+    def test_current_lineage_is_ordered_and_old_labels_do_not_make_runs_key(self):
+        lineage = ("round4_20261021/round4", "continued2_20261021/train", "continued3_20261022/train",
+                   "continued4_20261022/train", "joint_20261022/train")
+        self.assertEqual(dashboard.KEY_RUNS, lineage)
+        present = [n for n in lineage if "continued4" not in n]
+        old = ["large_batch_20261020/" + n for n in ("recipe", "recipe_hidden", "hygiene_hidden")]
+        for name in reversed(present + old + ["active"]):
+            self.log(self.root, name)
+        self.queue(self.root, self.job(self.root, "job", "active"))
+        runs = dashboard.state()["runs"]
+        self.assertEqual(list(runs)[:len(present)], present)
+        self.assertEqual([n for n, r in runs.items() if r["key"]], present)
+        self.assertNotIn(lineage[3], runs)
+        for name in present + old:
+            self.assertEqual(runs[name]["label"], dashboard.LABELS[name])
+        self.assertTrue(runs["active"]["active"])
+        self.assertFalse(runs["active"]["key"])
 
     def test_extra_roots_merge_runs_queues_history_and_runners(self):
         self.log(self.root, "direct")
@@ -230,6 +252,137 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(state["runs"], {})
         self.assertEqual(state["active"], [])
         self.assertEqual(len(state["runners"]), 2)
+
+
+class DashboardPageTests(unittest.TestCase):
+    def test_page_loads_pinned_plugins_after_chartjs_and_has_chart_resets(self):
+        self.assertEqual(re.findall(r'<script src="([^"]+)"', dashboard.PAGE), [
+            "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js",
+            "https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js",
+            "https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"])
+        canvases = re.findall(r'<canvas id="([^"]+)"', dashboard.PAGE)
+        self.assertEqual(re.findall(r'<button data-reset="([^"]+)"', dashboard.PAGE), canvases)
+        for control in ("all", "none", "default", "arch", "reset-all"):
+            self.assertIn(f'<button id="{control}">', dashboard.PAGE)
+        self.assertIn("Drag to zoom · ctrl/⌘ + wheel to zoom · shift + drag to pan · double-click or reset to restore",
+                      dashboard.PAGE)
+
+    def run_js(self, body, *, saved=None, blocked=False, zoom=True):
+        if not shutil.which("node"):
+            self.skipTest("node is required for dashboard JavaScript checks")
+        runs = {name: {"name": name, "root": "/tmp/data/rl_runs", "label": name, "config": {},
+                       "key": name == "key", "active": name == "active", "status": "done",
+                       "train": [{"iteration": 1, "collect_floor": 20}], "evals": []}
+                for name in ("key", "active", "old")}
+        harness = r"""
+const assert=require('node:assert/strict'), vm=require('node:vm');
+const input=JSON.parse(require('node:fs').readFileSync(0,'utf8'));
+const elements=new Map();
+function element(id){if(!elements.has(id))elements.set(id,{id,innerHTML:'',textContent:'',dataset:{},handlers:{},
+ addEventListener(type,fn){this.handlers[type]=fn}});return elements.get(id)}
+const buttons=input.canvases.map(id=>{const b=element('reset_'+id);b.dataset.reset=id;return b});
+let saved=input.saved;
+const storage={read:()=>saved};
+class Chart {
+ static register(plugin){assert.equal(plugin.id,'zoom')}
+ constructor(canvas,config){this.data=config.data;this.options=config.options;this.updates=[];this.resets=0;
+  if(input.zoom)this.resetZoom=mode=>{assert.equal(mode,'none');this.resets++;
+   for(const s of Object.values(this.options.scales)){delete s.min;delete s.max}}}
+ update(mode){this.updates.push(mode)}
+}
+const context=vm.createContext({assert,Chart,buttons,element,storage,state:input.state,
+ window:{ChartZoom:input.zoom?{id:'zoom'}:undefined},
+ document:{hidden:false,getElementById:element,querySelectorAll:()=>buttons,addEventListener(){}},
+ localStorage:{getItem(){if(input.blocked)throw Error('blocked');return saved},
+  setItem(key,value){if(input.blocked)throw Error('blocked');saved=value}},
+ fetch:async()=>({ok:true,json:async()=>input.state}),AbortSignal:{timeout(){}},setTimeout:()=>0,clearTimeout(){}});
+vm.runInContext(input.script,context);
+(async()=>{await new Promise(setImmediate);await vm.runInContext('(async()=>{'+input.body+'})()',context)})()
+ .catch(e=>{console.error(e);process.exitCode=1});
+"""
+        payload = {"script": dashboard.PAGE.split("<script>")[1].split("</script>")[0], "body": body,
+                   "canvases": re.findall(r'<canvas id="([^"]+)"', dashboard.PAGE),
+                   "state": {"now": 1000, "sig": "test", "runs": runs, "runners": [],
+                             "active": [], "history": {}, "win": [], "fresh": []},
+                   "saved": saved, "blocked": blocked, "zoom": zoom}
+        result = subprocess.run(["node", "-e", harness], input=json.dumps(payload), capture_output=True,
+                                text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_global_controls_and_hidden_archived_selection(self):
+        self.run_js(r"""
+assert.equal(Object.keys(charts).length,11);
+assert.deepEqual(visible(),['key','active']);
+const shown=n=>Object.values(charts).every(c=>c.data.datasets.some(d=>d.label===n||d.label.startsWith(n+' ')));
+assert(shown('key')&&shown('active'));assert(!shown('old'));
+const oldColor=color('old');
+element('all').handlers.click();assert(shown('old'));
+assert(element('arch').textContent.includes('1 checked'));
+element('arch').handlers.click();assert(visible().includes('old'));
+element('arch').handlers.click();assert(!visible().includes('old'));assert(shown('old'));
+assert(!element('runs').innerHTML.includes('data-run="old"'));
+element('runs').handlers.change({target:{matches:()=>true,dataset:{run:'old'}}});
+assert(!shown('old'));assert.equal(color('old'),oldColor);
+element('runs').handlers.click({target:{closest:()=>({dataset:{run:'active'}})}});
+assert(!shown('active'));
+element('none').handlers.click();assert(Object.values(charts).every(c=>c.data.datasets.length===0));
+element('default').handlers.click();assert(shown('key')&&shown('active'));assert(!shown('old'));
+assert.deepEqual(JSON.parse(storage.read()),{key:true,active:true,old:false});
+""")
+
+    def test_selection_restores_and_new_active_runs_default_to_selected(self):
+        self.run_js(r"""
+assert.equal(selected.get('key'),false);assert.equal(selected.get('old'),true);
+assert(!visible().includes('old'));assert(element('arch').textContent.includes('1 checked'));
+assert(Object.values(charts).every(c=>c.data.datasets.some(d=>d.label==='old'||d.label.startsWith('old '))));
+element('none').handlers.click();assert(Object.values(JSON.parse(storage.read())).every(v=>v===false));
+state.runs.later={...state.runs.active,name:'later'};await load();
+assert.equal(selected.get('later'),true);assert.equal(selected.get('key'),false);
+""", saved=json.dumps({"key": False, "active": True, "old": True}))
+
+    def test_invalid_or_unavailable_storage_uses_defaults(self):
+        for saved, blocked in (("broken", False), ('["old"]', False), ('{"old":"yes"}', False),
+                               ('{"key":false}', True)):
+            with self.subTest(saved=saved, blocked=blocked):
+                self.run_js(r"""
+assert.equal(selected.get('key'),true);assert.equal(selected.get('active'),true);assert.equal(selected.get('old'),false);
+element('none').handlers.click();assert(Object.values(charts).every(c=>c.data.datasets.length===0));
+""", saved=saved, blocked=blocked)
+
+    def test_zoom_ranges_survive_refresh_and_reset_controls_work(self):
+        self.run_js(r"""
+for(const c of Object.values(charts)){
+ const z=c.options.plugins.zoom;
+ assert.equal(z.zoom.mode,'xy');assert.equal(z.zoom.drag.enabled,true);assert.equal(z.zoom.wheel.enabled,true);
+ assert.equal(z.pan.enabled,true);assert.equal(z.pan.mode,'xy');assert.equal(z.pan.modifierKey,'shift');
+ assert.equal(!!z.zoom.onZoomStart({event:{type:'wheel'}}),false);
+ assert.equal(z.zoom.onZoomStart({event:{type:'wheel',ctrlKey:true}}),true);
+ assert.equal(z.zoom.onZoomStart({event:{type:'wheel',metaKey:true}}),true);
+ assert.equal(z.zoom.onZoomStart({event:{type:'mousedown'}}),true);
+ assert.equal(c.options.plugins.legend.onClick(),undefined);
+ c.options.scales.x.min=2;c.options.scales.x.max=4;c.options.scales.y={min:5,max:10};
+}
+const c=charts.c_train, scales=c.options.scales, data=c.data.datasets;
+await load();assert.equal(charts.c_train,c);assert.equal(c.options.scales,scales);assert.notEqual(c.data.datasets,data);
+for(const chart of Object.values(charts)){
+ assert.equal(chart.options.scales.x.min,2);assert.equal(chart.options.scales.x.max,4);
+ assert.equal(chart.options.scales.y.min,5);assert.equal(chart.options.scales.y.max,10);
+ assert.equal(chart.resets,0);assert.equal(chart.updates.at(-1),'none');
+}
+buttons.find(b=>b.dataset.reset==='c_train').handlers.click();assert.equal(c.resets,1);assert.equal(charts.c_wins.resets,0);
+element('c_train').handlers.dblclick();assert.equal(c.resets,2);
+element('reset-all').handlers.click();assert(Object.values(charts).every(chart=>chart.resets>0));
+assert.equal(c.options.scales.x.min,undefined);
+""")
+
+    def test_missing_zoom_plugin_keeps_charts_and_selection_working(self):
+        self.run_js(r"""
+assert.equal(Object.keys(charts).length,11);assert(Object.values(charts).every(c=>c.options.plugins.zoom===false));
+assert(element('reset-all').disabled);assert(buttons.every(b=>b.disabled));
+element('c_train').handlers.dblclick();element('reset-all').handlers.click();
+element('all').handlers.click();assert(Object.values(charts).every(c=>c.data.datasets.some(d=>d.label==='old'||d.label.startsWith('old '))));
+await load();assert(Object.values(charts).every(c=>c.updates.at(-1)==='none'));
+""", zoom=False)
 
 
 class DashboardCommandTests(unittest.TestCase):
