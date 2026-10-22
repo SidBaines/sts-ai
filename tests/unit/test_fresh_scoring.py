@@ -42,7 +42,8 @@ class FreshScoringTests(unittest.TestCase):
             stack.enter_context(patch.object(module,'begin_run',side_effect=synthetic_begin_run(native)))
 
     def train(self, root, data, architecture='new', **extra):
-        config=dict(data=[str(data)],out=str(root/'run'),architecture=architecture,phase='combat',
+        config=dict(data=[str(p) for p in data] if isinstance(data,list) else [str(data)],
+            out=str(root/'run'),architecture=architecture,phase='combat',
             fit_size='full',width=16,layers=1,heads=4,steps=2,min_steps=2,batch=2,
             eval_every=1,patience=6,lr=.001,seed=1919,device='cpu',deadline_utc=None,
             defer_test=True,**extra)
@@ -175,6 +176,19 @@ class FreshScoringTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'dataset identity'):
                     score_deferred(path,root/'score')
             self.assertFalse((root/'score').exists())
+
+    def test_deferred_scoring_reopens_mixed_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:
+            root=Path(tmp)
+            first,source=fixture(root/'first')
+            second,_=fixture(root/'second',interface_suffix=b'# faster interface\n',
+                             config={'world_start':92_000_001_000})
+            self.runtime(stack,source)
+            self.train(root,[first,second],mixed_sources=True)
+            path,_=self.selection(root)
+            summary=score_deferred(path,root/'score')
+            self.assertEqual(summary['status'],'completed')
+            self.assertEqual(summary['test_rows'],6)
 
     def test_finalizer_cpu_singletons_actor_only_no_updates_and_fresh_output(self):
         for architecture in ('new','old'):

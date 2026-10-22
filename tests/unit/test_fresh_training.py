@@ -23,35 +23,39 @@ from sts_policy.training import load_checkpoint, save_checkpoint
 from sts_rl.fresh_study import INFERENCE, PROTOCOL, PUBLIC_CONTEXT_ID, StudyPolicy, Interrupted, atomic_json, policy_observation
 from sts_rl.fresh_training import (FILTERS, MIN_DISK, TrainingControl, collate, digest, fit,
     freeze_manifest, make_model, preencode, soft_cross_entropy, target_distribution, validate_source,
-    validate_training_config, world_split, run_training, interleave_fit)
+    validate_training_config, world_split, run_training, interleave_fit, iter_rows)
 from sts_rl.recording import file_identity
 from tests.unit.test_entity_encoding import combat_observation, ooc_observation
 
 
-def synthetic_source(root):
+def synthetic_source(root, *, interface_suffix=b'', environment_version='0.1.5',
+                     observation_version='sts_env_public_v2', runtime_python_version='3.12',
+                     native_bytes=b'synthetic-no-native-execution', config=None):
     teacher=root/'teacher.pt'
     save_checkpoint(teacher,CandidateActorCritic(),model_config=CandidateActorCritic().metadata(),
                     metadata={'encoder_version':'public_candidate_v2'})
     native=root/'slaythespire.synthetic'
-    native.write_bytes(b'synthetic-no-native-execution')
+    native.write_bytes(native_bytes)
     archive=root/'source.zip'
-    env = b'ENVIRONMENT_VERSION = "0.1.5"\nOBSERVATION_VERSION = "sts_env_public_v2"\n'
+    env = f'ENVIRONMENT_VERSION = "{environment_version}"\nOBSERVATION_VERSION = "{observation_version}"\n'.encode()
+    interface_source = b'# synthetic only\n'+interface_suffix
     with zipfile.ZipFile(archive,'w') as output:
-        output.writestr('src/sts_env/synthetic.py',b'# synthetic only\n')
+        output.writestr('src/sts_env/synthetic.py',interface_source)
         output.writestr('src/sts_env/env.py',env)
         output.write(Path(__file__).resolve().parents[2]/'src/sts_rl/fresh_study.py','src/sts_rl/fresh_study.py')
-    interface=hashlib.sha256(b'env.py\0'+env+b'\0synthetic.py\0# synthetic only\n\0').hexdigest()
-    config={'mode':'collect','teacher_labels':True,'out':'synthetic','n':50,'world_start':92_000_000_000}
+    interface=hashlib.sha256(b'env.py\0'+env+b'\0synthetic.py\0'+interface_source+b'\0').hexdigest()
+    config={'mode':'collect','teacher_labels':True,'out':'synthetic','n':50,'world_start':92_000_000_000,
+            'checkpoint':str(teacher),**(config or {})}
     launch={'source_archive':file_identity(archive),'native':{'module_file':native.name,
             'module_sha256':file_identity(native)['sha256']},'parent_checkpoint':file_identity(teacher),
-            'effective_config':config,'runtime':{'python':'3.12 synthetic'}}
+            'effective_config':config,'runtime':{'python':runtime_python_version+' synthetic'}}
     path=root/'launch.json'
     atomic_json(path,launch)
     source={'protocol':PROTOCOL,'policy':{'protocol':PROTOCOL,'filter_ids':FILTERS,'inference':INFERENCE,
             'public_context_id':PUBLIC_CONTEXT_ID,
             'champion':file_identity(teacher),'combat':None,'ooc':None},'config':config,'launch':file_identity(path)}
-    provenance={'python_interface_sha256':interface,'runtime_python_version':'3.12',
-                'environment_version':'0.1.5','observation_version':'sts_env_public_v2',
+    provenance={'python_interface_sha256':interface,'runtime_python_version':runtime_python_version,
+                'environment_version':environment_version,'observation_version':observation_version,
                 'native_provenance':launch['native']}
     return source,provenance
 
@@ -76,13 +80,15 @@ def digest_public(o):
     return public_hash(o)
 
 
-def fixture(root):
-    source,provenance=synthetic_source(root)
+def fixture(root, **source_options):
+    root.mkdir(parents=True,exist_ok=True)
+    source,provenance=synthetic_source(root, **source_options)
     data=root/'data'
     (data/'worlds').mkdir(parents=True)
     # Several worlds per split, both phases per world, real C1 raw shard format.
     seeds={s:[] for s in ('FIT','VALIDATION','TEST')}
-    for seed in range(92_000_000_000,92_000_001_000):
+    start=source['config']['world_start']
+    for seed in range(start,start+1000):
         split=world_split(seed)
         if len(seeds[split])<3:
             seeds[split].append(seed)
@@ -125,6 +131,102 @@ class FreshTrainingTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         torch.set_num_threads(cls.threads)
+
+    def test_mixed_sources_optin_preserves_all_sources_and_individual_identities(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            first,source1=fixture(root/'first')
+            second,source2=fixture(root/'second',interface_suffix=b'# faster interface\n',
+                config={'world_start':92_000_001_000,'workers':2,'deadline_utc':None,'max_labels':50})
+            sources=[first,second]
+            for load in (freeze_manifest,lambda s:list(iter_rows(s))):
+                with self.assertRaisesRegex(ValueError,'^Incompatible scientific source/provenance identities$'):
+                    load(sources)
+            manifest=freeze_manifest(sources,mixed_sources=True)
+            self.assertIs(manifest['mixed_sources'],True)
+            self.assertEqual(manifest['collection_sources'],{digest(s):s for s in (source1,source2)})
+            identities={validate_source(s)[0] for s in (source1,source2)}
+            interfaces=sorted({validate_source(s)[1]['verified_interface_sha256'] for s in (source1,source2)})
+            self.assertEqual(len(identities),2)
+            self.assertEqual(len(interfaces),2)
+            self.assertEqual({m['source_identity'] for m in manifest['rows']},identities)
+            self.assertEqual(manifest['public_surface']['provenance']['python_interface_sha256'],interfaces)
+            self.assertEqual(manifest['collected_total'],36)
+            self.assertEqual(manifest['collected_worlds'],18)
+            self.assertEqual(manifest['data_identity'],digest({k:v for k,v in manifest.items() if k!='data_identity'}))
+            dataset=preencode(sources,manifest,'combat','old')
+            self.assertEqual({x.meta['source_identity'] for rows in dataset.values() for x in rows},identities)
+
+    def test_mixed_sources_reject_other_scientific_differences_by_field(self):
+        config={'teacher_probabilities':{'BOSS1':.5},'samples':4,'simulations':50}
+        changes=(
+            ({'native_bytes':b'different native module'},'native.module_sha256'),
+            ({'config':{'teacher_probabilities':{'BOSS1':.75}}},'config.teacher_probabilities.BOSS1'),
+            ({'config':{'simulations':51}},'config.simulations'),
+            ({'config':{'samples':5}},'config.samples'),
+            ({'config':{'samples':4.0}},'config.samples'),
+            ({'config':{'new_scientific_setting':True}},'config.new_scientific_setting'),
+            ({'environment_version':'0.1.6'},'provenance.environment_version'),
+            ({'observation_version':'sts_env_public_v3'},'provenance.observation_version'),
+            ({'runtime_python_version':'3.13'},'provenance.runtime_python_version'))
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            first,_=fixture(root/'first',config=config)
+            for i,(options,field) in enumerate(changes):
+                second,_=fixture(root/str(i),**{**options,'config':{
+                    **config,'world_start':92_000_001_000,**options.get('config',{})}})
+                with self.subTest(field=field),self.assertRaisesRegex(ValueError,'Incompatible mixed source field: '+field):
+                    freeze_manifest([first,second],mixed_sources=True)
+
+    def test_mixed_sources_still_verify_each_source_and_provenance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data,source=fixture(Path(tmp))
+            path=next((data/'worlds').glob('*'))
+            with gzip.open(path,'rt') as stream:
+                shard=json.load(stream)
+            shard['labels'][0]['expected_provenance']['python_interface_sha256']='unverified'
+            atomic_json(path,shard,compressed=True)
+            with self.assertRaisesRegex(ValueError,'Missing/mismatched native/public provenance'):
+                freeze_manifest([data],mixed_sources=True)
+            Path(source['policy']['champion']['path']).write_bytes(b'corrupt checkpoint')
+            with self.assertRaisesRegex(ValueError,'Source file identity mismatch'):
+                freeze_manifest([data],mixed_sources=True)
+
+    def test_mixed_sources_off_keeps_single_source_manifest_and_scientific_digest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data,source=fixture(Path(tmp))
+            manifest=freeze_manifest([data])
+            self.assertEqual(manifest,freeze_manifest([data],mixed_sources=False))
+            self.assertNotIn('mixed_sources',manifest)
+            launch=json.loads(Path(source['launch']['path']).read_text())
+            legacy_config={k:v for k,v in source['config'].items() if k not in {
+                'out','n','world_start','workers','deadline_utc','max_labels'}}
+            legacy_identity=digest({'policy':source['policy'],'native':launch['native'],'config':legacy_config,
+                                    'source_archive_sha256':launch['source_archive']['sha256']})
+            self.assertEqual(validate_source(source)[0],legacy_identity)
+            self.assertEqual({m['source_identity'] for m in manifest['rows']},{legacy_identity})
+            self.assertEqual(manifest['data_identity'],digest({k:v for k,v in manifest.items() if k!='data_identity'}))
+
+    def test_mixed_sources_cli_is_optin(self):
+        script=Path(__file__).resolve().parents[2]/'scripts/rl/fresh_train.py'
+        spec=importlib.util.spec_from_file_location('mixed_sources_cli',script)
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        args=['--data','synthetic','--out','out','--architecture','old','--phase','combat',
+              '--deadline-utc','2099-01-01T00:00:00Z']
+        self.assertNotIn('mixed_sources',vars(module.parser().parse_args(args)))
+        self.assertIs(module.parser().parse_args(args+['--mixed-sources']).mixed_sources,True)
+        with self.assertRaisesRegex(ValueError,'mixed_sources must be boolean'):
+            validate_training_config({'mixed_sources':'yes'},synthetic=True)
+        with self.assertRaisesRegex(ValueError,'only valid for combat fits'):
+            validate_training_config({'mixed_sources':True,'phase':'ooc'},synthetic=True)
+
+    def test_collection_checkpoint_must_match_recorded_champion(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            source,_=synthetic_source(root,config={'checkpoint':str(root/'elsewhere.pt')})
+            with self.assertRaisesRegex(ValueError,'checkpoint does not match the recorded champion'):
+                validate_source(source)
 
     def test_soft_ce_gapped_mapping_and_padding(self):
         r=row(combat_observation(),92_000_000_000,{}, {})

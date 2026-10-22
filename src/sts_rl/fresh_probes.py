@@ -46,7 +46,14 @@ def iter_probe_rows(sources, *, expected_surface=None, control=None):
         validate_provenance(prov, launch)
         current_surface = public_surface(source, prov)
         surface = surface or current_surface
-        if current_surface != surface:
+        comparison_surface = current_surface
+        if (isinstance(surface, dict) and isinstance(surface.get('provenance'), dict) and
+                isinstance(surface['provenance'].get('python_interface_sha256'), list)):
+            # A mixed manifest records all label interfaces, but compatibility
+            # uses explicit versions; each probe interface is still verified above.
+            comparison_surface = {**current_surface, 'provenance': {**prov,
+                'python_interface_sha256': surface['provenance']['python_interface_sha256']}}
+        if comparison_surface != surface:
             raise ValueError('Probe/label public environment/native/input-context identity mismatch')
         prefix = shard['action_prefix']
         if (not isinstance(prefix, list) or any(isinstance(i, bool) or not isinstance(i, int) for i in prefix)

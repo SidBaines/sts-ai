@@ -250,6 +250,9 @@ merge. Faults/cuts quarantine whole worlds.
 control defaults to large/no menu context. `--batch`, `--lr`, `--steps` and
 `--patience` control fitting. Combat `--fit-size 5000|20000|full` uses nested
 prefixes shared across encoders; out-of-combat fitting is full-only.
+`--mixed-sources` opts into fitting multiple collecting champions and Python
+source hashes; native identities, collection settings, environment/observation
+versions, Python runtime versions and public policy contracts must still match.
 Abstentions are excluded from targets; forced choices stay in evaluation but
 not optimization. Fixed unlabelled probes never supply targets or select
 weights. Use `--defer-test` until validation-only selection freezes. The

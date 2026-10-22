@@ -146,6 +146,11 @@ def validate_source(source):
     return _validate_collection_source(source, labelled=True)
 
 
+def _scientific_collection_config(config):
+    return {k:v for k,v in config.items() if k not in {
+        'out', 'n', 'world_start', 'workers', 'deadline_utc', 'max_labels'}}
+
+
 def _validate_collection_source(source, *, labelled):
     if (source.get('protocol') != PROTOCOL or source['policy'].get('protocol') != PROTOCOL or
             source['policy'].get('filter_ids') != FILTERS or
@@ -184,6 +189,9 @@ def _validate_collection_source(source, *, labelled):
         raise ValueError('Teacher checkpoint provenance mismatch')
     if launch.get('effective_config') != source['config']:
         raise ValueError('Collection source config mismatch')
+    if ('checkpoint' in source['config'] and
+            Path(source['config']['checkpoint']).resolve() != Path(policy['champion']['path']).resolve()):
+        raise ValueError('Collection config checkpoint does not match the recorded champion')
     native = launch['native']
     if not native.get('module_sha256') or native.get('preparation_only'):
         raise ValueError('Missing actual collection native identity')
@@ -191,8 +199,7 @@ def _validate_collection_source(source, *, labelled):
     if file_identity(binary)['sha256'] != native['module_sha256']:
         raise ValueError('Native snapshot checksum mismatch')
     # Operational shard bounds may differ; scientific settings must be identical.
-    config = {k:v for k,v in source['config'].items() if k not in {
-        'out', 'n', 'world_start', 'workers', 'deadline_utc', 'max_labels'}}
+    config = _scientific_collection_config(source['config'])
     scientific = {'policy': policy, 'native': native, 'config': config,
                   'source_archive_sha256': launch['source_archive']['sha256']}
     return digest(scientific), launch
@@ -215,6 +222,27 @@ def public_surface(source, prov):
             ('protocol', 'filter_ids', 'public_context_id', 'inference')}}
 
 
+def _mixed_source_contract(source, prov, launch):
+    # Only the collecting champion (policy and the collector's checkpoint path, each
+    # still validated per source) and archived Python bytes may differ.
+    config = {k:v for k,v in _scientific_collection_config(source['config']).items() if k != 'checkpoint'}
+    return {'native': launch['native'], 'config': config,
+            'provenance': {k:v for k,v in prov.items() if k!='python_interface_sha256'},
+            'policy': {k:v for k,v in source['policy'].items() if k!='champion'}}
+
+
+def _require_mixed_match(actual, expected, field=''):
+    if digest(actual) == digest(expected):
+        return
+    if isinstance(actual, dict) and isinstance(expected, dict):
+        for key in sorted(actual.keys() | expected.keys()):
+            name = field+'.'+key if field else key
+            if key not in actual or key not in expected:
+                raise ValueError('Incompatible mixed source field: '+name)
+            _require_mixed_match(actual[key], expected[key], name)
+    raise ValueError('Incompatible mixed source field: '+field)
+
+
 def shard_files(sources):
     paths = []
     for source in sources:
@@ -225,7 +253,7 @@ def shard_files(sources):
     return paths
 
 
-def iter_rows(sources, *, control=None):
+def iter_rows(sources, *, control=None, mixed_sources=False):
     """Accept C1 world JSON objects and JSONL exports; hold at most one world."""
     verified, worlds = {}, set()
     scientific, expected = None, None
@@ -274,10 +302,16 @@ def iter_rows(sources, *, control=None):
                     identity, launch = verified[key]
                     prov = row['expected_provenance']
                     validate_provenance(prov, launch)
-                    if scientific is None:
-                        scientific, expected = identity, prov
-                    if identity != scientific or expected != prov:
-                        raise ValueError('Incompatible scientific source/provenance identities')
+                    if mixed_sources:
+                        contract = _mixed_source_contract(source, prov, launch)
+                        if expected is None:
+                            expected = contract
+                        _require_mixed_match(contract, expected)
+                    else:
+                        if scientific is None:
+                            scientific, expected = identity, prov
+                        if identity != scientific or expected != prov:
+                            raise ValueError('Incompatible scientific source/provenance identities')
                     if nested:
                         n = len(row['prefix'])
                         if (world != shard['world_seed'] or row['source'] != shard['source'] or
@@ -337,15 +371,18 @@ def interleave_fit(rows):
     return result
 
 
-def freeze_manifest(sources, *, control=None):
+def freeze_manifest(sources, *, control=None, mixed_sources=False):
     files = [file_identity(p) for p in shard_files(sources)]
     rows, seen, collection_sources = [], set(), {}
-    for raw, meta in iter_rows(sources, control=control):
+    interfaces = set()
+    for raw, meta in iter_rows(sources, control=control, mixed_sources=mixed_sources):
         if meta['source_row_id'] in seen:
             raise ValueError('Duplicate source row identity')
         seen.add(meta['source_row_id'])
         rows.append(meta)
         collection_sources[digest(raw['source'])] = raw['source']
+        if mixed_sources:
+            interfaces.add(raw['expected_provenance']['python_interface_sha256'])
     rows.sort(key=lambda r: (r['world_seed'], r['source_row_id']))
     splits = {s: {'worlds': sorted({r['world_seed'] for r in rows if r['split']==s}),
                   'row_ids': [r['source_row_id'] for r in rows if r['split']==s and r['has_target']]}
@@ -374,6 +411,11 @@ def freeze_manifest(sources, *, control=None):
         'fit_order_method': 'full_group_quota_deficit_hashed_world_round_robin_v1',
         'fit_subset_group_counts': subset_counts,
         'collected_total': len(rows), 'collected_worlds': len({r['world_seed'] for r in rows})}
+    if mixed_sources:
+        result['mixed_sources'] = True
+        if rows:
+            result['public_surface']['provenance'] = {**raw['expected_provenance'],
+                'python_interface_sha256': sorted(interfaces)}
     result['data_identity'] = digest(result)
     if files != [file_identity(p) for p in shard_files(sources)]:
         raise ValueError('Data changed during manifest freeze')
@@ -412,7 +454,7 @@ def preencode(sources, manifest, phase, architecture, fit_size='full', *, contro
               r['phase']==phase and r['has_target'] and
               (r['split']!='FIT' or r['source_row_id'] in fit_ids)}
     result = {s: [] for s in splits}
-    for row, meta in iter_rows(sources, control=control):
+    for row, meta in iter_rows(sources, control=control, mixed_sources=manifest.get('mixed_sources',False)):
         if meta['source_row_id'] not in wanted:
             continue
         if meta != wanted.pop(meta['source_row_id']):
@@ -904,6 +946,11 @@ def validate_training_config(config, *, synthetic=False):
         raise ValueError('Invalid old control size/context')
     if not isinstance(config.get('defer_test',False),bool):
         raise ValueError('defer_test must be boolean')
+    if not isinstance(config.get('mixed_sources',False),bool):
+        raise ValueError('mixed_sources must be boolean')
+    if config.get('mixed_sources') and config.get('phase') != 'combat':
+        # OOC targets are each collecting champion's own choices; mixing would blend policies.
+        raise ValueError('mixed_sources is only valid for combat fits')
     for key in ('steps','min_steps','eval_every','patience','width','layers','heads'):
         if not isinstance(config[key],int) or config[key]<1:
             raise ValueError('Positive integer required: '+key)
@@ -938,7 +985,7 @@ def run_training(config):
     control.start()
     try:
         control.check()
-        manifest = freeze_manifest(config['data'],control=control)
+        manifest = freeze_manifest(config['data'],control=control,mixed_sources=config.get('mixed_sources',False))
         if config.get('manifest'):
             frozen = json.loads(Path(config['manifest']).read_text())
             if frozen != manifest:

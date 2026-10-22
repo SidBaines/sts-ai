@@ -22,9 +22,9 @@ from tests.unit.test_fresh_training import (fixture, row, synthetic_source, synt
 from tests.unit.test_entity_encoding import combat_observation, ooc_observation
 
 
-def probe_fixture(root, count=4):
+def probe_fixture(root, count=4, **source_options):
     root.mkdir()
-    source, prov = synthetic_source(root)
+    source, prov = synthetic_source(root, **source_options)
     launch_path = Path(source['launch']['path'])
     launch = json.loads(launch_path.read_text())
     source['config'].update(teacher_labels=False, world_start=93_000_000_000, n=3)
@@ -148,6 +148,32 @@ class FreshProbeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Archived public'):
                 list(iter_probe_rows([path]))
 
+    def test_mixed_manifest_probes_compare_versions_and_native_but_not_interface_hash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            first,_=fixture(root/'first')
+            second,_=fixture(root/'second',interface_suffix=b'# faster interface\n',
+                             config={'world_start':92_000_001_000})
+            strict=freeze_manifest([first])
+            mixed=freeze_manifest([first,second],mixed_sources=True)
+            surface=deepcopy(mixed['public_surface'])
+            # Even an unseen source hash is compatible when explicit versions match.
+            for i,suffix in enumerate((b'',b'# faster interface\n',b'# another speed-only edit\n')):
+                probes=probe_fixture(root/f'probe{i}',count=1,interface_suffix=suffix)
+                rows=list(iter_probe_rows([probes],expected_surface=surface))
+                self.assertEqual(len(rows),6)
+                if suffix:
+                    with self.assertRaisesRegex(ValueError,'identity mismatch'):
+                        list(iter_probe_rows([probes],expected_surface=strict['public_surface']))
+            for i,options in enumerate(({'native_bytes':b'different native module'},
+                                       {'environment_version':'0.1.6'},
+                                       {'observation_version':'sts_env_public_v3'},
+                                       {'runtime_python_version':'3.13'})):
+                probes=probe_fixture(root/f'incompatible{i}',count=1,**options)
+                with self.subTest(options=options),self.assertRaisesRegex(ValueError,'identity mismatch'):
+                    list(iter_probe_rows([probes],expected_surface=surface))
+            self.assertEqual(surface,mixed['public_surface'])
+
     def test_probe_cpu_actor_only_singleton_rng_and_mode_preserved(self):
         with tempfile.TemporaryDirectory() as tmp:
             probes = probe_fixture(Path(tmp)/'probe',count=2)
@@ -187,36 +213,49 @@ class FreshProbeTests(unittest.TestCase):
             self.assertEqual(event['pooled']['argmax_change_start'],1.)
 
     def test_training_receipt_probes_inputs_and_validation_only_selection(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root=Path(tmp)
-            data,source=fixture(root)
-            probes=probe_fixture(root/'probe',count=2)
-            cfg=dict(data=[str(data)],probe=[str(probes)],out=str(root/'run'),architecture='new',phase='combat',
-                fit_size='full',width=16,layers=1,heads=4,steps=2,min_steps=2,batch=2,
-                eval_every=1,patience=6,lr=.001,seed=1919,device='cpu',deadline_utc=None)
-            native=json.loads(Path(source['launch']['path']).read_text())['native']
-            with patch('sts_rl.fresh_training.validate_training_config',side_effect=lambda c:validate_training_config(c,synthetic=True)), \
-                 patch('sts_rl.fresh_training.TrainingControl',side_effect=lambda out,d:TrainingControl(out,d,ac=lambda:True,caffeinate=False)), \
-                 patch('sts_rl.fresh_training.begin_run',side_effect=synthetic_begin_run(native)):
-                summary=run_training(cfg)
-            out=root/'run'
-            receipt=json.loads((out/'receipt.json').read_text())
-            selection=json.loads((out/'probe_selection.json').read_text())
-            manifest=json.loads((out/'manifest.json').read_text())
-            launch=json.loads(Path(receipt['launch']['path']).read_text())
-            self.assertEqual(manifest['collected_total'],18)
-            self.assertTrue(all(r['world_seed']<93_000_000_000 for r in manifest['rows']))
-            self.assertEqual(receipt['probe_selection']['selection_identity'],selection['selection_identity'])
-            inputs=[i['path'] for i in launch['data_inputs']]
-            self.assertIn(str((out/'probe_selection.json').resolve()),inputs)
-            self.assertTrue(all(i['path'] in inputs for i in selection['source_files']))
-            events=[json.loads(line) for line in (out/'metrics.jsonl').read_text().splitlines()]
-            self.assertTrue(all(e['fixed93e9_probes']['pooled']['count']==6 for e in events))
-            self.assertEqual(summary['best_step'],min(events,key=lambda e:e['validation']['loss'])['step'])
-            from sts_policy.training import load_checkpoint
-            checkpoint=load_checkpoint(out/'latest.pt')
-            self.assertEqual(checkpoint['metadata']['probe_selection'],receipt['probe_selection'])
-            self.assertIsNone(checkpoint['metadata']['parent_checkpoint'])
+        for mixed in (False,True):
+            with self.subTest(mixed=mixed),tempfile.TemporaryDirectory() as tmp:
+                self.check_training_receipt(Path(tmp),mixed=mixed)
+
+    def check_training_receipt(self, root, *, mixed):
+        data,source=fixture(root)
+        probes=probe_fixture(root/'probe',count=2)
+        cfg=dict(data=[str(data)],probe=[str(probes)],out=str(root/'run'),architecture='new',phase='combat',
+            fit_size='full',width=16,layers=1,heads=4,steps=2,min_steps=2,batch=2,
+            eval_every=1,patience=6,lr=.001,seed=1919,device='cpu',deadline_utc=None)
+        teachers=[source['policy']['champion']['path']]
+        if mixed:
+            second,source2=fixture(root/'second',interface_suffix=b'# faster interface\n',
+                                  config={'world_start':92_000_001_000})
+            cfg.update(data=[str(data),str(second)],mixed_sources=True)
+            teachers.append(source2['policy']['champion']['path'])
+        native=json.loads(Path(source['launch']['path']).read_text())['native']
+        with patch('sts_rl.fresh_training.validate_training_config',side_effect=lambda c:validate_training_config(c,synthetic=True)), \
+             patch('sts_rl.fresh_training.TrainingControl',side_effect=lambda out,d:TrainingControl(out,d,ac=lambda:True,caffeinate=False)), \
+             patch('sts_rl.fresh_training.begin_run',side_effect=synthetic_begin_run(native)):
+            summary=run_training(cfg)
+        out=root/'run'
+        receipt=json.loads((out/'receipt.json').read_text())
+        selection=json.loads((out/'probe_selection.json').read_text())
+        manifest=json.loads((out/'manifest.json').read_text())
+        launch=json.loads(Path(receipt['launch']['path']).read_text())
+        self.assertEqual(manifest['collected_total'],36 if mixed else 18)
+        self.assertEqual(receipt['teacher_checkpoints'],sorted(teachers))
+        self.assertEqual(launch['effective_config']['teacher_checkpoints'],sorted(teachers))
+        self.assertEqual(len(manifest['collection_sources']),2 if mixed else 1)
+        self.assertTrue(all(r['world_seed']<93_000_000_000 for r in manifest['rows']))
+        self.assertEqual(receipt['probe_selection']['selection_identity'],selection['selection_identity'])
+        inputs=[i['path'] for i in launch['data_inputs']]
+        self.assertTrue(all(teacher in inputs for teacher in teachers))
+        self.assertIn(str((out/'probe_selection.json').resolve()),inputs)
+        self.assertTrue(all(i['path'] in inputs for i in selection['source_files']))
+        events=[json.loads(line) for line in (out/'metrics.jsonl').read_text().splitlines()]
+        self.assertTrue(all(e['fixed93e9_probes']['pooled']['count']==6 for e in events))
+        self.assertEqual(summary['best_step'],min(events,key=lambda e:e['validation']['loss'])['step'])
+        from sts_policy.training import load_checkpoint
+        checkpoint=load_checkpoint(out/'latest.pt')
+        self.assertEqual(checkpoint['metadata']['probe_selection'],receipt['probe_selection'])
+        self.assertIsNone(checkpoint['metadata']['parent_checkpoint'])
 
     def test_probes_leave_exact_optimizer_updates_and_selection_unchanged(self):
         with tempfile.TemporaryDirectory() as tmp:
