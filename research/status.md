@@ -1,6 +1,6 @@
 # Status
 
-**Updated 22 October 2026, 22:36 BST.** Several jobs run; nothing waits for Sid. Champion:
+**Updated 22 October 2026, 22:23 BST.** Several jobs run; nothing waits for Sid. Champion:
 `champion_af2fb9f1f260.pt` (21.1% on unused worlds).
 
 - **Champion promoted 22 October, 16:32:** the third continued training's
@@ -26,7 +26,7 @@
   and the 38 missing worlds of the win-first arm (`shard_03b`); about two
   hours. A background watcher reruns `analyse_benchmark.py` on every arm;
   detached keep-alive `keepalive_bench2.py`.
-- **Disk:** 78 GiB free at 22:36. Free space fell to 9.3 GiB at 22:00 and
+- **Disk:** 78 GiB free at 22:23. Free space fell to 9.3 GiB at 22:00 and
   stopped two benchmark arms (collectors stop below 6 GiB). With Sid's
   approval: the pip, uv and Homebrew download caches were cleared, and the
   240 files over 20 MB in the old LLM-era data (`~/Documents/SlayTheSpireAI/data`)
