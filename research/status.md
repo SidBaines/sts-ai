@@ -35,5 +35,7 @@
 
 ## Next
 
-Record the third continued training when it lands; follow the joint loop's
-gate decisions; decide how to use the boss-only corpus.
+Record the third continued training and the boss-label fits when they
+land; follow the joint loop's gate decisions; then start step 0 of the
+[better teacher](experiments/2026-10-22-better-teacher.md) plan
+(measurement and the teacher benchmark) on free lanes.

@@ -48,8 +48,9 @@ so the network plays well without search.
   are on top (Headbutt, Warcry, Frozen Eye), which the network's observation
   does not show either; it abstains on Secret Technique and Secret Weapon
   (1 of 35,054 round 2 labels).
-- Next: confirm one chosen student on the confirmation worlds; improve the
-  teacher before expert iteration.
+- Next: [a better search teacher](experiments/2026-10-22-better-teacher.md)
+  (planned): measure, benchmark, then fix the vote, score, determinisation
+  and known top cards.
 - Pages: [combat PPO and early imitation](experiments/2026-10-13-combat-ppo.md),
   [overnight tests](experiments/2026-10-14-overnight-tests.md),
   [fresh start](experiments/2026-10-15-fresh-start.md),

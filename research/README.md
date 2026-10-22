@@ -33,35 +33,25 @@ in the [results ledger](results.md).
 
 ## Now
 
-Running: a [second continued training](experiments/2026-10-21-continued-training-2.md)
-from the new champion, the first run to record exploration statistics,
-and a retest of the Demon Form rule on that champion. The champion became
-the first continued training's final checkpoint on the afternoon of 21
-October (11.6% against 9.3% on new worlds). [Large-batch PPO](experiments/2026-10-20-large-batch-ppo.md) finished on 21
-October: training the out-of-combat head for 73,728 more games improved
-every arm; batch size made no clear difference at equal games; the hygiene
-options helped under the potion filter; and the combat student plus retraining reached 9.6% on fresh
-worlds. The earlier plateau was the potions-visible evaluation, not the
-method. Also on 20 October: [boss rares](experiments/2026-10-20-boss-rares.md)
-(forcing Demon Form helps; never skipping boss rares does not clearly
-help) and [power picks](experiments/2026-10-20-power-picks.md) (powers are
-not under-picked as a class). See [status](status.md) and the temporary
-[experiment log](log.md).
+Running (see [status](status.md)): the [third continued training](experiments/2026-10-22-continued-training-3.md)
+of the out-of-combat head, which is also the control for the
+[joint loop](experiments/2026-10-22-joint-loop.md), queued next, in which
+out-of-combat PPO and teacher-labelled combat refits move together; and
+two combat students fitted on round 2, round 3 and boss-only labels
+([combat variance](experiments/2026-10-22-combat-variance.md)). Refits of
+the combat student vary a lot: one fit in four collapses by about two
+floors, so every refit is checked before use.
 
 ## Next
 
-1. **Second continued training and the Demon Form retest** (running);
-   distil the rule only if it still helps.
-2. **Read the exploration statistics** from that run: which menus are
-   saturated, and whether never-sampled actions (shop card removals) stay
-   at zero.
-3. **Card rule grid:** measure the champion's take rate for every card,
-   test forcing the most-declined strong cards with menu overlays, and
-   distil the ones that help; an ε-mixture behaviour policy was dropped
-   because PPO cannot raise near-zero probabilities (see
-   [strategies](strategies.md)). A counterfactual teacher for card rewards
-   is the general version.
-4. **Learn deck strength instead of simulating each choice:** a deck-value
+1. **Record the third continued training and the boss-label fits**, and
+   follow the joint loop's gate decisions.
+2. **[A better search teacher](experiments/2026-10-22-better-teacher.md)**
+   (planned with Sid, 22 October): measure the teacher's noise and build a
+   boss-fight benchmark for teachers; then fix its vote and score, pool its
+   searches, and build information-set search; let it and the student see
+   cards known to be on top of the draw pile. Network playouts follow.
+3. **Learn deck strength instead of simulating each choice:** a deck-value
    network trained on oracle scores. To discuss with Sid.
 
 The agent must stay a pure policy; search may be used to make better
@@ -73,8 +63,8 @@ teachers, not to play.
   could not?
 - Why does the old encoder still beat the structured encoder by about 1.4
   points once rule features and size are matched?
-- Would a stronger teacher (visit counts or values instead of the single best
-  rollout, a learned rollout policy) close the boss-fight gap?
+- Would a stronger teacher close the boss-fight gap, and is its weakness at
+  bosses the fixed sampled future, the random playouts or the score?
 - Does a recurrent policy (memory across turns) matter? Left for later.
 
 ## Pages

@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 22 October 2026
 
+- **Better-teacher plan**, 16:15: after reading the search teacher's source
+  (fixed sampled future, luckiest-line vote, uncalibrated score, forgotten
+  top cards), Sid approved a plan to measure, benchmark and fix it,
+  including an encoder that sees known top cards.
 - **All-corpora combat fit**, 13:41: 647 against the champion's 701
   (p = 0.039; floor −0.47): pooling didn't help in one fit. The joint loop
   will use only the corpora from today's players.
