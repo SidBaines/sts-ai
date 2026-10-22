@@ -41,6 +41,13 @@ so the network plays well without search.
   run on many labels works, though agreement with the teacher is a poor
   predictor of playing strength. The teacher itself is weak at bosses (see
   the [19 October brainstorm](brainstorms/2026-10-19-brainstorming.md)).
+- Known teacher limits (22 October, from the native source): each of the 24
+  searches plans in one fixed sampled future and picks the first move of its
+  single best playout, so it overrates lines that need foreseen draws or
+  enemy rolls; the draw pile is shuffled whole, losing cards the player knows
+  are on top (Headbutt, Warcry, Frozen Eye), which the network's observation
+  does not show either; it abstains on Secret Technique and Secret Weapon
+  (1 of 35,054 round 2 labels).
 - Next: confirm one chosen student on the confirmation worlds; improve the
   teacher before expert iteration.
 - Pages: [combat PPO and early imitation](experiments/2026-10-13-combat-ppo.md),
