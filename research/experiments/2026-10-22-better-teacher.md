@@ -203,7 +203,22 @@ champion's own games on the same worlds:
   scores differ by less than 0.000004 (equal cards to upgrade, equal map
   nodes); batched and single-game inference break such ties differently.
   This adds noise to the pairing, not bias.
-- Most-visited and pooled-search arms: running.
+- **New native options (win-first score, HP ignored at bosses, potions kept
+  for Acts 1 and 2; vote by best mean result)**, paired with today's teacher
+  on the same worlds: with today's exploration constant, 346 against 320
+  wins of 986 worlds (discordant 67/93, p = 0.048; Act 3 boss pass +4.9
+  points [+1.1, +8.6], Act 2 +1.7 [−0.6, +4.0]); with exploration 1.0,
+  329 against 333 of 1,024 (p = 0.81), and Act 2 boss pass fell 3.3 points
+  [−5.8, −0.8]. Lower exploration hurts; the win-first score may help at
+  the Act 3 boss. Exploratory: five arms are compared with today's teacher,
+  and p = 0.048 does not survive a correction for that; one shard of the
+  default-exploration arm stopped at 218 of 256 worlds (a power-status
+  query timed out), hence 986 worlds.
+- Pooled searches and most visited: stopped early when free disk space fell
+  below 6 GiB (215 and 152 worlds; the first worlds to finish, which favour
+  short games). On those worlds both beat today's teacher (90 against 72,
+  p = 0.008; 64 against 53, p = 0.035), but the samples are small and
+  selected: inconclusive until rerun.
 
 ## Conclusion
 
@@ -234,5 +249,7 @@ Pending.
 - 2026-10-22, 19:35: benchmark: the teacher at bosses wins 32.5 to 33.7%
   against the champion's 20.0%; the student has not learned the teacher's
   boss play.
+- 2026-10-22, 22:16: six arms analysed; pooled and most-visited arms
+  stopped by low disk space (9.3 GiB free); rerun once space is freed.
 
 Code: `experiments/2026-10-22-better-teacher/` (not yet written).
