@@ -135,7 +135,38 @@ known-top-cards change is code, written by Codex and reviewed by Claude.
 
 ## Results
 
-Not started.
+**Step 0, noise (finished): today's vote rule is mostly search noise, and
+more search does not fix it; voting by best mean result does improve with
+more search, after which disagreement between sampled futures remains.**
+Two searches at the same boss decision choose the same move this often
+(134 decisions from the benchmark below, about 45 per act; 8 searches per
+condition; "same future" = one sampled future, different search seeds;
+"different futures" = different sampled futures, one search seed; chance
+is about 23% with 5 to 6 legal moves):
+
+| Act | Vote rule | 1,000 simulations | 4,000 | 16,000 |
+|---|---|---|---|---|
+| 1 | Luckiest line (today) | 46% same future / 43% different | 50 / 45 | 50 / 48 |
+| 1 | Best mean result | 70 / 59 | 78 / 70 | 91 / 74 |
+| 2 | Luckiest line | 37 / 35 | 37 / 35 | 38 / 34 |
+| 2 | Best mean result | 53 / 43 | 64 / 50 | 76 / 56 |
+| 3 | Luckiest line | 50 / 43 | 53 / 44 | 55 / 46 |
+| 3 | Best mean result | 58 / 49 | 66 / 56 | 71 / 60 |
+
+- With today's rule, different sampled futures add only 2 to 7 points of
+  disagreement to the search's own noise, at every budget.
+- With the best-mean rule, the gap between one future and many grows with
+  budget (Act 2: 10 points at 1,000 simulations, 20 at 16,000): once search
+  noise falls, hidden information is the main remaining source, which is
+  what pooling or information-set search addresses.
+- The search spreads its simulations almost evenly over root moves (visit
+  entropy 0.91 to 0.94 of the maximum), and at 1,000 simulations a winning
+  playout is found in about 95% of Act 1 and 2 searches and 60% of Act 3
+  ones, so today's vote nearly always comes from a single lucky playout.
+- Agreement measures consistency, not strength; the benchmark below decides.
+  Agreement also counts two equivalent orderings of moves as different.
+
+**Step 0, benchmark:** running.
 
 ## Conclusion
 
@@ -158,5 +189,8 @@ Pending.
 - 2026-10-22, 17:43: benchmark arms queued for four vote rules on the same
   1,024 second-DEV worlds. In the first 110 worlds, every trajectory matched
   the champion's own game up to the teacher's first move, as designed.
+- 2026-10-22, 17:51: noise measurement done (table above). It changes the
+  order of work: fix the vote rule and raise the budget before building
+  information-set search.
 
 Code: `experiments/2026-10-22-better-teacher/` (not yet written).
