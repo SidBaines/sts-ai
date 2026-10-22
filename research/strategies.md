@@ -153,6 +153,20 @@ splice it into the player.
   fits, one was worse (it lost hallway fights) and one was not clearly
   better (733 against 701), though it passed bosses slightly more often.
 
+## Joint loop: out-of-combat PPO with gated combat refits
+
+**Promising.** While out-of-combat PPO runs, a loop labels the current
+player's fights with the search teacher, refits combat students, and swaps
+in a student that wins a gate, so the two halves can adapt to each other.
+
+- First run (22 October): 945 against its control's 877 of 4,096 unused
+  worlds (p = 0.029), with only one refit adopted (a disk-space stop hung
+  the second cycle). In a two-by-two, the refit helps (+1.5 points) and the
+  out-of-combat head that trained with the new combat head plays best with
+  it (interaction +1.8 points, borderline)
+  ([page](experiments/2026-10-22-joint-loop.md)).
+- Next: a robust orchestrator, a same-seed control, more refits.
+
 ## Distilling strategy rules
 
 **Working, used selectively.** Measure a strategic habit with a menu overlay
