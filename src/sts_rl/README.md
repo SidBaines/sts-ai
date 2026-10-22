@@ -187,6 +187,28 @@ Strategic entropy adds to `--entropy` only on rest, shop, card reward, map
 and card-removal menus. Updates already log optimizer minibatch steps as
 `steps` and KL guard stopping as `early_stop` (including zero-step updates).
 
+`train_ooc.py --combat-follow PATH` checks a checkpoint before each iteration's
+collection and adopts its combat head when the file's SHA-256 changes. The file
+may hold a composite or a bare phase head; every combat tensor must match the
+model's shape and dtype. Its metadata's `encoder_version` must match the starting
+checkpoint's, and its combat `model_config` must match that checkpoint's combat
+configuration. Bare heads may omit `model_config`; those still undergo encoder,
+tensor shape and dtype checks. Publish updates by writing a temporary file and
+renaming it. This option cannot be combined with `--train-combat`.
+Enabled runs log `combat_sha256` and `combat_hash_kind` on train and evaluation
+records (also in evaluation JSON files), plus `combat_swapped` on train records
+and `combat_swap` events. `eval_0000` measures the starting head before the first
+follow check. Fresh starts ignore inherited combat identity: the initial hash
+covers sorted combat tensor names, dtypes, shapes and bytes (`weights`); after
+adoption it covers the exact checkpoint bytes (`file`). The hash, kind, source
+path and a separate `combat_weights_sha256` fingerprint persist in trainer state;
+named checkpoint metadata also records the hash and kind. Resume restores that
+head before checking the followed file, trusting a saved file hash only from
+`latest.pt` and only if its fingerprint matches the loaded weights. Otherwise it
+uses a weights hash until adoption. Frozen combat parameters are excluded from
+AdamW, and swaps copy values without replacing parameters or optimizer state.
+Without this option, the existing training log schema is unchanged.
+
 Combat training uses `--fights`, `--mix`,
 `--holdout-fraction`, `--hp-weight`, `--shaping-hp` and `--shaping-enemy`;
 these change the objective or cohort. Resume uses `--out`'s `latest.pt`;

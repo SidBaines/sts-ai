@@ -11,6 +11,8 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import asdict, dataclass
 import gc
+import hashlib
+import io
 import json
 import math
 from pathlib import Path
@@ -26,6 +28,7 @@ from sts_policy.losses import PPOConfig, generalized_advantages, masked_distribu
 from sts_policy.encoding import encode_observation
 from sts_policy.model_agent import cached_public_collator, collate_public
 from sts_policy.rollout_training import collect_rollouts, update_ppo
+from sts_policy.training import load_checkpoint
 
 from .common import (save_atomic, EVAL_WORLD_START, ORIGINAL_CHECKPOINT, TRAIN_WORLD_START, JsonlLog, close_workers,
                      load_policy, make_workers, phase_forward, save_policy, strategic_rows, train_tasks)
@@ -56,6 +59,7 @@ class OOCTrainConfig:
     target_kl: float = 0.05
     credit: str = "macro"          # macro: OOC-only bootstrap; micro: GAE through combat critic
     combat: str = "greedy"         # greedy or sample during collection
+    combat_follow: str | None = None  # adopt this checkpoint's combat head between iterations
     ooc_temperature: float = 1.0
     strategic_temperature: float = 1.0  # extra OOC temperature on rest/map/shop menus (exploration)
     strategic_cards: bool = False      # also apply it to card-reward menus
@@ -419,7 +423,64 @@ def gradient_cosine(model: torch.nn.Module, forward, kept: Sequence[Sequence[Any
     return float(torch.dot(a, b) / (a.norm() * b.norm() + 1e-30))
 
 
+def _combat_weights_sha256(state: dict[str, torch.Tensor]) -> str:
+    """Initial/legacy identity: sorted combat tensor names, dtypes, shapes and bytes."""
+    digest = hashlib.sha256()
+    for key in sorted(k for k in state if k.startswith("combat.")):
+        value = state[key].detach().cpu().contiguous()
+        digest.update(json.dumps([key, str(value.dtype), list(value.shape)]).encode())
+        digest.update(value.reshape(-1).view(torch.uint8).numpy().tobytes())
+    return digest.hexdigest()
+
+
+def _follow_combat(model: torch.nn.Module, path: str, current_sha256: str,
+                   template: dict[str, Any]) -> str | None:
+    """Load and hash one snapshot; validate the whole head before copying anything."""
+    try:
+        data = Path(path).read_bytes()
+    except FileNotFoundError:
+        return None
+    sha256 = hashlib.sha256(data).hexdigest()
+    if sha256 == current_sha256:
+        return None
+    payload = load_checkpoint(io.BytesIO(data))
+    encoder = payload.get("metadata", {}).get("encoder_version")
+    if encoder != template["metadata"]["encoder_version"]:
+        raise ValueError(f"combat checkpoint {path}: encoder version mismatch")
+    source = payload["model_state"]
+    prefix = "combat." if any(k.startswith("combat.") for k in source) else ""
+    config = payload.get("model_config")
+    if prefix:
+        config = config.get("combat") if isinstance(config, dict) else None
+    if (prefix or "model_config" in payload) and config != template["model_config"]["combat"]:
+        raise ValueError(f"combat checkpoint {path}: combat model configuration mismatch")
+    state = model.state_dict()
+    combat = {}
+    for key, value in state.items():
+        if not key.startswith("combat."):
+            continue
+        source_key = prefix + key[len("combat."):]
+        if source_key not in source:
+            raise ValueError(f"combat checkpoint {path}: missing key {key} (source key {source_key})")
+        candidate = source[source_key]
+        if not isinstance(candidate, torch.Tensor) or candidate.shape != value.shape:
+            shape = tuple(candidate.shape) if isinstance(candidate, torch.Tensor) else type(candidate).__name__
+            raise ValueError(f"combat checkpoint {path}: shape mismatch for {key}: "
+                             f"expected {tuple(value.shape)}, got {shape}")
+        if candidate.dtype != value.dtype:
+            raise ValueError(f"combat checkpoint {path}: dtype mismatch for {key}: "
+                             f"expected {value.dtype}, got {candidate.dtype}")
+        combat[key] = candidate
+    # Copy into existing parameters; frozen combat parameters are absent from AdamW.
+    with torch.no_grad():
+        for key, value in combat.items():
+            state[key].copy_(value)
+    return sha256
+
+
 def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
+    if cfg.train_combat and cfg.combat_follow is not None:
+        raise ValueError("train_combat and combat_follow cannot be used together")
     if cfg.critic_gradient not in {"shared", "detached"}:
         raise ValueError("critic_gradient must be shared or detached")
     out = Path(cfg.out)
@@ -430,8 +491,10 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
     torch.manual_seed(cfg.seed)
     rng = random.Random(cfg.seed)
     model, template = load_policy(cfg.checkpoint)
+    saved_combat = {}
     normalizer = ReturnNormalizer()
     start_state = {k: v.clone() for k, v in model.state_dict().items()}
+    combat_keys = [k for k in start_state if k.startswith("combat.")]
     for name, p in model.named_parameters():
         p.requires_grad_(name.startswith("ooc.") or (cfg.train_combat and name.startswith("combat.")))
     trainable = [p for p in model.parameters() if p.requires_grad]
@@ -445,6 +508,10 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
         state = torch.load(latest, map_location="cpu", weights_only=False)
         normalizer = ReturnNormalizer.restore(state, enabled=cfg.normalize_returns)
         model.load_state_dict(state["model_state"])
+        # Frozen combat may have been adopted after cfg.checkpoint was written.
+        # Keep the original OOC reference for displacement measurements.
+        start_state.update({k: model.state_dict()[k].clone() for k in combat_keys})
+        saved_combat = state.get("trainer_state", {})
         optimizer.load_state_dict(state["optimizer_state"])
         # load_state_dict restores the saved lr; the config is authoritative (branches change it).
         saved_lr = optimizer.param_groups[0]["lr"]
@@ -470,7 +537,19 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                     epochs=cfg.epochs, minibatch_size=cfg.minibatch, learning_rate=cfg.lr,
                     kl_guard_before_update=True, target_kl=cfg.target_kl)
     baseline_records = json.loads(Path(cfg.baseline).read_text())["records"] if cfg.baseline else None
-    combat_keys = [k for k in start_state if k.startswith("combat.")]
+    if cfg.combat_follow is not None:
+        combat_weights_sha256 = _combat_weights_sha256(model.state_dict())
+        combat_sha256, combat_hash_kind = combat_weights_sha256, "weights"
+        combat_path = str(latest) if resume else cfg.checkpoint
+        # Fresh/spliced policies can inherit stale trainer state. Only latest.pt
+        # can supply a file identity, and it must describe the loaded weights.
+        saved_kind = saved_combat.get("combat_hash_kind")
+        saved_sha256 = saved_combat.get("combat_sha256")
+        if (saved_combat.get("combat_weights_sha256") == combat_weights_sha256
+                and saved_kind in {"weights", "file"} and saved_sha256
+                and (saved_kind == "file" or saved_sha256 == combat_weights_sha256)):
+            combat_sha256, combat_hash_kind = saved_sha256, saved_kind
+            combat_path = saved_combat.get("combat_path", combat_path)
     blocks = ooc_parameter_blocks(model)
     pool = None
     if cfg.collectors > 1:
@@ -491,9 +570,13 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
         restarts_before = pool.restarts if pool is not None else 0
         result = evaluate(model, pool if pool is not None else workers, n=cfg.eval_n,
                           world_start=cfg.eval_world_start)
+        if cfg.combat_follow is not None:
+            result.update(combat_sha256=combat_sha256, combat_hash_kind=combat_hash_kind)
         (out / f"eval_{iteration:04d}.json").write_text(json.dumps(result))
         record = {"event": "eval", "iteration": iteration, **result["summary"],
                   "collector_restarts": pool.restarts - restarts_before if pool is not None else 0}
+        if cfg.combat_follow is not None:
+            record.update(combat_sha256=combat_sha256, combat_hash_kind=combat_hash_kind)
         if baseline_records is not None:
             record["paired"] = paired(baseline_records, result["records"])
         log.emit(record)
@@ -503,6 +586,17 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             run_eval(0)
         for iteration in range(start_iteration, cfg.iterations + 1):
             started = time.time()
+            combat_swapped = False
+            if cfg.combat_follow is not None:
+                new_sha256 = _follow_combat(model, cfg.combat_follow, combat_sha256, template)
+                if new_sha256 is not None:
+                    log.emit({"event": "combat_swap", "iteration": iteration, "old_sha256": combat_sha256,
+                              "new_sha256": new_sha256, "path": cfg.combat_follow})
+                    combat_sha256, combat_path = new_sha256, cfg.combat_follow
+                    combat_hash_kind = "file"
+                    combat_weights_sha256 = _combat_weights_sha256(model.state_dict())
+                    combat_swapped = True
+                    start_state.update({k: model.state_dict()[k].clone() for k in combat_keys})
             model.eval()
             world_start = cfg.train_world_start + cfg.seed * 500_000_000 + iteration * 10_000_000
             tasks = train_tasks(world_start, cfg.games)
@@ -558,6 +652,9 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 "adv_raw_std": float(np.std([t.advantage for t in flat])) if flat else 0.0,
                 "return_scale": return_scale,
                 **behaviour, **exploration}
+            if cfg.combat_follow is not None:
+                record.update(combat_sha256=combat_sha256, combat_hash_kind=combat_hash_kind,
+                              combat_swapped=combat_swapped)
             update_started = time.time()
             if cfg.update_threads:
                 torch.set_num_threads(cfg.update_threads)
@@ -586,13 +683,19 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             del kept, flat
             gc.collect()
             trainer_state = normalizer.trainer_state() if cfg.normalize_returns else {}
+            combat_metadata = {}
+            if cfg.combat_follow is not None:
+                trainer_state.update(combat_sha256=combat_sha256, combat_hash_kind=combat_hash_kind,
+                                     combat_weights_sha256=combat_weights_sha256, combat_path=combat_path)
+                combat_metadata.update(combat_sha256=combat_sha256, combat_hash_kind=combat_hash_kind)
             payload = resume_payload(model, optimizer, iteration, steps_total, asdict(cfg), run_record, rng)
             payload["trainer_state"] = trainer_state
             save_atomic(payload, latest)
             if cfg.eval_every and (iteration % cfg.eval_every == 0 or iteration == cfg.iterations):
                 save_policy(out / f"iter_{iteration:04d}.pt", model, template,
                             metadata={"stage": "sts_rl_ooc_ppo", "iteration": iteration, "config": asdict(cfg),
-                                      'run_record': run_record}, optimizer=optimizer, step=steps_total, rng=rng,
+                                      'run_record': run_record, **combat_metadata},
+                            optimizer=optimizer, step=steps_total, rng=rng,
                             trainer_state=trainer_state)
                 run_eval(iteration)
     finally:
