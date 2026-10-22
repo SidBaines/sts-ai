@@ -166,6 +166,16 @@ is about 23% with 5 to 6 legal moves):
 - Agreement measures consistency, not strength; the benchmark below decides.
   Agreement also counts two equivalent orderings of moves as different.
 
+**Step 0, how often known top cards matter: rarely, for today's decks.**
+Among the 174,862 labelled combat decisions of the round 2 corpus, the deck
+holds Headbutt or Warcry in 3.7% of hallway, 2.9% of elite and 4.2% of boss
+decisions; Frozen Eye is present in 0.1 to 0.2%. The case the teacher gets
+wrong, a card just put on top this turn with a draw card in hand, occurs
+in about 0.03% of decisions (approximate: it relies on the observation's
+recent-action list). The champion rarely takes these cards, so the fix
+would change few labels now; it could matter more if a better teacher made
+the cards worth taking.
+
 **Step 0, benchmark:** running.
 
 ## Conclusion
