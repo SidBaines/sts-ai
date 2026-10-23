@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 23 October 2026
 
+- **Pooled distillation round**, 04:09: none of four students beats the
+  champion (pooled 873 and 718, luckiest-line 717 and 843, vs 899); three
+  of four fits lose about 2 floors. The teacher's boss strength does not
+  transfer through a single fit on 2,000 worlds.
 - **Teacher vote rules**, 00:21: pooling the 24 searches' statistics before
   choosing wins 429 against today's 331 of 1,020 worlds when the teacher
   plays the bosses (p < 0.001; Act 3 boss pass +11 points). Same searches,

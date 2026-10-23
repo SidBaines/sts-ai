@@ -247,6 +247,36 @@ champion's own games on the same worlds:
   - The two arms stopped by low disk space (215 and 152 worlds) are
     superseded by these full reruns.
 
+- **Pooled searches with more simulations or the win-first score**, paired
+  with pooled searches (1,024 worlds): 2,000 simulations per search won 454
+  against 429 (discordant 55/80, p = 0.038; Act 3 boss pass +4.1 points
+  [+1.1, +7.1]); the win-first score won 404 against 429 (97/72, p =
+  0.065; Act 2 boss pass −2.0 [−4.1, −0.1]). More search helps; the score
+  change does not once searches are pooled.
+
+**Distillation round (rule fixed in advance): no pooled-label student beats
+the champion.** Corpus: the champion played 2,000 new worlds (23% won),
+about 98 teacher labels per world (134,376 fit rows). Each student was fitted
+on this corpus only and spliced into the champion; second DEV, paired with
+the champion's 899 wins:
+
+| Student | Wins | McNemar p | Mean floor | Act 2 boss pass |
+|---|---:|---:|---|---|
+| Pooled labels, seed 1 | 873 | 0.39 | −1.70 [−2.09, −1.31] | −0.5 [−2.3, +1.3] |
+| Pooled labels, seed 2 | 718 | < 0.001 | −2.92 [−3.33, −2.51] | −1.6 [−3.5, +0.3] |
+| Luckiest-line labels from the same searches, seed 1 | 717 | < 0.001 | −1.92 [−2.27, −1.56] | −6.0 [−7.8, −4.3] |
+| Luckiest-line labels, seed 2 | 843 | 0.059 | −0.32 [−0.68, +0.04] | +0.6 [−1.1, +2.4] |
+
+- Pooled against luckiest-line labels, same seed: seed 1 873 against 717
+  (p < 0.001), seed 2 718 against 843 (p < 0.001): the two seeds disagree,
+  so the label rule's effect on students is not established.
+- Three of the four fits lose 1.7 to 2.9 floors, mostly before the bosses;
+  the fit-to-fit variance seen before (one fit in four collapsing) is at
+  least as large here, and dominates any label effect.
+- The bar is high: the champion's combat head is the best of five fits on
+  an earlier corpus; a single fit on 2,000 worlds rarely matches it, with
+  either label rule.
+
 ## Conclusion
 
 Pending.
@@ -276,6 +306,9 @@ Pending.
 - 2026-10-22, 19:35: benchmark: the teacher at bosses wins 32.5 to 33.7%
   against the champion's 20.0%; the student has not learned the teacher's
   boss play.
+- 2026-10-23, 04:09: pooled distillation round: no student beats the
+  champion; fit variance dominates. Pooled at 2,000 simulations beats
+  pooled at 1,000 (454 against 429).
 - 2026-10-23, 00:21: full reruns: pooled searches win 429 against 331
   (p < 0.001), the clear best rule.
 - 2026-10-22, 22:16: six arms analysed; pooled and most-visited arms
