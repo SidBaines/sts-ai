@@ -32,7 +32,7 @@ in the [results ledger](results.md).
 
 Running (see [status](status.md)): a [reward ablation](experiments/2026-10-23-reward-ablation.md),
 12 iterations of out-of-combat PPO from the champion with the current
-reward (wins plus floors) against wins only; results expected around 17:00
+reward (wins plus floors) against wins only; results expected around 18:00
 on 23 October.
 
 ## Next

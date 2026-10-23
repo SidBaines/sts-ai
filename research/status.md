@@ -8,7 +8,7 @@ on unused worlds).
   (output `reward_ablation_20261023/` in worktree `nonllm-large-batch`):
   trainers `ra-train-floors` (lane `train`) and `ra-train-wins` (lane
   `train2`) of the `nonllm-large-batch` queue, 12 iterations each from the
-  champion, both started 12:13; expected to finish around 17:00. Code runs
+  champion, both started 12:13; about 28 minutes per iteration with both sharing the laptop, so expected to finish around 18:00. Code runs
   from worktree `nonllm-reward-ablation` (do not edit it). The detached
   watcher `evaluate_arms.sh` (session scratchpad, `reward_ablation/`, log
   `eval108.log`) queues each arm's iteration 4, 8 and 12 checkpoints and the
