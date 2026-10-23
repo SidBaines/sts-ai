@@ -7,6 +7,9 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 23 October 2026
 
+- **Fourth continued training**, 04:15: 971 against the champion's 887 on
+  unused worlds (p = 0.005), 980 against 899 on second DEV. Joint run 2's
+  first iteration matches it exactly: training is deterministic.
 - **Pooled distillation round**, 04:09: none of four students beats the
   champion (pooled 873 and 718, luckiest-line 717 and 843, vs 899); three
   of four fits lose about 2 floors. The teacher's boss strength does not

@@ -1,6 +1,6 @@
 # Continued out-of-combat training, fourth pass, from the 22 October champion
 
-**Status:** queued (starts when the joint run frees the trainer, expected
+**Status:** finished 23 October. **Verdict:** better, confirmed: 23.7% against the champion's 21.7% on unused worlds (971 against 887, p = 0.005).
 late evening on 22 October). **Verdict:** pending.
 
 ## Question
@@ -32,18 +32,32 @@ promoted the third pass.
 
 ## Results
 
-Pending.
+| Worlds | Champion | Fourth continued training | Paired difference in wins | McNemar | Mean floor |
+|---|---|---|---|---|---|
+| Second DEV | 899 (21.9%) | 980 (23.9%) | +2.0 points [+0.5, +3.4] | p = 0.008 (412/493 discordant) | −0.06 [−0.40, +0.27] |
+| Unused, from 104,000,000,000 | 887 (21.7%) | 971 (23.7%) | +2.1 points [+0.6, +3.5] | p = 0.005 (396/480) | +0.11 [−0.24, +0.45] |
+
+- The trainer's best checkpoint (iteration 12) won 934 on second DEV (p =
+  0.24): the final checkpoint is the one that improved.
+- Act 2 boss pass +2.4 points [+0.7, +4.1] on the unused worlds.
+- Training is deterministic: the joint run 2 trainer (same start, seed and
+  settings) reproduced this run's first iteration exactly.
 
 ## Conclusion
 
-Pending.
+A fourth pass of the recipe gained again, about 2 points of wins,
+confirmed on unused worlds; smaller than the earlier passes (3.9 to 4.5
+points), so gains may be starting to shrink. Caveat: one seed. Promotion is
+Sid's decision.
 
 ## Next
 
-Pending.
+- If promoted, a fifth pass, or the joint run 2 recipe if it wins.
+- It is the control for [joint run 2](2026-10-22-joint-run-2.md).
 
 ## Log
 
+- 23 Oct, 04:15: evaluated; better on both world sets.
 - 22 Oct, 16:32: queued on the trainer lane after the joint run; a detached
   watcher (`eval_continued4.sh`) evaluates it when it finishes.
 
