@@ -1,6 +1,6 @@
 # Status
 
-**Updated 23 October 2026, 10:35 BST.** Nothing running.
+**Updated 23 October 2026, 10:15 BST.** Nothing running.
 Champion: `champion_c8553bc33e53.pt`, joint run 2's final checkpoint (26.8%
 on unused worlds), promoted by Sid at 09:58. A copy with its record is in
 `joint2_analysis_20261023/inputs/` (worktree `nonllm-large-batch`).
