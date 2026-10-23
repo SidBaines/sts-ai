@@ -177,6 +177,9 @@ in a student that wins a gate, so the two halves can adapt to each other.
   (interaction +0.0 [−1.9, +1.9]) ([page](experiments/2026-10-22-joint-run-2.md)).
   The useful part is the gated refit cycle, which can run beside ordinary
   out-of-combat training.
+  On the same positions the refitted head mainly drinks potions twice as
+  often, toward the search teacher, yet still at about half the teacher's
+  rate. Promoted to champion on 23 October.
 
 ## Distilling strategy rules
 

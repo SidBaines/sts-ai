@@ -30,12 +30,11 @@ in the [results ledger](results.md).
 
 ## Now
 
-Running (see [status](status.md)): an analysis of what joint run 2's
-refitted combat head does differently, on matched game states
-([joint run 2](experiments/2026-10-22-joint-run-2.md)). First look, from the
-two-by-two games: the new combat head dies less at the Act 1 boss and in
-Act 2 hallway fights, passes the Act 2 boss more often, drinks potions more,
-and does no better at the Act 3 boss.
+Nothing running. [Joint run 2](experiments/2026-10-22-joint-run-2.md)'s
+gain is its refitted combat head, which on the same positions mainly drinks
+potions twice as often (toward the search teacher, still at about half its
+rate), passes the Act 1 and Act 2 bosses more often, and plays the Act 3
+boss no better.
 
 ## Next
 
