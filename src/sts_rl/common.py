@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from concurrent.futures import Future
 import json
+import math
 import os
 import re
 from pathlib import Path
@@ -48,9 +49,14 @@ def make_workers(count: int, *, timeout: float = 10.0, dead_action_filter: bool 
                  elite_above: float | None = None, skip_cards_after: int | None = None,
                  save_potions_above: float | None = None, avoid_boss_relics: tuple[str, ...] = (),
                  no_skip_rares: bool = False, take_cards: tuple[str, ...] = (),
-                 hide_ooc_potions: bool = False) -> list[Any]:
-    workers = [InProcessWorker(config=WORKER_CONFIG) if in_process else
-               CurriculumWorker(config=WORKER_CONFIG, timeout=timeout) for _ in range(count)]
+                 hide_ooc_potions: bool = False, progress_floor_weight: float | None = None) -> list[Any]:
+    config = WORKER_CONFIG
+    if progress_floor_weight is not None:
+        if not math.isfinite(progress_floor_weight) or progress_floor_weight < 0:
+            raise ValueError("progress_floor_weight must be finite and nonnegative")
+        config = {**WORKER_CONFIG, "progress_floor_weight": progress_floor_weight}
+    workers = [InProcessWorker(config=config) if in_process else
+               CurriculumWorker(config=config, timeout=timeout) for _ in range(count)]
     if not (dead_action_filter or slim or forced_play or dominated or smith_above is not None or prefer_remove
             or elite_above is not None or skip_cards_after is not None or save_potions_above is not None
             or avoid_boss_relics or no_skip_rares or take_cards or hide_ooc_potions):

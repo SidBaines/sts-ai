@@ -63,8 +63,10 @@ class CollectorPool:
     """K persistent collector processes splitting ``workers`` game workers."""
 
     def __init__(self, collectors: int, *, workers: int, checkpoint: str, dead_action_filter: bool = True,
-                 threads: int = 1, in_process: bool = False, **worker_options: Any) -> None:
-        worker_options = {"dead_action_filter": dead_action_filter, "in_process": in_process, **worker_options}
+                 threads: int = 1, in_process: bool = False, progress_floor_weight: float | None = None,
+                 **worker_options: Any) -> None:
+        worker_options = {"dead_action_filter": dead_action_filter, "in_process": in_process,
+                          "progress_floor_weight": progress_floor_weight, **worker_options}
         self._context = mp.get_context("spawn")
         per = max(1, math.ceil(workers / collectors))
         self._collector_args = (checkpoint, per, worker_options, threads)

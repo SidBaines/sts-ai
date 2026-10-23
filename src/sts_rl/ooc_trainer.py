@@ -55,6 +55,8 @@ class OOCTrainConfig:
     value_weight: float = 0.5
     critic_gradient: str = "shared"  # shared or detached: critic head alone receives value gradients
     normalize_returns: bool = False
+    reset_return_normalizer: bool = False
+    progress_floor_weight: float = 0.05
     gae_lambda: float = 1.0
     target_kl: float = 0.05
     credit: str = "macro"          # macro: OOC-only bootstrap; micro: GAE through combat critic
@@ -525,9 +527,13 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
         if not (out / "config.json").exists():  # a branch seeded from another run's latest.pt
             (out / "config.json").write_text(json.dumps(asdict(cfg), indent=1))
     else:
-        normalizer = ReturnNormalizer.restore(template, enabled=cfg.normalize_returns)
+        if not cfg.reset_return_normalizer:
+            normalizer = ReturnNormalizer.restore(template, enabled=cfg.normalize_returns)
         (out / "config.json").write_text(json.dumps(asdict(cfg), indent=1))
-        log.emit({"event": "start", "config": asdict(cfg), 'run_record': run_record})
+        start_event = {"event": "start", "config": asdict(cfg), 'run_record': run_record}
+        if cfg.reset_return_normalizer:
+            start_event["reset_return_normalizer"] = True
+        log.emit(start_event)
     forward = phase_forward(combat=cfg.combat, temperature=cfg.ooc_temperature,
                             strategic_temperature=cfg.strategic_temperature, strategic_cards=cfg.strategic_cards,
                             card_temperature=cfg.card_temperature)
@@ -558,13 +564,14 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                              in_process=cfg.in_process_games, hide_ooc_potions=cfg.hide_ooc_potions,
                              dead_action_filter=cfg.dead_action_filter, dominated=cfg.dominated_filter,
                              smith_above=cfg.smith_above, prefer_remove=cfg.prefer_remove,
-                             elite_above=cfg.elite_above)
+                             elite_above=cfg.elite_above, progress_floor_weight=cfg.progress_floor_weight)
         workers: list[Any] = []
     else:
         workers = make_workers(cfg.workers, dead_action_filter=cfg.dead_action_filter,
                                in_process=cfg.in_process_games, hide_ooc_potions=cfg.hide_ooc_potions,
                                dominated=cfg.dominated_filter, smith_above=cfg.smith_above,
-                               prefer_remove=cfg.prefer_remove, elite_above=cfg.elite_above)
+                               prefer_remove=cfg.prefer_remove, elite_above=cfg.elite_above,
+                               progress_floor_weight=cfg.progress_floor_weight)
 
     def run_eval(iteration: int) -> None:
         restarts_before = pool.restarts if pool is not None else 0
