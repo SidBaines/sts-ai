@@ -7,6 +7,11 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 23 October 2026
 
+- **Joint run 2**, 08:36: 1,071 against its same-seed control's 998 (p =
+  0.022); the gain is all from the refitted combat head (two-by-two
+  interaction +0.0). Best combination: the control's out-of-combat head with
+  the joint run's combat head, 1,101; confirmation queued on worlds from
+  107,000,000,000.
 - **Potion-only teacher**, 08:15: the teacher deciding only potion drinks at
   bosses lifts the champion from 205 to 249 wins of 1,024 (p < 0.001): a
   narrow, cheap distillation target.

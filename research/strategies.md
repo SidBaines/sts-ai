@@ -171,7 +171,12 @@ in a student that wins a gate, so the two halves can adapt to each other.
   out-of-combat head that trained with the new combat head plays best with
   it (interaction +1.8 points, borderline)
   ([page](experiments/2026-10-22-joint-loop.md)).
-- Next: a robust orchestrator, a same-seed control, more refits.
+- Second run (23 October, same-seed control): 1,071 against 998 of 4,096
+  unused worlds (p = 0.022) with two refits, but the two-by-two shows the
+  whole gain is the refitted combat head (+2.5 points) and no co-adaptation
+  (interaction +0.0 [−1.9, +1.9]) ([page](experiments/2026-10-22-joint-run-2.md)).
+  The useful part is the gated refit cycle, which can run beside ordinary
+  out-of-combat training.
 
 ## Distilling strategy rules
 
