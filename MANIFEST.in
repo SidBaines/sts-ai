@@ -1,0 +1,9 @@
+include README.md CLAUDE.md WORKSTREAMS.md THIRD_PARTY_NOTICES.md
+recursive-include patches *.patch
+include scripts/build_lightspeed.sh
+include scripts/native_build_manifest.py
+include scripts/run_rollout.py
+include scripts/build_test_fixtures.sh
+recursive-include examples *.py
+recursive-include tests *.py *.md *.json *.cpp
+recursive-include docs *.md

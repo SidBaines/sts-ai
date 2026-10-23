@@ -1,0 +1,49 @@
+name: Environment
+
+on:
+  push:
+    branches: [main]
+    tags: ['env-v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ['3.12']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install package
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -e '.[gym]'
+      - name: Build pinned simulator
+        run: scripts/build_lightspeed.sh
+      - name: Build test-only search fixture
+        run: echo "STS_SEARCH_TEST_FIXTURE=$(scripts/build_test_fixtures.sh)" >> "$GITHUB_ENV"
+      - name: Test including required native integration
+        env:
+          PYTHONPATH: src
+          STS_REQUIRE_SIMULATOR: '1'
+          STS_REQUIRE_SEARCH_TEST_FIXTURE: '1'
+        run: .venv/bin/python -m unittest discover -s tests -t .
+      - name: Bounded rollout and replay
+        run: |
+          .venv/bin/sts-env doctor
+          .venv/bin/sts-env run --agent random --seed 3 --mode ooc --max-act 1 --battle-simulations 50 --output data/ci-smoke.jsonl
+          .venv/bin/sts-env replay data/ci-smoke.jsonl
+      - name: Build installable wheel
+        run: |
+          .venv/bin/python -m pip wheel . --no-deps --wheel-dir dist
+          python -m venv .wheel-venv
+          .wheel-venv/bin/python -m pip install --no-deps dist/*.whl
+          .wheel-venv/bin/sts-env --help
+          STS_LIGHTSPEED_BUILD="$PWD/external/sts_lightspeed/build" .wheel-venv/bin/sts-env doctor

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from sts_ai.glossary_v5 import augment, buff_effect, calculated_block, card_definition
+from sts_env._backend.glossary_v5 import augment, buff_effect, calculated_block, card_definition
 
 
 def state(extra: str = "") -> str:
@@ -60,6 +60,16 @@ class GlossaryV5Test(unittest.TestCase):
         self.assertIn("deal 8 damage", card_definition("Whirlwind+", []))
         self.assertIn("Deal 21 unmodified damage", card_definition("Ritual Dagger=21", []))
 
+    def test_cached_rules_follow_relic_context_and_full_instance_name(self):
+        for relics in ([], ["Blue Candle"], ["Burning Blood"], ["Blue Candle"]):
+            definition = card_definition("Injury", relics)
+            self.assertEqual("Playable with Blue Candle" in definition, "Blue Candle" in relics)
+        for name, damage in (("Rampage=5", 13), ("Rampage=9+", 17),
+                             ("Ritual Dagger=21", 21), ("Ritual Dagger=25+", 25)):
+            self.assertIn(f"{name}: Deal {damage} unmodified damage", card_definition(name, []))
+        self.assertIn("Deal 34 damage", card_definition("Searing Blow+4", []))
+        self.assertIn("Deal 51 damage", card_definition("Searing Blow+6", []))
+
     def test_pending_optional_exhaust_selection_is_clear(self):
         text = augment(state("Selection type: EXHAUST_MANY\n"),
                        [{"index": 0, "description": "exhaust no cards"}], "combat")
@@ -70,6 +80,6 @@ class GlossaryV5Test(unittest.TestCase):
     def test_requires_ascension_and_keeps_noncombat_unchanged(self):
         with self.assertRaisesRegex(ValueError, "ascension"):
             augment(state().replace("Ascension: 0", ""), [], "combat")
-        from sts_ai.glossary_v4 import augment as previous
+        from sts_env._backend.glossary_v4 import augment as previous
         self.assertEqual(augment("Your HP: 80/80", [], "out_of_combat"),
                          previous("Your HP: 80/80", [], "out_of_combat"))

@@ -1,13 +1,14 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..3ab3f98 100644
+index a9afe35..5115165 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1380 @@
+@@ -9,24 +9,1579 @@
 
  #include <sstream>
  #include <algorithm>
 +#include <map>
 +#include <random>
++#include <tuple>
 
  #include "sim/ConsoleSimulator.h"
  #include "sim/search/ScumSearchAgent2.h"
@@ -92,15 +93,30 @@ index a9afe35..3ab3f98 100644
 +
 +// Number of times an attack hits the annotated enemy. The engine encodes this
 +// inline in BattleContext::useAttackCard (no table), so we mirror it here — the static
-+// twin of Cards::getBaseDamage. Default 1. Ironclad-scoped; keep in sync with the
-+// card pool. Sword Boomerang is only annotated when its random targeting is
-+// deterministic because exactly one monster is alive.
++// twin of Cards::getBaseDamage. The static table defaults to 1; the context overload
++// below handles Whirlwind and Fiend Fire. Ironclad-scoped; keep in sync with the card
++// pool. With multiple enemies, Sword Boomerang's count is shared across random
++// targets, so its per-target annotation reports only the damage per hit.
 +int getHitCount(CardId id, bool upgraded) {
 +    switch (id) {
 +        case CardId::TWIN_STRIKE:     return 2;
 +        case CardId::PUMMEL:          return upgraded ? 5 : 4;
 +        case CardId::SWORD_BOOMERANG: return upgraded ? 4 : 3;
 +        default:                      return 1;
++    }
++}
++
++int getHitCount(const BattleContext &bc, const CardInstance &card) {
++    switch (card.getId()) {
++        case CardId::WHIRLWIND:
++            // Action::execute queues current energy; WhirlwindAction adds
++            // Chemical X even when the card is free to play once.
++            return bc.player.energy + (bc.player.hasRelic<RelicId::CHEMICAL_X>() ? 2 : 0);
++        case CardId::FIEND_FIRE:
++            // The played card leaves the hand before FiendFireAction counts it.
++            return bc.cards.cardsInHand - 1;
++        default:
++            return getHitCount(card.getId(), card.isUpgraded());
 +    }
 +}
 +
@@ -124,11 +140,13 @@ index a9afe35..3ab3f98 100644
 +// Base damage for the targeted special-formula cards that the computed-damage
 +// opt-in supports. These expressions deliberately mirror BattleContext::useAttackCard
 +// before passing through calculateCardDamage, including Heavy Blade's additional
-+// Strength applications. FIEND_FIRE remains unsupported because its hit count is
-+// determined by the hand after card-play triggers resolve.
++// Strength applications. Fiend Fire's base is per hit; its hand-dependent hit
++// count is handled by the context overload of getHitCount.
 +int getSpecialDamageBase(const BattleContext &bc, const CardInstance &card) {
 +    const bool upgraded = card.isUpgraded();
 +    switch (card.getId()) {
++        case CardId::FIEND_FIRE:
++            return upgraded ? 10 : 7;
 +        case CardId::BODY_SLAM:
 +            return bc.player.block;
 +        case CardId::HEAVY_BLADE:
@@ -146,7 +164,7 @@ index a9afe35..3ab3f98 100644
 +    }
 +}
 +
-+// Base damage for every non-X, untargeted ATTACK implemented by the Ironclad
++// Base damage for every untargeted ATTACK implemented by the Ironclad
 +// BattleContext::useAttackCard path. The engine folds Vigor into the queued base,
 +// then removes the status before the queued action calculates damage. An annotation
 +// is computed before card use, so calculateCardDamage sees the live Vigor and these
@@ -160,6 +178,7 @@ index a9afe35..3ab3f98 100644
 +        case CardId::REAPER:             return upgraded ? 5 : 4;
 +        case CardId::SWORD_BOOMERANG:    return 3;
 +        case CardId::THUNDERCLAP:        return upgraded ? 7 : 4;
++        case CardId::WHIRLWIND:          return upgraded ? 8 : 5;
 +        default:                         return -1;
 +    }
 +}
@@ -233,17 +252,12 @@ index a9afe35..3ab3f98 100644
 +    return std::to_string(cost);
 +}
 +
-+// The pile label includes every card attribute that can affect an immediate
-+// choice.  Pile output is later aggregated and sorted by this string, so the
-+// underlying draw vector's order (which is hidden information) never leaks.
-+std::string publicCardLabel(const CardInstance &card, bool includeCardType=false) {
++// Hand and action costs omit the base cost for byte compatibility. Pile
++// labels also show it when a temporary modifier changes the displayed cost.
++std::string publicCardCostLabel(const CardInstance &card, bool includeBase=false) {
 +    std::ostringstream os;
-+    os << publicCardName(card);
-+    if (includeCardType) {
-+        os << publicCardTypeTag(card);
-+    }
 +    os << " (cost " << energyCostLabel(card.costForTurn);
-+    if (card.costForTurn != card.cost) {
++    if (includeBase && card.costForTurn != card.cost) {
 +        os << ", base " << energyCostLabel(card.cost);
 +    }
 +    if (card.freeToPlayOnce) {
@@ -253,6 +267,19 @@ index a9afe35..3ab3f98 100644
 +        os << ", retained";
 +    }
 +    os << ")";
++    return os.str();
++}
++
++// The pile label includes every card attribute that can affect an immediate
++// choice. Pile output is later aggregated and sorted by this string, so the
++// underlying draw vector's order (which is hidden information) never leaks.
++std::string publicCardLabel(const CardInstance &card, bool includeCardType=false) {
++    std::ostringstream os;
++    os << publicCardName(card);
++    if (includeCardType) {
++        os << publicCardTypeTag(card);
++    }
++    os << publicCardCostLabel(card, true);
 +    return os.str();
 +}
 +
@@ -525,10 +552,89 @@ index a9afe35..3ab3f98 100644
 +    }
 +}
 +
++static const char *publicEventNames[] = {"INVALID", "MONSTER", "REST", "SHOP", "TREASURE", "NEOW", "OMINOUS_FORGE", "PLEADING_VAGRANT", "ANCIENT_WRITING", "OLD_BEGGAR", "BIG_FISH", "BONFIRE_SPIRITS", "COLOSSEUM", "CURSED_TOME", "DEAD_ADVENTURER", "DESIGNER_IN_SPIRE", "AUGMENTER", "DUPLICATOR", "FACE_TRADER", "FALLING", "FORGOTTEN_ALTAR", "THE_DIVINE_FOUNTAIN", "GHOSTS", "GOLDEN_IDOL", "GOLDEN_SHRINE", "WING_STATUE", "KNOWING_SKULL", "LAB", "THE_SSSSSERPENT", "LIVING_WALL", "MASKED_BANDITS", "MATCH_AND_KEEP", "MINDBLOOM", "HYPNOTIZING_COLORED_MUSHROOMS", "MYSTERIOUS_SPHERE", "THE_NEST", "NLOTH", "NOTE_FOR_YOURSELF", "PURIFIER", "SCRAP_OOZE", "SECRET_PORTAL", "SENSORY_STONE", "SHINING_LIGHT", "THE_CLERIC", "THE_JOUST", "THE_LIBRARY", "THE_MAUSOLEUM", "THE_MOAI_HEAD", "THE_WOMAN_IN_BLUE", "TOMB_OF_LORD_RED_MASK", "TRANSMORGRIFIER", "UPGRADE_SHRINE", "VAMPIRES", "WE_MEET_AGAIN", "WHEEL_OF_CHANGE", "WINDING_HALLS", "WORLD_OF_GOOP"};
++
++pybind11::dict publicEvent(const GameContext &gc) {
++    pybind11::dict d;
++    if (gc.screenState != ScreenState::EVENT_SCREEN) { return d; }
++    d["event"] = publicEventNames[static_cast<int>(gc.curEvent)];
++    switch (gc.curEvent) {
++        case Event::CURSED_TOME: case Event::SCRAP_OOZE: case Event::MATCH_AND_KEEP:
++            d["event_data"] = gc.info.eventData; break;
++        case Event::DEAD_ADVENTURER: d["phase"] = gc.info.phase; break;
++        case Event::DESIGNER_IN_SPIRE:
++            d["upgrade_one"] = gc.info.upgradeOne;
++            d["cleanup_is_remove"] = gc.info.cleanUpIsRemoveCard; break;
++        case Event::BIG_FISH: case Event::FACE_TRADER: case Event::FORGOTTEN_ALTAR:
++        case Event::GHOSTS: case Event::SHINING_LIGHT: case Event::THE_CLERIC:
++        case Event::THE_LIBRARY: case Event::THE_MOAI_HEAD: case Event::THE_WOMAN_IN_BLUE:
++        case Event::VAMPIRES:
++            d["hp_amount0"] = gc.info.hpAmount0; break;
++        case Event::GOLDEN_IDOL:
++            d["hp_amount0"] = gc.info.hpAmount0; d["hp_amount1"] = gc.info.hpAmount1; break;
++        case Event::KNOWING_SKULL: case Event::WINDING_HALLS:
++            d["hp_amount0"] = gc.info.hpAmount0; d["hp_amount1"] = gc.info.hpAmount1;
++            d["hp_amount2"] = gc.info.hpAmount2; break;
++        case Event::WORLD_OF_GOOP: d["gold_loss"] = gc.info.goldLoss; break;
++        case Event::FALLING: {
++            auto addCard = [&](const char *key, int idx) {
++                if (idx >= 0 && idx < gc.deck.size()) { std::ostringstream os; os << gc.deck.cards[idx]; d[key] = os.str(); }
++            };
++            addCard("falling_skill_card", gc.info.skillCardDeckIdx);
++            addCard("falling_power_card", gc.info.powerCardDeckIdx);
++            addCard("falling_attack_card", gc.info.attackCardDeckIdx); break;
++        }
++        case Event::NLOTH:
++            d["relic0"] = std::string(getRelicName(gc.relics.relics[gc.info.relicIdx0].id));
++            d["relic1"] = std::string(getRelicName(gc.relics.relics[gc.info.relicIdx1].id)); break;
++        case Event::WE_MEET_AGAIN:
++            d["gold"] = gc.info.gold;
++            if (gc.info.potionIdx >= 0 && gc.info.potionIdx < gc.potionCapacity) {
++                d["potion"] = std::string(safePotionName(gc.potions[gc.info.potionIdx]));
++            }
++            if (gc.info.cardIdx >= 0 && gc.info.cardIdx < gc.deck.size()) {
++                std::ostringstream os; os << gc.deck.cards[gc.info.cardIdx]; d["card"] = os.str();
++            }
++            break;
++        default: break;
++    }
++    return d;
++}
++
 +std::string describeGameAction(const GameContext &gc, const search::GameAction &a) {
 +    // NOTE: the raw action `bits` are intentionally omitted from this human-/model-
 +    // facing description; they remain available structurally on LegalAction.bits.
 +    std::ostringstream os;
++
++    if (a.isPotionAction()) {
++        const int slot = a.getIdx1();
++        if (slot >= gc.potionCapacity) {
++            throw std::runtime_error("potion slot out of range");
++        }
++        const auto potion = gc.potions[slot];
++        os << (a.isPotionDiscard() ? "discard potion " : "drink potion ")
++           << safePotionName(potion) << " (slot " << slot << ")";
++        if (!a.isPotionDiscard()) {
++            switch (potion) {
++                case Potion::BLOOD_POTION:
++                    os << ": heal "
++                       << gc.fractionMaxHp(gc.hasRelic(RelicId::SACRED_BARK) ? 0.40f : 0.20f)
++                       << " HP";
++                    break;
++                case Potion::FRUIT_JUICE: {
++                    const int amount = gc.hasRelic(RelicId::SACRED_BARK) ? 10 : 5;
++                    os << ": gain " << amount << " max HP and heal " << amount << " HP";
++                    break;
++                }
++                case Potion::ENTROPIC_BREW:
++                    os << ": fill empty potion slots with random potions";
++                    break;
++                default:
++                    break;
++            }
++        }
++        return os.str();
++    }
 +
 +    switch (gc.screenState) {
 +        case ScreenState::EVENT_SCREEN: {
@@ -620,6 +726,10 @@ index a9afe35..3ab3f98 100644
 +                } else {
 +                    const auto &node = gc.map->getNode(a.getIdx1(), gc.curMapNodeY + 1);
 +                    os << " room=" << roomStrings[static_cast<int>(node.room)];
++                }
++                if (gc.curMapNodeY < 14 && a.getIdx1() == gc.map->burningEliteX
++                    && gc.curMapNodeY + 1 == gc.map->burningEliteY) {
++                    os << " (burning: Emerald Key)";
 +                }
 +            }
 +            break;
@@ -881,6 +991,77 @@ index a9afe35..3ab3f98 100644
 +    return os.str();
 +}
 +
++// Keep same-name living enemies distinct in card/potion targets and damage
++// lists, so Python's display de-dup preserves each legal target. Public parsers
++// tolerate the " [enemy i]" suffix.
++void appendEnemyLabel(std::ostream &os, const BattleContext &bc, int idx) {
++    const std::string name = bc.monsters.arr[idx].getName();
++    os << name;
++    int sameNameAlive = 0;
++    for (int mi = 0; mi < bc.monsters.monsterCount; ++mi) {
++        if (bc.monsters.arr[mi].isAlive()
++                && std::string(bc.monsters.arr[mi].getName()) == name) {
++            ++sameNameAlive;
++        }
++    }
++    if (sameNameAlive > 1) {
++        os << " [enemy " << idx << "]";
++    }
++}
++
++// Sim-computed attack damage (target-correct, pre-block, multi-hit aware).
++// Existing targeted, table-based annotations remain unconditional for byte
++// compatibility. The opt-in additionally covers supported special formulas,
++// Fiend Fire and untargeted attacks, including Whirlwind (the only X-cost attack
++// implemented by useAttackCard). Sword Boomerang's random hits show per-hit
++// damage for each possible target, not a total for each enemy. Values describe
++// current public modifiers, before Block and card-play triggers that may change
++// them or Fiend Fire's hand size; they do not predict reactive hit effects.
++// Scalar format: "(deal total = per xN)" (or "(deal total)"). Whirlwind and
++// Fiend Fire always print "= per xN", including x0 and x1.
++// Multiple targets: "(deal per target: name: total; name: total = per xN)".
++// Random targets: "(deal per random hit, N hits total: name: per; name: per)".
++// Names may carry " [enemy i]" to disambiguate living enemies with the same name.
++// The nonnumeric prefixes prevent scalar _DEAL_RE consumers in lightspeed.py,
++// combat_public_v4.py and glossary.py, and _ACTION_ATTACK_RE in
++// tests/integration/test_combat_public_v3.py, from reading a per-target value as
++// the whole attack's damage.
++void appendComputedDamage(
++        std::ostream &os, const BattleContext &bc, const CardInstance &card,
++        int base, int dealTarget, const std::vector<int> &dealTargets) {
++    const int hits = getHitCount(bc, card);
++    const bool dynamicHits = card.getId() == CardId::WHIRLWIND
++        || card.getId() == CardId::FIEND_FIRE;
++    const bool randomTargets = card.getId() == CardId::SWORD_BOOMERANG
++        && dealTargets.size() > 1;
++    const auto appendDamage = [&](int target) {
++        const int per = bc.calculateCardDamage(card, target, base);
++        if (!randomTargets && (hits > 1 || dynamicHits)) {
++            os << (per * hits) << " = " << per << " x" << hits;
++        } else {
++            os << per;
++        }
++    };
++    if (dealTargets.size() > 1) {
++        if (randomTargets) {
++            os << " (deal per random hit, " << hits << " hits total: ";
++        } else {
++            os << " (deal per target: ";
++        }
++        for (std::size_t i = 0; i < dealTargets.size(); ++i) {
++            if (i > 0) os << "; ";
++            const int target = dealTargets[i];
++            appendEnemyLabel(os, bc, target);
++            os << ": ";
++            appendDamage(target);
++        }
++    } else {
++        os << " (deal ";
++        appendDamage(dealTarget);
++    }
++    os << ")";
++}
++
 +// Human-/model-facing description of a single combat action. Mirrors the campfire
 +// enrichment principle: spell out card/potion/target names rather than bare
 +// indices. Card-select actions delegate to the engine's printDesc.
@@ -895,39 +1076,20 @@ index a9afe35..3ab3f98 100644
 +            if (includeCardType) {
 +                os << publicCardTypeTag(c);
 +            }
-+            os << " (cost " << energyCostLabel(c.costForTurn) << ")";
++            os << publicCardCostLabel(c);
 +            int dealTarget = -1;
 +            if (c.requiresTarget()) {
 +                const int target = a.getTargetIdx();
 +                if (target >= 0 && target < bc.monsters.monsterCount) {
-+                    os << " -> " << bc.monsters.arr[target].getName();
-+                    // Disambiguate when another LIVING enemy shares this name (e.g. 3
-+                    // Sentries, split slimes): append the enemy slot index [i] so the
-+                    // model can target a specific one and identical-name targets are no
-+                    // longer rendered identically. Format " [enemy i]"; the Python
-+                    // de-dup and rollout_view/_PLAY_RE parsing tolerate this suffix.
-+                    const std::string targetName = bc.monsters.arr[target].getName();
-+                    int sameNameAlive = 0;
-+                    for (int mi = 0; mi < bc.monsters.monsterCount; ++mi) {
-+                        if (bc.monsters.arr[mi].isAlive()
-+                                && std::string(bc.monsters.arr[mi].getName()) == targetName) {
-+                            ++sameNameAlive;
-+                        }
-+                    }
-+                    if (sameNameAlive > 1) {
-+                        os << " [enemy " << target << "]";
-+                    }
++                    os << " -> ";
++                    appendEnemyLabel(os, bc, target);
 +                    dealTarget = target;
 +                }
 +            }
-+            // Sim-computed attack damage (target-correct, pre-block, multi-hit aware).
-+            // Existing targeted, table-based annotations remain unconditional for
-+            // byte compatibility. The opt-in additionally covers supported special
-+            // formulas and untargeted attacks when a sole living enemy makes their
-+            // target deterministic. X-cost and Fiend Fire remain unannotated. If
-+            // this trailing format changes, update _PLAY_RE in rollout_view.py.
 +            int base = -1;
-+            if (c.getType() == CardType::ATTACK && !c.isXCost()) {
++            std::vector<int> dealTargets;
++            if (c.getType() == CardType::ATTACK && (!c.isXCost()
++                    || (includeComputedDamage && c.getId() == CardId::WHIRLWIND))) {
 +                if (dealTarget >= 0) {
 +                    // v2's unconditional static-table annotations for Ritual Dagger
 +                    // and Mind Blast are known pre-existing defects preserved for
@@ -942,30 +1104,19 @@ index a9afe35..3ab3f98 100644
 +                        base = getSpecialDamageBase(bc, c);
 +                    }
 +                } else if (includeComputedDamage && !c.requiresTarget()) {
-+                    int livingTarget = -1;
-+                    int livingCount = 0;
 +                    for (int mi = 0; mi < bc.monsters.monsterCount; ++mi) {
 +                        if (!bc.monsters.arr[mi].isDeadOrEscaped()) {
-+                            livingTarget = mi;
-+                            ++livingCount;
++                            dealTargets.push_back(mi);
 +                        }
 +                    }
-+                    if (livingCount == 1) {
-+                        dealTarget = livingTarget;
-+                        base = getUntargetedDamageBase(c);
++                    if (dealTargets.size() == 1) {
++                        dealTarget = dealTargets.front();
 +                    }
++                    base = getUntargetedDamageBase(c);
 +                }
 +            }
-+            if (dealTarget >= 0 && base >= 0) {
-+                const int per = bc.calculateCardDamage(c, dealTarget, base);
-+                const int hits = getHitCount(c.getId(), c.isUpgraded());
-+                os << " (deal ";
-+                if (hits > 1) {
-+                    os << (per * hits) << " = " << per << " x" << hits;
-+                } else {
-+                    os << per;
-+                }
-+                os << ")";
++            if (base >= 0 && (dealTarget >= 0 || !dealTargets.empty())) {
++                appendComputedDamage(os, bc, c, base, dealTarget, dealTargets);
 +            }
 +            break;
 +        }
@@ -981,21 +1132,8 @@ index a9afe35..3ab3f98 100644
 +            } else {
 +                os << "drink potion " << safePotionName(p);
 +                if (potionRequiresTarget(p) && target >= 0 && target < bc.monsters.monsterCount) {
-+                    os << " -> " << bc.monsters.arr[target].getName();
-+                    // As for targeted cards, keep same-name living enemies distinct.
-+                    // Otherwise the Python display de-dup silently removes legal
-+                    // potion targets in fights such as the three Sentries.
-+                    const std::string targetName = bc.monsters.arr[target].getName();
-+                    int sameNameAlive = 0;
-+                    for (int mi = 0; mi < bc.monsters.monsterCount; ++mi) {
-+                        if (bc.monsters.arr[mi].isAlive()
-+                                && std::string(bc.monsters.arr[mi].getName()) == targetName) {
-+                            ++sameNameAlive;
-+                        }
-+                    }
-+                    if (sameNameAlive > 1) {
-+                        os << " [enemy " << target << "]";
-+                    }
++                    os << " -> ";
++                    appendEnemyLabel(os, bc, target);
 +                }
 +            }
 +            break;
@@ -1133,7 +1271,7 @@ index a9afe35..3ab3f98 100644
 +            if (includeCardType) {
 +                os << publicCardTypeTag(c);
 +            }
-+            os << " (cost " << energyCostLabel(c.costForTurn) << ")";
++            os << publicCardCostLabel(c);
 +        }
 +    }
 +
@@ -1245,12 +1383,64 @@ index a9afe35..3ab3f98 100644
 +    std::uint64_t effectiveDrawOrderSeed = 0;
 +    if (drawOrderPerturbed) {
 +        effectiveDrawOrderSeed = drawOrderSeed.cast<std::uint64_t>();
++        // Public piles are unordered. Canonicalize before fixed-seed sampling,
++        // so the finite sampled worlds cannot depend on the true hidden order.
++        // The key uses only the card fields surfaced in public_cards; unique IDs
++        // and latent specialData (except the public upgrade count) are excluded.
++        auto publicCardLess = [](const CardInstance &a, const CardInstance &b) {
++            auto key = [](const CardInstance &c) {
++                return std::make_tuple(static_cast<int>(c.id), c.getUpgradeCount(),
++                    c.cost, c.costForTurn, c.freeToPlayOnce, c.retain);
++            };
++            return key(a) < key(b);
++        };
++        std::sort(teacherState.cards.drawPile.begin(), teacherState.cards.drawPile.end(), publicCardLess);
++        std::sort(teacherState.cards.discardPile.begin(), teacherState.cards.discardPile.end(), publicCardLess);
++        std::sort(teacherState.cards.exhaustPile.begin(), teacherState.cards.exhaustPile.end(), publicCardLess);
 +        std::mt19937_64 drawOrderRng(effectiveDrawOrderSeed);
 +        std::shuffle(
 +            teacherState.cards.drawPile.begin(),
 +            teacherState.cards.drawPile.end(),
 +            drawOrderRng);
 +    }
++
++    // Canonical discard/exhaust order changes selection indices. Map the
++    // selected instance back to the const live state before exposing any root
++    // action. Instance identity is routing metadata, never a policy feature.
++    auto mapRootAction = [&](const search::Action &action) -> search::Action {
++        if (!drawOrderPerturbed || bc.inputState != InputState::CARD_SELECT
++                || action.getActionType() != search::ActionType::SINGLE_CARD_SELECT) {
++            return action;
++        }
++        auto mapIndex = [&](const auto &from, const auto &to) -> search::Action {
++            const int idx = action.getSelectIdx();
++            if (idx < 0 || idx >= static_cast<int>(from.size())) {
++                throw std::runtime_error("invalid sampled pile selection index");
++            }
++            const auto &card = from[idx];
++            for (int i = 0; i < static_cast<int>(to.size()); ++i) {
++                const auto &live = to[i];
++                if (std::tie(card.id, card.uniqueId, card.specialData, card.cost,
++                            card.costForTurn, card.upgraded, card.freeToPlayOnce, card.retain)
++                        == std::tie(live.id, live.uniqueId, live.specialData, live.cost,
++                            live.costForTurn, live.upgraded, live.freeToPlayOnce, live.retain)) {
++                    return search::Action(search::ActionType::SINGLE_CARD_SELECT, i);
++                }
++            }
++            throw std::runtime_error("sampled selection instance missing from live pile");
++        };
++        switch (bc.cardSelectInfo.cardSelectTask) {
++            case CardSelectTask::EXHUME:
++                return mapIndex(teacherState.cards.exhaustPile, bc.cards.exhaustPile);
++            case CardSelectTask::HEADBUTT:
++            case CardSelectTask::HOLOGRAM:
++            case CardSelectTask::LIQUID_MEMORIES_POTION:
++            case CardSelectTask::MEDITATE:
++                return mapIndex(teacherState.cards.discardPile, bc.cards.discardPile);
++            default:
++                return action;
++        }
++    };
 +
 +    // BattleScumSearcher2 takes another deep BattleContext copy.  Re-seeding
 +    // changes only the searcher's private action-selection RNG; it cannot touch
@@ -1266,13 +1456,13 @@ index a9afe35..3ab3f98 100644
 +        && !searcher.bestActionSequence.empty();
 +    const search::Action *selected = nullptr;
 +    const char *selectionMethod = nullptr;
-+    if (hasWinningSequence && searcher.bestActionSequence.front().isValidAction(bc)) {
++    if (hasWinningSequence && mapRootAction(searcher.bestActionSequence.front()).isValidAction(bc)) {
 +        selected = &searcher.bestActionSequence.front();
 +        selectionMethod = "winning_sequence";
 +    } else {
 +        std::int64_t maxVisits = -1;
 +        for (const auto &edge : searcher.root.edges) {
-+            if (edge.action.isValidAction(bc) && edge.node.simulationCount > maxVisits) {
++            if (mapRootAction(edge.action).isValidAction(bc) && edge.node.simulationCount > maxVisits) {
 +                selected = &edge.action;
 +                maxVisits = edge.node.simulationCount;
 +            }
@@ -1284,9 +1474,10 @@ index a9afe35..3ab3f98 100644
 +    }
 +
 +    pybind11::dict result;
-+    result["action"] = *selected;
-+    result["bits"] = selected->bits;
-+    result["description"] = describeBattleAction(bc, *selected, includeCardType);
++    const auto liveSelected = mapRootAction(*selected);
++    result["action"] = liveSelected;
++    result["bits"] = liveSelected.bits;
++    result["description"] = describeBattleAction(bc, liveSelected, includeCardType);
 +    result["selection_method"] = selectionMethod;
 +    result["simulations_requested"] = simulations;
 +    result["root_simulations"] = searcher.root.simulationCount;
@@ -1298,10 +1489,11 @@ index a9afe35..3ab3f98 100644
 +    pybind11::list rootEdges;
 +    for (const auto &edge : searcher.root.edges) {
 +        pybind11::dict d;
-+        d["action"] = edge.action;
-+        d["bits"] = edge.action.bits;
-+        d["description"] = describeBattleAction(bc, edge.action, includeCardType);
-+        d["valid"] = edge.action.isValidAction(bc);
++        const auto liveEdge = mapRootAction(edge.action);
++        d["action"] = liveEdge;
++        d["bits"] = liveEdge.bits;
++        d["description"] = describeBattleAction(bc, liveEdge, includeCardType);
++        d["valid"] = liveEdge.isValidAction(bc);
 +        d["visits"] = edge.node.simulationCount;
 +        d["evaluation_sum"] = edge.node.evaluationSum;
 +        d["mean_evaluation"] = edge.node.simulationCount == 0
@@ -1333,6 +1525,7 @@ index a9afe35..3ab3f98 100644
 +    provenance["evaluation"] = "BattleScumSearcher2::evaluateEndState";
 +    provenance["search_seed"] = effectiveSearchSeed;
 +    provenance["draw_order_perturbed"] = drawOrderPerturbed;
++    provenance["hidden_pile_order_canonicalized"] = drawOrderPerturbed;
 +    if (drawOrderPerturbed) {
 +        provenance["draw_order_seed"] = effectiveDrawOrderSeed;
 +    } else {
@@ -1364,10 +1557,16 @@ index a9afe35..3ab3f98 100644
 +            return false;
 +        }
 +
-+        BattleContext bc;
-+        bc.init(gc);
++        BattleContext bc{};
 +        try {
++            bc.init(gc);
++            if (bc.undefinedBehaviorEvoked) {
++                throw std::runtime_error("native battle init evoked undefined behavior");
++            }
 +            agent.playoutBattle(bc);
++            if (bc.undefinedBehaviorEvoked) {
++                throw std::runtime_error("native battle playout evoked undefined behavior");
++            }
 +            bc.exitBattle(gc);
 +        } catch (const std::exception &exc) {
 +            std::ostringstream os;
@@ -1383,10 +1582,16 @@ index a9afe35..3ab3f98 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -41,6 +1397,175 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -39,7 +1594,232 @@ PYBIND11_MODULE(slaythespire, m) {
+         .def_readwrite("boss_simulation_multiplier", &search::ScumSearchAgent2::bossSimulationMultiplier, "bonus multiplier to the simulation count for boss fights")
+         .def_readwrite("pause_on_card_reward", &search::ScumSearchAgent2::pauseOnCardReward, "causes the agent to pause so as to cede control to the user when it encounters a card reward choice")
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
-         .def("playout", &search::ScumSearchAgent2::playout);
-
+-        .def("playout", &search::ScumSearchAgent2::playout);
++        .def("playout", &search::ScumSearchAgent2::playout)
++        .def("seed", [](search::ScumSearchAgent2 &a, unsigned int seed) { a.rng.seed(seed); })
++        .def("select_out_of_combat_action", &search::ScumSearchAgent2::selectOutOfCombatAction)
++        .def("preview_out_of_combat_action", [](const search::ScumSearchAgent2 &a, const GameContext &gc) { auto copy = a; return copy.selectOutOfCombatAction(gc); });
++
 +    pybind11::class_<search::GameAction> gameAction(m, "GameAction");
 +    gameAction.def(pybind11::init<std::uint32_t>())
 +        .def(pybind11::init<int, int>(), pybind11::arg("idx1"), pybind11::arg("idx2") = 0)
@@ -1456,6 +1661,52 @@ index a9afe35..3ab3f98 100644
 +            oss << "<slaythespire.BattleAction bits=" << a.bits << ">";
 +            return oss.str();
 +        });
++
++    pybind11::enum_<Potion>(m, "Potion")
++        .value("INVALID", Potion::INVALID)
++        .value("EMPTY_POTION_SLOT", Potion::EMPTY_POTION_SLOT)
++        .value("AMBROSIA", Potion::AMBROSIA)
++        .value("ANCIENT_POTION", Potion::ANCIENT_POTION)
++        .value("ATTACK_POTION", Potion::ATTACK_POTION)
++        .value("BLESSING_OF_THE_FORGE", Potion::BLESSING_OF_THE_FORGE)
++        .value("BLOCK_POTION", Potion::BLOCK_POTION)
++        .value("BLOOD_POTION", Potion::BLOOD_POTION)
++        .value("BOTTLED_MIRACLE", Potion::BOTTLED_MIRACLE)
++        .value("COLORLESS_POTION", Potion::COLORLESS_POTION)
++        .value("CULTIST_POTION", Potion::CULTIST_POTION)
++        .value("CUNNING_POTION", Potion::CUNNING_POTION)
++        .value("DEXTERITY_POTION", Potion::DEXTERITY_POTION)
++        .value("DISTILLED_CHAOS", Potion::DISTILLED_CHAOS)
++        .value("DUPLICATION_POTION", Potion::DUPLICATION_POTION)
++        .value("ELIXIR_POTION", Potion::ELIXIR_POTION)
++        .value("ENERGY_POTION", Potion::ENERGY_POTION)
++        .value("ENTROPIC_BREW", Potion::ENTROPIC_BREW)
++        .value("ESSENCE_OF_DARKNESS", Potion::ESSENCE_OF_DARKNESS)
++        .value("ESSENCE_OF_STEEL", Potion::ESSENCE_OF_STEEL)
++        .value("EXPLOSIVE_POTION", Potion::EXPLOSIVE_POTION)
++        .value("FAIRY_POTION", Potion::FAIRY_POTION)
++        .value("FEAR_POTION", Potion::FEAR_POTION)
++        .value("FIRE_POTION", Potion::FIRE_POTION)
++        .value("FLEX_POTION", Potion::FLEX_POTION)
++        .value("FOCUS_POTION", Potion::FOCUS_POTION)
++        .value("FRUIT_JUICE", Potion::FRUIT_JUICE)
++        .value("GAMBLERS_BREW", Potion::GAMBLERS_BREW)
++        .value("GHOST_IN_A_JAR", Potion::GHOST_IN_A_JAR)
++        .value("HEART_OF_IRON", Potion::HEART_OF_IRON)
++        .value("LIQUID_BRONZE", Potion::LIQUID_BRONZE)
++        .value("LIQUID_MEMORIES", Potion::LIQUID_MEMORIES)
++        .value("POISON_POTION", Potion::POISON_POTION)
++        .value("POTION_OF_CAPACITY", Potion::POTION_OF_CAPACITY)
++        .value("POWER_POTION", Potion::POWER_POTION)
++        .value("REGEN_POTION", Potion::REGEN_POTION)
++        .value("SKILL_POTION", Potion::SKILL_POTION)
++        .value("SMOKE_BOMB", Potion::SMOKE_BOMB)
++        .value("SNECKO_OIL", Potion::SNECKO_OIL)
++        .value("SPEED_POTION", Potion::SPEED_POTION)
++        .value("STANCE_POTION", Potion::STANCE_POTION)
++        .value("STRENGTH_POTION", Potion::STRENGTH_POTION)
++        .value("SWIFT_POTION", Potion::SWIFT_POTION)
++        .value("WEAK_POTION", Potion::WEAK_POTION);
 +
 +    pybind11::class_<BattleContext> battleContext(m, "BattleContext");
 +    battleContext.def(pybind11::init<>())
@@ -1541,6 +1792,13 @@ index a9afe35..3ab3f98 100644
 +        .def_property_readonly("outcome", [](const BattleContext &bc) { return bc.outcome; })
 +        .def_property_readonly("input_state", [](const BattleContext &bc) { return bc.inputState; })
 +        .def_property_readonly("turn", [](const BattleContext &bc) { return bc.turn; })
++        .def_property_readonly("player_character_class", [](const BattleContext &bc) { return bc.player.cc; })
++        .def("obtain_potion", [](BattleContext &bc, Potion potion) {
++            if (potion < Potion::AMBROSIA || potion > Potion::WEAK_POTION) {
++                throw std::invalid_argument("potion must be a nonempty valid potion");
++            }
++            bc.obtainPotion(potion);
++        }, "obtain a potion in a free combat slot using normal capacity rules")
 +        .def_property_readonly("undefined_behavior_evoked", [](const BattleContext &bc) { return bc.undefinedBehaviorEvoked; })
 +        .def_property_readonly("player_cur_hp", [](const BattleContext &bc) { return bc.player.curHp; })
 +        .def_property_readonly("player_max_hp", [](const BattleContext &bc) { return bc.player.maxHp; })
@@ -1555,25 +1813,54 @@ index a9afe35..3ab3f98 100644
 +                << " outcome=" << static_cast<int>(bc.outcome) << ">";
 +            return oss.str();
 +        });
-+
+
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
-         .def("pick_reward_card", &sts::py::pickRewardCard, "choose to obtain the card at the specified index in the card reward list")
-@@ -55,6 +1580,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1835,14 @@ PYBIND11_MODULE(slaythespire, m) {
               [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
               "add a card to the deck"
          )
++        .def("obtain_potion", [](GameContext &gc, Potion potion) {
++            if (potion < Potion::AMBROSIA || potion > Potion::WEAK_POTION) {
++                throw std::invalid_argument("potion must be a nonempty valid potion");
++            }
++            gc.obtainPotion(potion);
++        }, "obtain a potion in a free inventory slot using normal capacity rules")
 +        .def("obtain_relic", &GameContext::obtainRelic,
 +             "add a relic to the inventory, applying its normal acquisition effects")
          .def("remove_card",
              [](GameContext &gc, int idx) {
                  if (idx < 0 || idx >= gc.deck.size()) {
-@@ -75,6 +1602,43 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +1863,76 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
-+    gameContext.def("legal_actions", &search::GameAction::getAllActionsInState)
++    gameContext.def("legal_actions", [](const GameContext &gc) {
++        // Keep the scripted/search agents' enumerator unchanged. Only the Python
++        // menu appends potion choices, preserving every ordinary screen index.
++        auto actions = search::GameAction::getAllActionsInState(gc);
++        if (!actions.empty()) {
++            for (int slot = 0; slot < gc.potionCapacity; ++slot) {
++                const search::GameAction drink(0x80000000U | static_cast<std::uint32_t>(slot));
++                const search::GameAction discard(0xC0000000U | static_cast<std::uint32_t>(slot));
++                if (drink.isValidAction(gc)) {
++                    actions.push_back(drink);
++                }
++                if (discard.isValidAction(gc)) {
++                    actions.push_back(discard);
++                }
++            }
++        }
++        return actions;
++    })
 +        .def("describe_state", &describeGameState)
++        .def("keys", [](const GameContext &gc) {
++            pybind11::dict result;
++            result["ruby"] = gc.hasKey(Key::RUBY_KEY);
++            result["emerald"] = gc.hasKey(Key::EMERALD_KEY);
++            result["sapphire"] = gc.hasKey(Key::SAPPHIRE_KEY);
++            return result;
++        }, "public key ownership: {ruby: bool, emerald: bool, sapphire: bool}")
 +        .def("map_graph", [](const GameContext &gc) {
 +            // Structured act map for the MAP_SCREEN. Python (sts_ai.glossary) walks
 +            // this DAG to render a neutral per-choice path summary, replacing the
@@ -1583,8 +1870,15 @@ index a9afe35..3ab3f98 100644
 +            // (room != NONE/INVALID) are returned.
 +            pybind11::dict result;
 +            result["cur_y"] = gc.curMapNodeY;
++            result["burning_elite"] = pybind11::none();
 +            pybind11::list nodes;
 +            if (gc.map != nullptr) {
++                if (gc.map->burningEliteX >= 0 && gc.map->burningEliteY >= 0) {
++                    pybind11::dict burningElite;
++                    burningElite["x"] = gc.map->burningEliteX;
++                    burningElite["y"] = gc.map->burningEliteY;
++                    result["burning_elite"] = burningElite;
++                }
 +                for (int y = 0; y < 15; ++y) {
 +                    for (int x = 0; x < 7; ++x) {
 +                        const auto &n = gc.map->getNode(x, y);
@@ -1595,6 +1889,7 @@ index a9afe35..3ab3f98 100644
 +                        d["x"] = x;
 +                        d["y"] = y;
 +                        d["room"] = std::string(roomStrings[static_cast<int>(n.room)]);
++                        d["burning_elite"] = x == gc.map->burningEliteX && y == gc.map->burningEliteY;
 +                        pybind11::list edges;
 +                        for (int e = 0; e < n.edgeCount; ++e) {
 +                            edges.append(n.edges[e]);
@@ -1606,13 +1901,24 @@ index a9afe35..3ab3f98 100644
 +            }
 +            result["nodes"] = nodes;
 +            return result;
-+        }, "structured act map: {cur_y, nodes:[{x, y, room, edges (child x-indices "
++        }, "structured act map: {cur_y, burning_elite: {x, y} or None, "
++           "nodes:[{x, y, room, burning_elite: bool, edges (child x-indices "
 +           "in row y+1)}]}; existing nodes only. Empty nodes list when not on a map.");
 +
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -836,5 +2400,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -84,7 +1942,8 @@ PYBIND11_MODULE(slaythespire, m) {
+         .def_readwrite("cur_map_node_x", &GameContext::curMapNodeX)
+         .def_readwrite("cur_map_node_y", &GameContext::curMapNodeY)
+         .def_readwrite("cur_room", &GameContext::curRoom)
+-//        .def_readwrite("cur_event", &GameContext::curEvent) // todo standardize event names
++        .def_property_readonly("current_event", [](const GameContext &gc) { return std::string(publicEventNames[static_cast<int>(gc.curEvent)]); })
++        .def("public_event", &publicEvent)
+         .def_readwrite("boss", &GameContext::boss)
+
+         .def_readwrite("cur_hp", &GameContext::curHp)
+@@ -836,5 +2695,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
@@ -1662,6 +1968,19 @@ index 767bbcd..5c2f71f 100644
          CardQueueItem curCardQueueItem;
 
          std::bitset<32> miscBits; // 0 stolen gold check,
+diff --git a/include/combat/Player.h b/include/combat/Player.h
+index fda6fb6..72208b7 100644
+--- a/include/combat/Player.h
++++ b/include/combat/Player.h
+@@ -31,7 +31,7 @@ namespace sts {
+     class BattleContext;
+
+     struct Player {
+-        CharacterClass cc;
++        CharacterClass cc = CharacterClass::IRONCLAD;
+
+         int16_t gold = 0;
+         int curHp = 80;
 diff --git a/include/game/GameContext.h b/include/game/GameContext.h
 index 04fceda..a280e63 100644
 --- a/include/game/GameContext.h
@@ -1706,10 +2025,20 @@ index e2e9cdd..a037a29 100644
 
          void playoutRandom(BattleContext &state, std::vector<Action> &actionStack);
 diff --git a/include/sim/search/ScumSearchAgent2.h b/include/sim/search/ScumSearchAgent2.h
-index ffa449b..7ab46c1 100644
+index ffa449b..711bb31 100644
 --- a/include/sim/search/ScumSearchAgent2.h
 +++ b/include/sim/search/ScumSearchAgent2.h
-@@ -44,8 +44,8 @@ namespace sts::search {
+@@ -35,6 +35,9 @@ namespace sts::search {
+         std::default_random_engine rng;
+
+
++        bool selectOnly = false;
++        GameAction selectOutOfCombatAction(const GameContext &gc);
++
+         // public interface
+         void playout(GameContext &gc);
+
+@@ -44,8 +47,8 @@ namespace sts::search {
          void takeAction(GameContext &gc, GameAction a);
          void takeAction(BattleContext &bc, Action a);
 
@@ -1720,8 +2049,55 @@ index ffa449b..7ab46c1 100644
 
          void stepOutOfCombatPolicy(GameContext &gc);
          void cardSelectPolicy(GameContext &gc);
+diff --git a/src/combat/Actions.cpp b/src/combat/Actions.cpp
+index 93db96f..e8360ec 100644
+--- a/src/combat/Actions.cpp
++++ b/src/combat/Actions.cpp
+@@ -5,6 +5,9 @@
+ #include "combat/Actions.h"
+ #include "combat/BattleContext.h"
+ #include "game/Game.h"
++#include "constants/CardPools.h"
++
++#include <stdexcept>
+
+ using namespace sts;
+
+@@ -564,7 +567,31 @@ Action Actions::PutRandomCardsInDrawPile(CardType type, int count) {
+ Action Actions::DiscoveryAction(CardType type, int amount) {
+     return {[=] (BattleContext &bc) {
+         bc.haveUsedDiscoveryAction = true;
+-        bc.openDiscoveryScreen(sts::generateDiscoveryCards(bc.cardRandomRng, bc.player.cc, type), amount);
++        // INVALID denotes the Discovery card's untyped class pool. Upstream
++        // marked every use as undefined, although the Ironclad implementation
++        // supplies a complete selection path. Other class pools remain missing.
++        if (type == CardType::INVALID && bc.player.cc != CharacterClass::IRONCLAD) {
++            bc.undefinedBehaviorEvoked = true;
++            throw std::runtime_error("Discovery class-card generation only supports Ironclad");
++        }
++        const auto offers = sts::generateDiscoveryCards(bc.cardRandomRng, bc.player.cc, type);
++        if (type == CardType::INVALID) {
++            for (int i = 0; i < 3; ++i) {
++                bool inSupportedPool = false;
++                for (int j = 0; j < CombatCardPool::getPoolSize(bc.player.cc); ++j) {
++                    inSupportedPool |= offers[i] == CombatCardPool::getCardAt(bc.player.cc, j);
++                }
++                bool duplicate = false;
++                for (int j = 0; j < i; ++j) {
++                    duplicate |= offers[i] == offers[j];
++                }
++                if (!inSupportedPool || offers[i] == CardId::INVALID || duplicate) {
++                    bc.undefinedBehaviorEvoked = true;
++                    throw std::runtime_error("Discovery produced invalid class-card offers");
++                }
++            }
++        }
++        bc.openDiscoveryScreen(offers, amount);
+     }};
+ }
+
 diff --git a/src/combat/BattleContext.cpp b/src/combat/BattleContext.cpp
-index 965faef..7871360 100644
+index 965faef..3e74311 100644
 --- a/src/combat/BattleContext.cpp
 +++ b/src/combat/BattleContext.cpp
 @@ -6,12 +6,52 @@
@@ -1777,7 +2153,15 @@ index 965faef..7871360 100644
 
  // assume all bc fields have just been initialized by in class member initializers
  void BattleContext::init(const GameContext &gc) {
-@@ -49,6 +89,7 @@ void BattleContext::init(const GameContext &gc, MonsterEncounter encounterToInit
+@@ -21,6 +61,7 @@ void BattleContext::init(const GameContext &gc) {
+ void BattleContext::init(const GameContext &gc, MonsterEncounter encounterToInit) {
+     undefinedBehaviorEvoked = false;
+     haveUsedDiscoveryAction = false;
++    player.cc = gc.cc;
+     seed = gc.seed;
+     floorNum = gc.floorNum;
+     encounter = encounterToInit;
+@@ -49,6 +90,7 @@ void BattleContext::init(const GameContext &gc, MonsterEncounter encounterToInit
      potionCount = gc.potionCount;
      potionCapacity = gc.potionCapacity;
      potions = gc.potions;
@@ -1785,7 +2169,7 @@ index 965faef..7871360 100644
 
      player.curHp = gc.curHp;
      player.maxHp = gc.maxHp;
-@@ -732,9 +773,19 @@ void BattleContext::executeActions() {
+@@ -732,9 +774,19 @@ void BattleContext::executeActions() {
                  break;
              }
 
@@ -1808,7 +2192,40 @@ index 965faef..7871360 100644
          }
 
          if (inputState != InputState::EXECUTING_ACTIONS) {
-@@ -2232,13 +2283,17 @@ void BattleContext::obtainPotion(Potion p) {
+@@ -1283,7 +1335,7 @@ void BattleContext::useSkillCard() {
+             break;
+
+         case CardId::DISCOVERY:
+-            undefinedBehaviorEvoked = true;
++            // DiscoveryAction validates the supported pool before opening its menu.
+             addToBot(Actions::DiscoveryAction(CardType::INVALID, 1));
+             break;
+
+@@ -1875,10 +1927,19 @@ void BattleContext::onUsePowerCard() {
+         mummifiedHandOnUsePower();
+     }
+
+-//    auto &m = monsters.optionMap[2];
+-//    if (m.hasStatusInternal<MS::CURIOSITY>()) {
+-//        m.buff<MS::STRENGTH>(m.getStatus<MS::CURIOSITY>());
+-//    }
++    for (int i = 0; i < monsters.monsterCount; ++i) {
++        const auto &m = monsters.arr[i];
++        if (m.hasStatus<MS::CURIOSITY>()) {
++            const auto amount = m.getStatus<MS::CURIOSITY>();
++            addToBot({[i, amount] (BattleContext &bc) {
++                // Earlier actions (e.g. Panache) can kill or half-kill the holder.
++                auto &holder = bc.monsters.arr[i];
++                if (!holder.isDeadOrEscaped()) {
++                    holder.buff<MS::STRENGTH>(amount);
++                }
++            }});
++        }
++    }
+ }
+
+ void BattleContext::onUseStatusOrCurseCard() {
+@@ -2232,13 +2293,17 @@ void BattleContext::obtainPotion(Potion p) {
  }
 
  void BattleContext::discardPotion(int idx) {
@@ -1827,7 +2244,7 @@ index 965faef..7871360 100644
      discardPotion(idx);
 
      // todo - dont need to add to bot because always will have nothing in actionQueue?
-@@ -2429,9 +2484,7 @@ void BattleContext::drinkPotion(int idx, int target) {
+@@ -2429,9 +2494,7 @@ void BattleContext::drinkPotion(int idx, int target) {
          case Potion::EMPTY_POTION_SLOT:
          case Potion::FAIRY_POTION:
          default:
@@ -1837,6 +2254,232 @@ index 965faef..7871360 100644
 +            throw std::runtime_error(invalidPotionMessage(*this, "drink potion", idx, p));
      }
 
+ }
+@@ -2735,7 +2798,7 @@ int BattleContext::calculateCardDamage(const CardInstance &card, int targetIdx,
+     }
+
+     if (monster.hasStatus<MS::INTANGIBLE>()) {
+-        damage = std::max(damage, 1.0f);
++        damage = std::min(damage, 1.0f);
+     }
+
+     return std::max(0, static_cast<int>(damage));
+diff --git a/src/combat/Monster.cpp b/src/combat/Monster.cpp
+index 95c005d..dc66ce3 100644
+--- a/src/combat/Monster.cpp
++++ b/src/combat/Monster.cpp
+@@ -363,8 +363,10 @@ void Monster::attackedUnblockedHelper(BattleContext &bc, int damage) { // todo,
+         auto flight = getStatus<MS::FLIGHT>();
+         if (flight == 1) {
+             setMove(MMID::BYRD_STUNNED);
++            removeStatus<MS::FLIGHT>();
++        } else {
++            setStatus<MS::FLIGHT>(flight-1);
+         }
+-        setStatus<MS::FLIGHT>(flight-1);
+
+     } else if (hasStatus<MS::MALLEABLE>() || hasStatus<MS::REACTIVE>()) {
+         if (hasStatus<MS::MALLEABLE>()) {
+@@ -421,15 +423,15 @@ void Monster::attacked(BattleContext &bc, int damage) {
+         }
+     }
+
+-    if (hasStatus<MS::ANGRY>()) { // onAttacked
+-        buff<MS::STRENGTH>(getStatus<MS::ANGRY>());
+-    }
+-
+     const bool hadBlock = block > 0;
+     const int tempDamage = damage;
+     damage -= block;
+     block = std::max(0, block - tempDamage);
+
++    if (damage > 0 && hasStatus<MS::ANGRY>()) { // onAttacked
++        buff<MS::STRENGTH>(getStatus<MS::ANGRY>());
++    }
++
+     if (hadBlock && block == 0 && bc.player.hasRelic<RelicId::HAND_DRILL>()) {
+         bc.addToBot(Actions::DebuffEnemy<MS::VULNERABLE>(idx, 2, false) );
+     }
+diff --git a/src/combat/MonsterSpecific.cpp b/src/combat/MonsterSpecific.cpp
+index f6f6c4a..2ea9d3b 100644
+--- a/src/combat/MonsterSpecific.cpp
++++ b/src/combat/MonsterSpecific.cpp
+@@ -887,6 +887,10 @@ void Monster::takeTurn(BattleContext &bc) {     // todo, maybe for monsters that
+
+         case MMID::LAGAVULIN_SLEEP:
+             if (bc.turn == 2 || !hasStatus<MS::ASLEEP>()) {
++                if (hasStatus<MS::ASLEEP>()) {
++                    setHasStatus<MS::ASLEEP>(false);
++                    decrementStatus<MS::METALLICIZE>(8);
++                }
+                 setMove(MMID::LAGAVULIN_ATTACK);
+             } else {
+                 setMove(MMID::LAGAVULIN_SLEEP);
+diff --git a/src/game/GameContext.cpp b/src/game/GameContext.cpp
+index fa10364..e0643d9 100644
+--- a/src/game/GameContext.cpp
++++ b/src/game/GameContext.cpp
+@@ -2187,14 +2187,9 @@ void GameContext::drinkPotion(Potion p) {
+             break;
+
+         case Potion::ENTROPIC_BREW: {
+-            Potion randPotions[5];
+-            for (int i = 0 ; i < potionCapacity; ++i) {
+-                randPotions[i] = returnRandomPotion(potionRng, cc);
+-                if (potions[i] == Potion::EMPTY_POTION_SLOT) {
+-                    potions[i] = randPotions[i];
+-                }
++            for (int i = 0; i < potionCapacity; ++i) {
++                obtainPotion(returnRandomPotion(potionRng, cc, true));
+             }
+-            potionCount = potionCapacity;
+             break;
+         }
+
+@@ -2662,6 +2657,7 @@ void GameContext::chooseEventOption(int idx) {
+                     break;
+
+                 case 1:
++                    loseGold(unfavorable ? 50 : 40);
+                     deck.upgradeRandomCards(miscRng, 2);
+                     regainControl();
+                     break;
+@@ -2675,6 +2671,7 @@ void GameContext::chooseEventOption(int idx) {
+                     loseGold(unfavorable ? 75 : 60);
+                     deck.transformRandomCards(miscRng, 2); // TODO
+                     regainControl();
++                    break;
+
+                 case 4:
+                     loseGold(unfavorable ? 110 : 90);
+@@ -2683,7 +2680,7 @@ void GameContext::chooseEventOption(int idx) {
+                         returnToMapAction(gc);
+                     };
+                     openCardSelectScreen(CardSelectScreenType::REMOVE, 1);
+-
++                    break;
+                 case 5:
+                     playerLoseHp(unfavorable ? 5 : 3);
+                     regainControl();
+@@ -3081,7 +3078,8 @@ void GameContext::chooseEventOption(int idx) {
+                 enterBattle(MonsterEncounter::MUSHROOMS_EVENT);
+
+             } else if (idx == 1) {
+-                obtainGold(unfavorable ? 50 : 99);
++                playerHeal(fractionMaxHp(0.25f));
++                deck.obtain(*this, CardId::PARASITE);
+                 regainControl();
+
+             } else {
+@@ -3102,7 +3100,6 @@ void GameContext::chooseEventOption(int idx) {
+                 enterBattle(MonsterEncounter::MYSTERIOUS_SPHERE_EVENT);
+
+             } else if (idx == 1) {
+-                obtainGold(unfavorable ? 50 : 99);
+                 regainControl();
+
+             } else {
+@@ -3329,6 +3326,8 @@ void GameContext::chooseEventOption(int idx) {
+                 if (result || unfavorable) {
+                     deck.obtain(*this, CardId::WRITHE);
+                 }
++                auto relic = returnRandomScreenlessRelic(returnRandomRelicTier(relicRng, act));
++                obtainRelic(relic);
+                 regainControl();
+
+             } else if (idx == 1) {
+@@ -3375,17 +3374,20 @@ void GameContext::chooseEventOption(int idx) {
+             Potion pArr[3];
+             switch (idx) {
+                 case 0: {
++                    loseGold(20);
+                     pArr[0] = getRandomPotion(potionRng, cc);
+                     openCombatRewardScreen(Rewards(pArr, 1));
+                     break;
+                 }
+                 case 1: {
++                    loseGold(30);
+                     pArr[0] = getRandomPotion(potionRng, cc);
+                     pArr[1] = getRandomPotion(potionRng, cc);
+                     openCombatRewardScreen(Rewards(pArr, 2));
+                     break;
+                 }
+                 case 2: {
++                    loseGold(40);
+                     pArr[0] = getRandomPotion(potionRng, cc);
+                     pArr[1] = getRandomPotion(potionRng, cc);
+                     pArr[2] = getRandomPotion(potionRng, cc);
+diff --git a/src/game/Shop.cpp b/src/game/Shop.cpp
+index bacf8e7..2625094 100644
+--- a/src/game/Shop.cpp
++++ b/src/game/Shop.cpp
+@@ -3,6 +3,7 @@
+ //
+
+ #include <cmath>
++#include <stdexcept>
+ #include "game/Shop.h"
+ #include "game/GameContext.h"
+ #include "game/Game.h"
+@@ -125,14 +126,19 @@ void Shop::buyRelic(GameContext &gc, int idx) {
+         removeCost = static_cast<int>(std::round(static_cast<float>(removeCost) * MEMBERSHIP_CARD_FACTOR));
+     }
+
++    if (r == RelicId::THE_COURIER) {
++        applyDiscount(COURIER_FACTOR);
++        removeCost = static_cast<int>(std::round(static_cast<float>(removeCost) * COURIER_FACTOR));
++    }
++
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+         relics[idx] = gc.returnRandomRelic(rollRelicTier(gc.merchantRng), true, false);
+-        getNewPrice(gc, getRelicBasePrice(relics[idx]));
++        relicPrice(idx) = getNewPrice(gc, getRelicBasePrice(relics[idx]));
+     } else {
+         relicPrice(idx) = -1;
+     }
+
+-    if (isEggRelic(relics[idx])) {
++    if (isEggRelic(r)) {
+         for (auto &c : cards) {
+             c = gc.previewObtainCard(c);
+         }
+@@ -140,9 +146,10 @@ void Shop::buyRelic(GameContext &gc, int idx) {
+ }
+
+ void Shop::buyPotion(GameContext &gc, int idx) {
+-//    if (gc.hasRelic(RelicId::SOZU)) { // just dont call this with sozu or without enough slots
+-//        return;
+-//    }
++    if (idx < 0 || idx >= 3 || potionPrice(idx) < 0 || gc.gold < potionPrice(idx) ||
++            gc.hasRelic(RelicId::SOZU) || gc.potionCount >= gc.potionCapacity) {
++        throw std::invalid_argument("invalid shop potion purchase");
++    }
+     gc.obtainPotion(potions[idx]);
+     gc.loseGold(potionPrice(idx), true);
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+@@ -198,19 +205,19 @@ int Shop::getNewCardPrice(GameContext &gc, CardRarity rarity, bool colorless) {
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+         price *= 0.8f;
+     }
+-    if (gc.hasRelic(RelicId::THE_COURIER)) {
++    if (gc.hasRelic(RelicId::MEMBERSHIP_CARD)) {
+         price *= 0.5f;
+     }
+     return static_cast<int>(price);
+ }
+
+ int Shop::getNewPrice(GameContext &gc, int basePrice) {
+-    basePrice = static_cast<int>(std::round(gc.merchantRng.random(0.95f, 1.05f)));
++    basePrice = static_cast<int>(std::round(basePrice * gc.merchantRng.random(0.95f, 1.05f)));
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+-        std::round(basePrice * COURIER_FACTOR);
++        basePrice = static_cast<int>(std::round(basePrice * COURIER_FACTOR));
+     }
+     if (gc.hasRelic(RelicId::MEMBERSHIP_CARD)) {
+-        std::round(basePrice * MEMBERSHIP_CARD_FACTOR);
++        basePrice = static_cast<int>(std::round(basePrice * MEMBERSHIP_CARD_FACTOR));
+     }
+     return basePrice;
  }
 diff --git a/src/sim/search/Action.cpp b/src/sim/search/Action.cpp
 index 551623d..7b4e762 100644
@@ -1998,11 +2641,98 @@ index 79eccf9..d715863 100644
              continue;
          }
          ++foundPotions;
+diff --git a/src/sim/search/GameAction.cpp b/src/sim/search/GameAction.cpp
+index 8c977ee..ad6d79b 100644
+--- a/src/sim/search/GameAction.cpp
++++ b/src/sim/search/GameAction.cpp
+@@ -4,6 +4,7 @@
+
+ #include <cassert>
+ #include <bitset>
++#include <stdexcept>
+
+ #include "sim/search/GameAction.h"
+
+@@ -229,7 +230,8 @@ bool isValidShopAction(const GameContext &gc, const search::GameAction a) {
+             if (select > 2) {
+                 return false;
+             }
+-            return s.potionPrice(select) != -1 && gc.gold >= s.potionPrice(select);
++            return s.potionPrice(select) != -1 && gc.gold >= s.potionPrice(select) &&
++                   !gc.hasRelic(RelicId::SOZU) && gc.potionCount < gc.potionCapacity;
+
+
+         case search::GameAction::RewardsActionType::RELIC:
+@@ -251,6 +253,9 @@ bool isValidShopAction(const GameContext &gc, const search::GameAction a) {
+ }
+
+ bool isValidPotionAction(const GameContext &gc, const search::GameAction a) {
++    if (gc.screenState == ScreenState::BATTLE || gc.screenState == ScreenState::INVALID) {
++        return false;
++    }
+     if (gc.curEvent == Event::WE_MEET_AGAIN && gc.screenState == ScreenState::EVENT_SCREEN) {
+         return false;
+     }
+@@ -414,21 +419,26 @@ void executeShopAction(GameContext &gc, const search::GameAction a) {
+ }
+
+ void search::GameAction::execute(GameContext &gc) const {
+-#ifdef sts_asserts
+-    if (!isValidAction(gc)) {
+-        std::cerr << "invalid game action taken: " << bits
+-        << " seed: " << gc << std::endl;
+-        assert(false);
+-    }
+-#endif
+-
+     if (isPotionAction()) {
++        // Validate even in Release (asserts are compiled out) so an invalid potion action cannot mutate state.
++        if (!isValidAction(gc)) {
++            throw std::runtime_error("invalid out-of-combat potion action");
++        }
+         if (isPotionDiscard()) {
+             gc.discardPotionAtIdx(getIdx1());
+         } else {
+             gc.drinkPotionAtIdx(getIdx1());
+         }
++        return;
++    }
++
++#ifdef sts_asserts
++    if (!isValidAction(gc)) {
++        std::cerr << "invalid game action taken: " << bits
++        << " seed: " << gc << std::endl;
++        assert(false);
+     }
++#endif
+
+     switch (gc.screenState) {
+         case ScreenState::EVENT_SCREEN:
+@@ -515,7 +525,8 @@ std::vector<search::GameAction> getAllShopActions(const sts::GameContext &gc) {
+
+     for (int i = 0; i < 3; ++i) {
+         auto price = s.potionPrice(i);
+-        if (price != -1 && gc.gold >= price) {
++        if (price != -1 && gc.gold >= price && !gc.hasRelic(RelicId::SOZU) &&
++                gc.potionCount < gc.potionCapacity) {
+             actions.emplace_back(search::GameAction::RewardsActionType::POTION, i);
+         }
+     }
+@@ -574,6 +585,9 @@ std::vector<search::GameAction> getAllRewardActions(const sts::GameContext &gc)
+         for (int x = 0; x < r.cardRewards[i].size(); ++x) {
+             actions.emplace_back(search::GameAction::RewardsActionType::CARD, i, x);
+         }
++        // Declining one card reward is independent of skipping the entire
++        // rewards screen; Singing Bowl also grants max HP through this action.
++        actions.emplace_back(search::GameAction::RewardsActionType::CARD, i, 5);
+     }
+
+     for (int i = 0; i < r.relicCount; ++i) {
 diff --git a/src/sim/search/ScumSearchAgent2.cpp b/src/sim/search/ScumSearchAgent2.cpp
-index 53aa5d2..acd5c43 100644
+index 53aa5d2..2914185 100644
 --- a/src/sim/search/ScumSearchAgent2.cpp
 +++ b/src/sim/search/ScumSearchAgent2.cpp
-@@ -6,6 +6,7 @@
+@@ -6,12 +6,39 @@
 
  #include <sim/search/ExpertKnowledge.h>
  #include <game/Game.h>
@@ -2010,7 +2740,39 @@ index 53aa5d2..acd5c43 100644
  #include "sim/PrintHelpers.h"
  #include "sim/search/BattleScumSearcher2.h"
 
-@@ -65,7 +66,20 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
+ using namespace sts;
+
++namespace { struct SelectedGameAction { search::GameAction action; }; }
++
++search::GameAction search::ScumSearchAgent2::selectOutOfCombatAction(const GameContext &gc) {
++    if (gc.outcome != GameOutcome::UNDECIDED || gc.screenState == ScreenState::BATTLE
++        || gc.screenState == ScreenState::INVALID) {
++        throw std::runtime_error("native OOC policy needs a nonterminal out-of-combat decision");
++    }
++    GameContext copy = gc;
++    selectOnly = true;
++    try {
++        stepOutOfCombatPolicy(copy);
++    } catch (const SelectedGameAction &selected) {
++        selectOnly = false;
++        if (!selected.action.isValidAction(gc)) {
++            throw std::runtime_error("native OOC policy selected an illegal action");
++        }
++        return selected.action;
++    } catch (...) {
++        selectOnly = false;
++        throw;
++    }
++    selectOnly = false;
++    throw std::runtime_error("native OOC policy did not select an action");
++}
++
+ void search::ScumSearchAgent2::takeAction(GameContext &gc, search::GameAction a) {
++    if (selectOnly) { throw SelectedGameAction{a}; }
+     if (printActions) {
+         gameActionHistory.emplace_back(a.bits);
+         std::cout << std::hex << a.bits << std::endl;
+@@ -65,7 +92,20 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
      std::vector<search::Action> bestActions;
      int bestOutcomePlayerHp = -1;
 
@@ -2031,7 +2793,7 @@ index 53aa5d2..acd5c43 100644
          const std::int64_t simulationCount = isBossEncounter(bc.encounter) ?
                                                (bossSimulationMultiplier * simulationCountBase) : simulationCountBase;
 
-@@ -82,32 +96,54 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
+@@ -82,32 +122,54 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
 
          simulationCountTotal += searcher.root.simulationCount;
 
@@ -2090,7 +2852,7 @@ index 53aa5d2..acd5c43 100644
      for (int actionCount = 0; actionCount < stepsNoSolution; ++actionCount) {
          if (bc.outcome != Outcome::UNDECIDED) {
              break;
-@@ -117,6 +153,9 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
+@@ -117,6 +179,9 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
          const sts::search::BattleScumSearcher2::Edge *maxEdge = nullptr;
 
          for (const auto &edge : curNode->edges) {
@@ -2100,7 +2862,7 @@ index 53aa5d2..acd5c43 100644
              if (edge.node.simulationCount > maxSimulations) {
                  maxSimulations = edge.node.simulationCount;
                  maxEdge = &edge;
-@@ -132,8 +171,10 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
+@@ -132,8 +197,10 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
          }
 
          takeAction(bc, maxEdge->action);
@@ -2111,7 +2873,24 @@ index 53aa5d2..acd5c43 100644
  }
 
  void search::ScumSearchAgent2::stepRandom(GameContext &gc) {
-@@ -408,4 +449,3 @@ void search::ScumSearchAgent2::stepEventPolicy(GameContext &gc) {
+@@ -161,7 +228,7 @@ void search::ScumSearchAgent2::stepOutOfCombatPolicy(GameContext &gc) {
+             if (gc.relics.has(RelicId::CURSED_KEY)) {
+                 takeChest = gc.info.chestSize == ChestSize::LARGE;
+             }
+-            takeAction(gc, takeChest);
++            takeAction(gc, takeChest ? 0 : 1);
+             break;
+         }
+
+@@ -334,6 +401,7 @@ void search::ScumSearchAgent2::weightedCardRewardPolicy(GameContext &gc) {
+                 acc += weights[i].second;
+                 if (roll <= acc) {
+                     selection = weights[i].first;
++                    break;
+                 }
+             }
+         }
+@@ -408,4 +476,3 @@ void search::ScumSearchAgent2::stepEventPolicy(GameContext &gc) {
              return;
      }
  }

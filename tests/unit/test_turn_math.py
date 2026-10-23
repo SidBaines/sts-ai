@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from sts_ai.turn_math import TurnMathInputs, turn_math_lines
+from sts_env._backend.turn_math import TurnMathInputs, turn_math_lines
 
 
 def _inputs(**overrides) -> TurnMathInputs:

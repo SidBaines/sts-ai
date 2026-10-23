@@ -8,9 +8,9 @@ import subprocess
 import sys
 import unittest
 
-from sts_ai.combat_public_v4 import CombatPublicV4Env
-from sts_ai.lightspeed import LightspeedHybridEnv
-from sts_ai.rollout import prepare_decision
+from sts_env._backend.combat_public_v4 import CombatPublicV4Env
+from sts_env._backend.lightspeed import LightspeedHybridEnv
+from tests.native_helpers import prepare_decision
 
 from tests.support import requires_simulator
 
@@ -85,7 +85,7 @@ class CombatPublicV4IntegrationTest(unittest.TestCase):
     def test_v4_actions_and_states_are_deterministic_across_processes(self) -> None:
         driver = '''
 import json
-from sts_ai.combat_public_v4 import CombatPublicV4Env
+from sts_env._backend.combat_public_v4 import CombatPublicV4Env
 from tests.integration.test_combat_public_v4 import _gambling_chip_env
 env = CombatPublicV4Env(_gambling_chip_env())
 trace = []

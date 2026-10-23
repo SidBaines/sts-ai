@@ -12,18 +12,18 @@ import textwrap
 import unittest
 from typing import Any
 
-from sts_ai.lightspeed import LightspeedHybridEnv
-from sts_ai.rollout import prepare_decision
-from sts_ai.turn_math import TurnMathInputs, turn_math_lines
+from sts_env._backend.lightspeed import LightspeedHybridEnv
+from tests.native_helpers import prepare_decision
+from sts_env._backend.turn_math import TurnMathInputs, turn_math_lines
 
 from tests.support import requires_simulator
 
 
 _HAND_ATTACK_RE = re.compile(
-    r"^\s*\[\d+\]\s+(.*?)\s+\[Attack\]\s+\(cost\s+(\S+)\)$"
+    r"^\s*\[\d+\]\s+(.*?)\s+\[Attack\]\s+\(cost\s+([^\s,)]+)[^)]*\)$"
 )
 _ACTION_ATTACK_RE = re.compile(
-    r"^play\s+(.*?)\s+\[Attack\]\s+\(cost\s+(\S+)\).*?"
+    r"^play\s+(.*?)\s+\[Attack\]\s+\(cost\s+([^\s,)]+)[^)]*\).*?"
     r"(?:\(deal\s+(\d+)[^)]*\))?$"
 )
 _PLAYER_RE = re.compile(r"^Player HP:.*?block:\s*(-?\d+), energy:\s*(-?\d+)/")
@@ -142,8 +142,8 @@ def _recompute_turn_math(state_text: str, actions: list[dict[str, Any]]) -> list
 
 _DETERMINISM_DRIVER = """
 import json
-from sts_ai.lightspeed import LightspeedHybridEnv
-from sts_ai.rollout import prepare_decision
+from sts_env._backend.lightspeed import LightspeedHybridEnv
+from tests.native_helpers import prepare_decision
 
 env = LightspeedHybridEnv(
     world_seed=4,

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import unittest
 
-from sts_ai.lightspeed import LightspeedHybridEnv
+from sts_env._backend.lightspeed import LightspeedHybridEnv
 
 
 class _FakeRawAction:
@@ -28,6 +28,7 @@ def _env(raw, *, combat: bool) -> LightspeedHybridEnv:
     env = object.__new__(LightspeedHybridEnv)
     env.bc = "BATTLE_CTX" if combat else None  # truthy sentinel doubles as the ctx
     env.gc = "GAME_CTX"
+    env._native_ooc_preview = None
     env.combat_observation = "legacy"
     env.raw_actions = lambda: raw  # stub out advance + native enumeration
     env.advance_to_decision = lambda: 0  # stub out the native engine step
@@ -35,6 +36,17 @@ def _env(raw, *, combat: bool) -> LightspeedHybridEnv:
 
 
 class CombatDedupTest(unittest.TestCase):
+    def test_native_search_duplicate_bits_map_to_same_display_action(self):
+        raw = [_FakeRawAction(10, "play Strike -> FOE"),
+               _FakeRawAction(11, "play Strike -> FOE"),
+               _FakeRawAction(12, "end turn")]
+        env = _env(raw, combat=True)
+        self.assertEqual(env.display_index_for_bits(10), 0)
+        self.assertEqual(env.display_index_for_bits(11), 0)
+        self.assertEqual(env.display_index_for_bits(12), 1)
+        with self.assertRaises(ValueError):
+            env.display_index_for_bits(999)
+
     def test_combat_collapses_identical_descriptions(self):
         raw = [
             _FakeRawAction(10, "play Strike (cost 1) -> FOE (deal 6)"),

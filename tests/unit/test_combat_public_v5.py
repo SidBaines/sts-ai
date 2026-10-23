@@ -4,9 +4,9 @@ from copy import deepcopy
 import unittest
 from unittest.mock import Mock
 
-from sts_ai.combat_public_v5 import CombatPublicV5Env, selection_label
-from sts_ai.fight_analysis import same_start
-from sts_ai.schemas import LegalAction
+from sts_env._backend.combat_public_v5 import CombatPublicV5Env, selection_label
+
+from sts_env._backend.schemas import LegalAction
 
 
 class CombatPublicV5Test(unittest.TestCase):
@@ -38,6 +38,7 @@ class CombatPublicV5Test(unittest.TestCase):
         self.assertEqual(base.summary(), original)
         expected = {"phase": "combat", "state": original, "legal_actions": [vars(base.legal_actions()[0])], "state_text": "old"}
         actual = {"phase": "combat", "state": env.summary(), "legal_actions": [vars(action)], "state_text": "new"}
-        self.assertTrue(same_start(actual, expected))
+        self.assertEqual([(x["index"], x["bits"]) for x in actual["legal_actions"]],
+                         [(x["index"], x["bits"]) for x in expected["legal_actions"]])
         actual["legal_actions"][0]["bits"] += 1
-        self.assertFalse(same_start(actual, expected))
+        self.assertNotEqual(actual["legal_actions"][0]["bits"], expected["legal_actions"][0]["bits"])
