@@ -59,6 +59,59 @@ class AdvantageTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exceeds max sequence length"):
                 load_rows(path, Tokenizer(), args)
 
+    def test_training_selects_train_worlds_and_never_validation_or_test(self):
+        class Tokenizer:
+            def apply_chat_template(self, messages, **kw):
+                return [int(messages[0]["content"])]
+        args = SimpleNamespace(benchmark_updates=False, benchmark_generation=False,
+                               effort="medium", max_new_tokens=10,
+                               max_sequence_length=20, limit=None)
+        records = [{"id": split, "split": split, "world_identity": f"world{number}",
+                    "legal_indices":[0], "teacher":{"checkpoint_sha256":"champion"},
+                    "messages":[{"role":"user", "content":str(number)}]}
+                   for number, split in enumerate(("validation", "train", "test"), 1)]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "prompts.jsonl"
+            path.write_text("".join(json.dumps(row) + "\n" for row in records))
+            rows = load_rows(path, Tokenizer(), args)
+        self.assertEqual([row["id"] for row in rows], ["train"])
+        self.assertEqual(args.selected_split, "train")
+        self.assertEqual(args.selected_row_count, 1)
+        self.assertEqual(len(args.selected_selection_sha256), 64)
+
+    def test_unsplit_teacher_data_rejected_even_after_smoke_limit(self):
+        class Tokenizer:
+            def apply_chat_template(self, *a, **kw): return [2, 4]
+        args = SimpleNamespace(benchmark_updates=False, benchmark_generation=False,
+                               effort="medium", max_new_tokens=10,
+                               max_sequence_length=20, limit=1)
+        row = {"id":"train", "split":"train", "legal_indices":[0], "teacher":{},
+               "messages":[{"role":"user", "content":"go"}]}
+        unsplit = dict(row, id="unsplit"); del unsplit["split"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "prompts.jsonl"
+            path.write_text(json.dumps(row) + "\n" + json.dumps(unsplit) + "\n")
+            with self.assertRaisesRegex(ValueError, "every dataset row to declare split"):
+                load_rows(path, Tokenizer(), args)
+
+    def test_resolved_selection_identity_changes_with_limit(self):
+        class Tokenizer:
+            def apply_chat_template(self, *a, **kw): return [2, 4]
+        args = SimpleNamespace(benchmark_updates=False, benchmark_generation=False,
+                               effort="medium", max_new_tokens=10,
+                               max_sequence_length=20, limit=None)
+        row = {"id":"a", "split":"train", "legal_indices":[0], "teacher":{},
+               "messages":[{"role":"user", "content":"go"}]}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "prompts.jsonl"
+            path.write_text(json.dumps(row) + "\n" + json.dumps(dict(row, id="b")) + "\n")
+            load_rows(path, Tokenizer(), args)
+            full_identity = args.selected_selection_sha256
+            args.limit = 1
+            load_rows(path, Tokenizer(), args)
+        self.assertNotEqual(full_identity, args.selected_selection_sha256)
+        self.assertEqual(args.selected_row_count, 1)
+
 
 @unittest.skipUnless(importlib.util.find_spec("torch"), "PyTorch required for numerical gradient tests")
 class TensorContracts(unittest.TestCase):

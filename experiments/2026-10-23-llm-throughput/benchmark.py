@@ -44,63 +44,24 @@ def atomic_json(path: Path, value: Any) -> None:
 
 
 def parse_action(text: str, legal_indices: list[int]) -> dict[str, Any]:
-    """Require a closed thought, then inspect only its final-answer region."""
+    """Use the same strict final-channel contract as training and evaluation."""
+    from sts_llm.generation import parse_action as parse_final
+    parsed = parse_final(text, legal_indices)
     closes = list(CLOSE_THOUGHT.finditer(text))
-    opens = list(OPEN_THOUGHT.finditer(text))
-    # The first real close ends the reasoning region. Reopening reasoning
-    # afterward is invalid even if the model eventually closes it again.
-    later_open = bool(closes and any(match.start() > closes[0].start() for match in opens))
-    unclosed = not closes or later_open
-    result: dict[str, Any] = {
+    boundary = closes[0] if closes else None
+    unclosed = boundary is None or bool(OPEN_THOUGHT.search(text[boundary.end():]))
+    schema = parsed.error in (None, "illegal_action_index")
+    return {
         "thinking_closed": not unclosed,
         "unclosed_thinking": unclosed,
-        "closing_thinking_tag": closes[0].group() if closes else None,
-        "later_open_thinking": later_open,
-        "json_valid": False,
-        "schema_valid": False,
-        "legal_action": False,
-        "action_index": None,
-        "answer_text": None,
-        "parse_error": None,
+        "closing_thinking_tag": boundary.group() if boundary else None,
+        "json_valid": schema or parsed.error == "invalid_action_schema",
+        "schema_valid": schema,
+        "legal_action": parsed.valid,
+        "action_index": parsed.action_index,
+        "answer_text": parsed.final_text,
+        "parse_error": parsed.error,
     }
-    if unclosed:
-        result["parse_error"] = "missing_closing_thinking_tag" if not closes else "unclosed_later_thinking_block"
-        return result
-    answer = text[closes[0].end():]
-    result["answer_text"] = answer
-    # Decode complete objects only after the verified channel boundary. A brace
-    # inside thought is deliberately irrelevant. The last final object wins;
-    # this also means a later non-action object cannot silently fall back.
-    decoder = json.JSONDecoder()
-    objects: list[tuple[Any, int, int]] = []
-    for match in re.finditer(r"\{", answer):
-        try:
-            obj, end = decoder.raw_decode(answer, match.start())
-        except json.JSONDecodeError:
-            continue
-        if isinstance(obj, dict):
-            objects.append((obj, match.start(), end))
-    if not objects:
-        result["parse_error"] = "no_final_json_object"
-        return result
-    obj, start, end = objects[-1]
-    result["json_valid"] = True
-    result["parsed_object"] = obj
-    result["json_span_in_answer"] = [start, end]
-    action = obj.get("action_index")
-    if set(obj) != {"action_index"} or isinstance(action, bool) or not isinstance(action, int):
-        result["parse_error"] = "expected_exact_integer_action_index_object"
-        return result
-    # An unfinished later JSON object is not an acceptable final answer.
-    if "{" in answer[end:]:
-        result["parse_error"] = "unfinished_later_json_object"
-        return result
-    result["schema_valid"] = True
-    result["action_index"] = action
-    result["legal_action"] = action in legal_indices
-    if not result["legal_action"]:
-        result["parse_error"] = "action_index_not_legal"
-    return result
 
 
 def percentile(values: list[float], q: float) -> float | None:
@@ -163,7 +124,7 @@ def load_prompts(path: Path, tokenizer: Any | None, effort: str, limit: int | No
                 "legal_indices": legal, "messages": row["messages"], "input_row": row}
         if tokenizer is not None:
             ids = tokenizer.apply_chat_template(row["messages"], tokenize=True,
-                                                add_generation_prompt=True, reasoning_effort=effort)
+                                                add_generation_prompt=True, return_dict=False, reasoning_effort=effort)
             if hasattr(ids, "tolist"):
                 ids = ids.tolist()
             if not isinstance(ids, list) or not ids or any(not isinstance(i, int) for i in ids):
@@ -451,7 +412,7 @@ def main() -> int:
     atomic_json(args.output / "config.json", config)
     try:
         from transformers import AutoTokenizer
-        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer or args.model, revision=args.revision)
+        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer or args.model, revision=args.revision, trust_remote_code=True)
         stop_token = "<|ifm|im_end|>"
         stop_id = tokenizer.convert_tokens_to_ids(stop_token)
         if not isinstance(stop_id, int) or tokenizer.convert_ids_to_tokens(stop_id) != stop_token:

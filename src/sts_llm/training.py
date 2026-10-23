@@ -19,7 +19,7 @@ import statistics
 import time
 from typing import Any, Sequence
 
-TRAINING_FORMAT_VERSION = 1
+TRAINING_FORMAT_VERSION = 2
 
 
 def atomic_json(path: Path, value: Any) -> None:
@@ -265,11 +265,18 @@ def load_model(args: Any) -> tuple[Any, Any, int]:
 
 def load_rows(path: Path, tokenizer: Any, args: Any) -> list[dict[str, Any]]:
     rows = []
-    for line in path.read_text().splitlines():
-        if not line.strip():
+    benchmark_only = args.benchmark_updates or args.benchmark_generation
+    source_rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    # Validate the entire declared split surface before applying a limit. A
+    # small smoke limit must not conceal an unsplit row later in the file.
+    if not benchmark_only:
+        for row in source_rows:
+            if row.get("split") not in {"train", "validation", "test"}:
+                raise ValueError("training requires every dataset row to declare split=train/validation/test")
+    for row in source_rows:
+        if not benchmark_only and row["split"] != "train":
             continue
-        row = json.loads(line)
-        if "teacher" not in row and not (args.benchmark_updates or args.benchmark_generation):
+        if "teacher" not in row and not benchmark_only:
             raise ValueError("training rows require teacher distribution metadata")
         if not row.get("legal_indices") or not row.get("messages"):
             raise ValueError("every row requires legal_indices and messages")
@@ -289,7 +296,13 @@ def load_rows(path: Path, tokenizer: Any, args: Any) -> list[dict[str, Any]]:
         if args.limit and len(rows) >= args.limit:
             break
     if not rows:
-        raise ValueError("empty input dataset")
+        raise ValueError("no selected input rows (training selects only split=train)")
+    args.selected_split = "all_explicitly_provided_benchmark_only" if benchmark_only else "train"
+    args.selected_row_count = len(rows)
+    args.selected_selection_sha256 = hashlib.sha256(json.dumps([
+        {"id": row["id"], "split": row.get("split"), "world_identity": row.get("world_identity"),
+         "prompt_ids": row["prompt_ids"]} for row in rows],
+        sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
     return rows
 
 
@@ -478,7 +491,8 @@ def training_loop(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str,
     invariant_names = ("model", "revision", "effort", "temperature", "max_new_tokens", "group_size",
         "generation_microbatch", "states_per_iteration", "microbatch", "gradient_accumulation",
         "update_epochs", "learning_rate", "clip_epsilon", "kl_beta", "invalid_reward", "seed",
-        "max_grad_norm", "dtype", "attention", "gradient_checkpointing")
+        "max_grad_norm", "dtype", "attention", "gradient_checkpointing", "limit",
+        "selected_split", "selected_row_count", "selected_selection_sha256")
     settings = {name: getattr(args, name) for name in invariant_names}
     settings["training_format_version"] = TRAINING_FORMAT_VERSION
     settings["prompt_file_sha256"] = hashlib.sha256(args.prompts.read_bytes()).hexdigest()
@@ -661,6 +675,9 @@ def main() -> int:
         model, tokenizer, stop_id = load_model(args)
         rows = load_rows(args.prompts, tokenizer, args)
         config.update(stop_token_ids=[stop_id], torch_version=torch.__version__,
+                      selected_split=args.selected_split,
+                      selected_row_count=args.selected_row_count,
+                      selected_selection_sha256=args.selected_selection_sha256,
                       cuda_version=torch.version.cuda,
                       device_name=torch.cuda.get_device_name() if args.device.startswith("cuda") else args.device,
                       trainable_parameters=sum(p.numel() for p in model.parameters() if p.requires_grad),

@@ -19,6 +19,12 @@ mechanics run is `--smoke --group-size 4 --max-new-tokens 512`. The cap can caus
 invalid truncated thoughts; report this with the reward variance and validity.
 The main study requires separately approved settings and is not launched here.
 
+Training requires an explicit `split` on every row and selects only `train`.
+Validation/test rows are never sampled for updates. Benchmark modes may consume
+all explicitly provided states and record that selection as benchmark-only.
+The selected split, row count, resolved selection hash and limit are recorded;
+exact resume validates them as well as the whole dataset hash.
+
 `--benchmark-generation` measures this actual HF rollout path, excludes
 `--warmup-steps` initial groups, retains generated IDs/text and performs no
 optimizer updates. Compare generation microbatches using fixed `--group-size`.
