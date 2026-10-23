@@ -43,6 +43,7 @@ better refits there? Approach:
 
 ## Log
 
-- 23 Oct, 16:25: labelling started (eight shards of 250 worlds).
+- 23 Oct, 16:18: labelling started (eight shards of 250 worlds).
+
 Code: worktree `nonllm-value-targets` (commit 9dead85; do not edit it).
 Data: run `value_refits_20261023` (local, worktree `nonllm-large-batch`).

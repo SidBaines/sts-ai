@@ -1,6 +1,6 @@
 # Status
 
-**Updated 23 October 2026, 16:25 BST.** Two experiments run; nothing waits for Sid.
+**Updated 23 October 2026, 16:20 BST.** Two experiments run; nothing waits for Sid.
 Champion: `champion_c8553bc33e53.pt`, joint run 2's final checkpoint (26.8%
 on unused worlds).
 
@@ -17,7 +17,7 @@ on unused worlds).
 - **[Value-target refits](experiments/2026-10-23-value-target-refits.md):**
   labelling 2,000 of the champion's worlds with search statistics
   (`vr-label-0` to `vr-label-7`, one lane each in the `nonllm-boss-rares`
-  queue; output `value_refits_20261023/corpus/`), started 16:25; fits and
+  queue; output `value_refits_20261023/corpus/`), started 16:18; fits and
   play tests follow. Code runs from worktree `nonllm-value-targets`.
 - **Next decision:** if iteration 12 does not separate the arms
   (p < 0.025), resume both to 24 iterations: `--resume --iterations 24`
