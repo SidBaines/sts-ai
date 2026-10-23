@@ -119,10 +119,10 @@ class TensorContracts(unittest.TestCase):
         import torch
         self.torch = torch
 
-    def objective(self, new, old, ref, advantage, mask, beta=0.):
+    def objective(self, new, old, ref, advantage, mask, beta=0., **kwargs):
         from sts_llm.training import clipped_response_loss
         return clipped_response_loss(new, old, ref, advantage, mask,
-                                      clip_epsilon=.2, kl_beta=beta)
+                                      clip_epsilon=.2, kl_beta=beta, **kwargs)
 
     def test_clipping_has_correct_sign_and_zero_gradient_regions(self):
         t = self.torch
@@ -177,6 +177,40 @@ class TensorContracts(unittest.TestCase):
         loss.backward()
         self.assertEqual(float(loss), 0.)
         self.assertEqual(float(new.grad.abs().sum()), 0.)
+
+    def test_fixed_budget_gives_same_per_token_gradient_for_mixed_lengths(self):
+        t = self.torch
+        mask = t.tensor([[True, False, False], [True, True, True]])
+        new = t.zeros((2, 3), requires_grad=True)
+        loss, metrics = self.objective(new, t.zeros_like(new), t.zeros_like(new),
+            t.tensor([1., 1.]), mask, loss_normalization="fixed_token_budget", loss_token_budget=8)
+        loss.backward()
+        self.assertAlmostEqual(float(loss), -4. / 16.)
+        expected = t.tensor([[-1./16., 0., 0.], [-1./16., -1./16., -1./16.]])
+        t.testing.assert_close(new.grad, expected)
+        # Ratio diagnostics remain likelihood ratios, not length / budget.
+        self.assertEqual(float(metrics["mean_ratio"]), 1.)
+
+    def test_fixed_budget_is_same_constant_across_effort_lengths_and_kl(self):
+        t = self.torch
+        budget, beta = 2048, .3
+        observed = []
+        for effort, length in (("low", 2), ("medium", 5), ("high", 9)):
+            new = t.zeros((1, length), requires_grad=True)
+            ref = t.full_like(new, math.log(2.))
+            loss, metrics = self.objective(new, t.zeros_like(new), ref, t.tensor([1.]),
+                t.ones_like(new, dtype=t.bool), beta=beta,
+                loss_normalization="fixed_token_budget", loss_token_budget=budget)
+            loss.backward()
+            # k3 = exp(log2)-log2-1; both policy and KL sum / same C.
+            expected_kl = length * (1. - math.log(2.)) / budget
+            self.assertAlmostEqual(float(metrics["sampled_kl_proxy"]), expected_kl, places=7)
+            self.assertAlmostEqual(float(loss), -length / budget + beta * expected_kl, places=7)
+            expected_gradient = (-1. - beta) / budget
+            for value in new.grad.flatten():
+                self.assertAlmostEqual(float(value), expected_gradient, places=7, msg=effort)
+            observed.append(float(new.grad[0, 0]))
+        self.assertEqual(observed, [observed[0]] * 3)
 
     def test_mixed_length_generated_token_alignment(self):
         from sts_llm.training import response_logps

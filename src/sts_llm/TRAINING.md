@@ -10,12 +10,21 @@ PEFT model. It samples the full categorical distribution (`top_p=1`, `top_k=0`)
 and scores logits at the same temperature. Old-policy log-probabilities are
 frozen once before any updates. The reference is the frozen base model with
 adapters disabled. All generated reasoning/final/EOS tokens receive the outcome
-advantage; prompt and artificial padding receive no loss. Responses have equal
-weight regardless of length. The KL diagnostic is a sampled proxy.
+advantage; prompt and artificial padding receive no loss. The KL diagnostic is
+a sampled proxy.
+
+Actual training requires an explicit `--loss-normalization`: `response_mean`
+divides each response's token sum by its realized length, while
+`fixed_token_budget` divides every response by the same positive
+`--loss-token-budget` (default 2048), for both policy and KL terms. The choice
+changes how response length weights the objective and must be fixed across
+effort comparisons. Fixed normalization alone does not establish an unbiased
+reward gradient: group standardization and clipping also affect it. Throughput
+benchmarks default to `response_mean` and record the setting.
 
 Run the CLI as `PYTHONPATH=src python -m sts_llm.training --help`. Training input
 is the teacher-prepared JSONL; preserve held-out worlds separately. A bounded
-mechanics run is `--smoke --group-size 4 --max-new-tokens 512`. The cap can cause
+mechanics run is `--smoke --group-size 4 --max-new-tokens 512 --loss-normalization response_mean`. The cap can cause
 invalid truncated thoughts; report this with the reward variance and validity.
 The main study requires separately approved settings and is not launched here.
 

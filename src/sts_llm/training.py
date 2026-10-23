@@ -20,7 +20,7 @@ import statistics
 import time
 from typing import Any, Sequence
 
-TRAINING_FORMAT_VERSION = 2
+TRAINING_FORMAT_VERSION = 3
 
 
 def atomic_json(path: Path, value: Any) -> None:
@@ -57,13 +57,20 @@ class Completion:
 
 def clipped_response_loss(new_logps: Any, old_logps: Any, ref_logps: Any,
                           advantages: Any, mask: Any, *, clip_epsilon: float,
-                          kl_beta: float) -> tuple[Any, dict[str, Any]]:
-    """Whole-response token means, then equal response means (including KL).
+                          kl_beta: float, loss_normalization: str = "response_mean",
+                          loss_token_budget: int = 2048) -> tuple[Any, dict[str, Any]]:
+    """Completion-token surrogate with explicit sequence normalization.
 
     `old_logps` and `ref_logps` are immutable cohort measurements. This function
     intentionally never recomputes or detaches a new log-prob to create old.
+    Both policy and KL use either each response's realized length or the same
+    fixed positive token budget. Diagnostic probability ratios remain per-token.
     """
     import torch
+    if loss_normalization not in {"response_mean", "fixed_token_budget"}:
+        raise ValueError("unknown loss normalization")
+    if not math.isfinite(loss_token_budget) or loss_token_budget <= 0:
+        raise ValueError("loss token budget must be a finite positive constant")
     new = new_logps.float()
     old = old_logps.detach().float()
     ref = ref_logps.detach().float()
@@ -82,16 +89,20 @@ def clipped_response_loss(new_logps: Any, old_logps: Any, ref_logps: Any,
     surrogate = torch.minimum(ratio * advantages[:, None], clipped * advantages[:, None])
     # Nonnegative sampled k3 KL proxy, not an exact vocabulary KL.
     kl = torch.expm1(ref_delta) - ref_delta
-    denom = lengths.float()
-    means = lambda value: (torch.where(mask, value, torch.zeros_like(value)).sum(-1) / denom).mean()
-    policy_loss = -means(surrogate)
-    kl_mean = means(kl)
+    sums = lambda value: torch.where(mask, value, torch.zeros_like(value)).sum(-1)
+    per_token_means = lambda value: (sums(value) / lengths.float()).mean()
+    denom = lengths.float() if loss_normalization == "response_mean" else torch.full_like(
+        lengths, float(loss_token_budget), dtype=torch.float32)
+    objective_means = lambda value: (sums(value) / denom).mean()
+    policy_loss = -objective_means(surrogate)
+    kl_mean = objective_means(kl)
     loss = policy_loss + kl_beta * kl_mean
     metrics = {
         "policy_loss": policy_loss.detach(), "sampled_kl_proxy": kl_mean.detach(),
-        "mean_ratio": means(ratio).detach(),
-        "clip_fraction": means((ratio != clipped).float()).detach(),
-        "mean_abs_log_ratio": means(log_ratio.abs()).detach(),
+        "sampled_kl_per_token": per_token_means(kl).detach(),
+        "mean_ratio": per_token_means(ratio).detach(),
+        "clip_fraction": per_token_means((ratio != clipped).float()).detach(),
+        "mean_abs_log_ratio": per_token_means(log_ratio.abs()).detach(),
         "max_abs_log_ratio": torch.where(mask, log_ratio.abs(), torch.zeros_like(new)).max().detach(),
         "mean_response_tokens": lengths.float().mean().detach(),
     }
@@ -185,7 +196,9 @@ def padded_objective(model: Any, examples: list[Completion], args: Any, pad_id: 
         mask[index, :count] = True
     adv = torch.tensor([item.advantage for item in examples], dtype=torch.float32, device=new.device)
     return clipped_response_loss(new, old, ref, adv, mask,
-                                 clip_epsilon=args.clip_epsilon, kl_beta=args.kl_beta)
+                                 clip_epsilon=args.clip_epsilon, kl_beta=args.kl_beta,
+                                 loss_normalization=args.loss_normalization,
+                                 loss_token_budget=args.loss_token_budget)
 
 
 def optimizer_step(model: Any, optimizer: Any, examples: list[Completion], args: Any,
@@ -454,6 +467,7 @@ def benchmark_updates(model: Any, tokenizer: Any, cohort: list[Completion], args
         "trainable_hash_after_warmup": timed_before,
         "frozen_logprob_seconds": freeze_seconds,
         "warmup_steps_excluded": args.warmup_steps, "timed_optimizer_steps": len(timed),
+        "loss_normalization": args.loss_normalization, "loss_token_budget": args.loss_token_budget,
         "timed_seconds": seconds, "optimizer_steps_per_second": len(timed) / seconds,
         "responses_per_second": sum(item["responses"] for item in timed) / seconds,
         "generated_training_tokens_per_second": sum(item["generated_tokens"] for item in timed) / seconds,
@@ -526,7 +540,8 @@ def training_loop(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str,
         "generation_microbatch", "states_per_iteration", "microbatch", "gradient_accumulation",
         "update_epochs", "learning_rate", "clip_epsilon", "kl_beta", "invalid_reward", "seed",
         "max_grad_norm", "dtype", "attention", "gradient_checkpointing", "limit",
-        "selected_split", "selected_row_count", "selected_selection_sha256")
+        "selected_split", "selected_row_count", "selected_selection_sha256",
+        "loss_normalization", "loss_token_budget")
     settings = {name: getattr(args, name) for name in invariant_names}
     settings["training_format_version"] = TRAINING_FORMAT_VERSION
     settings["prompt_file_sha256"] = hashlib.sha256(args.prompts.read_bytes()).hexdigest()
@@ -614,7 +629,9 @@ def training_loop(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str,
     summary = {"purpose": "single_decision_teacher_probability_grpo", "status": "complete",
                "iterations": history, "last_completed_checkpoint": last_checkpoint,
                "generation": "synchronous_current_hf_peft_policy", "sampling_top_p": 1.0,
-               "loss": "equal_response_mean_over_all_generated_reasoning_and_final_tokens",
+               "loss_tokens": "all_generated_reasoning_final_and_eos_tokens",
+               "loss_normalization": args.loss_normalization,
+               "loss_token_budget": args.loss_token_budget,
                "reference": "frozen_base_with_adapters_disabled", "sft_targets": False}
     atomic_json(output / "summary.json", summary)
     return summary
@@ -651,6 +668,10 @@ def main() -> int:
     parser.add_argument("--gradient-accumulation", type=int, default=4)
     parser.add_argument("--clip-epsilon", type=float, default=.2)
     parser.add_argument("--kl-beta", type=float, default=.02)
+    parser.add_argument("--loss-normalization", choices=("response_mean", "fixed_token_budget"),
+                        help="Required for training; benchmarks default to response_mean")
+    parser.add_argument("--loss-token-budget", type=int, default=2048,
+                        help="Fixed positive denominator for fixed_token_budget policy and KL loss")
     parser.add_argument("--max-grad-norm", type=float, default=1.)
     parser.add_argument("--invalid-reward", type=float, default=-1.)
     parser.add_argument("--seed", type=int, default=1729)
@@ -670,13 +691,18 @@ def main() -> int:
         parser.error("choose one benchmark mode")
     if args.resume and (args.adapter or args.benchmark_updates or args.benchmark_generation):
         parser.error("exact resume is training-only and cannot be combined with a weights warm start")
+    if args.loss_normalization is None:
+        if args.benchmark_updates or args.benchmark_generation:
+            args.loss_normalization = "response_mean"
+        else:
+            parser.error("actual training requires an explicit --loss-normalization choice")
     if args.dtype == "float16":
         parser.error("float16 requires loss scaling; use bfloat16 or float32")
     positive = (args.temperature, args.max_new_tokens, args.max_sequence_length, args.group_size,
                 args.generation_microbatch, args.microbatch, args.gradient_accumulation,
                 args.states_per_iteration, args.iterations, args.update_epochs, args.benchmark_steps,
                 args.learning_rate, args.max_grad_norm, args.lora_rank, args.lora_alpha,
-                args.generation_warmup_responses)
+                args.generation_warmup_responses, args.loss_token_budget)
     if min(positive) <= 0 or args.group_size < 2 or args.warmup_steps < 0:
         parser.error("positive sizes/temperature and group-size >=2 required")
     if (not all(math.isfinite(value) for value in positive) or
