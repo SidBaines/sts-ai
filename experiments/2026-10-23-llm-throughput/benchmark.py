@@ -327,6 +327,7 @@ async def run(args: argparse.Namespace, prompts: list[dict[str, Any]], tokenizer
         actual = [record for record in records if record is not None]
         summary = {
             "case_name": args.case_name, "model": args.model, "effort": args.effort,
+            **args.server_settings,
             "endpoint": endpoint, "url": url,
             "concurrency": args.concurrency, "max_tokens": args.max_tokens,
             "repeats": args.repeats, "seed": args.seed,
@@ -383,6 +384,7 @@ def main() -> int:
     parser.add_argument("--timeout", type=float, default=180, help="Per-request seconds")
     parser.add_argument("--run-timeout", "--deadline", type=float, default=600, help="Whole request cohort seconds")
     parser.add_argument("--case-name", default="benchmark")
+    parser.add_argument("--server-config", type=Path, help="Recorded server controls; no server mutation")
     parser.add_argument("--endpoint", choices=("completions", "chat"), default="completions")
     parser.add_argument("--tokenizer", help="HF tokenizer ID/path; defaults to --model")
     parser.add_argument("--revision", help="Pinned HF tokenizer/model revision")
@@ -407,6 +409,11 @@ def main() -> int:
         parser.error("output directory must be empty or new")
     args.output.mkdir(parents=True, exist_ok=True)
     config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items() if k != "api_key"}
+    allowed_controls = {"backend", "execution", "prefix", "max_num_batched_tokens", "max_num_seqs", "gpu_memory_utilization", "kv_cache_dtype", "dtype"}
+    args.server_settings = json.loads(args.server_config.read_text()) if args.server_config else {}
+    if set(args.server_settings) - allowed_controls:
+        parser.error("unknown server control fields")
+    config.update(args.server_settings)
     config["api_key_supplied"] = bool(args.api_key)
     config["client_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     atomic_json(args.output / "config.json", config)

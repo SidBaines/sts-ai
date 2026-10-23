@@ -7,6 +7,7 @@ probability. It never trains on teacher reasoning or SFT target completions.
 from __future__ import annotations
 
 import argparse
+import copy
 from contextlib import nullcontext
 from dataclasses import asdict, dataclass, field
 import hashlib
@@ -318,42 +319,64 @@ def sample_cohort(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str,
     cohort = []
     variances = []
     model.eval()
-    for row in rows:
-        group = []
-        for offset in range(0, args.group_size, args.generation_microbatch):
-            count = min(args.generation_microbatch, args.group_size - offset)
-            prompt = torch.tensor([row["prompt_ids"]] * count, dtype=torch.long, device=device)
-            torch.manual_seed(args.seed + iteration * 1000003 + len(cohort) + offset)
-            with torch.no_grad():
-                outputs = model.generate(input_ids=prompt, attention_mask=torch.ones_like(prompt),
-                    do_sample=True, temperature=args.temperature, top_p=1.0, top_k=0,
-                    max_new_tokens=args.max_new_tokens, pad_token_id=pad_id,
-                    eos_token_id=[stop_id, tokenizer.eos_token_id], use_cache=True,
-                    repetition_penalty=1.0, renormalize_logits=False)
-            for sequence in outputs:
-                tokens = sequence[prompt.shape[1]:].tolist()
-                endings = [i for i, token in enumerate(tokens) if token in {stop_id, tokenizer.eos_token_id}]
-                if endings:
-                    tokens = tokens[:endings[0] + 1]
-                truncated = not endings and len(tokens) >= args.max_new_tokens
-                text = tokenizer.decode(tokens, skip_special_tokens=False)
-                parsed = parse_action(text, row["legal_indices"], finish_reason="length" if truncated else "stop")
-                reward = teacher_reward(row, parsed.action_index if parsed.valid else None,
-                                        invalid_reward=args.invalid_reward) if "teacher" in row else 0.0
-                group.append(Completion(row["id"], row["phase"], row["prompt_ids"], tokens,
-                                        reward, raw_text=text, action_index=parsed.action_index,
-                                        valid=parsed.valid, truncated=truncated, error=parsed.error))
-            del outputs, prompt
-        if args.benchmark_updates:
-            # Throughput-only synthetic advantages guarantee an actual backward
-            # and optimizer update even when every sampled answer is truncated.
-            for index, item in enumerate(group):
-                item.reward = float(index % 2)
-        advantages, variance = normalized_advantages([item.reward for item in group])
-        variances.append(variance)
-        for item, advantage in zip(group, advantages):
-            item.advantage = advantage
-        cohort.extend(group)
+    began = time.perf_counter()
+    completed_path = args.output / f"generation_{iteration:04d}.jsonl"
+    partial_path = args.output / f"generation_{iteration:04d}.partial.jsonl"
+    if completed_path.exists():
+        raise FileExistsError(f"completed generation cohort exists: {completed_path}")
+    generated_tokens = 0
+    # This is the raw generation ledger, before group advantages are assigned.
+    # Each finished microbatch survives a later generation failure. The later
+    # cohort_NNNN.jsonl additionally stores the frozen old/reference log-probs.
+    with partial_path.open("x") as partial:
+        for row in rows:
+            group = []
+            for offset in range(0, args.group_size, args.generation_microbatch):
+                count = min(args.generation_microbatch, args.group_size - offset)
+                prompt = torch.tensor([row["prompt_ids"]] * count, dtype=torch.long, device=device)
+                torch.manual_seed(args.seed + iteration * 1000003 + len(cohort) + offset)
+                with torch.no_grad():
+                    outputs = model.generate(input_ids=prompt, attention_mask=torch.ones_like(prompt),
+                        do_sample=True, temperature=args.temperature, top_p=1.0, top_k=0,
+                        max_new_tokens=args.max_new_tokens, pad_token_id=pad_id,
+                        eos_token_id=[stop_id, tokenizer.eos_token_id], use_cache=True,
+                        repetition_penalty=1.0, renormalize_logits=False)
+                for sequence in outputs:
+                    tokens = sequence[prompt.shape[1]:].tolist()
+                    endings = [i for i, token in enumerate(tokens) if token in {stop_id, tokenizer.eos_token_id}]
+                    if endings:
+                        tokens = tokens[:endings[0] + 1]
+                    truncated = not endings and len(tokens) >= args.max_new_tokens
+                    text = tokenizer.decode(tokens, skip_special_tokens=False)
+                    parsed = parse_action(text, row["legal_indices"], finish_reason="length" if truncated else "stop")
+                    reward = teacher_reward(row, parsed.action_index if parsed.valid else None,
+                                            invalid_reward=args.invalid_reward) if "teacher" in row else 0.0
+                    item = Completion(row["id"], row["phase"], row["prompt_ids"], tokens,
+                        reward, raw_text=text, action_index=parsed.action_index,
+                        valid=parsed.valid, truncated=truncated, error=parsed.error)
+                    group.append(item)
+                    generated_tokens += len(tokens)
+                    partial.write(json.dumps({"stage": "generation_before_advantage_normalization",
+                                               **asdict(item)}) + "\n")
+                partial.flush()
+                os.fsync(partial.fileno())
+                elapsed = time.perf_counter() - began
+                print(json.dumps({"event": "generation_progress", "iteration": iteration,
+                    "completed_responses": len(cohort) + len(group), "generated_tokens": generated_tokens,
+                    "elapsed_seconds": elapsed, "generated_tokens_per_second": generated_tokens / elapsed,
+                    "partial_path": str(partial_path)}), flush=True)
+                del outputs, prompt
+            if args.benchmark_updates:
+                # Throughput-only synthetic advantages guarantee a real
+                # backward/update even when every answer is truncated.
+                for index, item in enumerate(group):
+                    item.reward = float(index % 2)
+            advantages, variance = normalized_advantages([item.reward for item in group])
+            variances.append(variance)
+            for item, advantage in zip(group, advantages):
+                item.advantage = advantage
+            cohort.extend(group)
+    os.replace(partial_path, completed_path)
     return cohort, {"mean_group_reward_variance": statistics.fmean(variances),
                     "zero_variance_group_fraction": sum(v <= 1e-12 for v in variances) / len(variances),
                     "mean_reward": statistics.fmean(item.reward for item in cohort),
@@ -449,8 +472,17 @@ def benchmark_generation(model: Any, tokenizer: Any, stop_id: int, rows: list[di
     """Time the actual HF rollout path used by training, without an update."""
     import torch
     selected = rows[:args.states_per_iteration]
+    warmup_records = []
+    warmup_args = copy.copy(args)
+    warmup_args.group_size = args.generation_warmup_responses
     for warmup in range(args.warmup_steps):
-        sample_cohort(model, tokenizer, stop_id, selected[:1], args, iteration=10000 + warmup)
+        began = time.perf_counter()
+        warmup_cohort, _ = sample_cohort(model, tokenizer, stop_id, selected[:1], warmup_args, iteration=10000 + warmup)
+        synchronize(args.device)
+        warmup_records.append({"responses": len(warmup_cohort),
+            "generated_tokens": sum(len(item.output_ids) for item in warmup_cohort),
+            "seconds": time.perf_counter() - began,
+            "cohort_path": str(output / f"generation_{10000 + warmup:04d}.jsonl")})
     synchronize(args.device)
     if args.device.startswith("cuda"):
         torch.cuda.reset_peak_memory_stats()
@@ -466,6 +498,8 @@ def benchmark_generation(model: Any, tokenizer: Any, stop_id: int, rows: list[di
         "effort": args.effort, "generation_microbatch": args.generation_microbatch,
         "group_size": args.group_size, "timed_states": len(selected), "timed_responses": len(cohort),
         "warmup_groups_excluded": args.warmup_steps,
+        "warmup_responses_per_group": args.generation_warmup_responses,
+        "warmup_records": warmup_records,
         "timed_seconds": seconds, "generated_tokens": generated,
         "generated_tokens_per_second": generated / seconds,
         "decisions_per_second": len(cohort) / seconds,
@@ -624,6 +658,8 @@ def main() -> int:
     parser.add_argument("--smoke", action="store_true", help="One state/group, one iteration; respects requested token cap")
     parser.add_argument("--benchmark-updates", action="store_true")
     parser.add_argument("--benchmark-generation", action="store_true")
+    parser.add_argument("--generation-warmup-responses", type=int, default=2,
+                        help="Benchmark-generation only: responses per excluded warmup group")
     parser.add_argument("--cohort-jsonl", type=Path, help="Benchmark-only raw generated records with actual output_token_ids")
     parser.add_argument("--warmup-steps", type=int, default=1)
     parser.add_argument("--benchmark-steps", type=int, default=3)
@@ -639,7 +675,8 @@ def main() -> int:
     positive = (args.temperature, args.max_new_tokens, args.max_sequence_length, args.group_size,
                 args.generation_microbatch, args.microbatch, args.gradient_accumulation,
                 args.states_per_iteration, args.iterations, args.update_epochs, args.benchmark_steps,
-                args.learning_rate, args.max_grad_norm, args.lora_rank, args.lora_alpha)
+                args.learning_rate, args.max_grad_norm, args.lora_rank, args.lora_alpha,
+                args.generation_warmup_responses)
     if min(positive) <= 0 or args.group_size < 2 or args.warmup_steps < 0:
         parser.error("positive sizes/temperature and group-size >=2 required")
     if (not all(math.isfinite(value) for value in positive) or

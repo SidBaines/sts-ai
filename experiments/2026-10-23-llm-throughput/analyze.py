@@ -21,6 +21,9 @@ def case(path, teachers):
     summary = json.loads(path.read_text())
     config_path = path.with_name("config.json")
     meta = {**(json.loads(config_path.read_text()) if config_path.exists() else {}), **summary}
+    server_path = path.with_name("server_config.json")
+    if server_path.exists():
+        meta.update(json.loads(server_path.read_text()))
     observations, scheduled = {}, set()
     records = jsonl(path.with_name("requests.jsonl"))
     counts = {"complete_responses": 0, "invalid_or_truncated": 0, "valid_responses": 0}
@@ -47,7 +50,7 @@ def case(path, teachers):
         "teacher_top_agreement": math.fsum(v[1] for v in values)/len(values)}
         for p, values in sorted(observations.items())]
     metrics = summary.get("metrics", {})
-    fields = ("model", "effort", "concurrency", "max_tokens", "endpoint", "backend", "execution", "prefix")
+    fields = ("model", "effort", "concurrency", "max_tokens", "endpoint", "backend", "execution", "prefix", "max_num_batched_tokens", "max_num_seqs", "temperature", "top_p")
     result = {"case_id": str(path.parent.resolve()), "case_name": meta.get("case_name", path.parent.name),
         **{key: meta.get(key) for key in fields}, "revision": meta.get("revision", meta.get("tokenizer_revision")),
         "end_reason": summary.get("end_reason"), **counts, "scheduled_decisions": len(scheduled),
@@ -75,7 +78,7 @@ def analyze(teacher_path, results, *, seed=1729, replicates=10000):
         raise ValueError("no summary.json files found under the requested result directories")
     cases = [case(path, teachers) for path in paths]
     comparisons = []
-    match = ("model", "revision", "concurrency", "max_tokens", "endpoint", "backend", "execution", "prefix")
+    match = ("model", "revision", "concurrency", "max_tokens", "endpoint", "backend", "execution", "prefix", "max_num_batched_tokens", "max_num_seqs", "temperature", "top_p")
     effort_order = {"low": 0, "medium": 1, "high": 2}
     for first, second in itertools.combinations(cases, 2):
         if any(first[key] is None or second[key] is None for key in ("model", "concurrency", "max_tokens")):
@@ -97,7 +100,7 @@ def analyze(teacher_path, results, *, seed=1729, replicates=10000):
         "missingness": "Completed invalid/capped outputs score zero; incomplete HTTP responses are missing.",
         "missingness_caveat": "Complete-pair estimates can be biased if slower or harder responses are disproportionately missing.",
         "timings": "Descriptive single-cohort measurements; no timing confidence intervals.",
-        "configuration": "Effort comparisons match recorded fields; null backend/execution fields mean unrecorded, not verified equal.",
+        "configuration": "Effort comparisons match recorded fields; null backend/execution fields mean unrecorded, not verified equal. Server sidecars preserve controls for early pilot cases.",
         "seed": seed, "bootstrap_replicates": replicates, "cases": cases, "comparisons": comparisons}
 
 
