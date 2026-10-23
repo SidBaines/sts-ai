@@ -424,6 +424,7 @@ def main(argv: list[str] | None = None) -> int:
                 if result["status"] == "interrupted":
                     break
             report = {
+                **environment_identity(), "env_config": env_config(args),
                 "seeds_requested": seeds, "episodes": summaries,
                 "completed": len(summaries), "errors": sum(r["status"] in {"error", "interrupted"} for r in summaries),
                 "mean_reward": sum(r["reward"] for r in summaries) / len(summaries),

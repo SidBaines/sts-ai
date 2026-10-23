@@ -7,6 +7,28 @@
 #include "game/GameContext.h"
 namespace py=pybind11;
 PYBIND11_MODULE(sts_hidden_pile_fixture,m) {
+    m.def("monster_intent_copy",[](const sts::BattleContext &bc, int targetIdx,
+                                   const std::string &move) {
+        if (targetIdx < 0 || targetIdx >= bc.monsters.monsterCount) {
+            throw std::runtime_error("invalid intent target");
+        }
+        for (int i = 0; i < sizeof(sts::monsterMoveStrings)/sizeof(sts::monsterMoveStrings[0]); ++i) {
+            if (move == sts::monsterMoveStrings[i]) {
+                sts::BattleContext result(bc);
+                result.monsters.arr[targetIdx].moveHistory[0] = static_cast<sts::MonsterMoveId>(i);
+                return result;
+            }
+        }
+        throw std::runtime_error("invalid intent name");
+    });
+    m.def("player_hp_copy",[](const sts::BattleContext &bc, int hp) {
+        if (hp <= 0 || hp > bc.player.maxHp) {
+            throw std::runtime_error("invalid player HP setup");
+        }
+        sts::BattleContext result(bc);
+        result.player.curHp = hp;
+        return result;
+    });
     m.def("encounter_game_copy",[](const sts::GameContext &gc,
                                    sts::MonsterEncounter encounter) {
         sts::GameContext result(gc);

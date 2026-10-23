@@ -71,6 +71,9 @@ class LightspeedHybridEnv:
         # Its presence is what distinguishes a combat decision from an out-of-combat
         # one (see `phase`).
         self.bc: Any | None = None
+        # Public history only: reset per run, never derived from hidden state.
+        # Consecutive fights (notably A20) need no intervening OOC decision.
+        self.combat_id = 0
         self._combat_history_turn: int | None = None
         self._combat_recent_actions: list[str] = []
         # Sticky: set if any combat evoked simulator UB. `exit_battle` clears
@@ -113,7 +116,10 @@ class LightspeedHybridEnv:
     def resolve_battle_if_needed(self) -> bool:
         if self.gc.screen_state != self.sts.ScreenState.BATTLE:
             return False
-        return bool(self.sts.resolve_current_battle(self.gc, self.battle_agent))
+        resolved = bool(self.sts.resolve_current_battle(self.gc, self.battle_agent))
+        if resolved:
+            self.combat_id += 1
+        return resolved
 
     def advance_to_decision(self) -> int:
         if self.combat_control == "llm":
@@ -141,6 +147,7 @@ class LightspeedHybridEnv:
                 bc = self.sts.BattleContext()
                 bc.init(self.gc)
                 self.bc = bc
+                self.combat_id += 1
                 self._sync_combat_history()
             if self.bc.outcome != self.sts.BattleOutcome.UNDECIDED:
                 if bool(self.bc.undefined_behavior_evoked):

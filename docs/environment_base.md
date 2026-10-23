@@ -39,12 +39,15 @@ say their effects are unavailable. Release 0.1.5 fixed the upstream Mushrooms,
 Mysterious Sphere, Mausoleum, Woman in Blue and Designer In-Spire deviations;
 the release does not claim full event or vanilla-game fidelity.
 
-The optional Gymnasium observation has two fields: `features` (15 compact
+The optional Gymnasium observation has two fields: `features` (16 compact
 numeric features) and `action_mask` (a fixed menu mask). It omits strategic
 card/enemy/map/event detail and raw native action bits. The full public
 observation in `info["observation"]` is available to richer experiment encoders;
 the remaining `info` diagnostics must not be used as policy input. The compact
 baseline is not a complete Markov representation.
+The final numeric feature is ascension (raw 0–20); the previous 15 positions
+are unchanged. See the [0.1.6 migration notes](release_v0.1.6.md) for the
+new observation version and input-shape boundary.
 
 For parallel RL environments, configure outer process workers as non-daemonic.
 The core creates an isolated native simulator child, and Python daemonic
@@ -96,7 +99,7 @@ undefined-behaviour flags do not certify all reachable game states as free of
 upstream undefined-memory bugs. Unflagged corrupted states may still evade
 detection.
 
-Known open faults and limits as of 0.1.5 (see [the 0.1.5 record](release_v0.1.5.md)
+Known open faults and limits carried into the 0.1.6 candidate (see [the 0.1.5 record](release_v0.1.5.md)
 for what was fixed):
 
 - Combat menus still merge copies of a card that differ only in base cost (same
@@ -125,7 +128,8 @@ out-of-combat policy is scripted/seeded rather than a planning search.
 ## Migration from the research harness
 
 This clean base uses distribution `slay-the-spire-env`, package `sts_env`, public
-observation contract `sts_env_public_v2` (`sts_env_public_v1` before 0.1.3), and
+observation contract `sts_env_public_v4` (`v1` before 0.1.3, `v2` in 0.1.3–0.1.4,
+and `v3` in 0.1.5–0.1.5.1), and
 trace schema `sts_env_trace_v1`.
 It does not reinterpret the old `sts_ai` DecisionRecord schema. Frozen historical
 traces and their original replay/training tools stay on the LLM workstream (`ws/llm`).
@@ -249,3 +253,20 @@ observation label stays `sts_env_public_v3`. The in-process step costs about a
 third as much (1,119 to 356 µs per decision). Source identity
 (`python_interface_sha256`) changes, as for any source edit, so traces
 recorded under 0.1.5 keep their usual replay boundary.
+
+## 0.1.6 candidate: higher ascensions
+
+The candidate corrects Ascension 16+ goods inflation, including Courier
+restocks, and makes the combat glossary's known Acts 1–3 effects follow the
+selected difficulty. Public state adds a monotonic, per-reset `combat_id`, so
+consumers can recognise consecutive fights such as the two Act 3 bosses at
+Ascension 20. Both bosses must be defeated for victory; beating the first is
+neither an episode ending nor a terminal win reward. `info` retains ascension,
+and evaluation summaries retain environment configuration and identity.
+
+The package/environment version becomes `0.1.6`, the public observation becomes
+`sts_env_public_v4`, and Gymnasium appends raw ascension as feature sixteen.
+Historical artifacts retain their original versions. See the
+[implementation, migration and verification record](release_v0.1.6.md). This
+candidate passed verification and is ready for review; no immutable release tag has
+been published yet.

@@ -23,6 +23,7 @@ class FakeBackend:
         self.steps = 0
         self.native_steps = 0
         self.undefined = False
+        self.combat_id = 0
     def seed_native_ooc(self, seed):
         self.seed = seed
     def advance_to_decision(self):

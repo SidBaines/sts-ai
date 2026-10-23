@@ -11,8 +11,8 @@ from typing import Any, Callable
 from sts_env._copies import copy_tree
 from sts_env._backend.glossary import BURNING_ELITE_MARKER
 
-ENVIRONMENT_VERSION = "0.1.5"
-OBSERVATION_VERSION = "sts_env_public_v3"
+ENVIRONMENT_VERSION = "0.1.6"
+OBSERVATION_VERSION = "sts_env_public_v4"
 
 
 class SimulatorError(RuntimeError):
@@ -72,6 +72,7 @@ class _Episode:
         state.pop("world_seed", None)
         state.pop("combat_observation", None)
         state["observation_version"] = OBSERVATION_VERSION
+        state["combat_id"] = self.env.combat_id
         graph = self.env.map_graph()
         if graph is not None:
             state["map"] = copy_tree(graph)
@@ -79,7 +80,7 @@ class _Episode:
             raise SimulatorError("Simulator reported undefined behavior; trajectory is invalid")
         actions = [] if self.env.is_terminal() else self.env.legal_actions()
         text = self.env.describe_state()
-        from sts_env._backend.glossary_v5 import augment
+        from sts_env._backend.glossary_v6 import augment
         text = augment(text, [asdict(action) for action in actions], phase=self.env.phase(),
                        map_graph=graph,
                        turn_math_lines=self.env._turn_math_lines())
@@ -120,6 +121,7 @@ class _Episode:
         outcome = ("GameOutcome.PLAYER_VICTORY" if reason == "victory"
                    else observation["state"].get("outcome", ""))
         return {**self.interface_identity, "mode": self.config["mode"], "world_seed": self.seed,
+                "ascension": self.config["ascension"],
                 "environment_version": ENVIRONMENT_VERSION,
                 "observation_version": OBSERVATION_VERSION,
                 "native_steps": self.native_steps, "steps": self.steps,

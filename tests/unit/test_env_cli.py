@@ -165,6 +165,18 @@ class CliTests(unittest.TestCase):
         self.assertTrue((output / "seed-3.jsonl").exists())
         self.assertTrue((output / "seed-4.jsonl").exists())
 
+    def test_evaluation_summary_records_ascension_and_interface_identity(self) -> None:
+        output = self.directory / "ascension20"
+        with patch.object(cli, "make_env", return_value=FakeEnv()) as factory:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(cli.main(["evaluate", "--seeds", "3", "--ascension", "20",
+                                           "--output", str(output)]), 0)
+        self.assertEqual(factory.call_args.args[0]["ascension"], 20)
+        report = json.loads((output / "summary.json").read_text())
+        self.assertEqual(report["env_config"]["ascension"], 20)
+        for key, value in cli.environment_identity().items():
+            self.assertEqual(report[key], value)
+
     def test_evaluation_counts_keyed_act3_win_as_victory(self) -> None:
         output = self.directory / "keyed-victory"
         with patch("sts_env.env._make_backend", return_value=FakeBackend(cutoff=True, act=3)):
