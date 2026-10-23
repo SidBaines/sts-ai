@@ -23,13 +23,13 @@ from sts_policy import controlled_encoding as ce, entity_encoding as ee
 from sts_rl import fresh_training as ft
 from sts_rl.fresh_study import read_json
 
-SCHEMA = 'controlled_preencoded_cache_v1'
+SCHEMA = 'controlled_preencoded_cache_v2'
 ENCODING = dict(architecture='controlled', phase='combat', fit_size='full', splits=['FIT', 'VALIDATION'])
 FULL_COUNTS = {'FIT': 113_042, 'VALIDATION': 17_989}
 _ROOT = Path(__file__).resolve().parents[2]
 _LOGIC = (
     'src/sts_rl/controlled_cache.py', 'src/sts_rl/fresh_training.py',
-    'src/sts_rl/fresh_study.py', 'src/sts_rl/recording.py',
+    'src/sts_rl/fresh_study.py', 'src/sts_rl/recording.py', 'src/sts_rl/teacher_votes.py',
     'src/sts_policy/controlled_encoding.py', 'src/sts_policy/entity_encoding.py',
     'src/sts_policy/encoding.py', 'src/sts_policy/curriculum.py',
     'src/sts_policy/entity_vocabulary.json', 'src/sts_env/_backend/glossary.py',
@@ -128,7 +128,7 @@ def _range(array, low, high, name):
 
 def _example(example):
     """Validate the existing unpadded encoder ABI, without encoding observations."""
-    _require(type(example) is ft.Example and set(vars(example)) == {'encoded', 'target', 'meta'},
+    _require(type(example) is ft.Example and set(vars(example)) == {f.name for f in fields(ft.Example)},
              'Example class/schema mismatch')
     x = example.encoded
     _require(type(x) is ce.EncodedControlledObservation and
@@ -180,6 +180,12 @@ def _example(example):
     _require(type(example.meta) is dict and example.meta.get('choice') == (a > 1)
              and example.meta.get('confident') == (float(example.target.max()) >= .75), 'target/menu metadata alignment')
     _require(ft.digest(example.target.tolist()) == example.meta.get('target_sha256'), 'canonical target mismatch')
+    if example.value_regrets is None:
+        _require(example.pooled_position is None, 'missing pooled value regrets')
+    else:
+        size += _array(example.value_regrets, 'float64', (a,), 'value_regrets')
+        _require(type(example.pooled_position) is int and 0 <= example.pooled_position < a
+                 and example.value_regrets[example.pooled_position] == 0., 'pooled winner/menu alignment')
     return size
 
 
@@ -427,12 +433,14 @@ def build_cache(config):
         mixed_sources = original.get('mixed_sources',False)
         mixed_sampling = original.get('mixed_sampling',False)
         relabel_vote_rule = original.get('relabel_vote_rule')
+        target_mode, value_scale = original.get('target_mode','votes'), original.get('value_scale',100.)
         _require(original_identity == ft.digest({k: v for k, v in original.items() if k != 'data_identity'}),
                  'original manifest self identity mismatch')
         manifest_rows(original)
         del original  # Never keep two parsed copies of the large original manifest.
         manifest = ft.freeze_manifest(config['data'], control=control, mixed_sources=mixed_sources,
-                                      mixed_sampling=mixed_sampling, relabel_vote_rule=relabel_vote_rule)
+                                      mixed_sampling=mixed_sampling, relabel_vote_rule=relabel_vote_rule,
+                                      target_mode=target_mode, value_scale=value_scale)
         _require(manifest['data_identity'] == original_identity, 'Frozen manifest/source identities differ')
         _verify(manifest_id, control)
         freeze_seconds = time.monotonic()-start

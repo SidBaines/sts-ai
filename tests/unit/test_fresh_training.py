@@ -24,10 +24,12 @@ from sts_rl.fresh_study import (INFERENCE, PROTOCOL, PUBLIC_CONTEXT_ID, StudyPol
     atomic_json, fit_manifest_path, read_json, policy_observation)
 from sts_rl.fresh_training import (FILTERS, MIN_DISK, TrainingControl, collate, digest, fit,
     freeze_manifest, make_model, preencode, soft_cross_entropy, target_distribution, validate_source,
-    validate_training_config, world_split, run_training, interleave_fit, iter_rows)
+    validate_training_config, world_split, run_training, interleave_fit, iter_rows, Example,
+    evaluate, value_diagnostics)
 from sts_rl.recording import file_identity
 from sts_rl.teacher_votes import RULES
 from tests.unit.test_entity_encoding import combat_observation, ooc_observation
+from tests.unit.test_teacher_votes import edge
 
 
 def synthetic_source(root, *, interface_suffix=b'', environment_version='0.1.5',
@@ -141,6 +143,166 @@ class FreshTrainingTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         torch.set_num_threads(cls.threads)
+
+    def test_pooled_value_targets_map_gapped_menu_and_validate_indices(self):
+        observation=combat_observation()
+        observation['legal_actions'].reverse()
+        raw=row(observation,92_000_000_000,{}, {})
+        raw['search_details']=[{'edges':[edge(10,100,1000),edge(17,10,1100),
+                                          edge(16,9,9000),edge(15,0,9000)]}]
+        target,indices=target_distribution(raw,target_mode='pooled_values',value_scale=100.)
+        expected=np.zeros(8,np.float32)
+        expected[0]=1/(1+np.exp(-1))
+        expected[-1]=1/(1+np.exp(1))
+        np.testing.assert_allclose(target,expected)
+        self.assertEqual(indices,list(range(17,9,-1)))
+        self.assertEqual(target.dtype,np.float32)
+        for index in (True,10.0,'010',99,'bad'):
+            invalid={**raw,'search_details':[{'edges':[edge(index,100,1)]}]}
+            with self.subTest(index=index),self.assertRaisesRegex(ValueError,'teacher.*index'):
+                target_distribution(invalid,target_mode='pooled_values')
+        raw['observation']['legal_actions'].append(raw['observation']['legal_actions'][0])
+        with self.assertRaisesRegex(ValueError,'duplicate legal action indices'):
+            target_distribution(raw,target_mode='pooled_values')
+
+    def test_pooled_values_require_details_and_preserve_recorded_abstentions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data,_=fixture(Path(tmp))
+            for abstention in (False,True):
+                for path in (data/'worlds').glob('*'):
+                    shard=read_json(path)
+                    if abstention:
+                        shard['labels'][0].update(label=None,votes={})
+                    atomic_json(path,shard,compressed=True)
+                for load in (freeze_manifest,lambda s,**kw:list(iter_rows(s,**kw))):
+                    with self.assertRaisesRegex(ValueError,'requires search_details.*--record-search'):
+                        load([data],target_mode='pooled_values')
+            for path in (data/'worlds').glob('*'):
+                shard=read_json(path)
+                shard['labels'][0]['search_details']=[]
+                atomic_json(path,shard,compressed=True)
+            manifest=freeze_manifest([data],target_mode='pooled_values')
+            self.assertEqual(manifest['counts']['combat_abstentions'],9)
+        raw=row(combat_observation(),92_000_000_000,{}, {})
+        for details,message in ((None,'to be a list'),([], 'requires visited search_details'),
+                                ([{'edges':[edge(10,0,1)]}],'requires visited search_details')):
+            with self.subTest(details=details),self.assertRaisesRegex(ValueError,message):
+                target_distribution({**raw,'search_details':details},target_mode='pooled_values')
+
+    def test_pooled_values_manifest_targets_and_compact_diagnostics_for_all_encoders(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data,_=fixture(Path(tmp),record_search=True)
+            original=list(iter_rows([data]))
+            files=[file_identity(p) for p in sorted((data/'worlds').glob('*'))]
+            baseline=freeze_manifest([data])
+            self.assertEqual(baseline,freeze_manifest([data],target_mode='votes',value_scale=100.))
+            for key in ('target_mode','value_scale'):
+                self.assertNotIn(key,baseline)
+            identities={baseline['data_identity']}
+            for scale in (100.,.5):
+                manifest=freeze_manifest([data],target_mode='pooled_values',value_scale=scale)
+                self.assertEqual(manifest['target_mode'],'pooled_values')
+                self.assertEqual(manifest['value_scale'],scale)
+                self.assertEqual(manifest['data_identity'],digest({k:v for k,v in manifest.items() if k!='data_identity'}))
+                identities.add(manifest['data_identity'])
+                for architecture in ('old','new','controlled'):
+                    dataset=preencode([data],manifest,'combat',architecture)
+                    for examples in dataset.values():
+                        for example in examples:
+                            expected=np.zeros(8,np.float32)
+                            expected[-1]=1/(1+np.exp(-1/scale))
+                            expected[0]=1-expected[-1]
+                            np.testing.assert_allclose(example.target,expected,rtol=1e-6)
+                            self.assertEqual(example.pooled_position,7)
+                            np.testing.assert_array_equal(example.value_regrets,[1.]*7+[0.])
+                            self.assertNotIn('search_details',example.meta)
+                with self.assertRaisesRegex(ValueError,'relabel_vote_rule cannot be combined with target_mode=pooled_values'):
+                    freeze_manifest([data],target_mode='pooled_values',value_scale=scale,
+                                    relabel_vote_rule='pooled_mean')
+            self.assertEqual(len(identities),3)
+            vote_dataset=preencode([data],baseline,'combat','old')
+            self.assertTrue(all(x.value_regrets is not None for rows in vote_dataset.values() for x in rows))
+            self.assertEqual(list(iter_rows([data])),original)
+            self.assertEqual([file_identity(p) for p in sorted((data/'worlds').glob('*'))],files)
+
+    def test_pooled_values_reject_relabel_rules_at_config_and_row_validation(self):
+        for rule in RULES:
+            options=dict(target_mode='pooled_values',relabel_vote_rule=rule)
+            with self.subTest(rule=rule):
+                with self.assertRaisesRegex(ValueError,'relabel_vote_rule cannot be combined with target_mode=pooled_values'):
+                    validate_training_config({'phase':'combat',**options},synthetic=True)
+                with self.assertRaisesRegex(ValueError,'relabel_vote_rule cannot be combined with target_mode=pooled_values'):
+                    list(iter_rows([],**options))
+
+    def test_value_regret_and_pooled_agreement_use_greedy_actions_and_available_rows(self):
+        from sts_policy.encoding import encode_observation
+        encoded=encode_observation(policy_observation(combat_observation()))
+        indices=encoded.action_indices.tolist()
+        details=[{'edges':[edge(10,100,1000),edge(11,10,1100),edge(12,9,800),edge(17,0,9000)]}]
+        regrets,winner=value_diagnostics(details,indices)
+        np.testing.assert_array_equal(regrets,[100.,0.,300.,300.,300.,300.,300.,300.])
+        self.assertEqual(winner,1)
+        examples=[]
+        positions=[0,1,2,7,0]
+        for i in range(5):
+            meta=dict(choice=True,confident=True,group='BOSS2' if i<3 else 'BOSS3')
+            target=np.array([.75]+[0.]*6+[.25],np.float32)
+            examples.append(Example(encoded,target,meta,regrets if i<4 else None,winner if i<4 else None))
+        logits=torch.zeros(5,len(indices))
+        logits[range(5),positions]=2.
+        with patch('sts_rl.fresh_training.actor_logits',return_value=logits):
+            result,_,_=evaluate(torch.nn.Identity(),examples,'old')
+        for name in ('all_rows','choice','high_confidence_choice'):
+            stats=result['groups'][name]
+            self.assertEqual(stats['rows'],5)
+            self.assertEqual(stats['value_rows'],4)
+            self.assertEqual(stats['value_regret'],175.)
+            self.assertEqual(stats['pooled_agreement'],.25)
+            self.assertEqual(stats['agreement'],.4)
+        boss2=result['groups']['group:BOSS2']
+        self.assertAlmostEqual(boss2['value_regret'],400/3)
+        self.assertAlmostEqual(boss2['pooled_agreement'],1/3)
+        self.assertEqual(result['groups']['group:BOSS3']['value_regret'],300.)
+        self.assertEqual(result['groups']['group:BOSS3']['pooled_agreement'],0.)
+        details[0]['edges'].append(edge(13,9,5000))
+        self.assertEqual(value_diagnostics(details,indices)[0][3],-3900.)
+        tied=[{'edges':[edge(10,20,2),edge(11,20,2),edge(12,30,2)]}]
+        self.assertEqual(value_diagnostics(tied,indices)[1],2)
+        tied[0]['edges'][-1]['visits']=20
+        tied[0]['edges'][-1]['evaluation_sum']=40
+        self.assertEqual(value_diagnostics(tied,indices)[1],0)
+
+    def test_target_options_are_optin_combat_only_and_checked_against_manifest(self):
+        script=Path(__file__).resolve().parents[2]/'scripts/rl/fresh_train.py'
+        spec=importlib.util.spec_from_file_location('targets_cli',script)
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        args=['--data','synthetic','--out','out','--architecture','old','--phase','combat',
+              '--deadline-utc','2099-01-01T00:00:00Z']
+        parser=module.parser()
+        for key in ('target_mode','value_scale'):
+            self.assertNotIn(key,vars(parser.parse_args(args)))
+        for flags in (['--target-mode','votes'],['--target-mode','pooled_values'],
+                      ['--target-mode','pooled_values','--value-scale','32']):
+            config=vars(parser.parse_args(args+flags))
+            validate_training_config(config,synthetic=True)
+            with self.assertRaisesRegex(ValueError,'only valid for combat fits'):
+                validate_training_config({**config,'phase':'ooc'},synthetic=True)
+        for options,message in (({'target_mode':'bad'},'target_mode must be one of'),
+                                ({'value_scale':32.},'requires target_mode=pooled_values'),
+                                *[({'target_mode':'pooled_values','value_scale':s},'finite and positive')
+                                  for s in (0,-1,float('nan'),float('inf'),True,None,'100')]):
+            with self.subTest(options=options):
+                with self.assertRaisesRegex(ValueError,message):
+                    validate_training_config(options,synthetic=True)
+                with self.assertRaisesRegex(ValueError,message):
+                    list(iter_rows([],**options))
+        for config,manifest,key in (({'target_mode':'pooled_values'},{},'target_mode'),
+                                    ({},{'target_mode':'pooled_values'},'target_mode'),
+                                    ({'target_mode':'pooled_values','value_scale':32.},
+                                     {'target_mode':'pooled_values','value_scale':100.},'value_scale')):
+            with self.subTest(key=key),self.assertRaisesRegex(ValueError,'config/manifest '+key+' mismatch'):
+                fit(None,{},config,None,manifest,{},None)
 
     def test_relabel_recomputes_votes_labels_and_encoded_targets_without_changing_sources(self):
         expected={'best_line':({10:3,17:1},10), 'most_visited':({10:4},10),
@@ -449,6 +611,10 @@ class FreshTrainingTests(unittest.TestCase):
                 manifest=freeze_manifest(['synthetic'],mixed_sources=mixed_sources)
                 self.assertEqual(manifest,freeze_manifest(['synthetic'],mixed_sources=mixed_sources,mixed_sampling=False))
                 self.assertEqual(manifest,freeze_manifest(['synthetic'],mixed_sources=mixed_sources,relabel_vote_rule=None))
+                self.assertEqual(manifest,freeze_manifest(['synthetic'],mixed_sources=mixed_sources,
+                                                          target_mode='votes',value_scale=100.))
+                self.assertNotIn('target_mode',manifest)
+                self.assertNotIn('value_scale',manifest)
                 self.assertNotIn('relabel_vote_rule',manifest)
                 self.assertNotIn('mixed_sampling',manifest)
                 self.assertNotIn('teacher_probability_profiles',manifest)
@@ -672,7 +838,7 @@ class FreshTrainingTests(unittest.TestCase):
         started=time.monotonic()
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp)
-            data,source=fixture(root)
+            data,source=fixture(root,record_search=True)
             manifest=freeze_manifest([data])
             for architecture in ('new','old'):
                 for phase in ('combat','ooc'):
@@ -720,6 +886,15 @@ class FreshTrainingTests(unittest.TestCase):
                         self.assertTrue(all(r['data_identity']==manifest['data_identity'] and r['split']=='TEST' for r in lines))
                         by_id={r['source_row_id']:r for r in manifest['rows']}
                         self.assertTrue(all(r['source_identity']==by_id[r['source_row_id']]['source_identity'] for r in lines))
+                        for record in lines:
+                            if phase=='combat':
+                                self.assertIs(type(record['value_regret']),float)
+                                self.assertIs(type(record['pooled_agreement']),bool)
+                                self.assertEqual(record['value_regret'],0. if record['prediction_index']==17 else 1.)
+                                self.assertEqual(record['pooled_agreement'],record['prediction_index']==17)
+                            else:
+                                self.assertNotIn('value_regret',record)
+                                self.assertNotIn('pooled_agreement',record)
                         if architecture=='new':
                             policy_from_payload(load_checkpoint(out/'best.pt'))
             # Also verify B1's bare payload through StudyPolicy, no format_version.
@@ -816,6 +991,14 @@ class FreshTrainingTests(unittest.TestCase):
             self.assertIn(source['policy']['champion']['path'],inputs)
             self.assertTrue(any(p.endswith('entity_vocabulary.json') for p in inputs))
             self.assertEqual(launch['effective_config']['filters'],FILTERS)
+            payload=load_checkpoint(root/'run'/'best.pt')
+            records=[read_json(root/'run'/'config.json'),receipt,launch['effective_config'],
+                     payload['metadata']['config']]
+            records.extend(r['training_condition'] for r in
+                           map(json.loads,(root/'run'/'test_rows.jsonl').read_text().splitlines()))
+            for record in records:
+                self.assertNotIn('target_mode',record)
+                self.assertNotIn('value_scale',record)
 
     def test_large_nested_interleave_keeps_exact_unique_prefixes(self):
         counts=dict(MONSTER1=12701,ELITE1=6307,BOSS1=3037,MONSTER2=1019,BOSS2=700,BOSS3=237)

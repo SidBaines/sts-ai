@@ -146,6 +146,25 @@ class ControlledCacheTests(unittest.TestCase):
             self.assertEqual(item.stat().st_mode & 0o222, 0)
         self.assertEqual(receipt['row_contract'], 'synthetic_fixture_only')
 
+    def test_pooled_diagnostics_survive_serialization_and_validate_menu_alignment(self):
+        data,_=fixture(self.out/'values',record_search=True)
+        manifest=ft.freeze_manifest([data],target_mode='pooled_values',value_scale=32.)
+        dataset=ft.preencode([data],manifest,'combat','controlled',splits=('FIT','VALIDATION'))
+        loaded=pickle.loads(pickle.dumps(dataset,protocol=5))
+        self.exact(dataset,loaded)
+        cc.validate_dataset(loaded,manifest,counts=self.counts)
+        for rows in loaded.values():
+            for example in rows:
+                self.assertEqual(example.pooled_position,7)
+                np.testing.assert_array_equal(example.value_regrets,[1.]*7+[0.])
+        example=loaded['FIT'][0]
+        for regrets,position in ((example.value_regrets.astype(np.float32),7),
+                                 (example.value_regrets,0),(None,7)):
+            invalid=deepcopy(example)
+            invalid.value_regrets,invalid.pooled_position=regrets,position
+            with self.assertRaisesRegex(ValueError,'value_regrets|pooled'):
+                cc._example(invalid)
+
     def test_identical_collation_minibatches_and_initial_weights(self):
         path = self.write()
         # Recompute only the small synthetic fixture, never a study corpus.
@@ -395,28 +414,32 @@ class ControlledCacheTests(unittest.TestCase):
             with patch.dict(os.environ, STS_LIGHTSPEED_BUILD='/synthetic-unused'):
                 cc.build_cache(cfg)
 
-    def test_creator_passes_mixed_sampling_and_relabel_rule_from_manifest(self):
+    def test_creator_passes_mixed_sampling_and_target_options_from_manifest(self):
         first,_=fixture(self.out/'first',record_search=True,config={'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':.04}})
         second,_=fixture(self.out/'second',record_search=True,config={'world_start':92_000_001_000,
             'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':0.0}})
         sources=[str(first),str(second)]
-        manifest=ft.freeze_manifest(sources,mixed_sources=True,mixed_sampling=True,relabel_vote_rule='pooled_mean')
-        path=self.out/'mixed_manifest.json'
-        ft.atomic_json(path,manifest)
-        cfg=dict(data=sources,manifest=str(path),out=str(self.out/'mixed_cache'),deadline_utc=None)
         original_control=ft.TrainingControl
-        with ExitStack() as stack:
-            stack.enter_context(patch.dict(os.environ,STS_LIGHTSPEED_BUILD='/synthetic-unused'))
-            stack.enter_context(patch.object(ft,'TrainingControl',side_effect=lambda out,deadline:
-                original_control(out,deadline,ac=lambda:True,caffeinate=False)))
-            stack.enter_context(patch.object(cc,'manifest_rows'))
-            stack.enter_context(patch.object(ft,'begin_run',side_effect=ft.Interrupted('STOP after manifest validation')))
-            freeze=stack.enter_context(patch.object(ft,'freeze_manifest',wraps=ft.freeze_manifest))
-            with self.assertRaisesRegex(ft.Interrupted,'STOP after manifest validation'):
-                cc.build_cache(cfg)
-        self.assertIs(freeze.call_args.kwargs['mixed_sources'],True)
-        self.assertIs(freeze.call_args.kwargs['mixed_sampling'],True)
-        self.assertEqual(freeze.call_args.kwargs['relabel_vote_rule'],'pooled_mean')
+        for options in ({'relabel_vote_rule':'pooled_mean'}, {'target_mode':'pooled_values','value_scale':32.}):
+            with self.subTest(options=options),ExitStack() as stack:
+                manifest=ft.freeze_manifest(sources,mixed_sources=True,mixed_sampling=True,**options)
+                path=self.out/'mixed_manifest.json'
+                ft.atomic_json(path,manifest)
+                cfg=dict(data=sources,manifest=str(path),out=str(self.out/('mixed_cache_'+manifest.get('target_mode','votes'))),
+                         deadline_utc=None)
+                stack.enter_context(patch.dict(os.environ,STS_LIGHTSPEED_BUILD='/synthetic-unused'))
+                stack.enter_context(patch.object(ft,'TrainingControl',side_effect=lambda out,deadline:
+                    original_control(out,deadline,ac=lambda:True,caffeinate=False)))
+                stack.enter_context(patch.object(cc,'manifest_rows'))
+                stack.enter_context(patch.object(ft,'begin_run',side_effect=ft.Interrupted('STOP after manifest validation')))
+                freeze=stack.enter_context(patch.object(ft,'freeze_manifest',wraps=ft.freeze_manifest))
+                with self.assertRaisesRegex(ft.Interrupted,'STOP after manifest validation'):
+                    cc.build_cache(cfg)
+                self.assertIs(freeze.call_args.kwargs['mixed_sources'],True)
+                self.assertIs(freeze.call_args.kwargs['mixed_sampling'],True)
+                self.assertEqual(freeze.call_args.kwargs['relabel_vote_rule'],options.get('relabel_vote_rule'))
+                self.assertEqual(freeze.call_args.kwargs['target_mode'],options.get('target_mode','votes'))
+                self.assertEqual(freeze.call_args.kwargs['value_scale'],options.get('value_scale',100.))
 
     def test_original_cli_defaults_and_cache_restrictions(self):
         train, creator = script('fresh_train'), script('fresh_cache')

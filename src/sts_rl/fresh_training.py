@@ -37,7 +37,7 @@ from sts_rl.fresh_study import (PROTOCOL, FILTER_ID, DEAD_FILTER_ID, PUBLIC_CONT
                                 Interrupted, atomic_json, fit_manifest_path, read_json,
                                 on_ac, policy_observation, validate_world_range)
 from sts_rl.recording import begin_run, capture_rng, file_identity
-from sts_rl.teacher_votes import RULES, votes_from_details
+from sts_rl.teacher_votes import RULES, pooled_edges, pooled_value_target, votes_from_details
 
 SPLIT_VERSION = 'fresh-start-split-v1'
 TEACHER_PROTOCOL = 'canonical_rng_resampled_native_v2'
@@ -65,8 +65,37 @@ def _integer(value, name):
     return int(value)
 
 
-def target_distribution(row, *, check_label=True):
+def _target_options(target_mode='votes', value_scale=100.):
+    if target_mode not in ('votes', 'pooled_values'):
+        raise ValueError('target_mode must be one of votes, pooled_values')
+    if (isinstance(value_scale, bool) or not isinstance(value_scale, (int, float))
+            or not math.isfinite(value_scale) or value_scale <= 0):
+        raise ValueError('value_scale must be finite and positive')
+    if target_mode == 'votes':
+        if value_scale != 100.:
+            raise ValueError('value_scale requires target_mode=pooled_values')
+        return {}
+    return {'target_mode': target_mode, 'value_scale': float(value_scale)}
+
+
+def _target_config(config):
+    options = _target_options(config.get('target_mode', 'votes'), config.get('value_scale', 100.))
+    return {**{k:v for k,v in config.items() if k not in ('target_mode', 'value_scale')}, **options}
+
+
+def _teacher_index(key, indices, mapped):
+    try:
+        index = int(key)
+    except (ValueError, TypeError, OverflowError) as exc:
+        raise ValueError('Invalid teacher action index') from exc
+    if isinstance(key, bool) or str(index) != str(key) or index not in indices or index in mapped:
+        raise ValueError('Illegal/duplicate teacher index')
+    return index
+
+
+def target_distribution(row, *, check_label=True, target_mode='votes', value_scale=100.):
     """Map original possibly gapped display indices into filtered menu positions."""
+    _target_options(target_mode, value_scale)
     observation = policy_observation(row['observation'])
     indices = [_integer(a['index'], 'action index') for a in observation['legal_actions']]
     if not indices or len(set(indices)) != len(indices):
@@ -76,6 +105,11 @@ def target_distribution(row, *, check_label=True):
     if observation['phase'] == 'combat':
         if row.get('label_kind') != TEACHER_PROTOCOL:
             raise ValueError('Combat requires original native vote targets')
+        if target_mode == 'pooled_values':
+            if 'search_details' not in row:
+                raise ValueError('pooled_values requires search_details on every combat row; collect with --record-search')
+            if not isinstance(row['search_details'], list):
+                raise ValueError('pooled_values requires search_details to be a list')
         votes = row.get('votes')
         # A deliberately recorded teacher abstention is a raw record, not a target.
         if row.get('label') is None and votes == {}:
@@ -86,12 +120,7 @@ def target_distribution(row, *, check_label=True):
             _integer(row.get('label'), 'teacher label')
         mapped = {}
         for key, value in votes.items():
-            try:
-                index = int(key)
-            except (ValueError, TypeError, OverflowError) as exc:
-                raise ValueError('Invalid teacher action index') from exc
-            if isinstance(key, bool) or str(index) != str(key) or index not in indices or index in mapped:
-                raise ValueError('Illegal/duplicate teacher index')
+            index = _teacher_index(key, indices, mapped)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0 or int(value)!=value:
                 raise ValueError('Negative/nonfinite vote count')
             mapped[index] = float(value)
@@ -106,6 +135,16 @@ def target_distribution(row, *, check_label=True):
         samples = search.get('samples', [])
         if not samples or len(set(samples))!=len(samples) or total != len(samples):
             raise ValueError('Incomplete teacher histogram')
+        if target_mode == 'pooled_values':
+            mapped = {}
+            for key, value in pooled_value_target(row['search_details'], value_scale).items():
+                index = _teacher_index(key, indices, mapped)
+                mapped[index] = value
+            if not mapped:
+                raise ValueError('Labelled combat row requires visited search_details for pooled_values')
+            target = np.array([mapped.get(index, 0.) for index in indices], dtype=np.float64)
+            if not np.isfinite(target).all():
+                raise ValueError('Nonfinite pooled value target')
     else:
         _integer(row.get('label'), 'teacher label')
         if row.get('label_kind') != 'champion_hard' or row.get('label') not in indices:
@@ -277,12 +316,16 @@ def _relabel_combat_row(row, rule):
     return {**row, 'votes': votes, 'label': plurality(votes, row['observation']), 'vote_rule': rule}
 
 
-def iter_rows(sources, *, control=None, mixed_sources=False, mixed_sampling=False, relabel_vote_rule=None):
+def iter_rows(sources, *, control=None, mixed_sources=False, mixed_sampling=False, relabel_vote_rule=None,
+              target_mode='votes', value_scale=100.):
     """Accept C1 world JSON objects and JSONL exports; hold at most one world."""
     if mixed_sampling and not mixed_sources:
         raise ValueError('mixed_sampling requires mixed_sources')
     if relabel_vote_rule is not None and relabel_vote_rule not in RULES:
         raise ValueError('relabel_vote_rule must be one of '+', '.join(RULES))
+    _target_options(target_mode, value_scale)
+    if relabel_vote_rule is not None and target_mode == 'pooled_values':
+        raise ValueError('relabel_vote_rule cannot be combined with target_mode=pooled_values')
     verified, worlds = {}, set()
     scientific, expected = None, None
     for path in shard_files(sources):
@@ -363,7 +406,7 @@ def iter_rows(sources, *, control=None, mixed_sources=False, mixed_sampling=Fals
                         raise ValueError('Act/room group mismatch')
                     if relabel_vote_rule is not None:
                         row = _relabel_combat_row(row, relabel_vote_rule)
-                    target, indices = target_distribution(row)
+                    target, indices = target_distribution(row, target_mode=target_mode, value_scale=value_scale)
                     row_id = digest([world, len(row['prefix']), row['public_hash']])
                     yield row, {'source_row_id': row_id, 'world_seed': world, 'group': group,
                         'phase': 'combat' if obs['phase'] == 'combat' else 'ooc',
@@ -405,12 +448,13 @@ def interleave_fit(rows):
     return result
 
 
-def freeze_manifest(sources, *, control=None, mixed_sources=False, mixed_sampling=False, relabel_vote_rule=None):
+def freeze_manifest(sources, *, control=None, mixed_sources=False, mixed_sampling=False, relabel_vote_rule=None,
+                    target_mode='votes', value_scale=100.):
     files = [file_identity(p) for p in shard_files(sources)]
     rows, seen, collection_sources = [], set(), {}
     interfaces = set()
     for raw, meta in iter_rows(sources, control=control, mixed_sources=mixed_sources, mixed_sampling=mixed_sampling,
-                               relabel_vote_rule=relabel_vote_rule):
+                               relabel_vote_rule=relabel_vote_rule, target_mode=target_mode, value_scale=value_scale):
         if meta['source_row_id'] in seen:
             raise ValueError('Duplicate source row identity')
         seen.add(meta['source_row_id'])
@@ -458,6 +502,7 @@ def freeze_manifest(sources, *, control=None, mixed_sources=False, mixed_samplin
             for s in collection_sources.values()})
     if relabel_vote_rule is not None:
         result['relabel_vote_rule'] = relabel_vote_rule
+    result.update(_target_options(target_mode, value_scale))
     result['data_identity'] = digest(result)
     if files != [file_identity(p) for p in shard_files(sources)]:
         raise ValueError('Data changed during manifest freeze')
@@ -469,6 +514,24 @@ class Example:
     encoded: object
     target: np.ndarray
     meta: dict
+    value_regrets: np.ndarray | None = None
+    pooled_position: int | None = None
+
+
+def value_diagnostics(details, indices):
+    means = {}
+    for edge in pooled_edges(details):
+        index = _teacher_index(edge['index'], indices, means)
+        if edge['visits'] > 0:
+            means[index] = edge['mean_evaluation']
+    if not means:
+        raise ValueError('Combat search_details have no visited edges')
+    winner = next(iter(votes_from_details(details, 'pooled_mean')))
+    best, worst = means[winner], min(means.values())
+    regrets = np.array([best - means.get(index, worst) for index in indices], dtype=np.float64)
+    if not np.isfinite(regrets).all():
+        raise ValueError('Nonfinite pooled value regret')
+    return regrets, indices.index(winner)
 
 
 def observation_encoder(architecture):
@@ -496,19 +559,22 @@ def preencode(sources, manifest, phase, architecture, fit_size='full', *, contro
               r['phase']==phase and r['has_target'] and
               (r['split']!='FIT' or r['source_row_id'] in fit_ids)}
     result = {s: [] for s in splits}
+    options = _target_options(manifest.get('target_mode', 'votes'), manifest.get('value_scale', 100.))
     for row, meta in iter_rows(sources, control=control, mixed_sources=manifest.get('mixed_sources',False),
                               mixed_sampling=manifest.get('mixed_sampling',False),
-                              relabel_vote_rule=manifest.get('relabel_vote_rule')):
+                              relabel_vote_rule=manifest.get('relabel_vote_rule'), **options):
         if meta['source_row_id'] not in wanted:
             continue
         if meta != wanted.pop(meta['source_row_id']):
             raise ValueError('Dataset no longer matches frozen manifest')
-        target, indices = target_distribution(row)
+        target, indices = target_distribution(row, **options)
         # The encoders see ONLY the full filtered public observation.
         encoded = encoder.encode_observation(policy_observation(row['observation']))
         if encoded.action_indices.tolist() != indices:
             raise ValueError('Encoder action/menu alignment failure')
-        result[meta['split']].append(Example(encoded, target, meta))
+        diagnostics = (value_diagnostics(row['search_details'], indices)
+                       if phase == 'combat' and 'search_details' in row else (None, None))
+        result[meta['split']].append(Example(encoded, target, meta, *diagnostics))
     if wanted:
         raise ValueError('Frozen rows missing from sources')
     if manifest['source_files'] != [file_identity(p) for p in shard_files(sources)]:
@@ -688,7 +754,9 @@ def summarize_predictions(examples, losses, probabilities, positions):
     groups = defaultdict(list)
     for x, loss, p, position in zip(examples, losses, probabilities, positions):
         correct = int(position==np.argmax(x.target))
-        entry = (float(loss),correct,float(-(p*np.log(np.maximum(p,1e-30))).sum()),float(max(p)))
+        values = ((float(x.value_regrets[position]), int(position==x.pooled_position))
+                  if x.value_regrets is not None else None)
+        entry = (float(loss),correct,float(-(p*np.log(np.maximum(p,1e-30))).sum()),float(max(p)),values)
         groups['all_rows'].append(entry)
         if x.meta['choice']:
             for key in ('choice','group:'+x.meta['group']):
@@ -699,6 +767,11 @@ def summarize_predictions(examples, losses, probabilities, positions):
                       agreement=float(np.mean([r[1] for r in v])),
                       entropy=float(np.mean([r[2] for r in v])), top_probability=float(np.mean([r[3] for r in v])))
              for key,v in groups.items()}
+    for key, rows in groups.items():
+        values = [r[4] for r in rows if r[4] is not None]
+        if values:
+            stats[key].update(value_rows=len(values), value_regret=float(np.mean([v[0] for v in values])),
+                              pooled_agreement=float(np.mean([v[1] for v in values])))
     return {'loss':stats['all_rows']['soft_ce'], 'groups':stats,
             'primary_agreement':stats.get('choice',{}).get('agreement')}
 
@@ -767,8 +840,12 @@ def fit(model, dataset, config, out, manifest, receipt, control, *, probes=None)
     """Actual minibatch AdamW updates. Fresh-only, no implicit resume."""
     config = {**config, 'old_size':config.get('old_size','large'),
               'old_context':config.get('old_context','none'), 'defer_test':config.get('defer_test',False)}
+    config = _target_config(config)
     if config.get('relabel_vote_rule') != manifest.get('relabel_vote_rule'):
         raise ValueError('Fit config/manifest relabel_vote_rule mismatch')
+    for key, default in (('target_mode', 'votes'), ('value_scale', 100.)):
+        if config.get(key, default) != manifest.get(key, default):
+            raise ValueError('Fit config/manifest '+key+' mismatch')
     architecture, device = config['architecture'], config['device']
     if architecture == 'controlled':
         if config['defer_test'] is not True:
@@ -910,6 +987,7 @@ def checkpoint_training_condition(payload):
                      defer_test=config.get('defer_test',False))
     if config.get('relabel_vote_rule') is not None:
         condition['relabel_vote_rule'] = config['relabel_vote_rule']
+    condition.update(_target_options(config.get('target_mode', 'votes'), config.get('value_scale', 100.)))
     if architecture in ('new','controlled'):
         actual = payload['metadata']['model_config']
         if actual['phase'] != config['phase']:
@@ -969,6 +1047,9 @@ def score_test_checkpoint(checkpoint, examples, architecture, out, *, control=No
                    'ce':loss,'prediction_index':int(x.encoded.action_indices[position]),'target':x.target.tolist(),
                    'data_identity':data_identity, 'inference':INFERENCE,'selected_checkpoint':selected_identity,
                    'architecture':architecture,'training_condition':condition}
+            if x.value_regrets is not None:
+                row.update(value_regret=float(x.value_regrets[position]),
+                           pooled_agreement=bool(position==x.pooled_position))
             stream.write(json.dumps(row,allow_nan=False)+'\n')
     return {'test':test_metrics,'test_evaluated':True,'test_protocol':INFERENCE,
             'test_device':'cpu','test_rows':len(examples)}
@@ -1008,6 +1089,11 @@ def validate_training_config(config, *, synthetic=False):
             raise ValueError('relabel_vote_rule must be one of '+', '.join(RULES))
         if config.get('phase') != 'combat':
             raise ValueError('relabel_vote_rule is only valid for combat fits')
+    _target_options(config.get('target_mode', 'votes'), config.get('value_scale', 100.))
+    if config.get('relabel_vote_rule') is not None and config.get('target_mode') == 'pooled_values':
+        raise ValueError('relabel_vote_rule cannot be combined with target_mode=pooled_values')
+    if ('target_mode' in config or 'value_scale' in config) and config.get('phase') != 'combat':
+        raise ValueError('target_mode/value_scale are only valid for combat fits')
     for key in ('steps','min_steps','eval_every','patience','width','layers','heads'):
         if not isinstance(config[key],int) or config[key]<1:
             raise ValueError('Positive integer required: '+key)
@@ -1029,6 +1115,7 @@ def run_training(config):
     if config.get('architecture') == 'controlled':
         config.setdefault('legacy_action_features', False)
     validate_training_config(config)
+    config = _target_config(config)
     out = Path(config['out'])
     out.mkdir(parents=True,exist_ok=True)
     if any(out.iterdir()):
@@ -1044,7 +1131,8 @@ def run_training(config):
         control.check()
         manifest = freeze_manifest(config['data'],control=control,mixed_sources=config.get('mixed_sources',False),
                                   mixed_sampling=config.get('mixed_sampling',False),
-                                  relabel_vote_rule=config.get('relabel_vote_rule'))
+                                  relabel_vote_rule=config.get('relabel_vote_rule'),
+                                  **_target_options(config.get('target_mode', 'votes'), config.get('value_scale', 100.)))
         if config.get('manifest'):
             frozen = read_json(config['manifest'])
             if frozen != manifest:

@@ -1,8 +1,9 @@
 """Pure vote-rule choices, thresholds and deterministic ties."""
 from copy import deepcopy
+import math
 import unittest
 
-from sts_rl.teacher_votes import RULES, votes_from_details
+from sts_rl.teacher_votes import RULES, pooled_value_target, votes_from_details
 
 
 def edge(index, visits, mean):
@@ -10,6 +11,38 @@ def edge(index, visits, mean):
 
 
 class TeacherVotesTests(unittest.TestCase):
+    def test_pooled_value_target_merges_edges_and_uses_inclusive_pooled_floor(self):
+        details = [{"edges": [edge(2, 60, 1000), edge(2, 40, 1200), edge(7, 6, 1400),
+                              edge(7, 4, 1000), edge(9, 4, 9000), edge(1, 0, 9000)]},
+                   {"edges": [edge(2, 100, 1100), edge(7, 10, 1200), edge(9, 15, 9000)]}]
+        for search in details:
+            for item in search['edges']:
+                item['mean_evaluation'] = -999  # Only sums and visits determine pooled means.
+        original = deepcopy(details)
+        target = pooled_value_target(details, 130.)
+        self.assertEqual(set(target), {2, 7})
+        self.assertAlmostEqual(target[2], 1 / (1 + math.e))
+        self.assertAlmostEqual(target[7], math.e / (1 + math.e))
+        self.assertEqual(details, original)
+
+    def test_pooled_value_scale_and_stable_softmax(self):
+        for scale in (16., 100., 1000.):
+            with self.subTest(scale=scale):
+                details = [{"edges": [edge(2, 100, 10000), edge(7, 10, 10032)]}]
+                target = pooled_value_target(details, scale)
+                self.assertAlmostEqual(target[7], 1 / (1 + math.exp(-32 / scale)))
+                self.assertAlmostEqual(sum(target.values()), 1.)
+        self.assertEqual(pooled_value_target(details, .001), {2: 0., 7: 1.})
+        tied = [{"edges": [edge(2, 100, 3), edge(7, 10, 3)]}]
+        self.assertEqual(pooled_value_target(tied, 100.), {2: .5, 7: .5})
+
+    def test_pooled_value_empty_unvisited_and_invalid_scale(self):
+        for details in ([], [{"edges": []}], [{"edges": [edge(2, 0, 100)]}]):
+            self.assertEqual(pooled_value_target(details, 100.), {})
+        for scale in (0, -1, float('nan'), float('inf'), True, None, '100'):
+            with self.subTest(scale=scale), self.assertRaisesRegex(ValueError, 'value_scale'):
+                pooled_value_target([], scale)
+
     def test_empty_and_unknown_rule(self):
         for rule in RULES:
             self.assertEqual(votes_from_details([], rule), {})

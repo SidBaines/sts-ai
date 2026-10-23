@@ -1,5 +1,6 @@
 """Vote rules over canonical combat-search diagnostics."""
 from collections import Counter
+import math
 
 RULES = ("best_line", "most_visited", "mean_value", "pooled_mean")
 
@@ -18,6 +19,24 @@ def _mean_winner(edges):
     maximum = max(edge["visits"] for edge in edges)
     return max((edge for edge in edges if edge["visits"] * 10 >= maximum),
                key=lambda edge: (edge["mean_evaluation"], edge["visits"], -edge["index"]))["index"]
+
+
+def pooled_edges(details):
+    return _merge_edges(edge for search in details for edge in _merge_edges(search["edges"]))
+
+
+def pooled_value_target(details, scale) -> dict[int, float]:
+    if isinstance(scale, bool) or not isinstance(scale, (int, float)) or not math.isfinite(scale) or scale <= 0:
+        raise ValueError("value_scale must be finite and positive")
+    edges = [edge for edge in pooled_edges(details) if edge["visits"] > 0]
+    if not edges:
+        return {}
+    maximum = max(edge["visits"] for edge in edges)
+    eligible = [edge for edge in edges if edge["visits"] * 10 >= maximum]
+    best = max(edge["mean_evaluation"] for edge in eligible)
+    weights = {edge["index"]: math.exp((edge["mean_evaluation"] - best) / scale) for edge in eligible}
+    total = sum(weights.values())
+    return {index: weight / total for index, weight in weights.items()}
 
 
 def votes_from_details(details, rule) -> dict[int, int]:

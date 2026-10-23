@@ -326,6 +326,17 @@ stored votes) a distinct data identity. `--mixed-sources` still requires matchin
 scientific source settings. Omitting the option preserves stored targets and
 existing manifests; unlabelled probes are unaffected.
 
+Combat `--target-mode pooled_values` also requires a `--record-search` corpus
+and cannot be combined with `--relabel-vote-rule`. Across the pooled searches,
+the target over moves visited at least a tenth as often as the most-visited
+move is proportional to `exp((mean value - best mean value) / value_scale)`.
+`--value-scale` is in search evaluation units (about 100 per HP in a won fight;
+default 100). Value regret and pooled agreement are reported per group and per
+row whenever `search_details` exist, in any target mode. Regret is measured
+against the best eligible move, so it can be slightly negative when the model
+picks a rarely visited move with a higher mean. The high-confidence group is
+defined from the target, so it is not comparable across target modes.
+
 Abstentions are excluded from targets; forced choices stay in evaluation but
 not optimization. Fixed unlabelled probes never supply targets or select
 weights. Use `--defer-test` until validation-only selection freezes. The

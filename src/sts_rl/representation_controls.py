@@ -691,7 +691,8 @@ class Controller:
                 'Wrong manifest/champion paths')
         cache = gate.get('preencoded_cache')
         require(isinstance(cache, dict) and set(cache) == {'schema', 'receipt', 'dataset', 'manifest', 'data_identity'}
-                and cache['schema'] == 'controlled_preencoded_cache_v1', 'Missing/invalid preencoded cache provenance')
+                and cache['schema'] in ('controlled_preencoded_cache_v1', 'controlled_preencoded_cache_v2'),
+                'Missing/invalid preencoded cache provenance')
         for key in ('receipt', 'dataset', 'manifest'):
             require(isinstance(cache[key], dict) and set(cache[key]) == {'path', 'bytes', 'sha256'},
                     'Invalid preencoded cache file identity: ' + key)

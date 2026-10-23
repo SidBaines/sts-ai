@@ -22,6 +22,10 @@ def parser():
                    help='With --mixed-sources, also allow different teacher-probability sampling profiles; all other teacher settings must match')
     p.add_argument('--relabel-vote-rule',choices=RULES,default=argparse.SUPPRESS,
                    help='Combat only: recompute votes and labels from recorded search_details; requires --record-search collection. Omit to use stored votes. The rule changes the manifest and scientific fit identity; probes are unaffected')
+    p.add_argument('--target-mode',choices=('votes','pooled_values'),default=argparse.SUPPRESS,
+                   help='Combat only: votes (default) or soft pooled search values; pooled_values requires --record-search collection')
+    p.add_argument('--value-scale',type=float,default=argparse.SUPPRESS,
+                   help='Positive softmax scale in search evaluation units for pooled_values (default: 100)')
     p.add_argument('--preencoded-cache',default=argparse.SUPPRESS,metavar='RECEIPT.json',
                    help='Opt-in lossless controlled/combat/full FIT+VALIDATION cache; requires --manifest and --defer-test')
     p.add_argument('--probe',nargs='+',help='Required for production: immutable unlabelled 93e9 world shards; movement monitoring only')

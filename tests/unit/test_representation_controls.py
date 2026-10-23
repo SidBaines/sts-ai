@@ -534,6 +534,11 @@ class SourceGateTests(unittest.TestCase):
         self.controller = rc.Controller(root, validator_factory=FakeValidator)
         self.controller.state = {'schema': 'representation_controls_state_v1', 'jobs': {}}
 
+    def test_value_diagnostics_cache_schema_is_accepted(self):
+        self.gate['preencoded_cache']['schema']='controlled_preencoded_cache_v2'
+        write(self.path,self.gate)
+        self.controller.gates()
+
     def test_missing_checks_and_gate_source_mutation_fail(self):
         self.controller.gates()
         self.p.script('queue_runner.py').write_text('# changed\n')

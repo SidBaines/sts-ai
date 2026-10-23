@@ -224,6 +224,86 @@ class FreshScoringTests(unittest.TestCase):
                 self.assertEqual(row['training_condition'],condition)
                 self.assertEqual(row['target'],[0.]*7+[1.])
 
+    def test_pooled_values_training_and_deferred_scoring_preserve_options_and_metrics(self):
+        for scale in (None,.5):
+            with self.subTest(scale=scale),tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:
+                root=Path(tmp)
+                data,source=fixture(root,record_search=True)
+                self.runtime(stack,source)
+                options={'target_mode':'pooled_values',**({'value_scale':scale} if scale is not None else {})}
+                self.train(root,data,'old',old_size='small',**options)
+                expected={'target_mode':'pooled_values','value_scale':100. if scale is None else scale}
+                manifest=read_json(fit_manifest_path(root/'run'))
+                payload=load_checkpoint(root/'run'/'best.pt')
+                condition=fresh_training.checkpoint_training_condition(payload)
+                launch=read_json(payload['metadata']['source_receipt']['launch']['path'])
+                for record in (manifest,payload['metadata']['config'],condition,launch['effective_config'],
+                               read_json(root/'run'/'config.json')):
+                    for key,value in expected.items():
+                        self.assertEqual(record[key],value)
+                path,_=self.selection(root)
+                for key,value in (('target_mode','votes'),('value_scale',32.)):
+                    invalid=deepcopy(payload)
+                    invalid['metadata']['config'][key]=value
+                    with patch.object(fresh_scoring,'load_checkpoint',return_value=invalid), \
+                         patch.object(fresh_scoring,'freeze_manifest',side_effect=AssertionError('raw data access')):
+                        with self.assertRaisesRegex(ValueError,'config/manifest '+key+' mismatch'):
+                            score_deferred(path,root/'invalid-score')
+                summary=score_deferred(path,root/'score')
+                self.assertEqual(summary['status'],'completed')
+                stats=summary['test']['groups']['all_rows']
+                self.assertEqual(stats['value_rows'],3)
+                self.assertIn('value_regret',stats)
+                self.assertIn('pooled_agreement',stats)
+                rows=list(map(json.loads,(root/'score'/'test_rows.jsonl').read_text().splitlines()))
+                self.assertTrue(all(r['training_condition']==condition for r in rows))
+                self.assertTrue(all(0<r['target'][0]<r['target'][-1]<1 for r in rows))
+                for row in rows:
+                    self.assertIs(type(row['value_regret']),float)
+                    self.assertIs(type(row['pooled_agreement']),bool)
+                    self.assertEqual(row['value_regret'],0. if row['prediction_index']==17 else 1.)
+                    self.assertEqual(row['pooled_agreement'],row['prediction_index']==17)
+
+    def test_deferred_rows_pair_across_target_modes_on_the_same_corpus(self):
+        with tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:
+            root=Path(tmp)
+            data,source=fixture(root,record_search=True)
+            self.runtime(stack,source)
+            scored={}
+            for mode in ('votes','pooled_values'):
+                fit_root=root/mode
+                self.train(fit_root,data,'old',old_size='small',target_mode=mode)
+                path,_=self.selection(fit_root)
+                summary=score_deferred(path,fit_root/'score')
+                rows=list(map(json.loads,(fit_root/'score'/'test_rows.jsonl').read_text().splitlines()))
+                scored[mode]={r['source_row_id']:r for r in rows}
+                self.assertEqual(len(scored[mode]),3)
+                self.assertTrue(all(type(r['value_regret']) is float and type(r['pooled_agreement']) is bool for r in rows))
+                stats=summary['test']['groups']['all_rows']
+                self.assertAlmostEqual(stats['value_regret'],sum(r['value_regret'] for r in rows)/len(rows))
+                self.assertAlmostEqual(stats['pooled_agreement'],sum(r['pooled_agreement'] for r in rows)/len(rows))
+            self.assertEqual(set(scored['votes']),set(scored['pooled_values']))
+            for key,votes in scored['votes'].items():
+                values=scored['pooled_values'][key]
+                self.assertEqual(votes['world_seed'],values['world_seed'])
+                self.assertEqual(votes['public_hash'],values['public_hash'])
+                self.assertNotEqual(votes['target_sha256'],values['target_sha256'])
+
+    def test_explicit_vote_defaults_leave_saved_configs_and_conditions_unchanged(self):
+        with tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:
+            root=Path(tmp)
+            data,source=fixture(root)
+            self.runtime(stack,source)
+            self.train(root,data,'old',old_size='small',target_mode='votes',value_scale=100.)
+            payload=load_checkpoint(root/'run'/'best.pt')
+            launch=read_json(payload['metadata']['source_receipt']['launch']['path'])
+            records=(read_json(fit_manifest_path(root/'run')),payload['metadata']['config'],
+                     fresh_training.checkpoint_training_condition(payload),launch['effective_config'],
+                     read_json(root/'run'/'config.json'))
+            for record in records:
+                self.assertNotIn('target_mode',record)
+                self.assertNotIn('value_scale',record)
+
     def test_finalizer_cpu_singletons_actor_only_no_updates_and_fresh_output(self):
         for architecture in ('new','old'):
             with self.subTest(architecture=architecture),tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:
@@ -263,6 +343,9 @@ class FreshScoringTests(unittest.TestCase):
                 self.assertTrue(all(torch.equal(v,after['model_state'][k]) for k,v in before['model_state'].items()))
                 rows=[json.loads(line) for line in (root/'score'/'test_rows.jsonl').read_text().splitlines()]
                 self.assertEqual(len(rows),3)
+                for row in rows:
+                    self.assertNotIn('value_regret',row)
+                    self.assertNotIn('pooled_agreement',row)
                 self.assertTrue(all(r['selected_checkpoint']==selection['selected_checkpoint']['sha256'] for r in rows))
                 self.assertTrue(all(r['architecture']==architecture and
                                     r['training_condition']==fresh_training.checkpoint_training_condition(before) for r in rows))
