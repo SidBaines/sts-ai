@@ -1,3 +1,5 @@
+> Historical pre-CLI research plan. Current work is described in [research/README.md](../research/README.md).
+
 # SlayTheSpireAI Research Plan
 
 ## Research question
