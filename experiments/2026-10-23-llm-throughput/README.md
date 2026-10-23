@@ -18,3 +18,20 @@ Prompt data and all results are in gitignored data/llm_runs/k2_throughput_202610
 The manifest records source hashes and selection. Prompts are public observations
 from env-v0.1.5.1; neither the old sts_ai harness nor a native simulator is needed
 for this offline serving benchmark.
+
+Use `collate.py --source RUN/remote --output RUN/analysis_complete` for separate
+serving, HF generation, update, fixed-work, cache-pair and mechanics CSVs. Failed
+checks, OOMs and timeouts remain visible. `analyze.py` additionally compares
+saved-decision teacher scores with source-world bootstrap intervals. These
+scores are teacher preferences, not game strength.
+
+`diagnose_prompt_cache.py` compares full and split prefill across batch sizes
+and dtypes under the pinned HF/PEFT runtime. Run each dtype in a fresh output
+directory with an external timeout. It retains raw logits, output IDs and
+actual generation cache-position/mask traces. The initial BF16 equivalence
+checks failed; matched FP32 checks passed. Backend, batch shape and dtype are
+recorded scientific conditions, so preserve them across a learning comparison.
+
+The run snapshot also retains the exact launch scripts and configurations used
+for calibration, serving controls, prefix checks and training mechanics. They
+contain the concrete machine commands; research notes refer to run names.

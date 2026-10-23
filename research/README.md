@@ -1,31 +1,40 @@
 # Learning full-game play with a reasoning language model
 
-Training and evaluation adapters are being prepared before generation and optimizer-update speed checks.
+Training and evaluation code is ready; the speed checks are complete, and no main learning study has started.
 
 The goal is an LLM controlling combat and out-of-combat decisions in Ironclad,
-Ascension 0, Acts 1–3. We want to observe how its reasoning changes during RL.
-Sid does not want SFT or teacher forcing on reasoning. A non-LLM policy may
-provide action feedback during an initial RL stage, followed by full-game
-outcome RL. These training stages have not started.
+Ascension 0, Acts 1–3. We want to observe reasoning changing during RL, without
+SFT or teacher-forced reasoning traces. Initial teacher feedback and later
+terminal-outcome training are implemented. There is no new LLM win-rate result.
 
 ## Now
 
-[Speed checks](experiments/2026-10-23-llm-throughput.md): compare
-K2-Horizon-0.9B at low, medium and high reasoning effort, with different
-request concurrency and supported attention settings on an RTX 2000 Ada,
-and measure real LoRA optimizer updates. The adapters use the latest core
-environment. Pause after these measurements, before the main study.
-See [status](status.md) for the live job.
+[Speed checks](experiments/2026-10-23-llm-throughput.md) measured all three
+K2-Horizon-0.9B efforts on RTX 2000 Ada, serving controls, actual HF generation,
+real optimizer updates, prefix caches and numerical controls.
+
+Four responses per state with serving prefix caching reached 3.27 versus 2.17
+valid decisions/second, with 75% prompt-token hits. Distinct states showed no
+gain. Medium HF generation at batch eight reached 0.326 valid decisions/second
+on 16 responses; high effort had long tails. These are exploratory timings.
+
+Teacher-feedback RL, checkpoint continuation and trained-adapter evaluation have
+bounded mechanics checks. Whole-game outcome RL is unit-tested and untrained.
+See [status](status.md), [results](results.md) and [metric definitions](metrics.md).
 
 ## Next
 
-Choose serving settings using valid completed decisions, token cost, output
-completeness and memory; do not choose solely by generated tokens per second.
-Then design the first teacher-feedback RL pilot within about ten GPU-hours.
+Choose effort, rollout backend/dtype, output cap and response-loss normalization
+before the approximately ten-hour teacher-feedback pilot. HF remains slower
+than dedicated serving. BF16 batch/cache changes can change generated actions,
+and recomputed old scores are not bitwise identical to cached sampling scores.
+
+The teacher is an action-preference bootstrap, not a game-value oracle. Later
+full-game RL must report model/simulator failures and group eligibility alongside
+wins. Whether the bootstrap transfers to full games remains untested.
 
 ## Evidence
 
-No new learning result has been obtained. Historical saved-fight imitation
-improved execution and fight outcomes, but stable full-game reasoning RL was
-not established. See [strategies](strategies.md), [results](results.md),
-[metrics](metrics.md), and [historical references](archive.md).
+[Strategies](strategies.md) records the current interpretation. Historical
+saved-fight imitation improved execution, but stable full-game reasoning RL was
+not established; see [historical references](archive.md).

@@ -78,10 +78,14 @@ def phase(name):
 def base_record(source, name, summary, config, failure, stop_request, directory):
     if summary is not None:
         status = 'completed'
-        if summary.get('end_reason', 'completed') != 'completed':
+        if summary.get('passed') is False:
+            status = 'failed_check'
+        elif summary.get('end_reason', 'completed') != 'completed':
             status = 'partial'
     elif failure is not None:
         status = 'oom' if 'OutOfMemory' in str(failure.get('type', failure.get('error_kind', ''))) or 'out of memory' in str(failure).lower() else 'error'
+        if failure.get('type') == 'BenchmarkTimeout':
+            status = 'bounded_timeout'
     elif directory.exists():
         status = 'partial_or_started'
     else:
@@ -99,7 +103,7 @@ def base_record(source, name, summary, config, failure, stop_request, directory)
 
 
 def family_of(name, summary, config):
-    if any(token in name for token in ('cache_check', 'teacher_rl_mechanics', 'resume', 'adapter', 'smoke')) or config.get('check_prompt_cache'):
+    if any(token in name for token in ('cache_check', 'cache_diagnostic', 'teacher_rl_mechanics', 'resume', 'adapter', 'smoke')) or config.get('check_prompt_cache'):
         return 'mechanics'
     if name.startswith('hf_generation_') or config.get('benchmark_generation') or summary.get('purpose') == 'hf_training_generation_throughput_only':
         return 'hf_generation'
@@ -248,7 +252,7 @@ def collate(source):
             updates.append(rec)
         elif family == 'mechanics':
             rec.update(public_config(config))
-            rec['mechanics_kind'] = 'prompt_cache_equivalence' if 'cache_check' in name or config.get('check_prompt_cache') else 'resume' if 'resume' in name else 'adapter_reload' if 'adapter' in name else 'teacher_rl_smoke' if 'teacher_rl' in name else 'other'
+            rec['mechanics_kind'] = 'prompt_cache_equivalence' if 'cache_check' in name or config.get('check_prompt_cache') else 'resume' if 'resume' in name else 'adapter_reload' if 'adapter' in name else 'teacher_rl_smoke' if 'teacher_rl' in name else 'numerical_cache_diagnostic' if 'cache_diagnostic' in name else 'other'
             rec.update({key: value for key, value in s.items() if key not in rec})
             mechanics.append(rec)
         else:
