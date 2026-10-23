@@ -38,6 +38,10 @@ boss no better.
 
 ## Next
 
+The [23 October discussion](brainstorms/2026-10-23-next-steps.md) sets out
+the training setup, where the headroom is and the options.
+
+
 1. **Make refit-and-gate cycles standard** beside out-of-combat training, with
    more refits per run (shorter cycles); joint run 2 showed the refits, not
    joint training, carry the gain.
