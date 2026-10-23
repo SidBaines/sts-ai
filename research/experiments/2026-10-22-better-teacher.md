@@ -162,6 +162,11 @@ at 0.0003, against 57.1%. Agreement on the training rows keeps rising (to 65
 to 69%) while validation levels off, so at this data size the student starts
 to overfit; and even its training agreement stays far below what one-hot
 labels allow, so the hand-featured network also fits these choices slowly.
+The structured entity transformer does no better on the same labels:
+validation agreement 57.2% (width 128, 2 layers) and 57.9% (width 256, 4
+layers), with the same per-act pattern. Two different model classes level off
+at the same place, which points to the information both read (the same public
+observation) or to data volume, not to network capacity.
 
 ## Conclusion
 
