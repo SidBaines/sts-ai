@@ -1,6 +1,6 @@
 # Combat students trained on the teacher's move values instead of its votes
 
-**Status:** running (stage 1 fits started 23 October, 13:40). **Verdict:** none yet.
+**Status:** running (stage 1 fits started 23 October, 13:13). **Verdict:** none yet.
 
 ## Question
 
@@ -57,10 +57,11 @@ choice gives up.
 
 ## Log
 
-- 23 Oct, 13:40: four stage 1 fits started (votes; values at scales 30, 100
+- 23 Oct, 13:13: four stage 1 fits started (votes; values at scales 30, 100
   and 300). A read-only scan of all 192,591 rows found the pooled value
   winner always equals the stored pooled vote; at scale 100 the median
   target puts 0.60 on its best move.
+
 Code: fitter options `--target-mode` and `--value-scale` (commit 9dead85,
 run from worktree `nonllm-value-targets`; do not edit it). Data: run `value_targets_20261023`
 (local, worktree `nonllm-large-batch`).

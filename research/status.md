@@ -1,6 +1,6 @@
 # Status
 
-**Updated 23 October 2026, 13:45 BST.** Two experiments run; nothing waits for Sid.
+**Updated 23 October 2026, 13:15 BST.** Two experiments run; nothing waits for Sid.
 Champion: `champion_c8553bc33e53.pt`, joint run 2's final checkpoint (26.8%
 on unused worlds).
 
@@ -17,7 +17,7 @@ on unused worlds).
 - **[Value targets](experiments/2026-10-23-value-targets.md), stage 1:**
   four combat fits (`vt-votes`, `vt-values30`, `vt-values100`,
   `vt-values300`, one lane each in the `nonllm-boss-rares` queue; output
-  `value_targets_20261023/`), on the GPU, started 13:40. Code runs from
+  `value_targets_20261023/`), on the GPU, started 13:13. Code runs from
   worktree `nonllm-value-targets` (do not edit it).
 - **Next decision:** if iteration 12 does not separate the arms
   (p < 0.025), resume both to 24 iterations: `--resume --iterations 24`
