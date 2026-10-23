@@ -9,7 +9,7 @@ everything is measured.
 
 | Player | Win rate | Evidence |
 |---|---|---|
-| Fourth continued training's final checkpoint (; out-of-combat PPO from the champion) | 23.7% on 4,096 unused worlds from 104,000,000,000 (971 against the champion's 887, p = 0.005); 23.9% on second DEV (980 against 899) | Confirmed; pure policy; awaiting Sid's promotion decision |
+| Fourth continued training's final checkpoint (`continued4_20261022/train/iter_0024.pt`; out-of-combat PPO from the champion) | 23.7% on 4,096 unused worlds from 104,000,000,000 (971 against the champion's 887, p = 0.005); 23.9% on second DEV (980 against 899) | Confirmed; pure policy; awaiting Sid's promotion decision |
 | Joint run's final checkpoint (`joint_20261022/train/iter_0024.pt`; out-of-combat PPO from the midday champion with one gated combat refit) | 23.1% on 4,096 unused worlds from 103,000,000,000 (945 against its control's 877, p = 0.029; the control is today's champion) | Planned comparison; not promoted |
 | **Champion from 22 October, 16:32:** the third continued training's final checkpoint (`champion_af2fb9f1f260.pt`; out-of-combat PPO from the previous champion, its round 2 combat student unchanged) | 21.1% on 4,096 unused worlds from 100,000,000,000 (865 against the previous champion's 707, p < 0.001); 21.9% on second DEV (899 against 701) | Confirmed; current default |
 | Champion of 22 October, midday: the second continued training's out-of-combat head with the round 2 combat student (`champion_85ea9019ff95.pt`) | 18.4% on 4,096 unused worlds from 99,000,000,000 (755 against the trained checkpoint's 662, p = 0.001); 17.1% on second DEV (701) | Confirmed |
