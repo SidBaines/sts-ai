@@ -19,6 +19,7 @@ serve = ["vllm==0.32.0"]
 [project.scripts]
 sts-env = "sts_env.cli:main"
 sts-llm-train = "sts_llm.training:main"
+sts-llm-game-train = "sts_llm.game_training:main"
 sts-llm-dataset = "sts_llm.dataset:main"
 sts-llm-evaluate = "sts_llm.eval:main"
 

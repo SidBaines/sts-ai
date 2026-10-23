@@ -863,7 +863,7 @@ def main() -> int:
         parser.error("exact resume is training-only and cannot be combined with a weights warm start")
     if args.static_cache_compile and (not args.benchmark_generation or args.reuse_prompt_cache):
         parser.error("static-cache compilation is benchmark-generation only and incompatible with --reuse-prompt-cache")
-    if args.static_cache_compile and args.group_size % min(args.group_size, args.generation_microbatch):
+    if args.static_cache_compile and min(args.group_size, args.generation_microbatch) > 0 and args.group_size % min(args.group_size, args.generation_microbatch):
         parser.error("static-cache benchmark requires full equal-sized generation microbatches to avoid untimed shape recompilation")
     if args.loss_normalization is None:
         if args.benchmark_updates or args.benchmark_generation or args.check_prompt_cache:

@@ -151,3 +151,97 @@ cohort paths. A pending checkpoint is never silently overwritten.
 Tests: `PYTHONPATH=src python -m unittest tests.unit.test_llm_training -v`.
 Numerical, gradient, token-alignment and cache-isolation tests require PyTorch.
 Validate the full test set and a real CUDA update before a study.
+
+The initial BF16 cache probes were not bitwise equivalent: a completed greedy
+combat action changed. FP32 probes on the same two states matched within
+0.0001 logit tolerance and preserved completed actions. Batch-size changes also
+shifted BF16 logits. Keep cache/backend/dtype settings fixed within a study;
+treat a change as a new numerical condition. The optional HF reuse path stays
+off by default. Frozen old-policy scores are recomputed full-sequence scores;
+freezing them does not prove equality to cached-decoding sampling probabilities.
+This numerical difference should be quantified before the main learning study.
+
+## Full-game outcome learning and evaluation
+
+`sts_llm.game_training` provides the later full-game path. It reuses the clean
+environment's `run_episode`, with native process isolation and finite operation
+timeouts. One current HF/PEFT model in the parent chooses combat and out-of-combat
+actions. Its own generated reasoning, final action and EOS tokens are trained;
+there are no teacher targets or teacher reasoning in this module.
+
+Games are synchronous and currently collected sequentially. This is a complete
+minimal execution path, not a throughput-optimized collector or evidence of
+successful full-game learning. The module has fake-environment/unit tests. No
+actual full-game GPU learning run has been performed.
+
+Use a JSON seed file containing only the explicitly selected training worlds.
+World seeds must be distinct integers in `[0, 2**63 - 1]`, matching the clean
+environment. Both training and evaluation require `--max-act 3`.
+Training repeats each world `group-size` times with separate policy seeds, freezes
+the behavior and base-reference log probabilities before any optimizer update,
+then assigns each game's terminal advantage to all of its generated decisions.
+Rewards must be explicit; the intended values are win +1 and defeat -1.
+
+Failures, simulator timeouts, context/output caps and act/decision truncations
+are unscored. One incomplete game excludes its entire comparison group. Completed
+game outcomes are still reported even if another game invalidates their group.
+Every game retains a clean replayable `game.jsonl`, a model `responses.jsonl` and
+`result.json`; failed/incomplete games never become ordinary losses.
+
+These choices must be reviewed before a study:
+
+- Dropping model-invalid groups conditions updates on valid rollouts. It supplies
+  no direct penalty for malformed output and can create selection bias.
+- The baseline/normalization is the shared trainer's group mean and population
+  standard deviation. Constant-reward groups have no outcome-policy gradient.
+- Decisions are summed within each game, then games are averaged. The helper
+  rescales both the policy advantage and KL coefficient to undo the shared
+  optimizer's completion mean. Forced one-option menus need no model call and
+  have no policy gradient.
+- `--loss-normalization` is required. Response means still divide by each
+  response's realized length; fixed normalization uses an explicit study-wide
+  constant. The KL reference is the frozen foundation model with adapters
+  disabled, including when warm-starting from a teacher-trained adapter.
+- The prompt is the current public state/menu, without conversation history.
+  This is not a claim that the public observation contains all useful memory.
+
+Mechanics smoke, intentionally too bounded to establish learning:
+
+```sh
+PYTHONPATH=src python -m sts_llm.game_training \
+  --seeds-file data/llm_runs/TRAINING_WORLDS.json --policy-seed 1729 \
+  --output data/llm_runs/full_game_mechanics \
+  --effort medium --temperature 1 --max-new-tokens 512 \
+  --max-sequence-length 8192 --max-decisions 20 --max-act 3 --ascension 0 \
+  --step-timeout 10 --win-reward 1 --loss-reward -1 \
+  --group-size 2 --worlds-per-iteration 1 --iterations 1 \
+  --loss-normalization fixed_token_budget --loss-token-budget 2048
+```
+
+The decision limit above normally produces incomplete groups, which verifies
+fault handling without pretending to provide positive learning signal. Shorter
+act limits are rejected: they could retain early defeats while truncating
+stronger games and silently change the learning target. For an
+approved learning study choose adequate decision/output budgets, the
+world/group/update counts and normalization in advance. Run a bounded shell
+timeout around diagnostic commands if a hard wall-clock limit is needed.
+
+For full-game evaluation of a trained checkpoint, add `--evaluate-only
+--warm-start-adapter PATH_TO_ADAPTER` and use a separate explicit seed file,
+fresh output, `--group-size 1`, Acts 1–3 and the chosen evaluation budgets. It
+loads the actual PEFT adapter into the same HF policy path; no serving endpoint
+or merge/unmerge is required. Evaluation performs no optimizer update and saves
+no adapter. Counts of wins, losses, failures and incomplete episodes are separate.
+Temperature zero selects greedy evaluation; positive temperatures sample.
+It does not by itself compute a paired win-rate interval or reasoning faithfulness.
+
+Create the output's `STOP` file to stop between decisions/games/whole optimizer
+updates. Every completed checkpoint includes optimizer and Python/Torch/CUDA RNG
+state, starting with `adapter_initial`. Resume using `--resume PATH --output NEW`
+and the same scientific settings/worlds; `--iterations` is the desired total.
+Partial iteration outputs remain intact and that iteration is regenerated from
+the last completed checkpoint. Warm starts reset optimizer/RNG. Source hashes
+record provenance; they are not byte-compatibility gates. Reproducing exact
+trajectories additionally requires the same runtime and native build recorded
+in the traces. Thirteen fake-environment/credit/contract tests passed locally; the Torch
+checkpoint roundtrip test requires the actual training runtime.
