@@ -1,6 +1,6 @@
 # Reward ablation: floors and wins against wins only
 
-**Status:** running (started 23 October, 12:13). **Verdict:** none yet.
+**Status:** finished 23 October. **Verdict:** rewarding only wins is better than wins plus floors (+1.0 points of wins after 12 iterations, p = 0.008, under the rule fixed in advance).
 
 ## Question
 
@@ -51,12 +51,66 @@ from the current champion? Part of the
 
 ## Results
 
+**Main comparison (rule fixed in advance): wins only beats wins plus
+floors.** 16,384 unused worlds from 108,000,000,000, environment 0.1.5.1,
+paired by world, iteration-12 checkpoints:
+
+| Player | Wins | vs champion | vs wins plus floors |
+|---|---:|---|---|
+| Champion (start) | 4,372 (26.7%) | | |
+| Wins plus floors, iteration 12 | 4,468 (27.3%) | +0.6 points (p = 0.11) | |
+| Wins only, iteration 12 | 4,632 (28.3%) | +1.6 points (p < 0.001) | **+1.0 points [+0.3, +1.7]** (discordant 1,975/1,811, p = 0.008) |
+
+Trajectory on the same worlds (exploratory): wins only gained +0.8, +1.2
+and +1.6 points over the champion at iterations 4, 8 and 12; wins plus
+floors +0.6, +0.7 and +0.6. Mean floor did not change in either arm.
+
+**Where the difference comes from (exploratory).** How the games end:
+
+| Games ending at | Champion | Wins plus floors | Wins only |
+|---|---:|---:|---:|
+| Act 1, hallways | 499 | 456 | 541 |
+| Act 1 boss | 848 | 924 | 872 |
+| Act 2, hallways | 829 | 772 | 826 |
+| Act 2 boss | 3,808 | 3,818 | 3,694 |
+| Act 3, hallways | 1,050 | 1,030 | 1,023 |
+| Act 3 boss | 4,978 | 4,916 | 4,796 |
+| Win | 4,372 | 4,468 | 4,632 |
+
+- Wins only passes the Act 3 boss more often (49.1% against 47.6% of games
+  reaching it) and the Act 2 boss slightly more often (73.9% against 73.2%),
+  while losing slightly more games in Act 1 hallways: it trades early
+  survival, which the floor reward pays for, for late wins.
+- The guess behind the study was wrong in detail: wins only does *not*
+  upgrade more at rest sites. It upgrades less (55% against 60% of rest
+  sites with at least half HP; 10% against 15% below half HP) and enters
+  the Act 1 boss with more HP (77% against 74% of maximum).
+
 ## Conclusion
+
+At 27% wins, the floor reward no longer helps out-of-combat PPO: training on
+wins alone improved the champion about 2.5 times as fast over 12 iterations
+and won 1.0 points more than the current reward. The floor reward appears to
+pay for surviving early at the expense of beating the late bosses.
+
+Caveats:
+- One training seed per arm; the arms shared training worlds and the first
+  iteration, so the difference is the reward, but training noise after that
+  is not replicated.
+- Only 12 iterations; whether the gap keeps growing is not known.
+- The behavioural explanation is exploratory.
 
 ## Next
 
+- Use wins-only reward for out-of-combat training from now on.
+- Resume the wins-only arm to 24 iterations (resuming is exact) to see
+  whether it keeps improving; its iteration-12 checkpoint is a promotion
+  candidate (Sid's decision).
+
 ## Log
 
+- 23 Oct, 18:24: decision at iteration 12: wins only better (4,632 against
+  4,468 of 16,384, p = 0.008); no 24-iteration look needed.
 - 23 Oct, 12:13: both arms started. Before launch: the new trainer options
   were checked on real games (with floor weight 0 every return is exactly
   ±1), and 1 plus 1 resumed iterations gave bit-identical weights to 2

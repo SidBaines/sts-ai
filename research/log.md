@@ -7,6 +7,9 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 23 October 2026
 
+- **Reward ablation**, 18:24: wins-only reward beats wins plus floors after 12
+  iterations (4,632 against 4,468 of 16,384, p = 0.008); wins only is 1.6
+  points above the champion. Promotion candidate; Sid's decision.
 - **Value targets**, 16:15: students fitted to the teacher's move values beat
   vote-fitted students on the same data (1,871 and 1,909 against 1,816 and
   1,556 of 8,192; pooled p < 0.0001), partly because one vote fit was bad;
