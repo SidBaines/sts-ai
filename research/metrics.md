@@ -23,3 +23,10 @@
 - **SDPA:** PyTorch scaled dot-product attention, selected through Hugging Face. This name alone does not identify which CUDA attention kernel ran.
 - **KL:** Kullback–Leibler divergence. The training loss uses a sampled nonnegative proxy to the frozen foundation-model reference, not an exact full-vocabulary KL.
 - **World / group:** one environment world seed; a group repeats either a saved state or one world under different policy samples. Whole-world splits prevent related decisions crossing train and held-out sets.
+
+- **Reasoning tokens:** generated content tokens before the first reasoning closer, excluding control tokens and final JSON. An unclosed capped trace is an observed lower bound, reported separately.
+- **Pilot panels:** training, validation and untouched-test public states split by whole world; proposed counts and sampling are defined in the medium-effort pilot page. The paired game panel uses separately recorded worlds and reports every outcome category.
+- **Teacher probability score:** the frozen teacher's probability for a valid chosen action, or zero for invalid/capped evaluation output. It differs from the proposed training reward, which penalizes invalid/capped output with -1.
+- **Zero-variance group fraction:** fraction of sampled groups whose action rewards provide no group-relative policy advantage; identical preferred actions and uninformative rewards can both produce flat groups.
+- **End-to-end training rate:** updated responses divided by total measured wall time, including generation, teacher lookup, old/reference scoring, updates, adapter refresh and checkpoint saving.
+- **Sampling/scoring mismatch:** difference between actual sampling log probabilities and recomputed token log probabilities under unchanged weights, measured over generated tokens with prompt/padding excluded.

@@ -1,0 +1,4 @@
+case,effort,n,mean,median,p95,maximum,empty_reasoning,unclosed_reasoning,source
+fi_graphs_b8192_low_c32,low,64,3.609375,0.0,26.69999999999999,73,58,0,k2_throughput_20261023/remote/results/fi_graphs_b8192_low_c32/requests.jsonl
+fi_graphs_b8192_medium_c32,medium,64,317.984375,255.0,721.3499999999999,1099,0,0,k2_throughput_20261023/remote/results/fi_graphs_b8192_medium_c32/requests.jsonl
+fi_graphs_b8192_high_c32,high,64,376.515625,253.5,968.8499999999993,1447,0,0,k2_throughput_20261023/remote/results/fi_graphs_b8192_high_c32/requests.jsonl

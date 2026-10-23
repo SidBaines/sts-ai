@@ -1,40 +1,42 @@
 # Learning full-game play with a reasoning language model
 
-Training and evaluation code is ready; the speed checks are complete, and no main learning study has started.
+Medium reasoning effort is selected for the first pilot; the next step is a bounded rollout check and teacher-feedback RL.
 
 The goal is an LLM controlling combat and out-of-combat decisions in Ironclad,
-Ascension 0, Acts 1–3. We want to observe reasoning changing during RL, without
-SFT or teacher-forced reasoning traces. Initial teacher feedback and later
-terminal-outcome training are implemented. There is no new LLM win-rate result.
+Ascension 0, Acts 1–3, while we observe its reasoning changing during RL.
+No SFT or teacher-forced reasoning traces are used. There is no new LLM win-rate result.
 
 ## Now
 
-[Speed checks](experiments/2026-10-23-llm-throughput.md) measured all three
-K2-Horizon-0.9B efforts on RTX 2000 Ada, serving controls, actual HF generation,
-real optimizer updates, prefix caches and numerical controls.
+Sid selected medium effort on 23 October. The
+[medium-effort pilot plan](experiments/2026-10-23-medium-teacher-pilot.md)
+records the proposed remaining settings, ten-GPU-hour budget and decision rules.
+Nothing is running; see [status](status.md).
 
-Four responses per state with serving prefix caching reached 3.27 versus 2.17
-valid decisions/second, with 75% prompt-token hits. Distinct states showed no
-gain. Medium HF generation at batch eight reached 0.326 valid decisions/second
-on 16 responses; high effort had long tails. These are exploratory timings.
-
-Teacher-feedback RL, checkpoint continuation and trained-adapter evaluation have
-bounded mechanics checks. Whole-game outcome RL is unit-tested and untrained.
-See [status](status.md), [results](results.md) and [metric definitions](metrics.md).
+The [completed speed study](experiments/2026-10-23-llm-throughput.md) found
+useful batching and repeated-state cache gains, but the current Hugging Face
+training rollout is slower than dedicated vLLM serving. Sampling/scoring
+consistency and adapter refresh need checking before adopting faster rollouts.
 
 ## Next
 
-Choose effort, rollout backend/dtype, output cap and response-loss normalization
-before the approximately ten-hour teacher-feedback pilot. HF remains slower
-than dedicated serving. BF16 batch/cache changes can change generated actions,
-and recomputed old scores are not bitwise identical to cached sampling scores.
+1. Check matched rollout/update correctness and end-to-end throughput; freeze
+   one backend, precision, cache policy and pilot configuration before training.
+2. Prepare a broader frozen teacher-labelled corpus with disjoint training,
+   validation and test worlds; collect the unchanged model's baseline.
+3. Run the medium-effort teacher-feedback pilot with one shared adapter and
+   fixed checkpoint evaluations, retaining all generated reasoning.
+4. Compare the frozen candidate with the base model on untouched states and
+   a small paired full-game panel; report completion failures alongside wins.
+5. Design terminal-outcome RL after the bootstrap and full-game validity checks.
 
-The teacher is an action-preference bootstrap, not a game-value oracle. Later
-full-game RL must report model/simulator failures and group eligibility alongside
-wins. Whether the bootstrap transfers to full games remains untested.
+## Evidence and open questions
 
-## Evidence
+Teacher-feedback updates, checkpoint continuation and trained-adapter evaluation
+have bounded mechanics checks. Whole-game outcome RL is implemented and
+unit-tested, with no full-game learning run. Teacher probabilities are action
+preferences, not game values; transfer to full-game play is untested.
 
-[Strategies](strategies.md) records the current interpretation. Historical
-saved-fight imitation improved execution, but stable full-game reasoning RL was
-not established; see [historical references](archive.md).
+See [strategies](strategies.md), [results](results.md), [metrics](metrics.md),
+and [historical references](archive.md). Backend/precision acceptance and the
+remaining proposed pilot settings are the immediate open questions.

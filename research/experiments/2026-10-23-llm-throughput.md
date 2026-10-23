@@ -1,6 +1,6 @@
 # Choosing settings for a small reasoning game player
 
-**Status:** finished 23 October 2026. **Verdict:** batching and repeated-state caching help; effort and numerical settings need a learning study.
+**Status:** finished 23 October 2026. **Verdict:** batching and repeated-state caching help; medium is selected for the pilot, with game quality untested.
 
 ## Question
 
@@ -74,6 +74,20 @@ Four-response caching raised decision throughput 50.6% and token throughput 41.4
 | Medium BF16, static cache and compilation | 8 | — | 240-second deadline | — | — | — |
 
 
+Reasoning-only counts in the matched FlashInfer runs (64 states per effort,
+including invalid final answers) exclude final JSON and control tokens;
+[the counts](../figures/llm-throughput/reasoning_lengths.csv) are retained:
+
+| Effort | Mean | Median | 95th percentile | Maximum |
+|---|---:|---:|---:|---:|
+| Low | 3.6 | 0 | 27 | 73 |
+| Medium | 318 | 255 | 721 | 1,099 |
+| High | 377 | 254 | 969 | 1,447 |
+
+Low had empty reasoning in 58/64 responses. Medium and high had similar medians;
+high had a heavier tail. Longer training-path outliers below include 5,510
+reasoning tokens in the 5,520-token completion, and an unclosed 8,192-token trace.
+
 The FP32 feasibility probe uses eight responses, a 1,024-token cap and no warmup; it is not a matched speed ratio against the 16-response screen. High effort produced a 5,520-token tail at microbatch eight and an 8,192-token capped response at microbatch four. The compiled static-cache case took 56 seconds for cold setup and 143 seconds for warmup, then exceeded its 240-second deadline without a complete timed cohort. It is not a demonstrated speedup.
 
 | Real update condition | Responses/s | Output training tokens/s | Peak allocated GiB | Result |
@@ -112,12 +126,13 @@ Caveats: timing noise and changing output lengths; only two HF timing states; BF
 
 ## Next
 
-Agree on effort, numerical/backend settings, output cap and response-loss normalization before the first teacher-feedback pilot. Consider a tighter rollout/update engine integration if HF generation dominates the budget. Later full-game studies must report completion/group eligibility alongside wins. No main study is queued.
+Sid selected medium effort on 23 October. The [medium-effort pilot plan](2026-10-23-medium-teacher-pilot.md) now defines the proposed next steps: matched rollout/scoring checks, a broader held-out corpus, baseline evaluation, a bounded teacher-feedback pilot, and a transfer check. Backend/precision, output cap and response-loss normalization must be frozen before updates. No pilot is running.
 
 ## Log
 
 - 23 October: speed checks approved before learning; use RTX 2000 Ada as requested.
 - 23 October: add explicit cache on/off comparisons after Sid raised shared prefixes.
 - 23 October: retain failed strict BF16 cache checks, verify FP32 controls, and keep HF reuse off.
+- 23 October: Sid selected medium effort; next work is the planned teacher-feedback pilot.
 
 Code: experiments/2026-10-23-llm-throughput/ and src/sts_llm/ at commit 8eb669a (final collation corrections recorded with these notes). Data: run k2_throughput_20261023 (local).
