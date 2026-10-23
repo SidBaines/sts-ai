@@ -156,6 +156,13 @@ about 5 points per 7-fold increase in data, so halving the gap with data alone
 would take on the order of 50 times more labels. The two full-data seeds agree
 equally often (57%) but win 873 and 718.
 
+Longer training does not close the gap: with patience 30 instead of 6 (up to
+30,000 steps), validation agreement is 57.5% at learning rate 0.001 and 57.7%
+at 0.0003, against 57.1%. Agreement on the training rows keeps rising (to 65
+to 69%) while validation levels off, so at this data size the student starts
+to overfit; and even its training agreement stays far below what one-hot
+labels allow, so the hand-featured network also fits these choices slowly.
+
 ## Conclusion
 
 The teacher's ceiling is not what holds the student back; imitation is.
