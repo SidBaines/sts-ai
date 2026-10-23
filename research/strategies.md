@@ -48,9 +48,13 @@ so the network plays well without search.
   are on top (Headbutt, Warcry, Frozen Eye), which the network's observation
   does not show either; it abstains on Secret Technique and Secret Weapon
   (1 of 35,054 round 2 labels).
-- Next: [a better search teacher](experiments/2026-10-22-better-teacher.md)
-  (planned): measure, benchmark, then fix the vote, score, determinisation
-  and known top cards.
+- [Better teacher](experiments/2026-10-22-better-teacher.md) (23 October):
+  pooling the 24 searches' statistics before choosing makes a far stronger
+  boss player (429 against 331 of about 1,020 worlds when it plays the
+  bosses); but students fitted on 2,000 worlds of its labels did not beat
+  the champion. Students agree with it on 46–66% of boss decisions against
+  77–87% for a second teacher run, and agreement grows only about 5 points
+  per 7-fold data: imitation, not the teacher, is now the bottleneck.
 - Pages: [combat PPO and early imitation](experiments/2026-10-13-combat-ppo.md),
   [overnight tests](experiments/2026-10-14-overnight-tests.md),
   [fresh start](experiments/2026-10-15-fresh-start.md),
