@@ -7,6 +7,9 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 23 October 2026
 
+- **Confirmation**, 08:50: the combination wins 1,083 and the joint
+  checkpoint 1,096 against the fourth continued training's 952 on fresh
+  worlds (both p < 0.001): about 26.5%, the best confirmed players.
 - **Joint run 2**, 08:36: 1,071 against its same-seed control's 998 (p =
   0.022); the gain is all from the refitted combat head (two-by-two
   interaction +0.0). Best combination: the control's out-of-combat head with
