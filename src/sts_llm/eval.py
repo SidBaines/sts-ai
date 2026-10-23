@@ -9,6 +9,8 @@ from .generation import OpenAIChatClient, parse_action
 from .observations import prompt, legal_indices, observation_identity
 from .teacher import teacher_reward, validate_teacher
 
+RESPONSE_LOG_SCHEMA = 'sts_llm_response_log_v1'
+
 
 class InvalidModelAction(RuntimeError):
     """Model failure, deliberately not converted into an ordinary game loss."""
@@ -20,19 +22,35 @@ class LLMAgent:
         self.client, self.require_reasoning_boundary = client, require_reasoning_boundary
         self.auto_forced = auto_forced
         self.log = Path(response_log).open('x') if response_log else None
-        self.reset(0)
+        self.episode_counter = 0
+        self.policy_seed = None
+        self.rng = None
+        self.decision = 0
+        self._closed = False
 
     def reset(self, seed):
+        if self._closed:
+            raise RuntimeError('LLM agent is closed')
         self.policy_seed = int(seed)
-        self.rng = random.Random(seed)
+        self.rng = random.Random(self.policy_seed)
+        self.episode_counter += 1
         self.decision = 0
+        self._record({'event': 'reset', 'policy_seed': self.policy_seed})
 
     def _record(self, record):
         if self.log:
+            record = {'schema': RESPONSE_LOG_SCHEMA, 'episode_counter': self.episode_counter,
+                      **record}
             self.log.write(json.dumps(record, ensure_ascii=False, allow_nan=False) + '\n')
             self.log.flush()
 
     def choose_action(self, observation):
+        if self._closed:
+            raise RuntimeError('LLM agent is closed')
+        # Direct callers may omit reset; the clean CLI always supplies it. Lazy
+        # initialization avoids creating an unused constructor episode in logs.
+        if self.rng is None:
+            self.reset(0)
         indices = legal_indices(observation)
         self.decision += 1
         identity = observation_identity(observation)
@@ -57,6 +75,7 @@ class LLMAgent:
     def close(self):
         if self.log:
             self.log.close()
+        self._closed = True
 
 
 def make_agent(*, base_url, model, max_tokens=4096, temperature=0., timeout=120., api_key=None,

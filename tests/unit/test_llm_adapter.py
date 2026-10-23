@@ -1,5 +1,6 @@
 import json
 import math
+import random
 import tempfile
 import unittest
 from pathlib import Path
@@ -102,6 +103,53 @@ class PromptAndDatasetTests(unittest.TestCase):
 
 
 class EvaluationTests(unittest.TestCase):
+    def test_reused_agent_records_episodes_and_restarts_sampling_rng(self):
+        class Client:
+            def __init__(self):
+                self.calls = []
+
+            def generate(self, messages, **kwargs):
+                self.calls.append((messages, kwargs['seed']))
+                return SimpleNamespace(text='{"action_index":9}', reasoning_content='',
+                                       finish_reason='stop', raw={}, elapsed_seconds=.1)
+
+        client = Client()
+        original_observation = json.dumps(OBS, sort_keys=True)
+        expected_messages = prompt(OBS)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'responses.jsonl'
+            agent = LLMAgent(client, response_log=str(path))
+            self.assertEqual(path.read_text(), '')
+            agent.reset(51)
+            agent.choose_action(OBS)
+            agent.choose_action(OBS)
+            agent.reset(72)
+            forced = {**OBS, 'legal_actions': [OBS['legal_actions'][0]]}
+            agent.choose_action(forced)
+            agent.choose_action(OBS)
+            agent.reset(51)
+            agent.choose_action(OBS)
+            agent.close()
+            agent.close()  # Repeated cleanup must be harmless.
+            with self.assertRaises(RuntimeError):
+                agent.reset(99)
+            records = [json.loads(line) for line in path.read_text().splitlines()]
+
+        resets = [r for r in records if r['event'] == 'reset']
+        self.assertEqual([(r['episode_counter'], r['policy_seed']) for r in resets],
+                         [(1, 51), (2, 72), (3, 51)])
+        actions = [r for r in records if r['event'] != 'reset']
+        self.assertEqual([(r['episode_counter'], r['decision']) for r in actions],
+                         [(1, 1), (1, 2), (2, 1), (2, 2), (3, 1)])
+        self.assertEqual(actions[2]['event'], 'forced_action')
+        rng51, rng72 = random.Random(51), random.Random(72)
+        first51 = rng51.randrange(2**31)
+        self.assertEqual([seed for _, seed in client.calls],
+                         [first51, rng51.randrange(2**31), rng72.randrange(2**31), first51])
+        self.assertTrue(all(messages == expected_messages for messages, _ in client.calls))
+        self.assertEqual(json.dumps(OBS, sort_keys=True), original_observation)
+        self.assertTrue(all(r['schema'] == 'sts_llm_response_log_v1' for r in records))
+
     def test_invalid_action_is_model_failure_not_game_loss(self):
         class Client:
             def generate(self, messages, **kwargs):
