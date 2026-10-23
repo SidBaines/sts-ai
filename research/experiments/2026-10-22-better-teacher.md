@@ -277,6 +277,30 @@ the champion's 899 wins:
   an earlier corpus; a single fit on 2,000 worlds rarely matches it, with
   either label rule.
 
+**Why the teacher's boss play does not transfer: the student imitates it
+poorly, and more data helps only slowly** (exploratory diagnostics, 23
+October). Agreement means the student's top move equals the pooled
+teacher's choice, on the corpus's validation rows:
+
+| | Act 1 boss | Act 2 boss | Act 3 boss | All rows |
+|---|---:|---:|---:|---:|
+| Two independent pooled teachers (24 different sampled futures each), 60 boss decisions per act | 87% | 78% | 77% | |
+| Student on all 134,376 rows (two seeds) | 66% | 54–55% | 45–46% | 57% |
+| Student on 20,000 rows | 63% | 49% | 40% | 51% |
+| Student on 5,000 rows | 54% | 45% | 38% | 47% |
+
+- The student falls 21 to 31 points short of what a second teacher run
+  reproduces, most at the Act 3 boss.
+- Agreement rises by about 5 points for each roughly 7-fold increase in
+  data, so closing half the gap this way would take on the order of 50
+  times more labels.
+- The two full-data seeds agree with the teacher equally often (57%) but
+  play very differently (873 against 718 wins): agreement does not predict
+  strength, as found before.
+- The teacher's own consistency was measured on benchmark positions, the
+  student's on validation rows; both are boss decisions of the same
+  champion, but not the same states.
+
 ## Conclusion
 
 Pending.
