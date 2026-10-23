@@ -53,4 +53,101 @@ The example template option must match the selected serving implementation. For 
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-Twelve unit tests cover reasoning/final separation, actual K2 terminal tokens, truncation, JSON/schema/illegal-action rejection, public-only prompt construction, probability-to-display-index mapping, excluded legal actions, malformed target rejection, whole-world splitting, evaluator failure accounting, and exported-source revision preservation inside another checkout. A real current-champion integration queried all 128 saved states without playing any games. Exporting the 22 imported source modules and reloading the portable teacher gave exactly identical combat and OOC distributions, with `native_simulator_loaded=false`.
+Unit tests cover reasoning/final separation, actual K2 terminal tokens, truncation, JSON/schema/illegal-action rejection, public-only prompt construction, probability-to-display-index mapping, excluded legal actions, malformed target rejection, whole-world splitting, evaluator failure accounting, and exported-source revision preservation inside another checkout. A real current-champion integration queried all 128 saved states without playing any games. Exporting the 22 imported source modules and reloading the portable teacher gave exactly identical combat and OOC distributions, with `native_simulator_loaded=false`.
+
+## Training and speed checks
+
+This package trains generated reasoning and final actions with single-decision
+non-LLM policy-probability rewards. It has no reasoning SFT targets.
+
+The initial loop uses synchronous Hugging Face generation from the current
+PEFT model. It samples the full categorical distribution (`top_p=1`, `top_k=0`)
+and scores logits at the same temperature. Old-policy log-probabilities are
+frozen once before any updates. The reference is the frozen base model with
+adapters disabled. All generated reasoning/final/EOS tokens receive the outcome
+advantage; prompt and artificial padding receive no loss. The KL diagnostic is
+a sampled proxy.
+
+Actual training requires an explicit `--loss-normalization`: `response_mean`
+divides each response's token sum by its realized length, while
+`fixed_token_budget` divides every response by the same positive
+`--loss-token-budget` (default 2048), for both policy and KL terms. The choice
+changes how response length weights the objective and must be fixed across
+effort comparisons. Fixed normalization alone does not establish an unbiased
+reward gradient: group standardization and clipping also affect it. Throughput
+benchmarks default to `response_mean` and record the setting.
+
+Run the CLI as `PYTHONPATH=src python -m sts_llm.training --help`. Training input
+is the teacher-prepared JSONL; preserve held-out worlds separately. A bounded
+mechanics run is `--smoke --group-size 4 --max-new-tokens 512 --loss-normalization response_mean`. The cap can cause
+invalid truncated thoughts; report this with the reward variance and validity.
+The main study requires separately approved settings and is not launched here.
+
+Training requires an explicit `split` on every row and selects only `train`.
+Validation/test rows are never sampled for updates. Benchmark modes may consume
+all explicitly provided states and record that selection as benchmark-only.
+The selected split, row count, resolved selection hash and limit are recorded;
+exact resume validates them as well as the whole dataset hash.
+
+`--benchmark-generation` measures this actual HF rollout path, excludes
+`--warmup-steps` initial groups, retains generated IDs/text and performs no
+optimizer updates. Compare generation microbatches using fixed `--group-size`.
+vLLM serving throughput is a different execution path.
+
+`--reuse-prompt-cache` is off by default. When enabled, each state prompt
+(except its last token) is prefetched once under the current adapter, then
+independent copies of its KV cache are expanded for each generation microbatch.
+The cache is discarded before another state or any optimizer update. Full
+input IDs and attention masks still reach HF generation, which processes only
+the uncached suffix. The flag is recorded and validated on exact resume.
+Before timing the enabled path, run `--check-prompt-cache` on representative
+states with the intended `--generation-microbatch`; it compares next-token
+logits, greedy token IDs and any completed legal actions, and verifies that the
+shared prefix length stays unchanged. `--cache-check-tokens` controls the greedy
+probe cap (default 32); an unfinished prefix cannot establish final-action
+equivalence. The default BF16 logit tolerance is absolute 0.125, relative 0.01,
+and actual differences are preserved. HF5.19 uses a different stopping-check
+path for supplied caches, so the benchmark measures that full HF implementation.
+
+`--static-cache-compile` is a separate, benchmark-generation-only option using
+a static cache and HF partial-graph `torch.compile` with unmerged LoRA. It is
+incompatible with prompt-cache reuse. Every prompt plus completion budget must
+fit `--static-cache-size` (default 8192); HF's reservation option is a floor,
+so this explicit validation prevents silent growth. Use an isolated command
+with a shell deadline, for example `timeout -s TERM 180 ...`. A separate two-token
+cold call records compilation startup/time before ordinary warmup and timed
+generation. Static warmup uses the actual microbatch size, and partial tail
+batches are rejected to avoid another unmeasured shape compilation. No compile
+speedup or equivalence is claimed until actual K2 CUDA validation succeeds.
+
+`--benchmark-updates` performs real forwards/backwards, gradient clipping and
+AdamW optimizer steps. It excludes warmup steps and measures CUDA peak memory,
+gradient norms, ratios, clipping and parameter changes. Optional
+`--cohort-jsonl` consumes saved vLLM records with actual output token IDs; this
+is explicitly a throughput-only replay, not on-policy training. Benchmark
+advantages are synthetic to ensure the backward path is exercised. No adapter
+is saved and the source checkpoint is never edited.
+
+To stop a training run, create its output directory's `STOP` file, or the file
+specified by `--stop-file`. The loop checks between iterations and optimizer
+steps. Completed checkpoints remain intact; incomplete cohorts and the number
+of partial updates are recorded. Partial updates are not promoted.
+
+Every completed `adapter_NNNN/` contains LoRA weights, tokenizer files and
+`training_state.pt` with optimizer and Python/Torch/CUDA RNG state. Resume with
+`--resume /path/to/adapter_NNNN --output /new/empty/output` and the original
+training settings; `--iterations` is the desired total iteration count.
+The incomplete next iteration is regenerated. A changed model, data, sampling
+or optimizer setting fails exact-resume validation. Device/kernel determinism
+still depends on the pinned runtime. `--warm-start-adapter` (alias `--adapter`)
+loads weights and explicitly resets optimizer/RNG; it is a new condition.
+
+Config records model revision, input and source hashes, teacher checkpoint,
+actual framework/device details, and warm-start/resume semantics. Checkpoints
+are staged in `.pending` directories and promoted only after state saving.
+Failures write `failure.json` with the last completed checkpoint and retained
+cohort paths. A pending checkpoint is never silently overwritten.
+
+Tests: `PYTHONPATH=src python -m unittest tests.unit.test_llm_training -v`.
+Numerical, gradient, token-alignment and cache-isolation tests require PyTorch.
+Validate the full test set and a real CUDA update before a study.

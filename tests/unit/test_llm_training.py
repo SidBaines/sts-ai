@@ -4,11 +4,12 @@ import math
 import json
 from pathlib import Path
 import tempfile
+from unittest.mock import patch
 import unittest
 from contextlib import contextmanager
 from types import SimpleNamespace
 
-from sts_llm.training import Completion, load_rows, normalized_advantages
+from sts_llm.training import Completion, generation_backend_kwargs, load_rows, normalized_advantages
 
 
 class AdvantageTests(unittest.TestCase):
@@ -111,6 +112,32 @@ class AdvantageTests(unittest.TestCase):
             load_rows(path, Tokenizer(), args)
         self.assertNotEqual(full_identity, args.selected_selection_sha256)
         self.assertEqual(args.selected_row_count, 1)
+
+    def test_static_cache_budget_is_checked_as_hard_input_contract(self):
+        class Tokenizer:
+            def apply_chat_template(self, *a, **kw): return [2] * 9
+        args = SimpleNamespace(benchmark_updates=False, benchmark_generation=True,
+            static_cache_compile=True, static_cache_size=16, effort="medium",
+            max_new_tokens=8, max_sequence_length=100, limit=None)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "prompts.jsonl"
+            path.write_text(json.dumps({"legal_indices":[0],
+                "messages":[{"role":"user", "content":"go"}]}) + "\n")
+            with self.assertRaisesRegex(ValueError, "fixed static cache size"):
+                load_rows(path, Tokenizer(), args)
+
+    def test_compile_kwargs_use_supported_top_level_size_and_unmerged_path(self):
+        self.assertEqual(generation_backend_kwargs(SimpleNamespace(static_cache_compile=False)), {})
+        fake = SimpleNamespace(CompileConfig=lambda **kwargs: kwargs)
+        with patch.dict("sys.modules", {"transformers": fake}):
+            result = generation_backend_kwargs(SimpleNamespace(static_cache_compile=True, static_cache_size=8192))
+        self.assertEqual(result["max_cache_len"], 8192)
+        self.assertEqual(result["cache_implementation"], "static")
+        self.assertNotIn("cache_config", result)
+        self.assertNotIn("past_key_values", result)
+        self.assertFalse(result["disable_compile"])
+        self.assertEqual(result["compile_config"], {"backend":"inductor", "fullgraph":False,
+            "dynamic":False, "mode":"reduce-overhead"})
 
 
 @unittest.skipUnless(importlib.util.find_spec("torch"), "PyTorch required for numerical gradient tests")
@@ -234,6 +261,26 @@ class TensorContracts(unittest.TestCase):
             t.testing.assert_close(logps, t.stack(expected))
         self.assertFalse(model.test_use_cache)
         self.assertEqual([len(v) for v in observed], [2, 3])
+
+    def test_expanded_dynamic_cache_is_independent_for_every_microbatch(self):
+        from transformers import DynamicCache
+        from sts_llm.training import expanded_prompt_cache
+        t = self.torch
+        prefix = DynamicCache()
+        keys = t.arange(4, dtype=t.float32).reshape(1, 1, 2, 2)
+        prefix.update(keys, keys + 10, 0)
+        first = expanded_prompt_cache(prefix, 3)
+        second = expanded_prompt_cache(prefix, 2)
+        first.update(t.ones(3, 1, 1, 2), t.ones(3, 1, 1, 2), 0)
+        self.assertEqual(prefix.get_seq_length(), 2)
+        self.assertEqual(first.get_seq_length(), 3)
+        self.assertEqual(second.get_seq_length(), 2)
+        self.assertEqual(prefix.layers[0].keys.shape[0], 1)
+        self.assertEqual(first.layers[0].keys.shape[0], 3)
+        self.assertEqual(second.layers[0].keys.shape[0], 2)
+        t.testing.assert_close(prefix.layers[0].keys, keys)
+        # No working cache tensor aliases the shared prefix or another batch.
+        self.assertNotEqual(prefix.layers[0].keys.data_ptr(), second.layers[0].keys.data_ptr())
 
 
 if __name__ == "__main__":

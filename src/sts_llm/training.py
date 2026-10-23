@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-from contextlib import nullcontext
 from dataclasses import asdict, dataclass, field
 import hashlib
 import json
@@ -279,7 +278,7 @@ def load_model(args: Any) -> tuple[Any, Any, int]:
 
 def load_rows(path: Path, tokenizer: Any, args: Any) -> list[dict[str, Any]]:
     rows = []
-    benchmark_only = args.benchmark_updates or args.benchmark_generation
+    benchmark_only = args.benchmark_updates or args.benchmark_generation or getattr(args, "check_prompt_cache", False)
     source_rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     # Validate the entire declared split surface before applying a limit. A
     # small smoke limit must not conceal an unsplit row later in the file.
@@ -306,6 +305,8 @@ def load_rows(path: Path, tokenizer: Any, args: Any) -> list[dict[str, Any]]:
             raise ValueError("chat template must return a nonempty flat integer-token list")
         if len(row["prompt_ids"]) + args.max_new_tokens > args.max_sequence_length:
             raise ValueError(f"prompt {row['id']} plus completion cap exceeds max sequence length; no silent truncation")
+        if getattr(args, "static_cache_compile", False) and len(row["prompt_ids"]) + args.max_new_tokens > args.static_cache_size:
+            raise ValueError("prompt plus completion budget exceeds fixed static cache size; max_cache_len is a size floor, not a cap")
         rows.append(row)
         if args.limit and len(rows) >= args.limit:
             break
@@ -318,6 +319,144 @@ def load_rows(path: Path, tokenizer: Any, args: Any) -> list[dict[str, Any]]:
          "prompt_ids": row["prompt_ids"]} for row in rows],
         sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
     return rows
+
+
+def prefill_prompt_cache(model: Any, prompt_ids: Sequence[int]) -> Any | None:
+    """Cache one current-policy prompt except its final token, without grads."""
+    import torch
+    if len(prompt_ids) < 2:
+        return None
+    if model.training:
+        raise ValueError("prompt-cache prefill requires eval mode")
+    device = next(model.parameters()).device
+    prefix = torch.tensor([list(prompt_ids[:-1])], dtype=torch.long, device=device)
+    with torch.no_grad():
+        output = model(input_ids=prefix, attention_mask=torch.ones_like(prefix),
+                       use_cache=True, logits_to_keep=1)
+    cache = output.past_key_values
+    if cache is None or cache.get_seq_length() != len(prompt_ids) - 1:
+        raise ValueError("model returned an incompatible prompt-prefix cache")
+    if not callable(getattr(cache, "batch_repeat_interleave", None)):
+        raise ValueError("prompt cache does not support independent batch expansion")
+    return cache
+
+
+def expanded_prompt_cache(prefix_cache: Any, count: int) -> Any:
+    """Return independently mutable KV storage; never grow the shared prefix."""
+    if count < 1:
+        raise ValueError("cache batch count must be positive")
+    working = copy.deepcopy(prefix_cache)
+    working.batch_repeat_interleave(count)
+    return working
+
+
+def generation_backend_kwargs(args: Any) -> dict[str, Any]:
+    if not args.static_cache_compile:
+        return {}
+    from transformers import CompileConfig
+    return {"cache_implementation": "static", "max_cache_len": args.static_cache_size,
+        "compile_config": CompileConfig(backend="inductor", fullgraph=False,
+            dynamic=False, mode="reduce-overhead"), "disable_compile": False}
+
+
+def prepare_static_compile(model: Any, tokenizer: Any, stop_id: int,
+                           row: dict[str, Any], args: Any, output: Path) -> dict[str, Any] | None:
+    if not args.static_cache_compile:
+        return None
+    import torch
+    count = min(args.generation_microbatch, args.group_size)
+    device = next(model.parameters()).device
+    prompt = torch.tensor([row["prompt_ids"]] * count, device=device, dtype=torch.long)
+    model.eval()
+    if any(getattr(module, "merged", False) for module in model.modules()):
+        raise ValueError("static-cache benchmark requires unmerged adapters")
+    atomic_json(output / "cold_compile_started.json", {"batch_size": count,
+        "static_cache_size": args.static_cache_size,
+        "deadline_enforcement": "external shell timeout required for this isolated benchmark",
+        "tokens_requested": 2, "minimum_new_tokens": 2, "adapter_merged": False})
+    synchronize(args.device)
+    began = time.perf_counter()
+    with torch.no_grad():
+        tokens = model.generate(input_ids=prompt, attention_mask=torch.ones_like(prompt),
+            do_sample=True, temperature=args.temperature, top_p=1.0, top_k=0,
+            max_new_tokens=2, min_new_tokens=2, eos_token_id=[stop_id, tokenizer.eos_token_id],
+            pad_token_id=tokenizer.pad_token_id, use_cache=True,
+            repetition_penalty=1.0, renormalize_logits=False,
+            **generation_backend_kwargs(args))
+        synchronize(args.device)
+    result = {"seconds": time.perf_counter() - began, "batch_size": count,
+        "tokens_requested": 2, "minimum_new_tokens": 2, "static_cache_size": args.static_cache_size,
+        "adapter_merged": False, "compile_backend": "inductor", "compile_fullgraph": False,
+        "compile_dynamic": False, "compile_mode": "reduce-overhead",
+        "generated_token_ids": tokens[:, prompt.shape[1]:].tolist(),
+        "note": "Two-token cold call includes prefill and one cached decode; remaining warmup follows. Bound the isolated benchmark with an external shell timeout; timeout is not a game loss."}
+    atomic_json(output / "cold_compile.json", result)
+    return result
+
+
+def check_prompt_cache(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str, Any]],
+                       args: Any, output: Path) -> dict[str, Any]:
+    """Actual-model equivalence probe, independent of throughput timing."""
+    import torch
+    from .generation import parse_action
+    model.eval()
+    device = next(model.parameters()).device
+    checks = []
+    for row in rows[:args.states_per_iteration]:
+        count = args.generation_microbatch
+        full = torch.tensor([row["prompt_ids"]] * count, dtype=torch.long, device=device)
+        attention = torch.ones_like(full)
+        prefix = prefill_prompt_cache(model, row["prompt_ids"])
+        if prefix is None:
+            raise ValueError("cache check needs prompts containing at least two tokens")
+        expected_prefix_length = len(row["prompt_ids"]) - 1
+        with torch.no_grad():
+            ordinary = model(input_ids=full, attention_mask=attention,
+                             use_cache=False, logits_to_keep=1).logits[:, -1].float()
+            cached = model(input_ids=full[:, -1:], attention_mask=attention,
+                           past_key_values=expanded_prompt_cache(prefix, count),
+                           use_cache=True, logits_to_keep=1).logits[:, -1].float()
+            kwargs = dict(input_ids=full, attention_mask=attention, do_sample=False,
+                max_new_tokens=args.cache_check_tokens, pad_token_id=tokenizer.pad_token_id,
+                eos_token_id=[stop_id, tokenizer.eos_token_id], use_cache=True)
+            ordinary_tokens = model.generate(**kwargs)
+            cached_tokens = model.generate(**kwargs, past_key_values=expanded_prompt_cache(prefix, count))
+        matches = torch.equal(ordinary_tokens, cached_tokens)
+        action_pairs = []
+        for ordinary_row, cached_row in zip(ordinary_tokens, cached_tokens):
+            pair = []
+            for sequence in (ordinary_row, cached_row):
+                tokens = sequence[full.shape[1]:].tolist()
+                endings = [i for i, token in enumerate(tokens) if token in {stop_id, tokenizer.eos_token_id}]
+                if endings:
+                    tokens = tokens[:endings[0] + 1]
+                text = tokenizer.decode(tokens, skip_special_tokens=False)
+                parsed = parse_action(text, row["legal_indices"], finish_reason="stop" if endings else "length")
+                pair.append({"output_token_ids": tokens, "raw_text": text,
+                             "valid": parsed.valid, "action_index": parsed.action_index})
+            action_pairs.append(pair)
+        checks.append({"prompt_id": row["id"], "phase": row["phase"], "batch_size": count,
+            "next_token_logits_max_abs_difference": float((ordinary - cached).abs().max()),
+            "next_token_logits_close": torch.allclose(ordinary, cached,
+                atol=args.cache_check_atol, rtol=args.cache_check_rtol),
+            "next_token_argmax_identical": torch.equal(ordinary.argmax(-1), cached.argmax(-1)),
+            "greedy_token_ids_identical": matches,
+            "completed_action_pairs": sum(pair[0]["valid"] and pair[1]["valid"] for pair in action_pairs),
+            "completed_action_pairs_identical": all(pair[0]["action_index"] == pair[1]["action_index"]
+                for pair in action_pairs if pair[0]["valid"] and pair[1]["valid"]),
+            "shared_prefix_length_unchanged": prefix.get_seq_length() == expected_prefix_length,
+            "pairs": action_pairs})
+        atomic_json(output / "cache_checks.json", checks)
+    passed = all(item["next_token_logits_close"] and item["next_token_argmax_identical"]
+                 and item["greedy_token_ids_identical"] and item["shared_prefix_length_unchanged"] for item in checks)
+    summary = {"purpose": "prompt_cache_equivalence_check", "passed": passed,
+        "optimizer_steps": 0, "weights_modified": False, "atol": args.cache_check_atol,
+        "rtol": args.cache_check_rtol, "greedy_token_cap": args.cache_check_tokens, "checks": checks,
+        "note": "Truncated greedy prefixes test token equivalence but do not establish final-action equivalence."}
+    atomic_json(output / "summary.json", summary)
+    if not passed:
+        raise AssertionError("prompt-cache equivalence check failed; inspect preserved cache_checks.json")
+    return summary
 
 
 def sample_cohort(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str, Any]],
@@ -344,16 +483,26 @@ def sample_cohort(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str,
     with partial_path.open("x") as partial:
         for row in rows:
             group = []
+            prefix_cache = prefill_prompt_cache(model, row["prompt_ids"]) if args.reuse_prompt_cache else None
+            prefix_length = len(row["prompt_ids"]) - 1
             for offset in range(0, args.group_size, args.generation_microbatch):
                 count = min(args.generation_microbatch, args.group_size - offset)
                 prompt = torch.tensor([row["prompt_ids"]] * count, dtype=torch.long, device=device)
                 torch.manual_seed(args.seed + iteration * 1000003 + len(cohort) + offset)
+                cache_kwargs = {"past_key_values": expanded_prompt_cache(prefix_cache, count)} if prefix_cache is not None else {}
+                cache_kwargs.update(generation_backend_kwargs(args))
                 with torch.no_grad():
                     outputs = model.generate(input_ids=prompt, attention_mask=torch.ones_like(prompt),
                         do_sample=True, temperature=args.temperature, top_p=1.0, top_k=0,
                         max_new_tokens=args.max_new_tokens, pad_token_id=pad_id,
                         eos_token_id=[stop_id, tokenizer.eos_token_id], use_cache=True,
-                        repetition_penalty=1.0, renormalize_logits=False)
+                        repetition_penalty=1.0, renormalize_logits=False, **cache_kwargs)
+                if prefix_cache is not None and prefix_cache.get_seq_length() != prefix_length:
+                    raise RuntimeError("shared prompt cache was mutated by a generation microbatch")
+                # generate mutates its working cache to include the entire
+                # completion. Release that potentially large KV allocation
+                # before decoding records or cloning another prompt prefix.
+                del cache_kwargs
                 for sequence in outputs:
                     tokens = sequence[prompt.shape[1]:].tolist()
                     endings = [i for i, token in enumerate(tokens) if token in {stop_id, tokenizer.eos_token_id}]
@@ -377,6 +526,8 @@ def sample_cohort(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str,
                 print(json.dumps({"event": "generation_progress", "iteration": iteration,
                     "completed_responses": len(cohort) + len(group), "generated_tokens": generated_tokens,
                     "elapsed_seconds": elapsed, "generated_tokens_per_second": generated_tokens / elapsed,
+                    "reuse_prompt_cache": args.reuse_prompt_cache,
+                    "shared_prefix_tokens": prefix_length if prefix_cache is not None else 0,
                     "partial_path": str(partial_path)}), flush=True)
                 del outputs, prompt
             if args.benchmark_updates:
@@ -389,6 +540,7 @@ def sample_cohort(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str,
             for item, advantage in zip(group, advantages):
                 item.advantage = advantage
             cohort.extend(group)
+            del prefix_cache
     os.replace(partial_path, completed_path)
     return cohort, {"mean_group_reward_variance": statistics.fmean(variances),
                     "zero_variance_group_fraction": sum(v <= 1e-12 for v in variances) / len(variances),
@@ -486,9 +638,11 @@ def benchmark_generation(model: Any, tokenizer: Any, stop_id: int, rows: list[di
     """Time the actual HF rollout path used by training, without an update."""
     import torch
     selected = rows[:args.states_per_iteration]
+    cold_compile = prepare_static_compile(model, tokenizer, stop_id, selected[0], args, output)
     warmup_records = []
     warmup_args = copy.copy(args)
-    warmup_args.group_size = args.generation_warmup_responses
+    warmup_args.group_size = (min(args.group_size, args.generation_microbatch)
+                             if args.static_cache_compile else args.generation_warmup_responses)
     for warmup in range(args.warmup_steps):
         began = time.perf_counter()
         warmup_cohort, _ = sample_cohort(model, tokenizer, stop_id, selected[:1], warmup_args, iteration=10000 + warmup)
@@ -512,7 +666,7 @@ def benchmark_generation(model: Any, tokenizer: Any, stop_id: int, rows: list[di
         "effort": args.effort, "generation_microbatch": args.generation_microbatch,
         "group_size": args.group_size, "timed_states": len(selected), "timed_responses": len(cohort),
         "warmup_groups_excluded": args.warmup_steps,
-        "warmup_responses_per_group": args.generation_warmup_responses,
+        "warmup_responses_per_group": warmup_args.group_size,
         "warmup_records": warmup_records,
         "timed_seconds": seconds, "generated_tokens": generated,
         "generated_tokens_per_second": generated / seconds,
@@ -523,6 +677,10 @@ def benchmark_generation(model: Any, tokenizer: Any, stop_id: int, rows: list[di
         "peak_allocated_bytes": torch.cuda.max_memory_allocated() if args.device.startswith("cuda") else None,
         "peak_reserved_bytes": torch.cuda.max_memory_reserved() if args.device.startswith("cuda") else None,
         "sampling_top_p": 1.0, "temperature": args.temperature, **metrics}
+    summary["reuse_prompt_cache"] = args.reuse_prompt_cache
+    summary.update(static_cache_compile=args.static_cache_compile,
+                   static_cache_size=args.static_cache_size if args.static_cache_compile else None,
+                   cold_compile=cold_compile, adapter_merged=False)
     atomic_json(output / "summary.json", summary)
     return summary
 
@@ -541,7 +699,7 @@ def training_loop(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str,
         "update_epochs", "learning_rate", "clip_epsilon", "kl_beta", "invalid_reward", "seed",
         "max_grad_norm", "dtype", "attention", "gradient_checkpointing", "limit",
         "selected_split", "selected_row_count", "selected_selection_sha256",
-        "loss_normalization", "loss_token_budget")
+        "loss_normalization", "loss_token_budget", "reuse_prompt_cache")
     settings = {name: getattr(args, name) for name in invariant_names}
     settings["training_format_version"] = TRAINING_FORMAT_VERSION
     settings["prompt_file_sha256"] = hashlib.sha256(args.prompts.read_bytes()).hexdigest()
@@ -549,6 +707,8 @@ def training_loop(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str,
         # This is our own explicitly selected training artifact, not arbitrary
         # downloaded model code. Python RNG tuples require weights_only=False.
         state = torch.load(Path(args.resume) / "training_state.pt", map_location=args.device, weights_only=False)
+        # Older format-3 checkpoints always used the uncached path.
+        state["settings"].setdefault("reuse_prompt_cache", False)
         if state["settings"] != settings:
             raise ValueError("exact-resume settings/data differ; use --warm-start-adapter for a declared new condition")
         optimizer.load_state_dict(state["optimizer"])
@@ -632,6 +792,7 @@ def training_loop(model: Any, tokenizer: Any, stop_id: int, rows: list[dict[str,
                "loss_tokens": "all_generated_reasoning_final_and_eos_tokens",
                "loss_normalization": args.loss_normalization,
                "loss_token_budget": args.loss_token_budget,
+               "reuse_prompt_cache": args.reuse_prompt_cache,
                "reference": "frozen_base_with_adapters_disabled", "sft_targets": False}
     atomic_json(output / "summary.json", summary)
     return summary
@@ -661,6 +822,15 @@ def main() -> int:
     parser.add_argument("--max-sequence-length", type=int, default=40960)
     parser.add_argument("--group-size", type=int, default=4)
     parser.add_argument("--generation-microbatch", type=int, default=2)
+    parser.add_argument("--reuse-prompt-cache", action="store_true",
+                        help="Prefill each state prompt once and clone KV storage per generation microbatch (default off)")
+    parser.add_argument("--check-prompt-cache", action="store_true", help="Actual-model cache equivalence probe; no optimizer updates")
+    parser.add_argument("--cache-check-tokens", type=int, default=32)
+    parser.add_argument("--cache-check-atol", type=float, default=.125)
+    parser.add_argument("--cache-check-rtol", type=float, default=.01)
+    parser.add_argument("--static-cache-compile", action="store_true",
+                        help="Benchmark-generation only: static KV cache and HF partial-graph torch.compile; retains unmerged LoRA")
+    parser.add_argument("--static-cache-size", type=int, default=8192)
     parser.add_argument("--states-per-iteration", type=int, default=4)
     parser.add_argument("--iterations", type=int, default=1)
     parser.add_argument("--update-epochs", type=int, default=1)
@@ -687,12 +857,16 @@ def main() -> int:
     args = parser.parse_args()
     if args.cohort_jsonl and not args.benchmark_updates:
         parser.error("offline cohorts are restricted to update-throughput benchmarking")
-    if args.benchmark_updates and args.benchmark_generation:
+    if sum((args.benchmark_updates, args.benchmark_generation, args.check_prompt_cache)) > 1:
         parser.error("choose one benchmark mode")
-    if args.resume and (args.adapter or args.benchmark_updates or args.benchmark_generation):
+    if args.resume and (args.adapter or args.benchmark_updates or args.benchmark_generation or args.check_prompt_cache):
         parser.error("exact resume is training-only and cannot be combined with a weights warm start")
+    if args.static_cache_compile and (not args.benchmark_generation or args.reuse_prompt_cache):
+        parser.error("static-cache compilation is benchmark-generation only and incompatible with --reuse-prompt-cache")
+    if args.static_cache_compile and args.group_size % min(args.group_size, args.generation_microbatch):
+        parser.error("static-cache benchmark requires full equal-sized generation microbatches to avoid untimed shape recompilation")
     if args.loss_normalization is None:
-        if args.benchmark_updates or args.benchmark_generation:
+        if args.benchmark_updates or args.benchmark_generation or args.check_prompt_cache:
             args.loss_normalization = "response_mean"
         else:
             parser.error("actual training requires an explicit --loss-normalization choice")
@@ -702,7 +876,8 @@ def main() -> int:
                 args.generation_microbatch, args.microbatch, args.gradient_accumulation,
                 args.states_per_iteration, args.iterations, args.update_epochs, args.benchmark_steps,
                 args.learning_rate, args.max_grad_norm, args.lora_rank, args.lora_alpha,
-                args.generation_warmup_responses, args.loss_token_budget)
+                args.generation_warmup_responses, args.loss_token_budget, args.cache_check_tokens,
+                args.static_cache_size)
     if min(positive) <= 0 or args.group_size < 2 or args.warmup_steps < 0:
         parser.error("positive sizes/temperature and group-size >=2 required")
     if (not all(math.isfinite(value) for value in positive) or
@@ -748,7 +923,9 @@ def main() -> int:
                       teacher_checkpoint_sha256=sorted({row["teacher"]["checkpoint_sha256"] for row in rows
                         if "teacher" in row and row["teacher"].get("checkpoint_sha256")}))
         atomic_json(args.output / "config.json", config)
-        if args.benchmark_generation:
+        if args.check_prompt_cache:
+            summary = check_prompt_cache(model, tokenizer, stop_id, rows, args, args.output)
+        elif args.benchmark_generation:
             summary = benchmark_generation(model, tokenizer, stop_id, rows, args, args.output)
         elif args.benchmark_updates:
             if args.cohort_jsonl:
