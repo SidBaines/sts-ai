@@ -178,8 +178,15 @@ turns 0 to 2, 55% from turn 6) and at the Act 3 bosses (41 to 47%, Awakened
 One lowest). In the benchmark the pooled teacher drinks 3.9 potions per game
 at bosses; games with it playing the bosses use 10.4 potions in combat against
 8.7 when the champion plays everything, so it spends about 1.7 more per game.
-A teacher arm that may not drink potions would measure how much of its boss
-advantage is potion use.
+**About half of the teacher's boss advantage is potion use.** The pooled
+teacher with potion actions kept out of its vote won 316 games, against 429
+for the full pooled teacher (paired on the same worlds: discordant 167/53, p <
+0.001) and 205 for the champion alone; its Act 1, 2 and 3 boss pass rates fall
+by 3.0, 9.7 and 10.3 points against the full teacher. Of the full teacher's
+224 extra wins over the champion, 113 vanish without potions. Its searches
+still plan potion use deeper in the tree, which it then cannot carry out, so
+this likely understates the no-potion teacher; "about half" is an upper
+estimate of the potions' share.
 
 ## Conclusion
 

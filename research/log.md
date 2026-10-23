@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 23 October 2026
 
+- **Potions**, 06:49: a pooled teacher barred from drinking potions wins 316
+  against 429 at bosses (champion alone 205): about half its advantage is
+  potion use, where the champion's network agrees with it only 12% of the
+  time.
 - **Fourth continued training**, 04:15: 971 against the champion's 887 on
   unused worlds (p = 0.005), 980 against 899 on second DEV. Joint run 2's
   first iteration matches it exactly: training is deterministic.
