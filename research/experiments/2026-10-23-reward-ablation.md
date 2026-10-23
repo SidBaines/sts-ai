@@ -1,6 +1,6 @@
 # Reward ablation: floors and wins against wins only
 
-**Status:** planned. **Verdict:** none yet.
+**Status:** running (started 23 October, 12:13). **Verdict:** none yet.
 
 ## Question
 
@@ -57,4 +57,10 @@ from the current champion? Part of the
 
 ## Log
 
-Code: `experiments/2026-10-23-reward-ablation/`. Data: run `reward_ablation_20261023` (local, worktree `nonllm-large-batch`).
+- 23 Oct, 12:13: both arms started. Before launch: the new trainer options
+  were checked on real games (with floor weight 0 every return is exactly
+  ±1), and 1 plus 1 resumed iterations gave bit-identical weights to 2
+  straight, so resuming to 24 is the same as running 24 from the start.
+Code: trainer options `--progress-floor-weight` and
+`--reset-return-normalizer` (commit 8a78301, run from worktree
+`nonllm-reward-ablation`; do not edit it). Data: run `reward_ablation_20261023` (local, worktree `nonllm-large-batch`).

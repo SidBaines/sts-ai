@@ -30,11 +30,10 @@ in the [results ledger](results.md).
 
 ## Now
 
-Nothing running. [Joint run 2](experiments/2026-10-22-joint-run-2.md)'s
-gain is its refitted combat head, which on the same positions mainly drinks
-potions twice as often (toward the search teacher, still at about half its
-rate), passes the Act 1 and Act 2 bosses more often, and plays the Act 3
-boss no better.
+Running (see [status](status.md)): a [reward ablation](experiments/2026-10-23-reward-ablation.md),
+12 iterations of out-of-combat PPO from the champion with the current
+reward (wins plus floors) against wins only; results expected around 17:00
+on 23 October.
 
 ## Next
 

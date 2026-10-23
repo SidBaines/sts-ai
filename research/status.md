@@ -1,29 +1,39 @@
 # Status
 
-**Updated 23 October 2026, 10:15 BST.** Nothing running.
+**Updated 23 October 2026, 12:15 BST.** One experiment runs; nothing waits for Sid.
 Champion: `champion_c8553bc33e53.pt`, joint run 2's final checkpoint (26.8%
-on unused worlds), promoted by Sid at 09:58. A copy with its record is in
-`joint2_analysis_20261023/inputs/` (worktree `nonllm-large-batch`).
+on unused worlds).
 
-- **Joint run 2 analysis:** finished (results on the
-  [joint run 2 page](experiments/2026-10-22-joint-run-2.md); data in
-  `joint2_analysis_20261023/`).
-- **Queues:** both lanes idle (`scripts/rl/queue_runner.py status` in
-  `nonllm-large-batch` or `nonllm-boss-rares`).
+- **[Reward ablation](experiments/2026-10-23-reward-ablation.md)**
+  (output `reward_ablation_20261023/` in worktree `nonllm-large-batch`):
+  trainers `ra-train-floors` (lane `train`) and `ra-train-wins` (lane
+  `train2`) of the `nonllm-large-batch` queue, 12 iterations each from the
+  champion, both started 12:13; expected to finish around 17:00. Code runs
+  from worktree `nonllm-reward-ablation` (do not edit it). The detached
+  watcher `evaluate_arms.sh` (session scratchpad, `reward_ablation/`, log
+  `eval108.log`) queues each arm's iteration 4, 8 and 12 checkpoints and the
+  champion on 16,384 worlds from 108,000,000,000 (lane `eval`) and runs the
+  comparison when they finish.
+- **Next decision:** if iteration 12 does not separate the arms
+  (p < 0.025), resume both to 24 iterations: `--resume --iterations 24`
+  with the same command and output directory, then
+  `evaluate_arms.sh 109000000000 16 20 24`.
+- **Check or stop:** `scripts/rl/queue_runner.py status` or `cancel NAME`
+  in `nonllm-large-batch`. Dashboard: http://127.0.0.1:8795.
 - **Disk:** 79 GiB free at 10:05. See `scripts/rl/CLAUDE.md` for the
   periodic check.
-- **Dashboard:** http://127.0.0.1:8795 (served from `nonllm-dashboard`).
 - **Closing the Claude desktop app kills processes this session started**,
-  including detached runners and watchers; resume a trainer with `--resume`.
+  including the watcher; resume a trainer with `--resume`.
 - **Worktrees to keep:** `nonllm-large-batch`, `nonllm-continued-frozen`,
-  `nonllm-joint-frozen`, `nonllm-joint2-frozen` (the frozen code of the two
-  joint runs; do not edit), `nonllm-better-teacher` (holds the new native
-  build), `nonllm-large-batch-hidden`, `nonllm-fresh-start`,
+  `nonllm-joint-frozen`, `nonllm-joint2-frozen`, `nonllm-reward-ablation`
+  (frozen code of runs; do not edit), `nonllm-better-teacher` (holds the new
+  native build), `nonllm-large-batch-hidden`, `nonllm-fresh-start`,
   `nonllm-boss-rares`, `nonllm-dashboard`, `nonllm-disk-hygiene`,
   `nonllm-joint-run-2`.
 
 ## Next
 
-Propose to Sid the next training round from the new champion:
-out-of-combat PPO with refit-and-gate cycles as standard (shorter cycles),
-and a potion-decision distillation.
+Record the iteration-12 comparison; meanwhile prepare the value-target
+combat fits (option C1 in the
+[23 October discussion](brainstorms/2026-10-23-next-steps.md)) on the
+existing pooled corpus, which need no new labels.
