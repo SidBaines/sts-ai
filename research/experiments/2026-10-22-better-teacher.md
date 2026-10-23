@@ -198,7 +198,12 @@ Candidates, under discussion with Sid: a much larger pooled-label corpus, or
 boss-weighted labelling; better student capacity or training (only about +5
 points of agreement per 7-fold data so far); the pooled teacher inside the
 joint loop's labelling; information-set search and network playouts, as
-planned; known top cards later, as Sid decided.
+planned; known top cards later, as Sid decided. A hypothesis for the imitation gap
+worth testing first: neither encoder sees the enemies' move history (only the
+current intent and powers; the hand-featured one also sees the turn number),
+while the teacher's simulations follow the true enemy AI, including its
+history rules; a student with a short history of enemy moves, or a recurrent
+student, could close part of the gap.
 
 ## Log
 

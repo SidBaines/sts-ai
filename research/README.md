@@ -36,26 +36,27 @@ in the [results ledger](results.md).
 
 ## Now
 
-Running (see [status](status.md)): the [joint loop](experiments/2026-10-22-joint-loop.md),
-in which out-of-combat PPO and teacher-labelled combat refits move
-together (control: the third continued training); two combat students
-fitted on round 2, round 3 and boss-only labels
-([combat variance](experiments/2026-10-22-combat-variance.md)); and,
-queued after the joint loop, a [fourth continued training](experiments/2026-10-22-continued-training-4.md)
-from the new champion. Refits of the combat student vary a lot: one fit in
-four collapses by about two floors, so every refit is checked before use.
+Running (see [status](status.md)): [joint run 2](experiments/2026-10-22-joint-run-2.md),
+out-of-combat PPO with repeated gated combat refits, against the fourth
+continued training as a same-seed control (training is deterministic, so the
+two differ only through the refits); results expected late morning on 23
+October.
 
 ## Next
 
-1. **Record the boss-label fits and the fourth continued training**, and
-   follow the joint loop's gate decisions.
-2. **[A better search teacher](experiments/2026-10-22-better-teacher.md)**
-   (planned with Sid, 22 October): measure the teacher's noise and build a
-   boss-fight benchmark for teachers; then fix its vote and score, pool its
-   searches, and build information-set search; let it and the student see
-   cards known to be on top of the draw pile. Network playouts follow.
-3. **Learn deck strength instead of simulating each choice:** a deck-value
-   network trained on oracle scores. To discuss with Sid.
+1. **Decide on promotion:** the fourth continued training reached 23.7% on
+   unused worlds (971 against the champion's 887, p = 0.005).
+2. **Joint run 2's result** decides whether joint training replaces
+   alternation.
+3. **[A better search teacher](experiments/2026-10-22-better-teacher.md):**
+   pooling the teacher's 24 searches makes it far stronger at bosses (with it
+   playing the bosses, 42 to 45% of games are won), but students imitate it
+   poorly (about 57% agreement, against about 80% for a second teacher run),
+   whatever the network or training length; more data helps slowly. Next:
+   test whether missing enemy move history explains the gap, or label far
+   more boss states.
+4. **Learn deck strength instead of simulating each choice** (a deck-value
+   network trained on oracle scores). To discuss with Sid.
 
 The agent must stay a pure policy; search may be used to make better
 teachers, not to play.
