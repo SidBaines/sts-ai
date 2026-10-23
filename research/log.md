@@ -7,6 +7,10 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 23 October 2026
 
+- **Value targets**, 16:15: students fitted to the teacher's move values beat
+  vote-fitted students on the same data (1,871 and 1,909 against 1,816 and
+  1,556 of 8,192; pooled p < 0.0001), partly because one vote fit was bad;
+  all are well below the champion (2,198). Next: value targets in refits.
 - **New champion**, 09:58: Sid promoted joint run 2's final checkpoint
   (`champion_c8553bc33e53.pt`, 26.8% on unused worlds). First look at the
   two-by-two games: the new combat head saves games at the Act 1 boss and in

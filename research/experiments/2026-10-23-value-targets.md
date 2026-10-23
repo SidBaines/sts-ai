@@ -1,6 +1,6 @@
 # Combat students trained on the teacher's move values instead of its votes
 
-**Status:** running (stage 2 play test). **Verdict:** none yet.
+**Status:** finished 23 October. **Verdict:** value targets are better than vote targets on the same data (fixed rule met: both seeds, pooled p < 0.0001), partly because they avoided a bad fit; all four students play far worse than the champion because the corpus is small and boss-heavy.
 
 ## Question
 
@@ -73,12 +73,67 @@ evaluation points (about 100 per HP in a won fight).
 - Between one fit and another of the same recipe, play strength varies a
   lot, which these intervals do not include; stage 2 uses two seeds.
 
+**Stage 2: value-target students play better than vote-target students.**
+Each student spliced into the champion; 8,192 unused worlds from
+110,000,000,000 (environment 0.1.5.1), paired by world:
+
+| Combat head | Wins | Mean floor | Validation boss regret |
+|---|---:|---:|---:|
+| Champion's own | 2,198 (26.8%) | 41.66 | |
+| Votes, seed 1 | 1,816 | 38.16 | 56.2 |
+| Votes, seed 2 | 1,556 | 36.90 | 59.1 |
+| Values, seed 1 | 1,871 | 37.74 | 52.9 |
+| Values, seed 2 | 1,909 | 38.12 | 54.7 |
+
+- Rule fixed in advance: both seed pairs favour values (seed 1: 1,871
+  against 1,816, discordant 830/775, p = 0.18; seed 2: 1,909 against 1,556,
+  p < 0.001), and pooled over 16,384 world pairs values win 1,820 games the
+  votes lose and lose 1,412 they win (exact McNemar p < 0.0001): *Better*.
+- Much of the margin is seed 2's vote fit, which played badly (a
+  heavy-tailed fit failure like those seen before); the value fits were
+  both reasonable. With two seeds per arm it is not clear whether value
+  targets mainly raise the typical fit or mainly avoid bad ones.
+- Validation boss regret ranked the four students in nearly the same order
+  as their wins (the two value fits swap), while validation agreement did
+  not separate them (53.0% to 53.3% at bosses for both vote fits).
+- Every student is far below the champion (−3.5 to −7.8 points of wins).
+  Compared with the champion they die about twice as often in Act 1 (at the
+  boss: 416 games for the champion against 856 to 1,012). The pooled corpus
+  is 2,000 worlds sampled mostly at bosses, while the champion's combat head
+  was fitted on several larger corpora covering all fights and then refitted
+  twice.
+
 ## Conclusion
+
+Training combat students on the search teacher's move values instead of its
+chosen move gives students that give up less teacher value at bosses (about
+a sixth less) and play better than vote-trained students on the same data,
+under a rule fixed in advance. It is a modest gain on agreement-style
+measures, but the regret measure tracks play strength better than agreement
+does. Not yet shown: whether it helps where it matters, in the refit loop on
+the champion's own fights with full corpora.
+
+Caveats:
+- Two fit seeds per target; one bad vote fit drives much of the pooled
+  margin.
+- One corpus (2,000 worlds of the 22 October champion's games, boss-heavy);
+  the champion's own combat head was trained differently, so these students
+  cannot be compared with it.
+- Scale 100 was chosen on stage 1's test rows, though validation agreed.
 
 ## Next
 
+- Use value targets in the refit loop: label the champion's fights with
+  `--record-search` (the joint loop's corpora lack search statistics), then
+  fit refits with values and with votes on that corpus, two seeds each, and
+  gate them in the champion.
+- Use validation boss regret, not agreement, to screen refits before the
+  gate.
+
 ## Log
 
+- 23 Oct, 16:15: stage 2 finished: values better than votes under the fixed
+  rule; seed 2's vote fit was a bad fit.
 - 23 Oct, 13:42: stage 1 meets its condition (scale 100 lowers boss
   regret by 8.6 [5.4, 11.8]); stage 2 started: seed 2 fits and play on
   8,192 worlds from 110,000,000,000.

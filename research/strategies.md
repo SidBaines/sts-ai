@@ -55,6 +55,12 @@ so the network plays well without search.
   the champion. Students agree with it on 46–66% of boss decisions against
   77–87% for a second teacher run, and agreement grows only about 5 points
   per 7-fold data: imitation, not the teacher, is now the bottleneck.
+- [Value targets](experiments/2026-10-23-value-targets.md) (23 October):
+  fitting students to the pooled searches' move values instead of the
+  chosen move cuts the value they give up at bosses by about a sixth and
+  plays better than vote targets on the same data (two seeds each). Value
+  regret ranked students' play far better than agreement did. Not yet
+  tried in the refit loop, which needs labelling with search statistics.
 - Pages: [combat PPO and early imitation](experiments/2026-10-13-combat-ppo.md),
   [overnight tests](experiments/2026-10-14-overnight-tests.md),
   [fresh start](experiments/2026-10-15-fresh-start.md),
