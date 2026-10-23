@@ -330,6 +330,9 @@ Pending.
 - 2026-10-22, 19:35: benchmark: the teacher at bosses wins 32.5 to 33.7%
   against the champion's 20.0%; the student has not learned the teacher's
   boss play.
+- 2026-10-23, 04:24: imitation gap measured: students reach 46–66% agreement
+  with the pooled teacher at bosses against 77–87% teacher self-agreement;
+  data scaling is slow.
 - 2026-10-23, 04:09: pooled distillation round: no student beats the
   champion; fit variance dominates. Pooled at 2,000 simulations beats
   pooled at 1,000 (454 against 429).
