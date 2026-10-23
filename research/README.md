@@ -1,6 +1,6 @@
 # Learning full-game play with a reasoning language model
 
-The next step is a short serving benchmark before choosing settings for RL.
+Training and evaluation adapters are being prepared before generation and optimizer-update speed checks.
 
 The goal is an LLM controlling combat and out-of-combat decisions in Ironclad,
 Ascension 0, Acts 1–3. We want to observe how its reasoning changes during RL.
@@ -10,9 +10,11 @@ outcome RL. These training stages have not started.
 
 ## Now
 
-[Serving benchmark](experiments/2026-10-23-llm-throughput.md): compare
+[Speed checks](experiments/2026-10-23-llm-throughput.md): compare
 K2-Horizon-0.9B at low, medium and high reasoning effort, with different
-request concurrency and supported attention settings on one A40.
+request concurrency and supported attention settings on an RTX 2000 Ada,
+and measure real LoRA optimizer updates. The adapters use the latest core
+environment. Pause after these measurements, before the main study.
 See [status](status.md) for the live job.
 
 ## Next

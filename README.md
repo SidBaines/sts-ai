@@ -1,3 +1,5 @@
+> LLM workstream topic branch: [current research](research/README.md), [training and evaluation](src/sts_llm/README.md), and [training mechanics](src/sts_llm/TRAINING.md). The core environment below is unchanged from the latest main release.
+
 # Slay the Spire Environment
 
 A maintained environment base for custom agents, LLM adapters, and reinforcement

@@ -9,7 +9,7 @@ enough for the first RL study? Approach: [small-model serving](../strategies.md#
 
 ## Design
 
-Use IFM/K2-Horizon-0.9B in BF16 on one A40. Compare low, medium and high
+Use IFM/K2-Horizon-0.9B in BF16 on one RTX 2000 Ada. Compare low, medium and high
 reasoning effort on the same fixed observations from environment release
 0.1.5.1, with combat and out-of-combat menus represented across all three acts.
 No model weights are changed and no reasoning examples are supervised.
@@ -33,9 +33,18 @@ is chosen using this measured tradeoff, with conclusions about playing strength
 reserved for a later game evaluation. All configuration comparisons are
 exploratory because the screening is adaptive.
 
-Budget: at most two A40 hours at $0.59/hour ($1.18 GPU cost), plus storage.
+Budget: at most three RTX 2000 Ada hours at $0.24/hour ($0.72 GPU cost), plus storage.
+The mistakenly started A40 was stopped after setup; no A40 timing is treated
+as a result. Its retained logs account for that operational detour.
 Sid approved a short serving-settings and three-effort test on 23 October.
 Machine settings, source identities and exact schedules live in the run record.
+
+Also benchmark the actual synchronous Hugging Face rollout path and real
+LoRA forward/backward/AdamW steps at different microbatches, attention settings
+and gradient checkpointing. Unload the serving process before training
+measurements. Synthetic update advantages measure throughput only; a separate
+bounded real-teacher smoke verifies the learning plumbing. Pause after the speed
+checks, before choosing or launching the main experiment.
 
 ## Results
 
