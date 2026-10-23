@@ -30,10 +30,11 @@ in the [results ledger](results.md).
 
 ## Now
 
-Running (see [status](status.md)): a [reward ablation](experiments/2026-10-23-reward-ablation.md),
-12 iterations of out-of-combat PPO from the champion with the current
-reward (wins plus floors) against wins only; results expected around 18:00
-on 23 October.
+Running (see [status](status.md)): a [reward ablation](experiments/2026-10-23-reward-ablation.md)
+(wins plus floors against wins only, 12 iterations from the champion;
+result around 17:30) and [value-target refits](experiments/2026-10-23-value-target-refits.md),
+after [value targets](experiments/2026-10-23-value-targets.md) made better
+combat students than vote targets on the same data.
 
 ## Next
 

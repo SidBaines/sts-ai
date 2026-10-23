@@ -1,6 +1,6 @@
 # Status
 
-**Updated 23 October 2026, 13:45 BST.** Two experiments run; nothing waits for Sid.
+**Updated 23 October 2026, 16:25 BST.** Two experiments run; nothing waits for Sid.
 Champion: `champion_c8553bc33e53.pt`, joint run 2's final checkpoint (26.8%
 on unused worlds).
 
@@ -14,13 +14,11 @@ on unused worlds).
   `eval108.log`) queues each arm's iteration 4, 8 and 12 checkpoints and the
   champion on 16,384 worlds from 108,000,000,000 (lane `eval`) and runs the
   comparison when they finish.
-- **[Value targets](experiments/2026-10-23-value-targets.md), stage 2:**
-  seed 2 fits (`vt-votes-seed2`, `vt-values100-seed2`, `nonllm-boss-rares`
-  queue) and play tests on 8,192 worlds from 110,000,000,000 (lane `eval` of
-  the `nonllm-large-batch` queue), driven by the detached watcher
-  `stage2.sh` (session scratchpad, `value_targets/`, log `stage2.log`),
-  which ends with the pre-registered comparison. Code runs from worktree
-  `nonllm-value-targets` (do not edit it).
+- **[Value-target refits](experiments/2026-10-23-value-target-refits.md):**
+  labelling 2,000 of the champion's worlds with search statistics
+  (`vr-label-0` to `vr-label-7`, one lane each in the `nonllm-boss-rares`
+  queue; output `value_refits_20261023/corpus/`), started 16:25; fits and
+  play tests follow. Code runs from worktree `nonllm-value-targets`.
 - **Next decision:** if iteration 12 does not separate the arms
   (p < 0.025), resume both to 24 iterations: `--resume --iterations 24`
   with the same command and output directory, then
@@ -40,5 +38,5 @@ on unused worlds).
 
 ## Next
 
-Record the value-target play test and the reward ablation's iteration-12
-comparison (around 18:00).
+Record the reward ablation's iteration-12 comparison (around 17:30); when
+labelling finishes, fit and play the value-target refits.
