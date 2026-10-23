@@ -188,6 +188,28 @@ still plan potion use deeper in the tree, which it then cannot carry out, so
 this likely understates the no-potion teacher; "about half" is an upper
 estimate of the potions' share.
 
+**Potion decisions alone recover a fifth of the gain.** When the champion
+plays every card and the pooled teacher overrides it only to drink a potion,
+the champion's games win 249, against 205 (paired: discordant 37/81, p <
+0.001; Act 2 boss pass +5.2 points [+2.8, +7.6], Act 3 +6.1 [+2.5, +9.4], Act
+1 +0.0). The four combinations, wins of about 1,020:
+
+| Card play by | Potions by | Wins |
+|---|---|---:|
+| Champion | Champion | 205 |
+| Champion | Teacher | 249 |
+| Teacher | Nobody (barred) | 316 |
+| Teacher | Teacher | 429 |
+
+Potions add 113 wins on top of the teacher's card play but 44 on top of the
+champion's: the teacher's potion use pays off most with its own card play.
+Still, +4.3 points from potion timing alone is about the size of a whole
+out-of-combat training pass, for a narrow decision the champion's network
+matches the teacher on only 12% of the time, so a student that learns the
+teacher's potion choices is a cheap target. (In the potion-only arm 30 worlds,
+not 23, leave the champion's own game before the teacher's first move, because
+the teacher acts rarely and near-ties have longer to flip.)
+
 ## Conclusion
 
 The teacher's ceiling is not what holds the student back; imitation is.

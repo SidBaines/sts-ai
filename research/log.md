@@ -7,6 +7,9 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 23 October 2026
 
+- **Potion-only teacher**, 08:15: the teacher deciding only potion drinks at
+  bosses lifts the champion from 205 to 249 wins of 1,024 (p < 0.001): a
+  narrow, cheap distillation target.
 - **Potions**, 06:49: a pooled teacher barred from drinking potions wins 316
   against 429 at bosses (champion alone 205): about half its advantage is
   potion use, where the champion's network agrees with it only 12% of the
