@@ -7,6 +7,11 @@ home file (experiment pages, the results ledger, strategies, README).
 
 ## 23 October 2026
 
+- **New champion**, 09:58: Sid promoted joint run 2's final checkpoint
+  (`champion_c8553bc33e53.pt`, 26.8% on unused worlds). First look at the
+  two-by-two games: the new combat head saves games at the Act 1 boss and in
+  Act 2 hallways and passes the Act 2 boss more often, but not the Act 3
+  boss; it drinks more potions. Matched-state analysis started.
 - **Confirmation**, 08:50: the combination wins 1,083 and the joint
   checkpoint 1,096 against the fourth continued training's 952 on fresh
   worlds (both p < 0.001): about 26.5%, the best confirmed players.
