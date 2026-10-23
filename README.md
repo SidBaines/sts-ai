@@ -10,7 +10,8 @@ Act 4 is optional and experimental. Experiments, model clients, training algorit
 and experiment-specific reward shaping belong in adapters or workstream
 branches; see [WORKSTREAMS.md](WORKSTREAMS.md) for the active ones. `main`
 receives tested environment fixes, and each release gets an immutable `env-v*`
-tag; `env-v0.1.5` is the latest.
+tag; `env-v0.1.5.1` is the latest published tag. This branch prepares
+[0.1.6, higher-ascension support](docs/release_v0.1.6.md), for review.
 
 ## Install and build
 
@@ -71,6 +72,19 @@ act boundary, and `--step-timeout` bounds native reset/search/step operations.
 Your own model/API agent should implement deadlines for its calls. `--ascension`
 sets difficulty (0–20); `--ooc-seed` separately controls the automatic OOC policy. Existing output
 files are rejected, so evaluations cannot silently overwrite earlier results.
+
+All ascensions can be selected directly; no unlock sequence is required. For
+example, evaluate Ironclad at Ascension 20 with:
+
+```bash
+.venv/bin/sts-env evaluate --agent first --ascension 20 --seeds 3,4,5 \
+  --mode full --max-act 3 --output data/ascension20
+```
+
+The trace header and evaluation summary retain the environment configuration,
+including ascension. Treat `(ascension, world seed)` as the world identity within
+one environment/build and evaluation protocol; the same seed at different
+ascensions need not generate the same map or trajectory.
 
 Play manually with `sts-env play --seed 3 --mode full`, or inspect all available
 flags using `sts-env <command> --help`. Built-in agents are `first`, `random`, and
@@ -146,6 +160,15 @@ continue to Act 4); `info["outcome"]` then reports `PLAYER_VICTORY` while the
 observation keeps the native outcome. Supply `reward_fn` in your own adapter for
 other rewards, and record that choice with experiment results.
 
+At Ascension 20, both Act 3 bosses must be defeated. The second fight can start
+in the same `step` that ends the first, with `phase="combat"` on both sides.
+`observation["state"]["combat_id"]` increases for each fight: 0 before the first,
+then 1, 2, and so on, retaining the last value outside combat. It resets on
+`reset`. Compare it between observations to detect a new fight; turn numbers,
+floor numbers and phase changes are not reliable fight identifiers. It counts
+automatic fights too and reveals no future encounter. `info["ascension"]`
+records the selected difficulty on reset and step.
+
 Use the observation as policy input. Diagnostic `info` can contain privileged
 simulator details such as raw executed-action bits, which can encode hidden draw
 positions; do not feed that diagnostic metadata to your model. The Gymnasium
@@ -154,9 +177,12 @@ wrapper's `info["observation"]` contains the safe public observation.
 For Gymnasium integration, install `.venv/bin/python -m pip install -e '.[gym]'`
 and import `GymnasiumEnv` from `sts_env.gymnasium`. Its fixed `Discrete(2048)` action space uses
 an `action_mask` to mark the current valid menu indices (configure `max_actions`
-for larger menus). Observations are dictionaries with `features` (15 numeric
+for larger menus). Observations are dictionaries with `features` (16 numeric
 values) and `action_mask`; the full public observation is retained
 in `info["observation"]`. `GymnasiumEnv.FEATURE_NAMES` gives the feature order.
+The last numeric feature is the raw ascension level, 0–20; the preceding 15
+features retain their previous order. Policies using the old numeric shape
+need an explicit input migration; see the [0.1.6 notes](docs/release_v0.1.6.md).
 
 The compact encoder summarizes HP, gold, progress, and basic combat counts. It
 omits card identities, enemy powers/intents, event offers, and map structure; it

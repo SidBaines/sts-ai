@@ -2410,7 +2410,7 @@ index fa10364..e0643d9 100644
                      pArr[1] = getRandomPotion(potionRng, cc);
                      pArr[2] = getRandomPotion(potionRng, cc);
 diff --git a/src/game/Shop.cpp b/src/game/Shop.cpp
-index bacf8e7..2625094 100644
+index bacf8e7..9ae6f54 100644
 --- a/src/game/Shop.cpp
 +++ b/src/game/Shop.cpp
 @@ -3,6 +3,7 @@
@@ -2421,6 +2421,15 @@ index bacf8e7..2625094 100644
  #include "game/Shop.h"
  #include "game/GameContext.h"
  #include "game/Game.h"
+@@ -15,7 +16,7 @@ void Shop::setup(GameContext &gc) {
+     setupPotions(gc);
+
+     if (gc.ascension >= 16) {
+-        applyDiscount(0.80f);
++        applyDiscount(1.10f);
+     }
+     if (gc.hasRelic(RelicId::THE_COURIER)) {
+         applyDiscount(0.80f);
 @@ -125,14 +126,19 @@ void Shop::buyRelic(GameContext &gc, int idx) {
          removeCost = static_cast<int>(std::round(static_cast<float>(removeCost) * MEMBERSHIP_CARD_FACTOR));
      }
@@ -2457,7 +2466,13 @@ index bacf8e7..2625094 100644
      gc.obtainPotion(potions[idx]);
      gc.loseGold(potionPrice(idx), true);
      if (gc.hasRelic(RelicId::THE_COURIER)) {
-@@ -198,19 +205,19 @@ int Shop::getNewCardPrice(GameContext &gc, CardRarity rarity, bool colorless) {
+@@ -195,22 +202,28 @@ int Shop::getNewCardPrice(GameContext &gc, CardRarity rarity, bool colorless) {
+     if (colorless) {
+         price *= 1.2f;
+     }
++    if (gc.ascension >= 16) {
++        price *= 1.1f;
++    }
      if (gc.hasRelic(RelicId::THE_COURIER)) {
          price *= 0.8f;
      }
@@ -2471,6 +2486,9 @@ index bacf8e7..2625094 100644
  int Shop::getNewPrice(GameContext &gc, int basePrice) {
 -    basePrice = static_cast<int>(std::round(gc.merchantRng.random(0.95f, 1.05f)));
 +    basePrice = static_cast<int>(std::round(basePrice * gc.merchantRng.random(0.95f, 1.05f)));
++    if (gc.ascension >= 16) {
++        basePrice = static_cast<int>(std::round(basePrice * 1.1f));
++    }
      if (gc.hasRelic(RelicId::THE_COURIER)) {
 -        std::round(basePrice * COURIER_FACTOR);
 +        basePrice = static_cast<int>(std::round(basePrice * COURIER_FACTOR));
