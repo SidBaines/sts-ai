@@ -1,6 +1,6 @@
 # Reward ablation: floors and wins against wins only
 
-**Status:** finished 23 October. **Verdict:** rewarding only wins is better than wins plus floors (+1.0 points of wins after 12 iterations, p = 0.008, under the rule fixed in advance).
+**Status:** extended to 24 iterations (running). **Verdict at 12 iterations:** rewarding only wins is better than wins plus floors (+1.0 points of wins after 12 iterations, p = 0.008, under the rule fixed in advance).
 
 ## Question
 
@@ -103,12 +103,17 @@ Caveats:
 ## Next
 
 - Use wins-only reward for out-of-combat training from now on.
-- Resume the wins-only arm to 24 iterations (resuming is exact) to see
-  whether it keeps improving; its iteration-12 checkpoint is a promotion
-  candidate (Sid's decision).
+- Running at Sid's request: both arms resumed to 24 iterations (resuming is
+  exact), for a clean comparison over a longer run. Iterations 16, 20 and 24
+  play the 16,384 unused worlds from 109,000,000,000 reserved for this, with
+  the same test as at 12 (p < 0.025).
+- The wins-only iteration-12 checkpoint is a promotion candidate (Sid's
+  decision).
 
 ## Log
 
+- 23 Oct, 18:28: Sid asked to resume both arms to 24 iterations for a
+  longer clean comparison; both resumed with full state restored.
 - 23 Oct, 18:24: decision at iteration 12: wins only better (4,632 against
   4,468 of 16,384, p = 0.008); no 24-iteration look needed.
 - 23 Oct, 12:13: both arms started. Before launch: the new trainer options
