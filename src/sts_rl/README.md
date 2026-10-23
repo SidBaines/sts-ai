@@ -284,6 +284,8 @@ the default probabilities sample other rooms too. Self-consistency repeats alway
 use `best_line` votes, regardless of `--vote-rule`. Defaults preserve the existing
 search and trajectory behavior.
 
+`--exclude-action-prefix TEXT` (repeatable; config `exclude_action_prefixes`) removes teacher root edges by case-insensitive legal-action description prefix (for example, `"drink potion "`); `best_line` replaces an excluded choice with the most-visited remaining edge (lowest display index breaks ties), and searches with no remaining edges abstain.
+
 `--search-options JSON` (config key `search_options`) configures native searches
 through the details path and records the selected options on each teacher sample.
 Use a flat dict or group dicts, for example

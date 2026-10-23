@@ -191,7 +191,8 @@ class FightBank:
 
 
 def query_votes(worker, observation, plan, config, control):
-    if search_options_for_group(config.get("search_options"), group(observation)) is not None:
+    if (config.get("exclude_action_prefixes") or
+            search_options_for_group(config.get("search_options"), group(observation)) is not None):
         return votes_from_details(query_details(worker, observation, plan, config, control), "best_line")
     if len(policy_observation(observation)["legal_actions"]) <= 1:
         raise ValueError("Teacher queries require an informative combat menu")
@@ -228,6 +229,22 @@ def query_details(worker, observation, plan, config, control):
             raise ValueError("Teacher returned incomplete search details")
         plurality(votes_from_details(chunk, "best_line"), observation)
         details.extend(chunk)
+    if config.get("exclude_action_prefixes"):
+        prefixes = tuple(prefix.casefold() for prefix in config["exclude_action_prefixes"])
+        excluded = {action["index"] for action in observation["legal_actions"]
+                    if action["description"].casefold().startswith(prefixes)}
+        filtered = []
+        for search in details:
+            edges = [edge for edge in search["edges"] if edge["index"] not in excluded]
+            if not edges:
+                continue  # This search abstains; other searches can still vote.
+            chosen = search["chosen"]
+            if chosen in excluded:
+                # best_line has no remaining best-line ranking: fall back to the
+                # most-visited remaining root edge, then the lowest display index.
+                chosen = max(edges, key=lambda edge: (edge["visits"], -edge["index"]))["index"]
+            filtered.append({**search, "chosen": chosen, "edges": edges})
+        return filtered
     return details
 
 
@@ -274,6 +291,8 @@ def play_world(worker, policy, seed, config, control, progress, source, label_co
                         vote_rule = config.get("vote_rule", "best_line")
                         if config.get("search_options") is not None:
                             sample["search_options"] = search_options_for_group(config["search_options"], key)
+                        if config.get("exclude_action_prefixes"):
+                            sample["excluded_action_prefixes"] = list(config["exclude_action_prefixes"])
                         if vote_rule == "best_line" and not config.get("record_search", False):
                             votes = query_votes(worker, observation, plan, config, control)
                         else:
@@ -480,6 +499,11 @@ def run_collection(config, policy, *, worker_factory=None):
 
 def validate_config(config):
     validate_search_options(config.get("search_options"))
+    if "exclude_action_prefixes" in config:
+        prefixes = config["exclude_action_prefixes"]
+        if (not isinstance(prefixes, list) or not prefixes or
+                any(not isinstance(prefix, str) or not prefix for prefix in prefixes)):
+            raise ValueError("exclude_action_prefixes must be a non-empty list of non-empty strings")
     validate_world_range(config["world_start"], config["n"])
     if config["mode"] not in {"eval", "collect"}:
         raise ValueError("mode must be eval or collect")

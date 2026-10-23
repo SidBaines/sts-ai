@@ -38,6 +38,9 @@ def parser():
     p.add_argument("--record-search", action="store_true", default=argparse.SUPPRESS, help="Save per-search diagnostics")
     p.add_argument("--search-options", type=json.loads, default=argparse.SUPPRESS,
                    help="Native search options as JSON; flat dict or default/encounter-group dicts")
+    p.add_argument("--exclude-action-prefix", dest="exclude_action_prefixes", action="append",
+                   default=argparse.SUPPRESS, metavar="TEXT",
+                   help="Exclude teacher root actions by case-insensitive description prefix; repeatable")
     p.add_argument("--self-consistency-every", type=int, default=100,
                    help="TEST worlds only, hash-selected fraction 1/N, disjoint draw/RNG/search seeds; 0=disabled")
     return p

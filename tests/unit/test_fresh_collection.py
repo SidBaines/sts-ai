@@ -115,6 +115,16 @@ class DetailsWorker(Worker):
         return super().step(action)
 
 
+class RootDetailsWorker(DetailsWorker):
+    def __init__(self, states, searches):
+        super().__init__(states)
+        self.searches = searches
+
+    def search_details_public(self, *args, **kwargs):
+        return [{**detail, **deepcopy(self.searches[(detail["future"] - 1) % len(self.searches)])}
+                for detail in super().search_details_public(*args, **kwargs)]
+
+
 class CliTests(unittest.TestCase):
     def test_collect_cli_teacher_options_and_defaults(self):
         root = Path(__file__).resolve().parents[2]
@@ -124,7 +134,7 @@ class CliTests(unittest.TestCase):
         args = ["--mode", "collect", "--checkpoint", "fake", "--out", "out",
                 "--world-start", str(SEED), "--n", "1"]
         defaults = vars(module.parser().parse_args(args))
-        for key in ("vote_rule", "teacher_plays", "record_search", "search_options"):
+        for key in ("vote_rule", "teacher_plays", "record_search", "search_options", "exclude_action_prefixes"):
             self.assertNotIn(key, defaults)
         for rule in RULES:
             value = vars(module.parser().parse_args([*args, "--vote-rule", rule, "--teacher-plays", "--record-search"]))
@@ -134,10 +144,15 @@ class CliTests(unittest.TestCase):
         value = vars(module.parser().parse_args([*args, "--search-options", json.dumps(options)]))
         self.assertEqual(value["search_options"], options)
         validate_config(value)
+        prefixes = ["drink potion ", "discard potion "]
+        exclusions = ["--exclude-action-prefix", prefixes[0], "--exclude-action-prefix", prefixes[1]]
+        value = vars(module.parser().parse_args([*args, *exclusions]))
+        self.assertEqual(value["exclude_action_prefixes"], prefixes)
+        validate_config(value)
         configs = []
         summary = {key: 0 for key in ("completed", "faults", "cuts", "censored", "unstarted", "wins")}
         summary.update(event="done", status="completed", cohort_complete=True)
-        for extra in ([], ["--vote-rule", "best_line"], ["--vote-rule", "mean_value"]):
+        for extra in ([], ["--vote-rule", "best_line"], ["--vote-rule", "mean_value"], exclusions):
             with patch.object(module, "StudyPolicy"), \
                  patch.object(module, "run_collection", return_value=summary) as run, redirect_stdout(io.StringIO()):
                 module.main([*args, *extra])
@@ -145,6 +160,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(configs[0], defaults)
         self.assertEqual(configs[1], defaults)
         self.assertEqual(configs[2], {**defaults, "vote_rule": "mean_value"})
+        self.assertEqual(configs[3], {**defaults, "exclude_action_prefixes": prefixes})
 
     def test_panel_cli_accepts_multiple_receipted_directories_and_expected_grid(self):
         root = Path(__file__).resolve().parents[2]
@@ -274,6 +290,101 @@ class CollectionTests(LifecycleTests):
         self.assertEqual(first.queries, second.queries)
         self.assertEqual(len(first.queries), 12)
         self.assertEqual(first.detail_queries + second.detail_queries, [])
+        self.assertTrue(all("excluded_action_prefixes" not in sample for sample in baseline["labels"]))
+
+    def potion_states(self):
+        return [observation(), observation("combat", "BOSS", actions=[
+            {"index": 13, "description": "play Strike"},
+            {"index": 7, "description": "DrInK PoTiOn Fire Potion (slot 0)"},
+            {"index": 2, "description": "end turn"}]), self.states()[-1]]
+
+    def test_excluded_potion_cannot_win_pooled_vote(self):
+        search = {"chosen": 7, "edges": [
+            {"index": 7, "visits": 20, "evaluation_sum": 200., "mean_evaluation": 10.},
+            {"index": 13, "visits": 10, "evaluation_sum": 20., "mean_evaluation": 2.},
+            {"index": 2, "visits": 8, "evaluation_sum": 8., "mean_evaluation": 1.}]}
+        original = deepcopy(search)
+        baseline, _ = self.run_world(RootDetailsWorker(self.potion_states(), [search]),
+                                     vote_rule="pooled_mean", record_search=True)
+        self.assertEqual(baseline["labels"][1]["votes"], {7: 24})
+        worker = RootDetailsWorker(self.potion_states(), [search])
+        record, count = self.run_world(worker, vote_rule="pooled_mean", record_search=True,
+                                       exclude_action_prefixes=["drink potion "])
+        sample = record["labels"][1]
+        self.assertEqual((sample["label"], sample["votes"]), (13, {13: 24}))
+        self.assertEqual(sample["excluded_action_prefixes"], ["drink potion "])
+        self.assertNotIn("excluded_action_prefixes", record["labels"][0])
+        self.assertTrue(all([edge["index"] for edge in detail["edges"]] == [13, 2]
+                            for detail in sample["search_details"]))
+        self.assertEqual(votes_from_details(sample["search_details"], "pooled_mean"), sample["votes"])
+        self.assertEqual(sample["self_consistency"]["votes"], {13: 24})
+        self.assertEqual(worker.queries, [])
+        self.assertEqual(len(worker.detail_queries), 12)
+        self.assertEqual(search, original)
+        self.assertEqual(count, [1])
+
+    def test_best_line_excluded_choice_uses_most_visited_remaining_edge(self):
+        edges = [{"index": 7, "visits": 50, "evaluation_sum": 500., "mean_evaluation": 10.},
+                 {"index": 13, "visits": 8, "evaluation_sum": 80., "mean_evaluation": 10.},
+                 {"index": 2, "visits": 15, "evaluation_sum": 15., "mean_evaluation": 1.},
+                 {"index": 7, "visits": 5, "evaluation_sum": 50., "mean_evaluation": 10.}]
+        for chosen, expected in ((7, 2), (13, 13)):
+            with self.subTest(chosen=chosen):
+                worker = RootDetailsWorker(self.potion_states(), [{"chosen": chosen, "edges": edges}])
+                record, _ = self.run_world(worker, bank=False, teacher_plays=True, record_search=True,
+                                           exclude_action_prefixes=["DRINK potion "])
+                sample = record["labels"][1]
+                self.assertEqual((sample["label"], sample["votes"]), (expected, {expected: 24}))
+                self.assertTrue(all(detail["chosen"] == expected and len(detail["edges"]) == 2
+                                    for detail in sample["search_details"]))
+                self.assertEqual(sample["self_consistency"]["votes"], {expected: 24})
+                self.assertEqual(worker.played, [2, expected])
+                self.assertEqual(sample["source_action"], 13)
+                self.assertEqual(worker.queries, [])
+
+    def test_excluding_all_root_edges_abstains_and_champion_plays(self):
+        search = {"chosen": 7, "edges": [
+            {"index": 7, "visits": 10, "evaluation_sum": 10., "mean_evaluation": 1.}]}
+        for rule in RULES:
+            with self.subTest(rule=rule):
+                worker = RootDetailsWorker(self.potion_states(), [search])
+                record, count = self.run_world(worker, bank=False, teacher_plays=True,
+                    vote_rule=rule, record_search=True, exclude_action_prefixes=["drink potion "])
+                sample = record["labels"][1]
+                self.assertEqual((sample["label"], sample["votes"], sample["search_details"]), (None, {}, []))
+                self.assertEqual(sample["self_consistency"]["votes"], {})
+                self.assertEqual(sample["excluded_action_prefixes"], ["drink potion "])
+                self.assertNotIn("played_action", sample)
+                self.assertNotIn("played_by", sample)
+                self.assertNotIn("use_for_training", sample)
+                self.assertEqual(record["sampling"]["BOSS2:abstain"], 1)
+                self.assertEqual(worker.played, [2, 13])
+                self.assertEqual(count, [])
+
+    def test_excluded_searches_contribute_nothing_without_dropping_remaining_searches(self):
+        excluded = {"chosen": 7, "edges": [
+            {"index": 7, "visits": 10, "evaluation_sum": 10., "mean_evaluation": 1.}]}
+        remaining = {"chosen": 2, "edges": [
+            {"index": 2, "visits": 10, "evaluation_sum": 10., "mean_evaluation": 1.}]}
+        for rule in RULES:
+            with self.subTest(rule=rule):
+                worker = RootDetailsWorker(self.potion_states(), [excluded] * 4 + [remaining])
+                record, _ = self.run_world(worker, samples=8, self_consistency_every=0, vote_rule=rule,
+                    record_search=True, exclude_action_prefixes=["discard potion ", "drink potion "])
+                sample = record["labels"][1]
+                self.assertEqual((sample["label"], sample["votes"]), (2, {2: 1}))
+                self.assertEqual(len(sample["search_details"]), 1)
+                self.assertEqual(sample["search_details"][0]["future"], 5)
+
+    def test_exclude_action_prefixes_validation(self):
+        value = config(exclude_action_prefixes=["drink potion ", "discard potion "])
+        before = deepcopy(value)
+        validate_config(value)
+        self.assertEqual(value, before)
+        for prefixes in (None, [], "drink potion ", ("drink potion ",), {}, True, 1,
+                         [""], ["drink potion ", ""], [None], [1], [True], [[]]):
+            with self.subTest(prefixes=prefixes), self.assertRaisesRegex(ValueError, "exclude_action_prefixes"):
+                validate_config(config(exclude_action_prefixes=prefixes))
 
     def test_alternative_rules_use_details_with_original_seeds_and_repeat_path(self):
         for rule in RULES[1:]:
