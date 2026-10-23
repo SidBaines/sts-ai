@@ -9,7 +9,7 @@ everything is measured.
 
 | Player | Win rate | Evidence |
 |---|---|---|
-| Reward ablation, wins-only arm, iteration 12 (`reward_ablation_20261023/wins/iter_0012.pt`; out-of-combat PPO from the champion rewarded only for wins) | 28.3% on 16,384 unused worlds from 108,000,000,000 (4,632 against the champion's 4,372, p < 0.001) | Confirmed; awaiting Sid's promotion decision |
+| Reward ablation, wins-only arm, iteration 12 (`reward_ablation_20261023/wins/iter_0012.pt`; out-of-combat PPO from the champion rewarded only for wins) | 28.3% on 16,384 unused worlds from 108,000,000,000 (4,632 against the champion's 4,372, p < 0.001) | Confirmed; promotion decided after the 24-iteration comparison |
 | **Champion from 23 October, 09:58:** joint run 2's final checkpoint (`champion_c8553bc33e53.pt`, from `joint2_20261022/train/iter_0024.pt`; out-of-combat PPO from the previous champion with two gated combat refits) | 26.8% on 4,096 unused worlds from 107,000,000,000 (1,096 against the fourth continued training's 952, p < 0.001); 26.1% on unused worlds from 105,000,000,000 (1,071 against its same-seed control's 998, p = 0.022) | Confirmed; current default |
 | The fourth continued training's out-of-combat head with joint run 2's combat head (`joint2_20261022/factorial/c4_ooc_joint_combat.pt`) | 26.4% on the same 107,000,000,000 worlds (1,083; no clear difference from the champion, p = 0.69) | Confirmed; not promoted |
 | Fourth continued training's final checkpoint (`continued4_20261022/train/iter_0024.pt`; out-of-combat PPO from the 22 October champion) | 23.7% on 4,096 unused worlds from 104,000,000,000 (971 against that champion's 887, p = 0.005) | Confirmed; not promoted |

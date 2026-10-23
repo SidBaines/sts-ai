@@ -1,7 +1,6 @@
 # Status
 
-**Updated 23 October 2026, 18:30 BST.** Two experiments run; nothing waits for Sid
-except a promotion decision. Champion: `champion_c8553bc33e53.pt` (26.8% on
+**Updated 23 October 2026, 18:30 BST.** Two experiments run; nothing waits for Sid. Champion: `champion_c8553bc33e53.pt` (26.8% on
 unused worlds).
 
 - **[Reward ablation](experiments/2026-10-23-reward-ablation.md), extended
@@ -19,7 +18,8 @@ unused worlds).
   `value_refits_20261023/corpus/`), nearly done; fits and play tests follow.
   Code runs from worktree `nonllm-value-targets`.
 - **Promotion candidate:** the wins-only arm's iteration-12 checkpoint
-  (28.3% on 16,384 unused worlds against the champion's 26.7%); Sid's call.
+  (28.3% on 16,384 unused worlds against the champion's 26.7%). Sid will
+  decide after the 24-iteration comparison.
 - **Check or stop:** `scripts/rl/queue_runner.py status` or `cancel NAME`
   in `nonllm-large-batch` or `nonllm-boss-rares`. Dashboard:
   http://127.0.0.1:8795.
