@@ -42,6 +42,14 @@ Scope throughout: Ironclad, Ascension 0, Acts 1 to 3; Act 4 is out of scope.
 - **Teacher repeat agreement:** how often the teacher repeats its own choice
   when asked again with different reseeds. A reference for how noisy the
   labels are, not a strict ceiling.
+- **Value regret:** how much of the pooled teacher's value the student's top
+  action gives up: the best mean search value among moves the pooled
+  searches visited at least a tenth as often as the most-visited move,
+  minus the mean value of the student's move, in search evaluation points
+  (about 100 per HP in a won fight). Lower is better; it can be slightly
+  negative.
+- **Value targets:** a student target over those same moves proportional to
+  exp((move value − best value) / scale), instead of the teacher's vote.
 
 ## Training health
 
@@ -115,6 +123,7 @@ confirmation worlds apart.
 | 0.1.5.1 | Joint run 2 against its control, final comparison and two-by-two | 105,000,000,000 | 4,096 |
 | 0.1.5.1 | Reward ablation, comparison at 12 iterations | 108,000,000,000 | 16,384 |
 | 0.1.5.1 | Reward ablation, comparison at 24 iterations (only if 12 does not decide) | 109,000,000,000 | 16,384 |
+| 0.1.5.1 | Value-target students in the champion, play test (selection set) | 110,000,000,000 | 8,192 |
 | 0.1.5.1 | Probe worlds for the round 2 and round 3 fits (unlabelled, movement monitoring only) | 93,000,000,100; 93,000,000,200 | 8 each |
 | All | Out-of-combat PPO training worlds (`train_ooc.py`): 7,000,000,000 plus 500,000,000 per training seed plus 10,000,000 per iteration | 7,000,000,000 | games per iteration |
 
