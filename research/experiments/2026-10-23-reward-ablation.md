@@ -61,6 +61,7 @@ from the current champion? Part of the
   were checked on real games (with floor weight 0 every return is exactly
   ±1), and 1 plus 1 resumed iterations gave bit-identical weights to 2
   straight, so resuming to 24 is the same as running 24 from the start.
+
 Code: trainer options `--progress-floor-weight` and
 `--reset-return-normalizer` (commit 8a78301, run from worktree
 `nonllm-reward-ablation`; do not edit it). Data: run `reward_ablation_20261023` (local, worktree `nonllm-large-batch`).
