@@ -168,6 +168,19 @@ layers), with the same per-act pattern. Two different model classes level off
 at the same place, which points to the information both read (the same public
 observation) or to data volume, not to network capacity.
 
+**Where the champion and the pooled teacher disagree at bosses: potions
+most of all** (exploratory; the corpus records both the champion's own move
+and the teacher's choice at 96,260 labelled boss decisions). When the teacher
+chooses to drink a potion (11% of boss labels), the champion does the same 12%
+of the time, against about 53% for card plays and ending the turn.
+Disagreement is highest in the first turns of a fight (44 to 46% agreement on
+turns 0 to 2, 55% from turn 6) and at the Act 3 bosses (41 to 47%, Awakened
+One lowest). In the benchmark the pooled teacher drinks 3.9 potions per game
+at bosses; games with it playing the bosses use 10.4 potions in combat against
+8.7 when the champion plays everything, so it spends about 1.7 more per game.
+A teacher arm that may not drink potions would measure how much of its boss
+advantage is potion use.
+
 ## Conclusion
 
 The teacher's ceiling is not what holds the student back; imitation is.
