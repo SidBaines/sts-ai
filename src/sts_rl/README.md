@@ -284,6 +284,8 @@ the default probabilities sample other rooms too. Self-consistency repeats alway
 use `best_line` votes, regardless of `--vote-rule`. Defaults preserve the existing
 search and trajectory behavior.
 
+`--teacher-plays-prefix TEXT` (repeatable; config `teacher_plays_prefixes`) requires `--teacher-plays` and limits overrides to labels whose legal-action descriptions start with a prefix, ignoring case; other labels leave the champion's action in place, record `played_by: "champion"` and `played_action`, remain excluded from training, and count as `teacher_declined` instead of `teacher_played`; omitting it preserves existing behavior.
+
 `--exclude-action-prefix TEXT` (repeatable; config `exclude_action_prefixes`) removes teacher root edges by case-insensitive legal-action description prefix (for example, `"drink potion "`); `best_line` replaces an excluded choice with the most-visited remaining edge (lowest display index breaks ties), and searches with no remaining edges abstain.
 
 `--search-options JSON` (config key `search_options`) configures native searches

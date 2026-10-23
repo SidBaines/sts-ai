@@ -35,6 +35,9 @@ def parser():
     p.add_argument("--simulations", type=int, default=1000)
     p.add_argument("--vote-rule", choices=RULES, default=argparse.SUPPRESS, help="Default best_line")
     p.add_argument("--teacher-plays", action="store_true", default=argparse.SUPPRESS, help="Benchmark only; exclude corpus from training")
+    p.add_argument("--teacher-plays-prefix", dest="teacher_plays_prefixes", action="append",
+                   default=argparse.SUPPRESS, metavar="TEXT",
+                   help="Only play teacher labels matching a case-insensitive description prefix; requires --teacher-plays; repeatable")
     p.add_argument("--record-search", action="store_true", default=argparse.SUPPRESS, help="Save per-search diagnostics")
     p.add_argument("--search-options", type=json.loads, default=argparse.SUPPRESS,
                    help="Native search options as JSON; flat dict or default/encounter-group dicts")

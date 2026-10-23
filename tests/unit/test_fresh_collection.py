@@ -134,7 +134,8 @@ class CliTests(unittest.TestCase):
         args = ["--mode", "collect", "--checkpoint", "fake", "--out", "out",
                 "--world-start", str(SEED), "--n", "1"]
         defaults = vars(module.parser().parse_args(args))
-        for key in ("vote_rule", "teacher_plays", "record_search", "search_options", "exclude_action_prefixes"):
+        for key in ("vote_rule", "teacher_plays", "teacher_plays_prefixes", "record_search", "search_options",
+                    "exclude_action_prefixes"):
             self.assertNotIn(key, defaults)
         for rule in RULES:
             value = vars(module.parser().parse_args([*args, "--vote-rule", rule, "--teacher-plays", "--record-search"]))
@@ -149,10 +150,15 @@ class CliTests(unittest.TestCase):
         value = vars(module.parser().parse_args([*args, *exclusions]))
         self.assertEqual(value["exclude_action_prefixes"], prefixes)
         validate_config(value)
+        teacher_plays = ["--teacher-plays", "--teacher-plays-prefix", prefixes[0],
+                         "--teacher-plays-prefix", prefixes[1]]
+        value = vars(module.parser().parse_args([*args, *teacher_plays]))
+        self.assertEqual(value["teacher_plays_prefixes"], prefixes)
+        validate_config(value)
         configs = []
         summary = {key: 0 for key in ("completed", "faults", "cuts", "censored", "unstarted", "wins")}
         summary.update(event="done", status="completed", cohort_complete=True)
-        for extra in ([], ["--vote-rule", "best_line"], ["--vote-rule", "mean_value"], exclusions):
+        for extra in ([], ["--vote-rule", "best_line"], ["--vote-rule", "mean_value"], exclusions, teacher_plays):
             with patch.object(module, "StudyPolicy"), \
                  patch.object(module, "run_collection", return_value=summary) as run, redirect_stdout(io.StringIO()):
                 module.main([*args, *extra])
@@ -161,6 +167,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(configs[1], defaults)
         self.assertEqual(configs[2], {**defaults, "vote_rule": "mean_value"})
         self.assertEqual(configs[3], {**defaults, "exclude_action_prefixes": prefixes})
+        self.assertEqual(configs[4], {**defaults, "teacher_plays": True, "teacher_plays_prefixes": prefixes})
 
     def test_panel_cli_accepts_multiple_receipted_directories_and_expected_grid(self):
         root = Path(__file__).resolve().parents[2]
@@ -507,6 +514,7 @@ class CollectionTests(LifecycleTests):
                           sample["played_by"], sample["use_for_training"]), (7, 2, 7, "teacher", False))
         self.assertEqual(sample["played_action"], record["action_prefix"][len(sample["prefix"])])
         self.assertEqual(record["sampling"]["BOSS2:teacher_played"], 1)
+        self.assertNotIn("BOSS2:teacher_declined", record["sampling"])
         self.assertEqual(count, [1])
         class Factory(DetailsWorker):
             def __init__(self, **kwargs):
@@ -518,6 +526,54 @@ class CollectionTests(LifecycleTests):
             self.assertIs(summary["teacher_plays"], True)
             for name in ("summary.json", "completion.json"):
                 self.assertIs(json.loads((Path(directory)/name).read_text())["teacher_plays"], True)
+
+    def test_teacher_plays_prefixes_play_potion_label_by_index_ignoring_case(self):
+        worker = DetailsWorker(self.potion_states())
+        record, count = self.run_world(worker, bank=False, vote_rule="most_visited", teacher_plays=True,
+                                       teacher_plays_prefixes=["discard potion ", "DRINK potion "])
+        sample = record["labels"][1]
+        self.assertEqual(worker.played, [2, 7])
+        self.assertEqual(record["action_prefix"], [2, 7])
+        self.assertEqual((sample["label"], sample["source_action"], sample["played_action"],
+                          sample["played_by"], sample["use_for_training"]), (7, 13, 7, "teacher", False))
+        self.assertEqual(record["sampling"]["BOSS2:teacher_played"], 1)
+        self.assertNotIn("BOSS2:teacher_declined", record["sampling"])
+        self.assertEqual(count, [1])
+
+    def test_teacher_plays_prefixes_decline_card_label_and_step_champion_action(self):
+        states = self.potion_states()
+        states[1]["legal_actions"][1]["description"] = "play Defend"
+        for prefixes, played_by, action in ((None, "teacher", 7), (["drink potion "], "champion", 13)):
+            with self.subTest(prefixes=prefixes):
+                worker = DetailsWorker(states)
+                changes = {} if prefixes is None else {"teacher_plays_prefixes": prefixes}
+                record, count = self.run_world(worker, bank=False, vote_rule="most_visited",
+                                               teacher_plays=True, **changes)
+                sample = record["labels"][1]
+                self.assertEqual(worker.played, [2, action])
+                self.assertEqual(record["action_prefix"], [2, action])
+                self.assertEqual((sample["label"], sample["votes"], sample["source_action"]), (7, {7: 24}, 13))
+                self.assertEqual((sample["played_by"], sample["played_action"], sample["use_for_training"]),
+                                 (played_by, action, False))
+                self.assertEqual(sample["played_action"], record["action_prefix"][len(sample["prefix"])])
+                counted = "teacher_played" if prefixes is None else "teacher_declined"
+                absent = "teacher_declined" if prefixes is None else "teacher_played"
+                self.assertEqual(record["sampling"]["BOSS2:" + counted], 1)
+                self.assertNotIn("BOSS2:" + absent, record["sampling"])
+                self.assertEqual(count, [1])
+
+    def test_teacher_plays_prefixes_validation(self):
+        value = config(bank=False, teacher_plays=True, teacher_plays_prefixes=["drink potion ", "play "])
+        before = deepcopy(value)
+        validate_config(value)
+        self.assertEqual(value, before)
+        for prefixes in (None, [], "drink potion ", ("drink potion ",), {}, True, 1,
+                         [""], ["drink potion ", ""], [None], [1], [True], [[]]):
+            with self.subTest(prefixes=prefixes), self.assertRaisesRegex(ValueError, "teacher_plays_prefixes"):
+                validate_config(config(bank=False, teacher_plays=True, teacher_plays_prefixes=prefixes))
+        for changes in ({}, {"teacher_plays": False}):
+            with self.subTest(changes=changes), self.assertRaisesRegex(ValueError, "teacher_plays_prefixes requires teacher_plays"):
+                validate_config(config(bank=False, teacher_plays_prefixes=["drink potion "], **changes))
 
     def test_new_config_validation_accepts_legacy_and_rejects_invalid_options(self):
         original = config()

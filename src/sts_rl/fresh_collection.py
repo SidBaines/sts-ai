@@ -317,9 +317,18 @@ def play_world(worker, policy, seed, config, control, progress, source, label_co
                         if label is not None:
                             label_count(1)
                             if config.get("teacher_plays", False):
-                                action = attempted_action = label
-                                sample.update(played_by="teacher", played_action=action, use_for_training=False)
-                                sampling[key + ":teacher_played"] += 1
+                                plays_label = True
+                                prefixes = config.get("teacher_plays_prefixes")
+                                if prefixes is not None:
+                                    description = next(a["description"] for a in observation["legal_actions"]
+                                                       if a["index"] == label)
+                                    plays_label = description.casefold().startswith(
+                                        tuple(prefix.casefold() for prefix in prefixes))
+                                if plays_label:
+                                    action = attempted_action = label
+                                sample.update(played_by="teacher" if plays_label else "champion",
+                                              played_action=action, use_for_training=False)
+                                sampling[key + (":teacher_played" if plays_label else ":teacher_declined")] += 1
             after, _, terminated, truncated, info = worker.step(action)
             win = info.get("task_outcome") in {"act_clear", "victory"}
             metrics.transition(observation, action, after, win=win)
@@ -499,11 +508,12 @@ def run_collection(config, policy, *, worker_factory=None):
 
 def validate_config(config):
     validate_search_options(config.get("search_options"))
-    if "exclude_action_prefixes" in config:
-        prefixes = config["exclude_action_prefixes"]
-        if (not isinstance(prefixes, list) or not prefixes or
-                any(not isinstance(prefix, str) or not prefix for prefix in prefixes)):
-            raise ValueError("exclude_action_prefixes must be a non-empty list of non-empty strings")
+    for key in ("exclude_action_prefixes", "teacher_plays_prefixes"):
+        if key in config:
+            prefixes = config[key]
+            if (not isinstance(prefixes, list) or not prefixes or
+                    any(not isinstance(prefix, str) or not prefix for prefix in prefixes)):
+                raise ValueError(key + " must be a non-empty list of non-empty strings")
     validate_world_range(config["world_start"], config["n"])
     if config["mode"] not in {"eval", "collect"}:
         raise ValueError("mode must be eval or collect")
@@ -512,6 +522,8 @@ def validate_config(config):
     for key in ("teacher_plays", "record_search"):
         if not isinstance(config.get(key, False), bool):
             raise ValueError(key + " must be a bool")
+    if "teacher_plays_prefixes" in config and not config.get("teacher_plays", False):
+        raise ValueError("teacher_plays_prefixes requires teacher_plays true")
     if config.get("teacher_plays", False) and (config["mode"] != "collect" or not config["teacher_labels"]):
         raise ValueError("teacher_plays requires mode collect with teacher_labels true")
     if config.get("teacher_plays", False) and config["bank"]:
