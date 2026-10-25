@@ -1,6 +1,6 @@
 # Learning decisions with medium-effort reasoning
 
-**Status:** planned 23 October 2026. **Verdict:** medium effort is chosen; learning and full-game transfer remain untested.
+**Status:** planned 23 October 2026; on hold since 25 October. **Verdict:** not run. A review found that this design would probably end inconclusive, and [a staged replacement](../brainstorms/2026-10-25-getting-the-model-to-learn.md) awaits Sid's decisions.
 
 ## Question
 
@@ -136,6 +136,7 @@ controlled experiments.
 ## Log
 
 - 23 October: Sid selected medium effort and requested the next-step plan.
+- 25 October: put on hold after review. The unchanged model scores no better than always choosing the first menu option; combat teacher rewards are mostly near-ties, which group standard-deviation scaling amplifies; and the plan allows about 150 updates at a low LoRA learning rate. The proposed replacement starts with an overfit test on decisive out-of-combat states.
 
 Code: existing src/sts_llm/ at commit 4d30a8b; pilot launch configuration pending.
 Data: no pilot run or scientific training corpus has been created.

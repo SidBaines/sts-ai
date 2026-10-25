@@ -1,20 +1,25 @@
 # Status
 
-Nothing running. Medium reasoning effort selected on 23 October 2026.
+Nothing is running. Updated 25 October 2026.
 
-- Branch: codex/llm-throughput; core equals env-v0.1.5.1.
-- Next study: research/experiments/2026-10-23-medium-teacher-pilot.md.
-- Medium effort is approved. Other pilot settings and its allocation are proposed.
-- Immediate work: matched rollout/scoring checks, adapter refresh/cache handling,
-  then corpus preparation and baseline evaluation before teacher-feedback RL.
-- Proposed pilot cap: ten GPU-hours including new preflight and evaluations;
-  the previous speed-study allocation is already finished.
-- No new GPU allocation or learning run has been started for this plan.
-- Existing evidence: 52 LLM tests pass with Torch; environment 247 pass, 19 skip.
-  Teacher mechanics produced 16 valid responses and four nonzero updates;
-  the trained adapter's three real CLI decisions replay correctly.
-- Full-game outcome RL is implemented and unit-tested, with no learning run.
-- Completed run: k2_throughput_20261023; outputs and checkpoints are local.
-- RTX pod ra7v5afx03jcji stopped at 16:28 UTC; disk retained, timer cancelled.
-- Earlier A40 qccxnwlrjo151f returned not found at final lookup; setup logs
-  are local and no comparable throughput timing completed.
+- Branch: `codex/llm-throughput`, local only and not pushed. Its worktree is
+  `~/.codex/worktrees/llm-throughput/SlayTheSpireAI`. The core environment is
+  env-v0.1.5.1.
+- Local tag `archive/llm/pre-cli` marks the old `sts_ai` harness. It is not
+  pushed.
+- Laptop setup:
+  - The environment is `.venv-mlx/` in the worktree (PyTorch 2.13, Transformers
+    5.19, PEFT 0.21.2, mlx-lm 0.31.3).
+  - The MLX model is `data/models/k2-horizon-0.9b-mlx`, symlinked to the
+    Hugging Face cache.
+  - Mac runs are in `data/llm_runs/mac_local_20261025`.
+- RTX runs are in `data/llm_runs/k2_throughput_20261023` (local). The RTX pod
+  from 23 October no longer exists: `runpodctl` finds no pods.
+- The pilot is on hold until Sid decides the questions in
+  `research/brainstorms/2026-10-25-getting-the-model-to-learn.md`.
+- Environment bug for `main`: the out-of-combat text lists potions by count
+  rather than slot (`slaythespire.cpp` around line 849). Also for `main`:
+  `run_episode` swallows agent errors, so a CUDA out-of-memory error in the
+  clean CLI path becomes an "error" game.
+- Tests: the full suite passes 355 with 36 skipped (PyTorch, gym and fixture
+  extras). With PyTorch installed, the four LLM test modules pass 76 of 76.

@@ -35,3 +35,10 @@
 - **Zero-variance group fraction:** fraction of sampled groups whose action rewards provide no group-relative policy advantage; identical preferred actions and uninformative rewards can both produce flat groups.
 - **End-to-end training rate:** updated responses divided by total measured wall time, including generation, teacher lookup, old/reference scoring, updates, adapter refresh and checkpoint saving.
 - **Sampling/scoring mismatch:** difference between actual sampling log probabilities and recomputed token log probabilities under unchanged weights, measured over generated tokens with prompt/padding excluded.
+
+- **Decisive state:** a state where the teacher's most probable action leads the second by at least 0.3 probability. In the 128 prepared states: 42 of 48 out-of-combat states and 10 of 80 combat states.
+- **Top-1 agreement on decisive states:** the fraction of decisive states where a valid answer equals the teacher's most probable action; the proposed primary early-learning signal.
+- **Normalised teacher score:** (teacher probability of the chosen action − mean teacher probability over the legal menu) / (teacher's top probability − that mean); 0 for a random legal action, 1 for the teacher's choice, comparable across phases. Proposed, not yet reported.
+- **Menu-shuffle consistency:** the fraction of states where the model picks the same action content when the menu is presented in a different order. It detects position shortcuts. Proposed.
+- **Grouped generation:** generating one state's samples together as one batch, so every prompt in the batch has the same length; on the Mac this was 2–3× faster than mixing prompt lengths in one batch (the cause inside mlx-lm is not established).
+- **Equal-work probe (Mac):** the same fixed-token probe as above, run with mlx-lm with no stop tokens.

@@ -1,42 +1,62 @@
 # Learning full-game play with a reasoning language model
 
-Medium reasoning effort is selected for the first pilot; the next step is a bounded rollout check and teacher-feedback RL.
+No learning run has happened yet. The pilot plan is on hold pending Sid's
+decisions on a staged replacement. The laptop can run the training under MLX.
 
-The goal is an LLM controlling combat and out-of-combat decisions in Ironclad,
-Ascension 0, Acts 1–3, while we observe its reasoning changing during RL.
-No SFT or teacher-forced reasoning traces are used. There is no new LLM win-rate result.
+The goal is an LLM that makes combat and out-of-combat decisions for Ironclad,
+Ascension 0, Acts 1–3, while we watch how its reasoning changes during RL. No
+SFT or teacher-forced reasoning traces are used.
+
+## Current best
+
+There is no trained model. The unchanged K2-Horizon-0.9B scores no better than
+always choosing the first menu option on the teacher measure:
+- teacher probability 0.26–0.33 at medium effort, against 0.30 for
+  always-first;
+- 0.21 for a random legal action and 0.54 for the teacher's own top choice;
+- 64 states, independent samples from the RTX and Mac runs.
+
+It has won no games; none have been attempted. Definitions are in
+[metrics](metrics.md).
 
 ## Now
 
-Sid selected medium effort on 23 October. The
-[medium-effort pilot plan](experiments/2026-10-23-medium-teacher-pilot.md)
-records the proposed remaining settings, ten-GPU-hour budget and decision rules.
-Nothing is running; see [status](status.md).
-
-The [completed speed study](experiments/2026-10-23-llm-throughput.md) found
-useful batching and repeated-state cache gains, but the current Hugging Face
-training rollout is slower than dedicated vLLM serving. Sampling/scoring
-consistency and adapter refresh need checking before adopting faster rollouts.
+Nothing is running ([status](status.md)). Completed on 25 October:
+- A [review of the plan](brainstorms/2026-10-25-getting-the-model-to-learn.md):
+  - the model is at trivial-baseline skill;
+  - combat rewards are mostly near-ties, amplified by standard-deviation
+    scaling;
+  - the plan allowed only about 150 updates at a low LoRA learning rate.
+- The [Mac speed study](experiments/2026-10-25-mac-local-speed.md): an exact
+  MLX conversion, with an estimated 95 s per pilot iteration on the laptop.
+- Code fixes: full-game RL scores model-invalid games, errors are no longer
+  swallowed, held-out worlds are guarded, and few-world intervals are
+  withheld.
+- Corrected speed-check ledger rows, with trivial baselines added.
 
 ## Next
 
-1. Check matched rollout/update correctness and end-to-end throughput; freeze
-   one backend, precision, cache policy and pilot configuration before training.
-2. Prepare a broader frozen teacher-labelled corpus with disjoint training,
-   validation and test worlds; collect the unchanged model's baseline.
-3. Run the medium-effort teacher-feedback pilot with one shared adapter and
-   fixed checkpoint evaluations, retaining all generated reasoning.
-4. Compare the frozen candidate with the base model on untouched states and
-   a small paired full-game panel; report completion failures alongside wins.
-5. Design terminal-outcome RL after the bootstrap and full-game validity checks.
+1. Sid decides the questions at the end of the review: changing the prompt,
+   starting with out-of-combat decisions only, mean-centred advantages, and
+   hardware.
+2. Fix the potion line in the environment on `main`. Out-of-combat text lists
+   potions by count rather than slot.
+3. Write a small MLX teacher-feedback trainer: grouped generation and
+   checkpointed updates.
+4. Stage 0: a prompt A/B on the unchanged model on the laptop.
+5. Stage 1: an overfit test and learning-rate screen on 32 decisive
+   out-of-combat states.
+6. Stage 2: an out-of-combat pilot with a held-out probe every 10–20 steps.
 
 ## Evidence and open questions
 
-Teacher-feedback updates, checkpoint continuation and trained-adapter evaluation
-have bounded mechanics checks. Whole-game outcome RL is implemented and
-unit-tested, with no full-game learning run. Teacher probabilities are action
-preferences, not game values; transfer to full-game play is untested.
+- Teacher probabilities are the preferences of a 27–29%-win policy, not game
+  values, and transfer to full games is untested.
+- Open questions:
+  - Can the model learn decisive out-of-combat choices at all?
+  - Does its reasoning shrink under this reward?
+  - Is the champion's diffuse combat policy a usable combat teacher, or is a
+    search teacher needed?
 
-See [strategies](strategies.md), [results](results.md), [metrics](metrics.md),
-and [historical references](archive.md). Backend/precision acceptance and the
-remaining proposed pilot settings are the immediate open questions.
+See [strategies](strategies.md), [results](results.md), the [log](log.md) and
+[historical references](archive.md).
