@@ -530,6 +530,48 @@ class FreshTrainingTests(unittest.TestCase):
             dataset=preencode(sources,manifest,'combat','old')
             self.assertEqual({s:len(rows) for s,rows in dataset.items()},{s:6 for s in ('FIT','VALIDATION','TEST')})
 
+    def test_mixed_sources_ignore_search_recording_without_changing_targets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            first,source1=fixture(root/'legacy')
+            for recording in (False,True):
+                second,source2=fixture(root/str(recording),record_search=recording,
+                    config={'world_start':92_000_001_000,'record_search':recording})
+                individual=[freeze_manifest([data]) for data in (first,second)]
+                expected={meta['source_row_id']:meta for manifest in individual for meta in manifest['rows']}
+                for sources in ([first,second],[second,first]):
+                    for mixed_sampling in (False,True):
+                        with self.subTest(recording=recording,sources=sources,mixed_sampling=mixed_sampling):
+                            manifest=freeze_manifest(sources,mixed_sources=True,mixed_sampling=mixed_sampling)
+                            self.assertEqual(manifest['collected_total'],36)
+                            self.assertEqual({m['source_row_id']:m for m in manifest['rows']},expected)
+                            self.assertEqual(manifest['collection_sources'],{digest(s):s for s in (source1,source2)})
+                            self.assertEqual(len(list(iter_rows(sources,mixed_sources=True,
+                                                               mixed_sampling=mixed_sampling))),36)
+                    with self.assertRaisesRegex(ValueError,'Incompatible scientific source/provenance identities'):
+                        freeze_manifest(sources)
+
+    def test_mixed_sources_accept_absent_collector_options_only_at_no_effect_defaults(self):
+        defaults=(('vote_rule','best_line'),('teacher_plays',False),
+                  ('search_options',None),('search_options',{}),
+                  ('exclude_action_prefixes',None),('exclude_action_prefixes',[]),
+                  ('teacher_plays_prefixes',None),('teacher_plays_prefixes',[]))
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            first,_=fixture(root/'legacy')
+            for i,(key,value) in enumerate(defaults):
+                second,source=fixture(root/str(i),config={'world_start':92_000_001_000,key:value})
+                original=deepcopy(source)
+                for sources in ([first,second],[second,first]):
+                    for mixed_sampling in (False,True):
+                        with self.subTest(key=key,value=value,sources=sources,mixed_sampling=mixed_sampling):
+                            manifest=freeze_manifest(sources,mixed_sources=True,mixed_sampling=mixed_sampling)
+                            self.assertEqual(manifest['collected_total'],36)
+                            self.assertEqual(manifest['collection_sources'][digest(source)],original)
+                            self.assertEqual(len(list(iter_rows(sources,mixed_sources=True,
+                                                               mixed_sampling=mixed_sampling))),36)
+                self.assertEqual(source,original)
+
     def test_mixed_sources_reject_other_scientific_differences_by_field(self):
         config={'teacher_probabilities':{'BOSS1':.5},'samples':4,'simulations':50}
         changes=(
@@ -542,6 +584,11 @@ class FreshTrainingTests(unittest.TestCase):
             ({'config':{'teacher_probabilities':{'BOSS2':0.5},'samples':4.0}},'config.samples'),
             ({'config':{'new_scientific_setting':True}},'config.new_scientific_setting'),
             ({'config':{'vote_rule':'pooled_mean'}},'config.vote_rule'),
+            ({'config':{'vote_rule':None}},'config.vote_rule'),
+            ({'config':{'teacher_plays':0}},'config.teacher_plays'),
+            ({'config':{'search_options':{'evaluation':1}}},'config.search_options'),
+            ({'config':{'exclude_action_prefixes':['drink potion ']}},'config.exclude_action_prefixes'),
+            ({'config':{'teacher_plays_prefixes':['drink potion ']}},'config.teacher_plays_prefixes'),
             ({'config':{'relabel_vote_rule':'pooled_mean'}},'config.relabel_vote_rule'),
             ({'environment_version':'0.1.6'},'provenance.environment_version'),
             ({'observation_version':'sts_env_public_v3'},'provenance.observation_version'),
@@ -574,22 +621,25 @@ class FreshTrainingTests(unittest.TestCase):
                 freeze_manifest([data],mixed_sources=True)
 
     def test_mixed_sources_off_keeps_single_source_manifest_and_scientific_digest(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            data,source=fixture(Path(tmp))
-            manifest=freeze_manifest([data])
-            self.assertEqual(manifest,freeze_manifest([data],mixed_sources=False))
-            self.assertEqual(manifest,freeze_manifest([data],mixed_sampling=False))
-            self.assertNotIn('mixed_sources',manifest)
-            self.assertNotIn('mixed_sampling',manifest)
-            self.assertNotIn('teacher_probability_profiles',manifest)
-            launch=json.loads(Path(source['launch']['path']).read_text())
-            legacy_config={k:v for k,v in source['config'].items() if k not in {
-                'out','n','world_start','workers','deadline_utc','max_labels'}}
-            legacy_identity=digest({'policy':source['policy'],'native':launch['native'],'config':legacy_config,
-                                    'source_archive_sha256':launch['source_archive']['sha256']})
-            self.assertEqual(validate_source(source)[0],legacy_identity)
-            self.assertEqual({m['source_identity'] for m in manifest['rows']},{legacy_identity})
-            self.assertEqual(manifest['data_identity'],digest({k:v for k,v in manifest.items() if k!='data_identity'}))
+        for config in ({},{'record_search':True},
+                       {'record_search':False,'vote_rule':'best_line','teacher_plays':False,
+                        'search_options':{},'exclude_action_prefixes':[],'teacher_plays_prefixes':[]}):
+            with self.subTest(config=config),tempfile.TemporaryDirectory() as tmp:
+                data,source=fixture(Path(tmp),config=config)
+                manifest=freeze_manifest([data])
+                self.assertEqual(manifest,freeze_manifest([data],mixed_sources=False))
+                self.assertEqual(manifest,freeze_manifest([data],mixed_sampling=False))
+                self.assertNotIn('mixed_sources',manifest)
+                self.assertNotIn('mixed_sampling',manifest)
+                self.assertNotIn('teacher_probability_profiles',manifest)
+                launch=json.loads(Path(source['launch']['path']).read_text())
+                legacy_config={k:v for k,v in source['config'].items() if k not in {
+                    'out','n','world_start','workers','deadline_utc','max_labels'}}
+                legacy_identity=digest({'policy':source['policy'],'native':launch['native'],'config':legacy_config,
+                                        'source_archive_sha256':launch['source_archive']['sha256']})
+                self.assertEqual(validate_source(source)[0],legacy_identity)
+                self.assertEqual({m['source_identity'] for m in manifest['rows']},{legacy_identity})
+                self.assertEqual(manifest['data_identity'],digest({k:v for k,v in manifest.items() if k!='data_identity'}))
 
     def test_mixed_sampling_off_keeps_legacy_manifest_snapshots(self):
         # Fixed raw-reader output makes complete pre-option manifest digests reproducible.

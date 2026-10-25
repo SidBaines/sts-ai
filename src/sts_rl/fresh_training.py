@@ -267,9 +267,18 @@ def public_surface(source, prov):
 
 
 def _mixed_source_contract(source, prov, launch, *, mixed_sampling=False):
-    # By default, only the collecting champion (policy and the collector's checkpoint
-    # path, each still validated per source) and archived Python bytes may differ.
-    config = {k:v for k,v in _scientific_collection_config(source['config']).items() if k != 'checkpoint'}
+    # The champion and archived Python bytes may differ, with each source still
+    # validated separately. Search recording adds diagnostics, not different votes.
+    config = {k:v for k,v in _scientific_collection_config(source['config']).items()
+              if k not in {'checkpoint', 'record_search'}}
+    # Match older collectors that omitted these options to explicit no-effect
+    # defaults. Normalize only this comparison, preserving source/manifest identities.
+    for key, defaults in {'vote_rule': ('best_line',), 'teacher_plays': (False,),
+                          'search_options': (None, {}), 'exclude_action_prefixes': (None, []),
+                          'teacher_plays_prefixes': (None, [])}.items():
+        if key in config and any(type(config[key]) is type(default) and config[key] == default
+                                 for default in defaults):
+            config.pop(key)
     if mixed_sampling:
         # Sampling selects states to label; it does not change their teacher targets.
         config.pop('teacher_probabilities', None)
