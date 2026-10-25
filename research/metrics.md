@@ -9,8 +9,8 @@
 - **Reasoning effort:** the model's low, medium or high template setting. It is not a measured token budget.
 - **Concurrency:** number of simultaneous client requests to one server; the server scheduler determines actual decode batch size.
 - **Prefix caching:** server reuse of earlier prompt computations. Repeated-prompt throughput is a distinct condition from fresh-prompt throughput.
-- **Teacher agreement:** matching a separately stored teacher action; diagnostic only, not game correctness.
-- **Confidence intervals:** bootstrap over whole source worlds when reporting paired decision differences; throughput differences additionally need repeated timed batches.
+- **Teacher top-choice agreement:** a valid answer equal to the teacher's most probable action; invalid answers count as disagreement. Diagnostic only, not game correctness.
+- **Confidence intervals:** bootstrap over whole source worlds when reporting paired decision differences, and no interval with fewer than 10 worlds (a percentile bootstrap over a handful of worlds is far too narrow). Throughput differences additionally need repeated timed batches.
 
 - **Training generation:** synchronous Hugging Face generation under the current unmerged LoRA adapter, with full-support sampling. It is a separate execution path from vLLM serving.
 - **Update rate:** actual AdamW forward/backward steps on a fixed completion cohort, with one warmup step excluded. Synthetic advantages test throughput, not learning.
@@ -27,6 +27,11 @@
 - **Reasoning tokens:** generated content tokens before the first reasoning closer, excluding control tokens and final JSON. An unclosed capped trace is an observed lower bound, reported separately.
 - **Pilot panels:** training, validation and untouched-test public states split by whole world; proposed counts and sampling are defined in the medium-effort pilot page. The paired game panel uses separately recorded worlds and reports every outcome category.
 - **Teacher probability score:** the frozen teacher's probability for a valid chosen action, or zero for invalid/capped evaluation output. It differs from the proposed training reward, which penalizes invalid/capped output with -1.
+- **Random legal action baseline:** the teacher probability expected from choosing uniformly among the current menu's legal options; equal to the mean of one over the menu size, because the teacher's probabilities sum to one over the menu.
+- **Always-first baseline:** always choosing the first option of the current menu (index 0), scored the same way. Model arms are compared with it state by state.
+- **Teacher top-choice baseline:** the teacher's own most probable action on each state; the highest teacher probability score attainable there.
+- **First-option rate:** the fraction of valid answers that choose the first menu option.
+- **Valid-pairs-only sensitivity:** the teacher probability averaged over valid answers only, keeping a state only when both compared arms have a valid answer. It checks whether invalid answers scored as zero drive a comparison; the zero-scored version stays the main result.
 - **Zero-variance group fraction:** fraction of sampled groups whose action rewards provide no group-relative policy advantage; identical preferred actions and uninformative rewards can both produce flat groups.
 - **End-to-end training rate:** updated responses divided by total measured wall time, including generation, teacher lookup, old/reference scoring, updates, adapter refresh and checkpoint saving.
 - **Sampling/scoring mismatch:** difference between actual sampling log probabilities and recomputed token log probabilities under unchanged weights, measured over generated tokens with prompt/padding excluded.
