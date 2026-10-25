@@ -29,13 +29,14 @@ training setup, the headroom and the options.
 
 ## Now
 
-Running ([status](status.md)): [hybrid targets](experiments/2026-10-25-hybrid-targets.md),
-value targets on new rows and votes on the older corpora. Latest results:
+Nothing running ([status](status.md)). Latest results:
 - [Value-target refits](experiments/2026-10-23-value-target-refits.md):
   fitting refits to the teacher's move values instead of its votes adds about
   6 points of wins on the same data, and these refits pass the Act 3 boss far
   more often than the champion (58 to 61% against 51%), though they lose more
   early fights.
+- [Hybrid targets](experiments/2026-10-25-hybrid-targets.md): mixing value
+  targets with votes from the older corpora in one fit was worse than either.
 - [Reward ablation](experiments/2026-10-23-reward-ablation.md): dropping the
   floor reward helped for 12 iterations but not over 24; keep it. Its
   24-iteration run became the champion.

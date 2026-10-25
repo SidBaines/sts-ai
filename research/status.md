@@ -1,17 +1,10 @@
 # Status
 
-**Updated 25 October 2026, 10:56 GMT.** Hybrid-target fits run. Champion:
+**Updated 25 October 2026, 11:58 GMT.** Nothing running. Champion:
 `champion_4058cbf0e271.pt` (promoted by Sid on 25 October; 29.4% on unused
 worlds), kept with earlier champions in `data/rl_runs/champions/` (worktree
 `nonllm-large-batch`).
 
-- **[Hybrid targets](experiments/2026-10-25-hybrid-targets.md):** two fits
-  (`vr-fit-hybrid-s1`, `-s2`, `nonllm-boss-rares` queue; output
-  `value_refits_20261023/fit_hybrid_seed*`). The detached watcher
-  `play_hybrid.sh` (session scratchpad, `value_refits/`, log
-  `play_hybrid.log`) splices each into the champion and plays 8,192 worlds
-  from 111,000,000,000; it reports failures. Code runs from worktree
-  `nonllm-hybrid-targets` (do not edit it).
 - **Queues:** idle runners in `nonllm-large-batch` and `nonllm-boss-rares`
   (`scripts/rl/queue_runner.py status`), restarted on 25 October so their
   stall watchdog also counts `fresh_collect.py`'s progress file.
@@ -28,4 +21,5 @@ worlds), kept with earlier champions in `data/rl_runs/champions/` (worktree
 
 ## Next
 
-Record the hybrid-target play tests.
+With Sid: label more of the champion's fights with search statistics for
+value-target refits on a bigger corpus.

@@ -66,6 +66,10 @@ so the network plays well without search.
   vote-target refits by about 6 points of wins and pass the Act 3 boss far
   more often than any other head (58 to 61% against 51 to 54%), but lose more
   early fights; overall they match today's recipe on three times the data.
+- [Hybrid targets](experiments/2026-10-25-hybrid-targets.md) (25 October):
+  value targets on new rows plus votes on older corpora in one fit was worse
+  than either alone; value targets need a corpus fully labelled with search
+  statistics.
 - Pages: [combat PPO and early imitation](experiments/2026-10-13-combat-ppo.md),
   [overnight tests](experiments/2026-10-14-overnight-tests.md),
   [fresh start](experiments/2026-10-15-fresh-start.md),
