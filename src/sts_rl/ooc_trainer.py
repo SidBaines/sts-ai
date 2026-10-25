@@ -87,6 +87,7 @@ class OOCTrainConfig:
     micro_batch: int = 1024         # PPO forward/backward chunk (same update, bounded activation memory)
     collectors: int = 1             # >1: data-parallel collector processes (workers split between them)
     update_threads: int = 0         # torch threads for the PPO update (0: same as threads)
+    update_device: str = "cpu"      # cpu or mps; collection and diagnostics stay on CPU
     threads: int = 2
     notes: str = ""
 
@@ -480,7 +481,20 @@ def _follow_combat(model: torch.nn.Module, path: str, current_sha256: str,
     return sha256
 
 
+def _move_optimizer_state(optimizer: torch.optim.Optimizer, device: str) -> None:
+    """Move AdamW moments with the model, retaining its CPU scalar step counters."""
+    for state in optimizer.state.values():
+        for key, value in state.items():
+            if isinstance(value, torch.Tensor):
+                state[key] = value.to("cpu" if key == "step" else device)
+
+
 def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
+    if cfg.update_device not in {"cpu", "mps"}:
+        raise ValueError("update_device must be cpu or mps")
+    if cfg.update_device == "mps" and not torch.backends.mps.is_available():
+        raise ValueError("update_device='mps' requires an available MPS backend "
+                         "(torch.backends.mps.is_available() is False)")
     if cfg.train_combat and cfg.combat_follow is not None:
         raise ValueError("train_combat and combat_follow cannot be used together")
     if cfg.critic_gradient not in {"shared", "detached"}:
@@ -667,9 +681,18 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 torch.set_num_threads(cfg.update_threads)
             if cfg.health_every and iteration % cfg.health_every == 0:
                 record["grad_cosine_half"] = gradient_cosine(model, update_forward, kept, rng=rng, chunk=cfg.micro_batch)
-            update = update_ppo(model, flat, collate=collate_public, forward=update_forward, config=ppo, device="cpu",
-                                seed=cfg.seed * 1000 + iteration, optimizer=optimizer,
-                                micro_batch=cfg.micro_batch, return_scale=return_scale, entropy_weights=entropy_weights)
+            try:
+                if cfg.update_device != "cpu":
+                    _move_optimizer_state(optimizer, cfg.update_device)
+                update = update_ppo(model, flat, collate=collate_public, forward=update_forward, config=ppo,
+                                    device=cfg.update_device, seed=cfg.seed * 1000 + iteration, optimizer=optimizer,
+                                    micro_batch=cfg.micro_batch, return_scale=return_scale, entropy_weights=entropy_weights)
+            finally:
+                if cfg.update_device != "cpu":
+                    # Collectors, diagnostics, evaluation and both checkpoint
+                    # formats retain the existing CPU-only contract, even on failure.
+                    model.cpu()
+                    _move_optimizer_state(optimizer, "cpu")
             torch.set_num_threads(cfg.threads)
             record["update_seconds"] = time.time() - update_started
             optimizer = update.pop("optimizer")
