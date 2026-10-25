@@ -266,6 +266,7 @@ Release 0.1.6 fixes two faults:
   writing the trace's end record. `sts-env evaluate` counts errors by source
   and accepts `--stop-on-agent-error`.
 
-The observation label advances to `sts_env_public_v4`. Game logic, menus,
+The patch also adds the `<algorithm>` includes that GCC 15 requires; the macOS
+binary is unchanged. The observation label advances to `sts_env_public_v4`. Game logic, menus,
 rewards and the trace schema are unchanged. See
 [the release record](release_v0.1.6.md).

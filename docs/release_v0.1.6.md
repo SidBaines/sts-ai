@@ -5,7 +5,8 @@ Release 0.1.6 fixes two faults found by the LLM workstream on 25 October 2026:
 - `run_episode` recorded agent errors as if the simulator had failed.
 
 The out-of-combat observation text changes, so the public observation label
-advances to `sts_env_public_v4`. Game logic, menus, rewards and the trace
+advances to `sts_env_public_v4`.
+The release also restores the Linux build, which GCC 15 broke. Game logic, menus, rewards and the trace
 schema are unchanged.
 
 ## Changes
@@ -36,6 +37,15 @@ schema are unchanged.
     raised this way, and they are never losses.
   - `sts-env evaluate` reports `error_sources` and accepts
     `--stop-on-agent-error`.
+- **Linux build with GCC 15.**
+  - The fault: GitHub's `ubuntu-latest` runner moved to GCC 15.2, which
+    rejects eight upstream simulator sources. They call `std::sort`,
+    `std::stable_sort`, `std::find` or `std::find_if` without including
+    `<algorithm>`. Linux CI had failed for this reason since 20 October,
+    including for `env-v0.1.5.1`.
+  - The fix: the patch adds `#include <algorithm>` to those files.
+  - Impact: none on behaviour. The macOS binary is byte-identical with and
+    without these lines.
 - **Tooling.** `scripts/benchmark_env_step.py --record-fixture PATH` records
   the step-regression fixture. The fixture is now
   `tests/fixtures/env_step_reference.json`, recorded from this release.
@@ -57,12 +67,17 @@ Built on 25 October 2026 from the unchanged upstream pin
 Apple clang 21.0.0 and Python 3.12.13 on macOS arm64, in an isolated `.venv`.
 
 - **Patch.** SHA256
-  `cb182a71076c6c55cbd8f84f824c20cf3a4c520c85b00778317d1adc7ceeb0d7`. It applies
+  `71a779eab2991c2a1829a5d23c1f8d3dc320afd941d581bb3ec03816bdf3185c`. It applies
   to a fresh upstream checkout and reverse-applies to the build tree. Apart
-  from shifted hunk line numbers, the patch diff is only the potion-line change.
+  from shifted hunk line numbers, the patch diff is the potion-line change
+  plus eight `#include <algorithm>` lines.
+- **GCC 15.** Under GCC 15.3 (the `gcc:15` Docker image), all 29 simulator
+  sources and both binding files pass a full syntax check.
 - **Native binary.** SHA256
   `b279577747e408fe8d939814217f58aa2d06ef9aa5e0c2ffa59052b64f831155`. A second
   build from a fresh copy of the pinned source produced the identical binary.
+  Adding the GCC 15 includes left it byte-identical, so the checks below
+  apply to the final patch.
 - **Only the potion line changed.** The 0.1.5.1 step fixture covers 8 worlds
   and 1,883 decisions. Replayed on the new build, with the new potion line
   converted back to the old count-based format, every observation, info,

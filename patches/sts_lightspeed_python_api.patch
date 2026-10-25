@@ -2057,10 +2057,14 @@ index ffa449b..711bb31 100644
          void stepOutOfCombatPolicy(GameContext &gc);
          void cardSelectPolicy(GameContext &gc);
 diff --git a/src/combat/Actions.cpp b/src/combat/Actions.cpp
-index 93db96f..e8360ec 100644
+index 93db96f..b2e6caf 100644
 --- a/src/combat/Actions.cpp
 +++ b/src/combat/Actions.cpp
-@@ -5,6 +5,9 @@
+@@ -2,9 +2,13 @@
+ // Created by gamerpuppy on 7/4/2021.
+ //
+
++#include <algorithm>
  #include "combat/Actions.h"
  #include "combat/BattleContext.h"
  #include "game/Game.h"
@@ -2070,7 +2074,7 @@ index 93db96f..e8360ec 100644
 
  using namespace sts;
 
-@@ -564,7 +567,31 @@ Action Actions::PutRandomCardsInDrawPile(CardType type, int count) {
+@@ -564,7 +568,31 @@ Action Actions::PutRandomCardsInDrawPile(CardType type, int count) {
  Action Actions::DiscoveryAction(CardType type, int amount) {
      return {[=] (BattleContext &bc) {
          bc.haveUsedDiscoveryAction = true;
@@ -2104,10 +2108,15 @@ index 93db96f..e8360ec 100644
  }
 
 diff --git a/src/combat/BattleContext.cpp b/src/combat/BattleContext.cpp
-index 965faef..3e74311 100644
+index 965faef..32a5757 100644
 --- a/src/combat/BattleContext.cpp
 +++ b/src/combat/BattleContext.cpp
-@@ -6,12 +6,52 @@
+@@ -2,16 +2,57 @@
+ // Created by gamerpuppy on 7/4/2021.
+ //
+
++#include <algorithm>
+ #include "combat/BattleContext.h"
  #include "game/GameContext.h"
  #include "game/Game.h"
 
@@ -2160,7 +2169,7 @@ index 965faef..3e74311 100644
 
  // assume all bc fields have just been initialized by in class member initializers
  void BattleContext::init(const GameContext &gc) {
-@@ -21,6 +61,7 @@ void BattleContext::init(const GameContext &gc) {
+@@ -21,6 +62,7 @@ void BattleContext::init(const GameContext &gc) {
  void BattleContext::init(const GameContext &gc, MonsterEncounter encounterToInit) {
      undefinedBehaviorEvoked = false;
      haveUsedDiscoveryAction = false;
@@ -2168,7 +2177,7 @@ index 965faef..3e74311 100644
      seed = gc.seed;
      floorNum = gc.floorNum;
      encounter = encounterToInit;
-@@ -49,6 +90,7 @@ void BattleContext::init(const GameContext &gc, MonsterEncounter encounterToInit
+@@ -49,6 +91,7 @@ void BattleContext::init(const GameContext &gc, MonsterEncounter encounterToInit
      potionCount = gc.potionCount;
      potionCapacity = gc.potionCapacity;
      potions = gc.potions;
@@ -2176,7 +2185,7 @@ index 965faef..3e74311 100644
 
      player.curHp = gc.curHp;
      player.maxHp = gc.maxHp;
-@@ -732,9 +774,19 @@ void BattleContext::executeActions() {
+@@ -732,9 +775,19 @@ void BattleContext::executeActions() {
                  break;
              }
 
@@ -2199,7 +2208,7 @@ index 965faef..3e74311 100644
          }
 
          if (inputState != InputState::EXECUTING_ACTIONS) {
-@@ -1283,7 +1335,7 @@ void BattleContext::useSkillCard() {
+@@ -1283,7 +1336,7 @@ void BattleContext::useSkillCard() {
              break;
 
          case CardId::DISCOVERY:
@@ -2208,7 +2217,7 @@ index 965faef..3e74311 100644
              addToBot(Actions::DiscoveryAction(CardType::INVALID, 1));
              break;
 
-@@ -1875,10 +1927,19 @@ void BattleContext::onUsePowerCard() {
+@@ -1875,10 +1928,19 @@ void BattleContext::onUsePowerCard() {
          mummifiedHandOnUsePower();
      }
 
@@ -2232,7 +2241,7 @@ index 965faef..3e74311 100644
  }
 
  void BattleContext::onUseStatusOrCurseCard() {
-@@ -2232,13 +2293,17 @@ void BattleContext::obtainPotion(Potion p) {
+@@ -2232,13 +2294,17 @@ void BattleContext::obtainPotion(Potion p) {
  }
 
  void BattleContext::discardPotion(int idx) {
@@ -2251,7 +2260,7 @@ index 965faef..3e74311 100644
      discardPotion(idx);
 
      // todo - dont need to add to bot because always will have nothing in actionQueue?
-@@ -2429,9 +2494,7 @@ void BattleContext::drinkPotion(int idx, int target) {
+@@ -2429,9 +2495,7 @@ void BattleContext::drinkPotion(int idx, int target) {
          case Potion::EMPTY_POTION_SLOT:
          case Potion::FAIRY_POTION:
          default:
@@ -2262,7 +2271,7 @@ index 965faef..3e74311 100644
      }
 
  }
-@@ -2735,7 +2798,7 @@ int BattleContext::calculateCardDamage(const CardInstance &card, int targetIdx,
+@@ -2735,7 +2799,7 @@ int BattleContext::calculateCardDamage(const CardInstance &card, int targetIdx,
      }
 
      if (monster.hasStatus<MS::INTANGIBLE>()) {
@@ -2271,6 +2280,30 @@ index 965faef..3e74311 100644
      }
 
      return std::max(0, static_cast<int>(damage));
+diff --git a/src/combat/CardInstance.cpp b/src/combat/CardInstance.cpp
+index 2bd9c9d..7520e78 100644
+--- a/src/combat/CardInstance.cpp
++++ b/src/combat/CardInstance.cpp
+@@ -2,6 +2,7 @@
+ // Created by gamerpuppy on 7/4/2021.
+ //
+
++#include <algorithm>
+ #include "combat/CardInstance.h"
+
+ #include "combat/BattleContext.h"
+diff --git a/src/combat/CardManager.cpp b/src/combat/CardManager.cpp
+index e46d0cc..64733f5 100644
+--- a/src/combat/CardManager.cpp
++++ b/src/combat/CardManager.cpp
+@@ -2,6 +2,7 @@
+ // Created by gamerpuppy on 7/24/2021.
+ //
+
++#include <algorithm>
+ #include "combat/CardManager.h"
+ #include "combat/BattleContext.h"
+
 diff --git a/src/combat/Monster.cpp b/src/combat/Monster.cpp
 index 95c005d..dc66ce3 100644
 --- a/src/combat/Monster.cpp
@@ -2308,10 +2341,18 @@ index 95c005d..dc66ce3 100644
          bc.addToBot(Actions::DebuffEnemy<MS::VULNERABLE>(idx, 2, false) );
      }
 diff --git a/src/combat/MonsterSpecific.cpp b/src/combat/MonsterSpecific.cpp
-index f6f6c4a..2ea9d3b 100644
+index f6f6c4a..a64f2b0 100644
 --- a/src/combat/MonsterSpecific.cpp
 +++ b/src/combat/MonsterSpecific.cpp
-@@ -887,6 +887,10 @@ void Monster::takeTurn(BattleContext &bc) {     // todo, maybe for monsters that
+@@ -2,6 +2,7 @@
+ // Created by gamerpuppy on 8/21/2021.
+ //
+
++#include <algorithm>
+ #include "combat/Monster.h"
+ #include "game/Random.h"
+ #include "combat/BattleContext.h"
+@@ -887,6 +888,10 @@ void Monster::takeTurn(BattleContext &bc) {     // todo, maybe for monsters that
 
          case MMID::LAGAVULIN_SLEEP:
              if (bc.turn == 2 || !hasStatus<MS::ASLEEP>()) {
@@ -2568,10 +2609,18 @@ index 551623d..7b4e762 100644
 -
 -
 diff --git a/src/sim/search/BattleScumSearcher2.cpp b/src/sim/search/BattleScumSearcher2.cpp
-index 79eccf9..d715863 100644
+index 79eccf9..8c909bf 100644
 --- a/src/sim/search/BattleScumSearcher2.cpp
 +++ b/src/sim/search/BattleScumSearcher2.cpp
-@@ -73,7 +73,14 @@ void search::BattleScumSearcher2::step() {
+@@ -2,6 +2,7 @@
+ // Created by keega on 9/18/2021.
+ //
+
++#include <algorithm>
+ #include "sim/search/BattleScumSearcher2.h"
+ #include "sim/search/ExpertKnowledge.h"
+
+@@ -73,7 +74,14 @@ void search::BattleScumSearcher2::step() {
              return;
 
          } else {
@@ -2587,7 +2636,7 @@ index 79eccf9..d715863 100644
              auto &edgeTaken = curNode.edges[selectIdx];
 
  //            edgeTaken.action.printDesc(std::cout, curState) << std::endl;
-@@ -144,6 +151,22 @@ int search::BattleScumSearcher2::selectBestEdgeToSearch(const search::BattleScum
+@@ -144,6 +152,22 @@ int search::BattleScumSearcher2::selectBestEdgeToSearch(const search::BattleScum
      return bestEdge;
  }
 
@@ -2610,7 +2659,7 @@ index 79eccf9..d715863 100644
  int search::BattleScumSearcher2::selectFirstActionForLeafNode(const search::BattleScumSearcher2::Node &leafNode) {
      auto dist = std::uniform_int_distribution<int>(0, static_cast<int>(leafNode.edges.size())-1);
      return dist(randGen);
-@@ -151,13 +174,18 @@ int search::BattleScumSearcher2::selectFirstActionForLeafNode(const search::Batt
+@@ -151,13 +175,18 @@ int search::BattleScumSearcher2::selectFirstActionForLeafNode(const search::Batt
 
  void search::BattleScumSearcher2::playoutRandom(BattleContext &state, std::vector<Action> &actionStack) {
      Node tempNode; // temp
@@ -2633,7 +2682,7 @@ index 79eccf9..d715863 100644
          }
 
          auto dist = std::uniform_int_distribution<int>(0, static_cast<int>(tempNode.edges.size())-1);
-@@ -267,7 +295,13 @@ void search::BattleScumSearcher2::enumeratePotionActions(search::BattleScumSearc
+@@ -267,7 +296,13 @@ void search::BattleScumSearcher2::enumeratePotionActions(search::BattleScumSearc
      for (int pIdx = 0; pIdx < bc.potionCapacity; ++pIdx) {
 
          const auto p = bc.potions[pIdx];
@@ -2736,10 +2785,15 @@ index 8c977ee..ad6d79b 100644
 
      for (int i = 0; i < r.relicCount; ++i) {
 diff --git a/src/sim/search/ScumSearchAgent2.cpp b/src/sim/search/ScumSearchAgent2.cpp
-index 53aa5d2..2914185 100644
+index 53aa5d2..8ff7667 100644
 --- a/src/sim/search/ScumSearchAgent2.cpp
 +++ b/src/sim/search/ScumSearchAgent2.cpp
-@@ -6,12 +6,39 @@
+@@ -2,16 +2,44 @@
+ // Created by keega on 9/19/2021.
+ //
+
++#include <algorithm>
+ #include "sim/search/ScumSearchAgent2.h"
 
  #include <sim/search/ExpertKnowledge.h>
  #include <game/Game.h>
@@ -2779,7 +2833,7 @@ index 53aa5d2..2914185 100644
      if (printActions) {
          gameActionHistory.emplace_back(a.bits);
          std::cout << std::hex << a.bits << std::endl;
-@@ -65,7 +92,20 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
+@@ -65,7 +93,20 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
      std::vector<search::Action> bestActions;
      int bestOutcomePlayerHp = -1;
 
@@ -2800,7 +2854,7 @@ index 53aa5d2..2914185 100644
          const std::int64_t simulationCount = isBossEncounter(bc.encounter) ?
                                                (bossSimulationMultiplier * simulationCountBase) : simulationCountBase;
 
-@@ -82,32 +122,54 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
+@@ -82,32 +123,54 @@ void search::ScumSearchAgent2::playoutBattle(BattleContext &bc) {
 
          simulationCountTotal += searcher.root.simulationCount;
 
@@ -2859,7 +2913,7 @@ index 53aa5d2..2914185 100644
      for (int actionCount = 0; actionCount < stepsNoSolution; ++actionCount) {
          if (bc.outcome != Outcome::UNDECIDED) {
              break;
-@@ -117,6 +179,9 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
+@@ -117,6 +180,9 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
          const sts::search::BattleScumSearcher2::Edge *maxEdge = nullptr;
 
          for (const auto &edge : curNode->edges) {
@@ -2869,7 +2923,7 @@ index 53aa5d2..2914185 100644
              if (edge.node.simulationCount > maxSimulations) {
                  maxSimulations = edge.node.simulationCount;
                  maxEdge = &edge;
-@@ -132,8 +197,10 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
+@@ -132,8 +198,10 @@ void search::ScumSearchAgent2::stepThroughSearchTree(BattleContext &bc, const se
          }
 
          takeAction(bc, maxEdge->action);
@@ -2880,7 +2934,7 @@ index 53aa5d2..2914185 100644
  }
 
  void search::ScumSearchAgent2::stepRandom(GameContext &gc) {
-@@ -161,7 +228,7 @@ void search::ScumSearchAgent2::stepOutOfCombatPolicy(GameContext &gc) {
+@@ -161,7 +229,7 @@ void search::ScumSearchAgent2::stepOutOfCombatPolicy(GameContext &gc) {
              if (gc.relics.has(RelicId::CURSED_KEY)) {
                  takeChest = gc.info.chestSize == ChestSize::LARGE;
              }
@@ -2889,7 +2943,7 @@ index 53aa5d2..2914185 100644
              break;
          }
 
-@@ -334,6 +401,7 @@ void search::ScumSearchAgent2::weightedCardRewardPolicy(GameContext &gc) {
+@@ -334,6 +402,7 @@ void search::ScumSearchAgent2::weightedCardRewardPolicy(GameContext &gc) {
                  acc += weights[i].second;
                  if (roll <= acc) {
                      selection = weights[i].first;
@@ -2897,8 +2951,20 @@ index 53aa5d2..2914185 100644
                  }
              }
          }
-@@ -408,4 +476,3 @@ void search::ScumSearchAgent2::stepEventPolicy(GameContext &gc) {
+@@ -408,4 +477,3 @@ void search::ScumSearchAgent2::stepEventPolicy(GameContext &gc) {
              return;
      }
  }
 -
+diff --git a/src/sim/search/SimpleAgent.cpp b/src/sim/search/SimpleAgent.cpp
+index 3c31b97..d2e91b9 100644
+--- a/src/sim/search/SimpleAgent.cpp
++++ b/src/sim/search/SimpleAgent.cpp
+@@ -2,6 +2,7 @@
+ // Created by keega on 9/27/2021.
+ //
+
++#include <algorithm>
+ #include <sim/search/SimpleAgent.h>
+ #include <game/Game.h>
+ #include "sim/PrintHelpers.h"
