@@ -124,10 +124,11 @@ large batches of whole games.
   winning more Act 3 boss fights (pass 35% → 42%); still no plateau.
 - Fourth (23 October, [page](experiments/2026-10-22-continued-training-4.md)):
   21.7% → 23.7% on unused worlds (+2.1 points), a smaller gain than before.
-- Reward (23 October, [page](experiments/2026-10-23-reward-ablation.md)):
-  rewarding only wins, without the 0.05 per floor, gained 1.6 points over
-  the champion in 12 iterations against 0.6 with the floor term (+1.0
-  points, p = 0.008), mostly at the Act 3 boss. Use wins-only reward.
+- Reward (23 to 25 October, [page](experiments/2026-10-23-reward-ablation.md)):
+  rewarding only wins, without the 0.05 per floor, gained faster over 12
+  iterations (+1.0 points, p = 0.008) but not over 24 (wins plus floors 0.6
+  points ahead, p = 0.15). Keep the current reward. Both 24-iteration arms
+  beat the champion by about 3 points: more training still pays.
 - An apparent plateau at 768 games (58 and 57 wins against 57 on 1,024 DEV
   worlds) was most likely the evaluation, not the method or the batch
   size (weight decay also changed).

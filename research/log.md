@@ -5,6 +5,14 @@ first, kept at Sid's request from 20 October 2026, one or two lines per
 entry. It will be deleted: everything that matters is also recorded in its
 home file (experiment pages, the results ledger, strategies, README).
 
+## 25 October 2026
+
+- **Reward ablation at 24 iterations**, 03:00: wins plus floors 4,822 against
+  wins only 4,728 of 16,384 (p = 0.15): the 12-iteration lead did not last.
+  Both beat the champion (4,262) by about 3 points. Keep the current reward.
+- **Value-target refit labelling** stopped on 23 October at 18:18 by the
+  queue's stall watchdog, at 1,753 of 2,000 worlds.
+
 ## 23 October 2026
 
 - **Reward ablation**, 18:24: wins-only reward beats wins plus floors after 12

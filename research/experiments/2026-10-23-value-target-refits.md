@@ -1,6 +1,6 @@
 # Value targets in combat refits
 
-**Status:** running. **Verdict:** none yet.
+**Status:** paused (labelling stopped at 1,753 of 2,000 worlds). **Verdict:** none yet.
 
 ## Question
 
@@ -43,6 +43,10 @@ better refits there? Approach:
 
 ## Log
 
+- 23 Oct, 18:18: the queue's stall watchdog stopped all eight labelling
+  jobs after two hours without log output (the collector writes no progress
+  to its log), with 1,753 of 2,000 worlds labelled and saved. The plan can
+  go ahead on those worlds.
 - 23 Oct, 16:18: labelling started (eight shards of 250 worlds).
 
 Code: worktree `nonllm-value-targets` (commit 9dead85; do not edit it).

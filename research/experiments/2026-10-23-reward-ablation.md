@@ -1,6 +1,6 @@
 # Reward ablation: floors and wins against wins only
 
-**Status:** extended to 24 iterations (running). **Verdict at 12 iterations:** rewarding only wins is better than wins plus floors (+1.0 points of wins after 12 iterations, p = 0.008, under the rule fixed in advance).
+**Status:** finished 25 October. **Verdict:** no clear difference over a full run. Rewarding only wins was better after 12 iterations (+1.0 points, p = 0.008), but the lead did not last: after 24 iterations wins plus floors was 0.6 points ahead (p = 0.15). Keep the current reward.
 
 ## Question
 
@@ -86,32 +86,56 @@ floors +0.6, +0.7 and +0.6. Mean floor did not change in either arm.
   sites with at least half HP; 10% against 15% below half HP) and enters
   the Act 1 boss with more HP (77% against 74% of maximum).
 
+**Extension to 24 iterations (Sid's request): the lead does not last.**
+16,384 unused worlds from 109,000,000,000, same test as at 12 iterations:
+
+| Player | Iteration 16 | Iteration 20 | Iteration 24 |
+|---|---:|---:|---:|
+| Champion (start) | 4,262 (26.0%) | | |
+| Wins plus floors | 4,611 | 4,893 | 4,822 (29.4%) |
+| Wins only | 4,629 | 4,595 | 4,728 (28.9%) |
+
+- At iteration 24, wins plus floors leads by 0.6 points (discordant
+  2,107/2,013, p = 0.15): no clear difference. Both arms are far above the
+  champion: +3.4 points (wins plus floors) and +2.8 points (wins only), both
+  p < 0.001.
+- Wins only rose quickly over the first 12 iterations and then flattened
+  (+2.2, +2.0 and +2.8 points over the champion at 16, 20 and 24); wins plus
+  floors kept improving (+2.1, +3.9, +3.4). Mean floor is 0.33 lower for wins
+  only at iteration 24 [−0.52, −0.14].
+
 ## Conclusion
 
-At 27% wins, the floor reward no longer helps out-of-combat PPO: training on
-wins alone improved the champion about 2.5 times as fast over 12 iterations
-and won 1.0 points more than the current reward. The floor reward appears to
-pay for surviving early at the expense of beating the late bosses.
+Over a full 24-iteration run, dropping the floor reward makes no clear
+difference to wins. It sped up the first 12 iterations (a gain confirmed on
+fresh worlds), but the run with the floor reward caught up and was slightly
+ahead by the end, with a higher mean floor. The 12-iteration result answered
+its question correctly but would have been a poor basis for changing the
+reward. Both 24-iteration players are clearly better than the champion,
+which says more out-of-combat training still pays.
 
 Caveats:
-- One training seed per arm; the arms shared training worlds and the first
-  iteration, so the difference is the reward, but training noise after that
-  is not replicated.
-- Only 12 iterations; whether the gap keeps growing is not known.
-- The behavioural explanation is exploratory.
+- One training seed per arm. With matched worlds the arms differ only by
+  reward, but how each run's training noise unfolds is not replicated; the
+  12-iteration lead and the 24-iteration reversal may both partly be that
+  noise.
+- The two looks used different world sets (108,000,000,000 and
+  109,000,000,000); the champion won 26.7% and 26.0% on them.
+- The behavioural explanation at 12 iterations is exploratory.
 
 ## Next
 
-- Use wins-only reward for out-of-combat training from now on.
-- Running at Sid's request: both arms resumed to 24 iterations (resuming is
-  exact), for a clean comparison over a longer run. Iterations 16, 20 and 24
-  play the 16,384 unused worlds from 109,000,000,000 reserved for this, with
-  the same test as at 12 (p < 0.025).
-- The wins-only iteration-12 checkpoint is a promotion candidate (Sid's
-  decision).
+- Keep the current reward (wins plus 0.05 per floor).
+- Promotion candidate: the wins-plus-floors arm's iteration-24 checkpoint
+  (`reward_ablation_20261023/floors/iter_0024.pt`, 29.4% against the
+  champion's 26.0%); Sid's decision.
+- When comparing training choices, compare at the end of a full-length run;
+  early leads can fade.
 
 ## Log
 
+- 25 Oct, 03:00: 24-iteration comparison: wins plus floors 4,822 against
+  wins only 4,728 (p = 0.15); the 12-iteration lead did not last.
 - 23 Oct, 18:28: Sid asked to resume both arms to 24 iterations for a
   longer clean comparison; both resumed with full state restored.
 - 23 Oct, 18:24: decision at iteration 12: wins only better (4,632 against
