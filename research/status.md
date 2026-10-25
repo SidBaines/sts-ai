@@ -1,6 +1,6 @@
 # Status
 
-**Updated 25 October 2026, 14:25 GMT.** Nothing running. Champion:
+**Updated 25 October 2026, 14:23 GMT.** Nothing running. Champion:
 `champion_4058cbf0e271.pt` (promoted by Sid on 25 October; 29.4% on unused
 worlds), kept with earlier champions in `data/rl_runs/champions/` (worktree
 `nonllm-large-batch`).
