@@ -8,10 +8,10 @@ On hold since 25 October, pending Sid's decisions. The idea:
   target reasoning.
 - Full-game terminal outcomes come later.
 
-The unchanged model plays at trivial-baseline level:
-- no effort level beats always choosing the first menu option on the teacher
-  measure;
-- high effort scores below it.
+As expected before any training, the unchanged model plays at
+trivial-baseline level. No effort level beats always choosing the first menu
+option on the teacher measure, and high effort scores below it. These numbers
+are the "before" reference, not a finding.
 
 Most combat rewards are near-ties: the teacher's top combat action averages
 0.37 probability. The group standard-deviation scaling amplifies those ties.
@@ -21,7 +21,7 @@ would probably end inconclusive. The
 proposes a staged replacement:
 - an overfit test on decisive out-of-combat states;
 - mean-centred advantages;
-- a prompt A/B before any training;
+- a prompt fixed on design grounds before training;
 - held-out top-1 agreement on decisive states as the early signal.
 
 Full-game RL now scores model-invalid games as losses. It is unit-tested, with

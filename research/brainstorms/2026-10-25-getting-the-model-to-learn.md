@@ -1,13 +1,18 @@
 # Getting the 0.9B model to learn
 
 **25 October 2026.** The planned pilot is likely to end "inconclusive" for
-reasons unrelated to whether RL can teach this model. It starts at
-trivial-baseline skill, most of its combat reward is noise between near-equal
-actions, it gets about 150 optimizer steps at a low LoRA learning rate, and it
-has no early metric that separates learning from noise. We propose a staged
-plan instead. Each stage is a quick test that can fail, and the first stages
-use only out-of-combat decisions, where the teacher is decisive. The
-decisions needed from Sid are listed at the end.
+reasons unrelated to whether RL can teach this model:
+- most of its combat reward is noise between near-equal actions;
+- it gets about 150 optimizer steps at a low LoRA learning rate;
+- it has no early metric that separates learning from noise.
+
+The untrained model's near-zero skill is expected, since it has never played,
+and is not itself a concern. Its scores serve only as the "before" point for
+detecting learning.
+
+We propose a staged plan instead. Each stage is a quick test that can fail,
+and the first stages use only out-of-combat decisions, where the teacher is
+decisive. The decisions needed from Sid are listed at the end.
 
 ## What we found
 
@@ -23,7 +28,9 @@ only 35. The ranges below therefore include the Mac runs from
 [the Mac study](../experiments/2026-10-25-mac-local-speed.md) as independent
 samples.
 
-**The model plays at trivial-baseline level.** Mean teacher probability of the chosen action:
+**The starting point is trivial-baseline play, as expected.** These numbers
+are the "before" reference, and they show that the reward has room to move.
+Mean teacher probability of the chosen action:
 
 | Policy | Combat | Out of combat | All |
 |---|---:|---:|---:|
@@ -110,8 +117,11 @@ so position bias is real but only moderate.
      through content.
    - Trim the caveat text and show only the reachable map.
    - Fix the potion line on `main` first.
-   - Changing the prompt changes the experiment, so do it before the baseline,
-     with an A/B on the unchanged model. Recommended; needs Sid's decision.
+   - Choose the prompt on design grounds before training starts. The
+     untrained model's accuracy cannot rank prompts, because any prompt scores
+     near the trivial baselines. If two variants remain in doubt, compare how
+     fast the model learns under each in stage 1. Recommended; needs Sid's
+     decision.
 4. **Treat reasoning length as an outcome, not a setting.**
    - With teacher agreement as the reward, the model may learn to shorten its
      reasoning, since its near-empty low-effort answers score no worse. That
@@ -160,15 +170,15 @@ near-ties add variance.
 
 ## Proposed stages
 
-0. **Prompt A/B on the unchanged model**, run on the Mac in MLX.
-   - Arms: the current prompt, and a trimmed and relabelled prompt with a
-     shuffled menu.
-   - Measure: decisive top-1 agreement, normalised score and first-option rate,
-     on the 64-state panel with four samples each.
-   - Choose the prompt before any training.
+0. **Fix the prompt on design grounds.** Give menu actions distinct labels,
+   shuffle their order, trim the caveat text and the map, and include the
+   potion fix. Check only that the untrained model still answers validly; do
+   not rank prompts by its accuracy.
 1. **Overfit test and learning-rate screen** on 32 decisive out-of-combat
-   training states. Gate: reward on those states rises clearly within about 50
-   steps at some learning rate.
+   training states, run on the Mac in MLX. Gate: reward on those states rises
+   clearly within about 50 steps at some learning rate. If the prompt choice
+   is in doubt, run this stage under both variants and keep the one that
+   learns faster.
 2. **Out-of-combat pilot.**
    - Train on decisive out-of-combat states from training worlds, with
      mean-centred advantages.
@@ -182,7 +192,12 @@ near-ties add variance.
 
 ## Decisions for Sid
 
-- May the prompt and answer format change before the pilot baseline (stage 0)?
+- May the prompt and answer format change before training (stage 0)?
+
+Later decision, 25 October: Sid noted that benchmarking the untrained
+model's skill is not informative, because it has never played. The base-model
+prompt A/B was therefore dropped from stage 0, and base-model scores are kept
+only as the "before" reference.
 - Start with out-of-combat decisions only (stages 1–2)?
 - Replace standard-deviation scaling with mean-centring, and start with
   decisive states?

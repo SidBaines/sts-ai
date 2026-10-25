@@ -136,7 +136,7 @@ controlled experiments.
 ## Log
 
 - 23 October: Sid selected medium effort and requested the next-step plan.
-- 25 October: put on hold after review. The unchanged model scores no better than always choosing the first menu option; combat teacher rewards are mostly near-ties, which group standard-deviation scaling amplifies; and the plan allows about 150 updates at a low LoRA learning rate. The proposed replacement starts with an overfit test on decisive out-of-combat states.
+- 25 October: put on hold after review. Combat teacher rewards are mostly near-ties, which group standard-deviation scaling amplifies; the plan allows about 150 updates at a low LoRA learning rate; and it has no early metric. The untrained model's near-trivial score is expected and is only the "before" reference. The proposed replacement starts with an overfit test on decisive out-of-combat states.
 
 Code: existing src/sts_llm/ at commit 4d30a8b; pilot launch configuration pending.
 Data: no pilot run or scientific training corpus has been created.

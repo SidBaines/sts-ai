@@ -9,8 +9,9 @@ SFT or teacher-forced reasoning traces are used.
 
 ## Current best
 
-There is no trained model. The unchanged K2-Horizon-0.9B scores no better than
-always choosing the first menu option on the teacher measure:
+There is no trained model. As expected for a model that has never played, the
+unchanged K2-Horizon-0.9B scores no better than always choosing the first menu
+option on the teacher measure. This is the "before" reference only:
 - teacher probability 0.26–0.33 at medium effort, against 0.30 for
   always-first;
 - 0.21 for a random legal action and 0.54 for the teacher's own top choice;
@@ -23,7 +24,6 @@ It has won no games; none have been attempted. Definitions are in
 
 Nothing is running ([status](status.md)). Completed on 25 October:
 - A [review of the plan](brainstorms/2026-10-25-getting-the-model-to-learn.md):
-  - the model is at trivial-baseline skill;
   - combat rewards are mostly near-ties, amplified by standard-deviation
     scaling;
   - the plan allowed only about 150 updates at a low LoRA learning rate.
@@ -43,9 +43,10 @@ Nothing is running ([status](status.md)). Completed on 25 October:
    potions by count rather than slot.
 3. Write a small MLX teacher-feedback trainer: grouped generation and
    checkpointed updates.
-4. Stage 0: a prompt A/B on the unchanged model on the laptop.
+4. Stage 0: fix the prompt on design grounds (distinct menu labels, shuffled
+   order, trimmed text). Do not rank prompts by the untrained model's accuracy.
 5. Stage 1: an overfit test and learning-rate screen on 32 decisive
-   out-of-combat states.
+   out-of-combat states, on the laptop.
 6. Stage 2: an out-of-combat pilot with a held-out probe every 10–20 steps.
 
 ## Evidence and open questions
