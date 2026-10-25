@@ -5,6 +5,12 @@ This package provides single-decision teacher-guided training inputs and saved-s
 ## APIs
 
 - `observations.prompt(observation)` returns the shared two-message prompt. It copies only complete public observation text and the raw current action menu. It never serializes `info`, world seeds, teacher labels, provenance or policy features into messages. `legal_indices(observation)` preserves native display indices.
+- `observations.labelled_prompt(observation, order=None)` is prompt version 2 (`public_text_labelled_menu_v2`). It uses the same state text, then the menu in the given order, with letter labels (`A) ...`, `B) ...`; `AA` after `Z`). The labels cannot be confused with the `[0]`-style indices of hand cards, enemies and potions. It returns `LabelledPrompt(messages, labels, order)`, where `labels` maps each label to its native index and never enters the messages. A fresh random order per presentation removes menu position as a learnable shortcut. Parse answers with `parse_action(..., labels=prompt.labels)`: the final JSON must be exactly `{"action": "<label>"}`, and the returned `action_index` is native. An unknown label is `illegal_action_label`.
+- `decision_metrics` holds the quantities that decide results:
+  - `centered_advantages` gives a group-mean baseline with no standard-deviation scaling;
+  - `teacher_table`, `teacher_top` and `decisive_margin` (top minus second teacher probability) describe the teacher's target;
+  - `normalized_teacher_score` is 0 for a random legal action in expectation and 1 for the teacher's choice;
+  - `reasoning_token_count` counts tokens before the first reasoning closer.
 - `generation.parse_action(text, legal_indices, finish_reason=None, reasoning_content=None, final_channel=False, require_reasoning_boundary=True)` returns `ActionParse(action_index, valid, error, reasoning, final_text, truncated)`. Raw K2 completions require a reasoning closer; any of its three effort closers is accepted, regardless of requested effort. The opening tag may be absent because the chat template already supplies it. A native separate reasoning field establishes a final channel. Truncation is a failure even if the visible suffix contains JSON. Final output must be one JSON object with only an integer `action_index`. The actual K2 assistant-end and end-of-text tokens are stripped after the boundary.
 - `teacher.NonLLMTeacher(teacher_root=..., checkpoint=..., python=..., timeout=60, batch_size=64)` launches one isolated inference subprocess. `distribution(observation)` or `distributions(observations)` returns display indices, probabilities, excluded menu indices, checkpoint identity and source revision. Requests carry at most `batch_size` observations, and `timeout` applies to startup and to each request separately. The parent never imports the non-LLM environment package. No native simulator is loaded or queried. The worker removes its own directory (`src/sts_llm`) from its import path, so `sts_llm/statistics.py` cannot shadow the standard library. Teacher metadata reads the encoder and checkpoint format versions from the checkpoint; `version_source` says whether they came from the checkpoint or from the historical constants (`public_candidate_v2`, format 1).
 - `teacher.teacher_reward(row, action_index, mode='probability', invalid_reward=None, log_floor=1e-8)` uses the prepared row's teacher distribution. Probability is the default bounded reward. A legal action filtered out of the champion's deployment menu receives zero probability and remains distinct from malformed/illegal output. Log probability is optional; its invalid reward must be no larger than `log(log_floor)`, to avoid rewarding invalid output over valid low-probability choices. Default invalid reward is zero for probability or `log(log_floor)` for log probability.
@@ -173,6 +179,54 @@ treat a change as a new numerical condition. The optional HF reuse path stays
 off by default. Frozen old-policy scores are recomputed full-sequence scores;
 freezing them does not prove equality to cached-decoding sampling probabilities.
 This numerical difference should be quantified before the main learning study.
+
+## Teacher-feedback training on Apple silicon (MLX)
+
+`python -m sts_llm.mlx_training` trains a LoRA adapter on the MLX conversion of
+K2-Horizon. Build the conversion with
+`experiments/2026-10-25-mac-local/mlx_model.py`; its FP32 log-probabilities
+match the original model within 0.0013. The input files are JSONL states with
+`observation` (phase, text, menu), `teacher`, `world_identity` and `split`.
+`--train` must hold training-split worlds and `--probe` validation-split worlds;
+`dataset.verified_split` checks both.
+
+Each iteration:
+- takes `--states-per-iteration` states, cycling through a shuffled order so
+  every state is seen equally often;
+- presents each state with a fresh random menu order under prompt version 2;
+- samples `--group-size` answers in one batch from the live adapter
+  (temperature `--temperature`, top-p 1, cap `--max-new-tokens`);
+- rewards a valid answer with the teacher's probability of the chosen action,
+  and gives invalid or capped output `--invalid-reward` (default -1);
+- subtracts the group mean and takes one AdamW step.
+
+This is REINFORCE with a group-mean baseline. With one update per sampled
+batch, a PPO ratio would be exactly one, so there is no clipping and no
+old-policy scoring pass. Each response's summed generated-token
+log-probability is divided by `--loss-token-budget` (default 2048), or by its
+own length with `--loss-normalization response_mean`. Responses with zero
+advantage are skipped in the backward pass. An optional sampled KL penalty to
+the base model (`--kl-beta`, default 0) scores references with the adapters
+switched off. Gradient checkpointing is on by default; on this machine it is
+both faster and smaller.
+
+Every completion is written to `generations/iter_NNNN.jsonl`, including its
+raw text and reasoning, menu order, label, reward, advantage, teacher
+probability, top-choice agreement, normalised score and reasoning-token count.
+`iterations.jsonl` holds per-iteration metrics, overall and per phase:
+- reward and validity;
+- zero-variance groups, group reward range and distinct actions;
+- first-displayed-option rate and reasoning length;
+- gradient norm and timings.
+
+Every `--eval-every` iterations, and before training, a greedy evaluation runs
+fixed menu orders (`--eval-orders` per state) on the training states and the
+probe. Results go to `evaluations/` and `evaluations.jsonl`. Adapters and their
+metadata (format version, model revision, LoRA shape, effort, prompt version)
+are saved to `adapters/`. `config.json` records the source commit, source
+hashes, MLX versions, device, input hashes and teacher checkpoint. Create
+`OUTPUT/STOP` to stop between iterations. `--adapter` warm-starts weights; the
+optimizer and random state start fresh.
 
 ## Full-game outcome learning and evaluation
 

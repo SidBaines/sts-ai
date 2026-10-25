@@ -1,0 +1,422 @@
+"""Teacher-feedback policy-gradient training of K2-Horizon with MLX on Apple silicon.
+
+Each iteration takes ``--states-per-iteration`` training states (cycling through
+a shuffled order, so every state is seen equally often) and presents each with a
+freshly shuffled, letter-labelled menu (prompt version 2). It samples
+``--group-size`` answers per state from the current LoRA policy in one batch,
+rewards each valid answer with the frozen teacher's probability of the chosen
+action (invalid or capped output gets ``--invalid-reward``), subtracts the group
+mean, and takes one AdamW step on the generated-token log-probabilities: REINFORCE
+with a group-mean baseline. With one update per sampled batch, a PPO ratio would be
+exactly one, so no clipping or old-policy scoring pass is needed.
+
+Every completion, including its reasoning, is retained. A greedy evaluation of
+fixed menu orders runs on the training states and on a held-out probe every
+``--eval-every`` iterations. Run with ``PYTHONPATH=src``; it needs mlx-lm and an
+MLX model directory built by ``experiments/2026-10-25-mac-local/mlx_model.py``.
+"""
+from __future__ import annotations
+
+import argparse
+from contextlib import contextmanager
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import random
+import statistics
+import subprocess
+import time
+from typing import Any, Sequence
+
+from .dataset import verified_split
+from .decision_metrics import (centered_advantages, normalized_teacher_score, reasoning_token_count,
+                               teacher_table, teacher_top)
+from .generation import K2_ASSISTANT_END_TOKEN_ID, parse_action
+from .observations import LABELLED_PROMPT_VERSION, labelled_prompt, legal_indices
+from .teacher import teacher_reward
+
+MLX_TRAINING_FORMAT_VERSION = 1
+LORA_KEYS = ("self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj",
+             "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj")
+
+
+def load_states(path: Path, *, split: str) -> list[dict]:
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    for row in rows:
+        if verified_split(row) != split:
+            raise ValueError(f"row {row['id']} is from the {row['split']} split, not {split}")
+        if legal_indices(row["observation"]) != row["legal_indices"]:
+            raise ValueError(f"row {row['id']} menu differs from its observation")
+        teacher_table(row)
+    if len({row["id"] for row in rows}) != len(rows):
+        raise ValueError("state IDs must be unique")
+    return rows
+
+
+def menu_order(rng: random.Random, row: dict) -> list[int]:
+    order = list(row["legal_indices"])
+    rng.shuffle(order)
+    return order
+
+
+def score_answer(row: dict, prompt, output_ids: Sequence[int], text: str, finish_reason: str,
+                 invalid_reward: float) -> dict:
+    """Parse one completion against its labelled menu and score it."""
+    parsed = parse_action(text, row["legal_indices"], finish_reason=finish_reason, labels=prompt.labels)
+    action = parsed.action_index if parsed.valid else None
+    reasoning_tokens, closed = reasoning_token_count(output_ids)
+    label = next((k for k, v in prompt.labels.items() if v == action), None)
+    return {"valid": parsed.valid, "error": parsed.error, "action_index": action, "label": label,
+            "capped": finish_reason == "length",
+            "reward": teacher_reward(row, action, invalid_reward=invalid_reward),
+            "teacher_probability": teacher_reward(row, action, invalid_reward=0.),
+            "teacher_top_agreement": action == teacher_top(row),
+            "normalized_teacher_score": normalized_teacher_score(row, action),
+            "first_displayed_option": label == "A" if action is not None else None,
+            "native_first_option": action == row["legal_indices"][0] if action is not None else None,
+            "output_tokens": len(output_ids), "reasoning_tokens": reasoning_tokens,
+            "reasoning_closed": closed}
+
+
+def summarize(records: list[dict], prefix: str = "") -> dict:
+    """Means of the decision metrics, overall and per phase."""
+    def block(rows):
+        if not rows:
+            return {}
+        valid = [r for r in rows if r["valid"]]
+        scores = [r["normalized_teacher_score"] for r in rows if r["normalized_teacher_score"] is not None]
+        reasoning = sorted(r["reasoning_tokens"] for r in rows)
+        return {"decisions": len(rows), "valid_fraction": len(valid) / len(rows),
+                "capped_fraction": sum(r["capped"] for r in rows) / len(rows),
+                "mean_teacher_probability": statistics.fmean(r["teacher_probability"] for r in rows),
+                "teacher_top_agreement": statistics.fmean(r["teacher_top_agreement"] for r in rows),
+                "mean_normalized_teacher_score": statistics.fmean(scores) if scores else None,
+                "first_displayed_option_rate": (statistics.fmean(r["first_displayed_option"] for r in valid)
+                                                if valid else None),
+                "median_reasoning_tokens": statistics.median(reasoning),
+                "p95_reasoning_tokens": reasoning[min(len(reasoning) - 1, math.ceil(0.95 * len(reasoning)) - 1)],
+                "empty_reasoning_fraction": sum(r["reasoning_tokens"] == 0 for r in rows) / len(rows),
+                "mean_output_tokens": statistics.fmean(r["output_tokens"] for r in rows)}
+    result = {f"{prefix}all": block(records)}
+    for phase in ("out_of_combat", "combat"):
+        result[f"{prefix}{phase}"] = block([r for r in records if r["phase"] == phase])
+    return result
+
+
+def group_statistics(groups: list[list[dict]]) -> dict:
+    rewards = [[r["reward"] for r in group] for group in groups]
+    return {"zero_variance_group_fraction": statistics.fmean(max(g) - min(g) <= 1e-12 for g in rewards),
+            "mean_group_reward_range": statistics.fmean(max(g) - min(g) for g in rewards),
+            "mean_distinct_actions_per_group": statistics.fmean(len({r["action_index"] for r in group})
+                                                                for group in groups),
+            "mean_reward": statistics.fmean(x for g in rewards for x in g)}
+
+
+class MLXPolicy:
+    """The MLX model with LoRA adapters, its tokenizer, generation and scoring."""
+
+    def __init__(self, args: Any):
+        import mlx.core as mx
+        from mlx_lm import load
+        from mlx_lm.tuner.trainer import grad_checkpoint
+        from mlx_lm.tuner.utils import linear_to_lora_layers
+        from transformers import AutoTokenizer
+        self.mx, self.args = mx, args
+        self.tokenizer = AutoTokenizer.from_pretrained(args.model_repo, revision=args.revision, trust_remote_code=True)
+        self.model, _ = load(str(args.mlx_model))
+        self.model.freeze()
+        linear_to_lora_layers(self.model, len(self.model.layers), {
+            "rank": args.lora_rank, "scale": args.lora_alpha / args.lora_rank, "dropout": 0.0, "keys": list(LORA_KEYS)})
+        if args.adapter:
+            self.model.load_weights(str(args.adapter), strict=False)
+        if args.grad_checkpoint:
+            grad_checkpoint(self.model.layers[0])
+        self.stops = [[K2_ASSISTANT_END_TOKEN_ID], [self.tokenizer.eos_token_id]]
+
+    def prompt_ids(self, messages) -> list[int]:
+        ids = self.tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True,
+                                                 return_dict=False, reasoning_effort=self.args.effort)
+        return list(ids)
+
+    def generate(self, prompts: list[list[int]], *, temperature: float, seed: int,
+                 concurrency: int | None = None) -> list[tuple[list[int], str]]:
+        """One completion per prompt. A batch of identical prompts is about twice as fast
+        per decision as a batch mixing prompt lengths."""
+        from mlx_lm.generate import BatchGenerator
+        from mlx_lm.sample_utils import make_sampler
+        self.model.eval()
+        self.mx.random.seed(seed)
+        width = min(len(prompts), concurrency or len(prompts))
+        generator = BatchGenerator(self.model, max_tokens=self.args.max_new_tokens, stop_tokens=self.stops,
+                                   sampler=make_sampler(temp=temperature, top_p=1.0),
+                                   completion_batch_size=width, prefill_batch_size=min(8, width))
+        uids = generator.insert(prompts, [self.args.max_new_tokens] * len(prompts))
+        tokens, finished = {uid: [] for uid in uids}, {}
+        while responses := generator.next_generated():
+            for response in responses:
+                tokens[response.uid].append(int(response.token))
+                if response.finish_reason is not None:
+                    finished[response.uid] = response.finish_reason
+        generator.close()
+        return [(tokens[uid], finished[uid]) for uid in uids]
+
+    def token_logps(self, prompt: list[int], output: list[int]):
+        """Temperature-scaled log-probabilities of the generated tokens only."""
+        mx = self.mx
+        ids = mx.array([prompt + output])
+        start = len(prompt) - 1
+        hidden = self.model.model(ids)[:, start:-1]
+        logits = self.model.lm_head(hidden).astype(mx.float32) / self.args.temperature
+        logps = logits - mx.logsumexp(logits, axis=-1, keepdims=True)
+        return mx.take_along_axis(logps, ids[:, start + 1:, None], axis=-1)[0, :, 0]
+
+    @contextmanager
+    def adapters_disabled(self):
+        from mlx_lm.tuner.lora import LoRALinear
+        layers = [m for _, m in self.model.named_modules() if isinstance(m, LoRALinear)]
+        scales = [layer.scale for layer in layers]
+        try:
+            for layer in layers:
+                layer.scale = 0.0
+            yield
+        finally:
+            for layer, scale in zip(layers, scales):
+                layer.scale = scale
+
+    def trainable_items(self):
+        from mlx.utils import tree_flatten
+        return tree_flatten(self.model.trainable_parameters())
+
+    def save_adapter(self, path: Path, metadata: dict) -> None:
+        self.mx.save_safetensors(str(path), dict(self.trainable_items()), metadata={"format": "mlx"})
+        path.with_suffix(".json").write_text(json.dumps(metadata, indent=2) + "\n")
+
+
+def response_loss(policy: MLXPolicy, item: dict, *, advantage: float, ref_logps, denominator: float,
+                  kl_beta: float):
+    mx = policy.mx
+    new = policy.token_logps(item["prompt_ids"], item["output_token_ids"])
+    loss = -advantage * new.sum() / denominator
+    if kl_beta > 0:
+        delta = ref_logps - new
+        loss = loss + kl_beta * (mx.exp(delta) - delta - 1).sum() / denominator
+    return loss
+
+
+def update(policy: MLXPolicy, optimizer, items: list[dict], args: Any) -> dict:
+    """One AdamW step on the mean per-response loss, accumulated one response at a time."""
+    import mlx.core as mx
+    import mlx.nn as nn
+    import mlx.optimizers as optim
+    from mlx.utils import tree_map
+    policy.model.train()
+    active = [item for item in items if item["advantage"] != 0.0 or args.kl_beta > 0]
+    if not active:
+        return {"optimizer_step": False, "responses_with_gradient": 0}
+    total, loss_sum = None, 0.0
+    for item in active:
+        ref = mx.array(item["ref_logps"]) if args.kl_beta > 0 else None
+        denominator = (args.loss_token_budget if args.loss_normalization == "fixed_token_budget"
+                       else len(item["output_token_ids"]))
+        grad_fn = nn.value_and_grad(policy.model, lambda: response_loss(
+            policy, item, advantage=item["advantage"], ref_logps=ref,
+            denominator=denominator, kl_beta=args.kl_beta))
+        loss, grads = grad_fn()
+        # Weight by 1/N over all responses; zero-advantage ones contribute nothing.
+        grads = tree_map(lambda g: g / len(items), grads)
+        total = grads if total is None else tree_map(mx.add, total, grads)
+        mx.eval(total, loss)
+        loss_sum += loss.item() / len(items)
+    total, norm = optim.clip_grad_norm(total, args.max_grad_norm)
+    norm = norm.item()
+    if not math.isfinite(norm) or not math.isfinite(loss_sum):
+        raise FloatingPointError("nonfinite loss or gradient; optimizer step withheld")
+    optimizer.update(policy.model, total)
+    mx.eval(policy.model.trainable_parameters(), optimizer.state)
+    return {"optimizer_step": True, "loss": loss_sum, "gradient_norm_before_clip": norm,
+            "responses_with_gradient": len(active)}
+
+
+def evaluate(policy: MLXPolicy, sets: dict[str, list[dict]], orders: dict[str, list[list[int]]],
+             args: Any, iteration: int, output: Path) -> dict:
+    """Greedy answers for fixed menu orders, all states in one bounded-width batch."""
+    jobs = [(name, row, labelled_prompt(row["observation"], order))
+            for name, rows in sets.items() for row in rows for order in orders[row["id"]]]
+    results = policy.generate([policy.prompt_ids(prompt.messages) for _, _, prompt in jobs],
+                              temperature=0.0, seed=args.seed, concurrency=args.eval_concurrency)
+    records = []
+    for (name, row, prompt), (output_ids, reason) in zip(jobs, results):
+        text = policy.tokenizer.decode(output_ids, skip_special_tokens=False)
+        records.append({"set": name, "id": row["id"], "phase": row["phase"], "order": prompt.order,
+                        "raw_text": text, "output_token_ids": output_ids, "finish_reason": reason,
+                        **score_answer(row, prompt, output_ids, text, reason, args.invalid_reward)})
+    with (output / "evaluations" / f"iter_{iteration:04d}.jsonl").open("x") as stream:
+        for record in records:
+            stream.write(json.dumps(record) + "\n")
+    summary = {"iteration": iteration}
+    for name in sets:
+        summary.update(summarize([r for r in records if r["set"] == name], prefix=f"{name}/"))
+    return summary
+
+
+def run_record(args: Any, policy: MLXPolicy, train_rows: list[dict], probe_rows: list[dict]) -> dict:
+    import mlx.core as mx
+    import mlx_lm
+    source = Path(__file__).parent
+    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=source, capture_output=True, text=True).stdout.strip()
+    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "."], cwd=source,
+                                capture_output=True, text=True).stdout.strip())
+    config_path = Path(args.mlx_model) / "config.json"
+    teachers = sorted({row["teacher"].get("checkpoint_sha256", "") for row in train_rows + probe_rows})
+    return {"format_version": MLX_TRAINING_FORMAT_VERSION, "prompt_version": LABELLED_PROMPT_VERSION,
+            "settings": {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
+            "source_commit": commit, "source_uncommitted_changes": dirty,
+            "source_files_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                                    for p in sorted(source.glob("*.py"))},
+            "mlx_version": mx.__version__, "mlx_lm_version": mlx_lm.__version__,
+            "device": {k: v for k, v in getattr(mx, "device_info", mx.metal.device_info)().items()
+                       if isinstance(v, (str, int, float))},
+            "mlx_model_config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
+            "states_sha256": {"train": hashlib.sha256(Path(args.train).read_bytes()).hexdigest(),
+                              "probe": hashlib.sha256(Path(args.probe).read_bytes()).hexdigest()
+                              if args.probe else None},
+            "teacher_checkpoint_sha256": teachers,
+            "trainable_parameters": sum(v.size for _, v in policy.trainable_items()),
+            "train_states": len(train_rows), "probe_states": len(probe_rows)}
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--mlx-model", type=Path, required=True)
+    parser.add_argument("--model-repo", default="IFM/K2-Horizon-0.9B")
+    parser.add_argument("--revision", default="7c75f2f49e74ac97c1852e62b4c860091d6a00ea")
+    parser.add_argument("--train", type=Path, required=True, help="JSONL of training-split states with teacher labels")
+    parser.add_argument("--probe", type=Path, help="JSONL of validation-split states for the held-out probe")
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--adapter", type=Path, help="warm-start LoRA weights (optimizer and RNG reset)")
+    parser.add_argument("--effort", choices=("low", "medium", "high"), default="medium")
+    parser.add_argument("--iterations", type=int, required=True)
+    parser.add_argument("--states-per-iteration", type=int, default=4)
+    parser.add_argument("--group-size", type=int, default=8)
+    parser.add_argument("--temperature", type=float, default=0.6)
+    parser.add_argument("--max-new-tokens", type=int, default=4096)
+    parser.add_argument("--learning-rate", type=float, required=True)
+    parser.add_argument("--max-grad-norm", type=float, default=1.0)
+    parser.add_argument("--kl-beta", type=float, default=0.0)
+    parser.add_argument("--invalid-reward", type=float, default=-1.0)
+    parser.add_argument("--loss-normalization", choices=("fixed_token_budget", "response_mean"),
+                        default="fixed_token_budget")
+    parser.add_argument("--loss-token-budget", type=int, default=2048)
+    parser.add_argument("--lora-rank", type=int, default=16)
+    parser.add_argument("--lora-alpha", type=float, default=32)
+    parser.add_argument("--grad-checkpoint", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--eval-every", type=int, default=10, help="0 disables evaluation")
+    parser.add_argument("--eval-orders", type=int, default=2, help="fixed menu orders per evaluated state")
+    parser.add_argument("--eval-concurrency", type=int, default=16, help="evaluation answers decoded at once")
+    parser.add_argument("--save-every", type=int, default=10)
+    parser.add_argument("--seed", type=int, default=1729)
+    args = parser.parse_args(argv)
+    if min(args.iterations, args.states_per_iteration, args.group_size, args.max_new_tokens,
+           args.loss_token_budget, args.lora_rank, args.eval_orders, args.eval_concurrency) < 1 or args.group_size < 2:
+        parser.error("sizes must be positive and group size at least 2")
+    if not (args.temperature > 0 and args.learning_rate > 0 and args.max_grad_norm > 0 and args.kl_beta >= 0
+            and math.isfinite(args.invalid_reward)):
+        parser.error("temperature, learning rate and gradient norm must be positive; KL nonnegative")
+    args.output.mkdir(parents=True, exist_ok=False)
+    for name in ("generations", "evaluations", "adapters"):
+        (args.output / name).mkdir()
+    stop_file = args.output / "STOP"
+
+    import mlx.core as mx
+    import mlx.optimizers as optim
+    train_rows = load_states(args.train, split="train")
+    probe_rows = load_states(args.probe, split="validation") if args.probe else []
+    policy = MLXPolicy(args)
+    record = run_record(args, policy, train_rows, probe_rows)
+    (args.output / "config.json").write_text(json.dumps(record, indent=2) + "\n")
+    optimizer = optim.AdamW(learning_rate=args.learning_rate, weight_decay=0.0)
+    rng = random.Random(args.seed)
+    order_rng = random.Random(args.seed + 1)
+    eval_rng = random.Random(args.seed + 2)
+    eval_sets = {"train": train_rows, **({"probe": probe_rows} if probe_rows else {})}
+    eval_orders = {row["id"]: [menu_order(eval_rng, row) for _ in range(args.eval_orders)]
+                   for rows in eval_sets.values() for row in rows}
+    adapter_metadata = {"format_version": MLX_TRAINING_FORMAT_VERSION, "model_repo": args.model_repo,
+                        "revision": args.revision, "lora_rank": args.lora_rank, "lora_alpha": args.lora_alpha,
+                        "lora_keys": list(LORA_KEYS), "effort": args.effort, "prompt_version": LABELLED_PROMPT_VERSION}
+    log = (args.output / "iterations.jsonl").open("a")
+    queue: list[dict] = []
+
+    def evaluation(iteration):
+        started = time.perf_counter()
+        summary = evaluate(policy, eval_sets, eval_orders, args, iteration, args.output)
+        summary["seconds"] = time.perf_counter() - started
+        with (args.output / "evaluations.jsonl").open("a") as stream:
+            stream.write(json.dumps(summary) + "\n")
+        print(json.dumps({"event": "evaluation", **{k: v for k, v in summary.items() if k.endswith("/all")},
+                          "iteration": iteration, "seconds": summary["seconds"]}), flush=True)
+
+    if args.eval_every:
+        evaluation(0)
+    for iteration in range(1, args.iterations + 1):
+        if stop_file.exists():
+            print(json.dumps({"event": "stopped", "before_iteration": iteration}), flush=True)
+            break
+        began = time.perf_counter()
+        if len(queue) < args.states_per_iteration:
+            fresh = list(train_rows)
+            rng.shuffle(fresh)
+            queue.extend(fresh)
+        states, queue = queue[:args.states_per_iteration], queue[args.states_per_iteration:]
+        groups, items = [], []
+        for position, row in enumerate(states):
+            prompt = labelled_prompt(row["observation"], menu_order(order_rng, row))
+            ids = policy.prompt_ids(prompt.messages)
+            results = policy.generate([ids] * args.group_size, temperature=args.temperature,
+                                      seed=args.seed + iteration * 1000 + position)
+            group = []
+            for sample, (output_ids, reason) in enumerate(results):
+                text = policy.tokenizer.decode(output_ids, skip_special_tokens=False)
+                group.append({"iteration": iteration, "id": row["id"], "phase": row["phase"], "sample": sample,
+                              "order": prompt.order, "prompt_ids": ids, "output_token_ids": output_ids,
+                              "raw_text": text, "finish_reason": reason,
+                              **score_answer(row, prompt, output_ids, text, reason, args.invalid_reward)})
+            for item, advantage in zip(group, centered_advantages([r["reward"] for r in group])):
+                item["advantage"] = advantage
+            groups.append(group)
+            items.extend(group)
+        generation_seconds = time.perf_counter() - began
+        scoring_started = time.perf_counter()
+        if args.kl_beta > 0:
+            with policy.adapters_disabled():
+                for item in items:
+                    item["ref_logps"] = policy.token_logps(item["prompt_ids"], item["output_token_ids"]).tolist()
+        scoring_seconds = time.perf_counter() - scoring_started
+        update_started = time.perf_counter()
+        step = update(policy, optimizer, items, args)
+        update_seconds = time.perf_counter() - update_started
+        with (args.output / "generations" / f"iter_{iteration:04d}.jsonl").open("x") as stream:
+            for item in items:
+                stream.write(json.dumps({k: v for k, v in item.items() if k not in ("prompt_ids", "ref_logps")}) + "\n")
+        summary = {"iteration": iteration, **step, **group_statistics(groups), **summarize(items),
+                   "generated_tokens": sum(len(i["output_token_ids"]) for i in items),
+                   "generation_seconds": generation_seconds, "scoring_seconds": scoring_seconds,
+                   "update_seconds": update_seconds, "iteration_seconds": time.perf_counter() - began,
+                   "peak_memory_gb": mx.get_peak_memory() / 1e9}
+        log.write(json.dumps(summary) + "\n")
+        log.flush()
+        print(json.dumps({k: summary[k] for k in ("iteration", "mean_reward", "zero_variance_group_fraction",
+                                                  "iteration_seconds")} | {"all": summary["all"]}), flush=True)
+        if iteration % args.save_every == 0 or iteration == args.iterations:
+            policy.save_adapter(args.output / "adapters" / f"iter_{iteration:04d}.safetensors",
+                                {**adapter_metadata, "iteration": iteration})
+        if args.eval_every and (iteration % args.eval_every == 0 or iteration == args.iterations):
+            evaluation(iteration)
+    log.close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

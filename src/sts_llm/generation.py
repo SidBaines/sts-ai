@@ -29,19 +29,26 @@ class ActionParse:
 
 def parse_action(text: str, legal_indices, *, finish_reason: str | None = None,
                  reasoning_content: str | None = None, final_channel: bool = False,
-                 require_reasoning_boundary: bool = True) -> ActionParse:
+                 require_reasoning_boundary: bool = True, labels=None) -> ActionParse:
     """Parse only the final channel; never accept JSON inside unfinished thought.
 
     K2's chat template already supplies the opening reasoning tag, so raw generated
     completions normally have a closer with no opener. Any of the three effort
     closers can occur at any requested effort. A native API's separate reasoning
     field establishes an explicit final channel, even when that field is empty.
+
+    With ``labels`` (label -> native index, from ``observations.labelled_prompt``)
+    the final JSON must be exactly ``{"action": "<label>"}`` and the returned
+    ``action_index`` is the native index; otherwise ``{"action_index": int}``.
     """
     if not isinstance(text, str):
         raise TypeError('Generated text must be a string')
     indices = list(legal_indices)
     if any(type(i) is not int for i in indices) or len(set(indices)) != len(indices):
         raise ValueError('Legal indices must be unique integers')
+    if labels is not None and (not labels or set(labels.values()) - set(indices)
+                               or any(not isinstance(label, str) for label in labels)):
+        raise ValueError('Labels must map strings onto legal indices')
     truncated = finish_reason in _TRUNCATED
     boundary = [(text.find(tag), tag) for tag in (*K2_REASONING_CLOSERS, '</think>') if tag in text]
     reasoning = reasoning_content or ''
@@ -82,6 +89,12 @@ def parse_action(text: str, legal_indices, *, finish_reason: str | None = None,
         value = json.loads(final, object_pairs_hook=no_duplicates)
     except (ValueError, TypeError):
         return ActionParse(None, False, 'invalid_final_json', reasoning, final, False)
+    if labels is not None:
+        if not isinstance(value, dict) or set(value) != {'action'} or not isinstance(value['action'], str):
+            return ActionParse(None, False, 'invalid_action_schema', reasoning, final, False)
+        if value['action'] not in labels:
+            return ActionParse(None, False, 'illegal_action_label', reasoning, final, False)
+        return ActionParse(labels[value['action']], True, None, reasoning, final, False)
     if not isinstance(value, dict) or set(value) != {'action_index'} or type(value['action_index']) is not int:
         return ActionParse(None, False, 'invalid_action_schema', reasoning, final, False)
     index = value['action_index']
