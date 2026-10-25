@@ -1,6 +1,6 @@
 # Value targets in combat refits
 
-**Status:** paused (labelling stopped at 1,753 of 2,000 worlds). **Verdict:** none yet.
+**Status:** running (fits started 25 October). **Verdict:** none yet.
 
 ## Question
 
@@ -25,13 +25,18 @@ better refits there? Approach:
   - *Today's recipe:* luckiest-line votes on the new corpus plus the round 2
     and round 3 corpora (value targets cannot use those, which lack search
     statistics).
-- **Play:** each fit spliced into the champion, with the champion itself,
+- **Play:** each fit spliced into the champion (since 25 October
+  `champion_4058cbf0e271.pt`, whose combat head is identical to the one that
+  played the labelled games), with the champion itself,
   on 8,192 unused worlds from 111,000,000,000, paired by world.
 - **Decision rule, fixed in advance:** values are *Better* than votes on the
   same corpus if both seed pairs favour values and the pooled paired
   comparison (16,384 world pairs) has exact McNemar p < 0.05. Reported
   alongside: each fit against the champion and against today's recipe, and
   validation boss regret for every fit.
+- **Changes before any fit (25 October):** labelling stopped at 1,752 of
+  2,000 worlds, which are used as they are; the play tests use the new
+  champion. Sid asked for both.
 - **Approval:** under Sid's standing instruction to keep doing useful
   research (22 October); follows the value-target result.
 
@@ -43,6 +48,7 @@ better refits there? Approach:
 
 ## Log
 
+- 25 Oct: six fits started on the 1,752 labelled worlds.
 - 23 Oct, 18:18: the queue's stall watchdog stopped all eight labelling
   jobs after two hours without log output (the collector writes no progress
   to its log), with 1,753 of 2,000 worlds labelled and saved. The plan can
