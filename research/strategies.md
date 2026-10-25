@@ -61,6 +61,11 @@ so the network plays well without search.
   plays better than vote targets on the same data (two seeds each). Value
   regret ranked students' play far better than agreement did. Not yet
   tried in the refit loop, which needs labelling with search statistics.
+- [Value-target refits](experiments/2026-10-23-value-target-refits.md)
+  (25 October): on 1,752 of the champion's worlds, value-target refits beat
+  vote-target refits by about 6 points of wins and pass the Act 3 boss far
+  more often than any other head (58 to 61% against 51 to 54%), but lose more
+  early fights; overall they match today's recipe on three times the data.
 - Pages: [combat PPO and early imitation](experiments/2026-10-13-combat-ppo.md),
   [overnight tests](experiments/2026-10-14-overnight-tests.md),
   [fresh start](experiments/2026-10-15-fresh-start.md),

@@ -29,15 +29,15 @@ training setup, the headroom and the options.
 
 ## Now
 
-Nothing running ([status](status.md)). Finished since 23 October:
-- [Reward ablation](experiments/2026-10-23-reward-ablation.md): dropping the
-  floor reward helped for 12 iterations but not over 24; keep it.
-- [Value targets](experiments/2026-10-23-value-targets.md): combat students
-  fitted to the teacher's move values beat vote-fitted students on the same
-  data.
+Nothing running ([status](status.md)). Latest results:
 - [Value-target refits](experiments/2026-10-23-value-target-refits.md):
-  labelling stopped at 1,753 of 2,000 worlds (killed by the queue's stall
-  watchdog); fits not yet run.
+  fitting refits to the teacher's move values instead of its votes adds about
+  6 points of wins on the same data, and these refits pass the Act 3 boss far
+  more often than the champion (58 to 61% against 51%), though they lose more
+  early fights.
+- [Reward ablation](experiments/2026-10-23-reward-ablation.md): dropping the
+  floor reward helped for 12 iterations but not over 24; keep it. Its
+  24-iteration run became the champion.
 
 ## Next
 
