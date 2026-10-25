@@ -45,6 +45,29 @@ class OutOfCombatPotionTest(unittest.TestCase):
         return next(a for a in gc.legal_actions()
                     if a.describe(gc).startswith(f"drink potion {name} "))
 
+    @staticmethod
+    def potion_line(gc):
+        return next(line for line in gc.describe_state().splitlines() if line.startswith("Potions"))
+
+    def test_potion_line_lists_every_slot_after_an_earlier_slot_empties(self):
+        # Regression: the line looped over the potion count, not the slots, so
+        # an empty slot 0 hid the potion in slot 2 that the menu still offered.
+        gc = self.map_context()
+        self.assertEqual(self.potion_line(gc), "Potions (capacity 3): [0] empty, [1] empty, [2] empty")
+        for name in ("BLOOD_POTION", "FIRE_POTION", "FRUIT_JUICE"):
+            gc.obtain_potion(getattr(self.sts.Potion, name))
+        next(a for a in gc.legal_actions()
+             if a.describe(gc) == "discard potion Blood Potion (slot 0)").execute(gc)
+        line = self.potion_line(gc)
+        self.assertEqual(line, "Potions (capacity 3): [0] empty, [1] Fire Potion, [2] Fruit Juice")
+        actions = self.potion_actions(gc)
+        self.assertTrue(actions)
+        for action in actions:
+            name, slot = re.search(r"potion (.+) \(slot (\d+)\)", action.describe(gc)).groups()
+            self.assertIn(f"[{slot}] {name}", line)
+        from sts_env._backend.glossary import _potion_names
+        self.assertEqual(_potion_names(gc.describe_state()), ["Fire Potion", "Fruit Juice"])
+
     def test_map_screen_prefix_and_slot_order_are_preserved(self):
         gc = self.map_context()
         ordinary = self.menu(gc)

@@ -216,6 +216,99 @@ class CliTests(unittest.TestCase):
             self.assertEqual(cli.main(["evaluate", "--seeds", "3,4", "--output", str(self.directory / "fresh")]), 0)
             self.assertEqual(factory.call_count, 2)
 
+    def run_with_agent(self, agent, env: FakeEnv, path: Path, **kwargs) -> dict:
+        with patch.object(cli, "load_agent", return_value=agent), patch.object(cli, "make_env", return_value=env):
+            return cli.run_episode(seed=3, policy_seed=4, agent_spec="module:factory", agent_config={},
+                                   config={"mode": "full"}, output=path, **kwargs)
+
+    def test_agent_and_environment_errors_are_recorded_with_their_source(self) -> None:
+        class OutOfMemory:
+            def choose_action(self, observation: dict) -> int:
+                raise RuntimeError("CUDA out of memory")
+
+        class Illegal:
+            def choose_action(self, observation: dict) -> int:
+                return 99
+
+        cases = (("agent raises", OutOfMemory(), FakeEnv(), "RuntimeError", "agent"),
+                 ("agent returns illegal action", Illegal(), FakeEnv(), "ValueError", "agent"),
+                 ("simulator stalls", cli.load_agent("first"), FakeEnv(error=True), "TimeoutError", "environment"))
+        for name, agent, env, kind, source in cases:
+            with self.subTest(name):
+                path = self.directory / f"{name.replace(' ', '-')}.jsonl"
+                result = self.run_with_agent(agent, env, path)
+                self.assertEqual(result["status"], "error")
+                self.assertEqual(result["error"]["kind"], kind)
+                self.assertEqual(result["error"]["source"], source)
+                self.assertTrue(env.closed)
+                self.assertEqual(cli.read_trace(path)[-1]["error"]["source"], source)
+
+    def test_agent_loading_and_reset_failures_are_agent_errors(self) -> None:
+        class BadReset:
+            def reset(self, seed: int) -> None:
+                raise KeyError("missing checkpoint")
+
+            def choose_action(self, observation: dict) -> int:
+                return 0
+
+        result = self.run_with_agent(BadReset(), FakeEnv(), self.directory / "reset.jsonl")
+        self.assertEqual((result["error"]["kind"], result["error"]["source"]), ("KeyError", "agent"))
+        with patch.object(cli, "make_env", return_value=FakeEnv()) as factory:
+            result = cli.run_episode(seed=3, policy_seed=4, agent_spec="no-colon", agent_config={},
+                                     config={"mode": "full"}, output=self.directory / "load.jsonl")
+            factory.assert_not_called()
+        self.assertEqual((result["error"]["kind"], result["error"]["source"]), ("ValueError", "agent"))
+
+    def test_native_baseline_failure_is_an_environment_error(self) -> None:
+        class FailingNative(FakeEnv):
+            def native_action(self) -> int:
+                raise TimeoutError("native search stalled")
+
+        result = self.run_with_agent(cli.NativeAgent(), FailingNative(), self.directory / "native.jsonl")
+        self.assertEqual((result["error"]["kind"], result["error"]["source"]), ("TimeoutError", "environment"))
+
+    def test_raise_agent_errors_reraises_original_after_writing_the_end_record(self) -> None:
+        class OutOfMemory:
+            def choose_action(self, observation: dict) -> int:
+                raise MemoryError("out of memory")
+
+        env = FakeEnv()
+        path = self.directory / "raised.jsonl"
+        with self.assertRaises(MemoryError):
+            self.run_with_agent(OutOfMemory(), env, path, raise_agent_errors=True)
+        self.assertTrue(env.closed)
+        end = cli.read_trace(path)[-1]
+        self.assertEqual((end["type"], end["status"], end["error"]["source"]), ("end", "error", "agent"))
+        # Environment faults are never raised by this option.
+        result = self.run_with_agent(cli.load_agent("first"), FakeEnv(error=True),
+                                     self.directory / "env.jsonl", raise_agent_errors=True)
+        self.assertEqual(result["error"]["source"], "environment")
+
+    def test_evaluation_counts_error_sources_and_can_stop_on_agent_error(self) -> None:
+        class FailsOnSecondSeed:
+            def __init__(self) -> None:
+                self.episodes = 0
+
+            def reset(self, seed: int) -> None:
+                self.episodes += 1
+
+            def choose_action(self, observation: dict) -> int:
+                if self.episodes == 2:
+                    raise RuntimeError("CUDA out of memory")
+                return 0
+
+        for stop, completed in ((False, 3), (True, 2)):
+            with self.subTest(stop=stop):
+                output = self.directory / f"stop-{stop}"
+                argv = ["evaluate", "--agent", "module:factory", "--seeds", "3,4,5", "--output", str(output)]
+                with patch.object(cli, "load_agent", return_value=FailsOnSecondSeed()), \
+                        patch.object(cli, "make_env", side_effect=lambda config: FakeEnv()), \
+                        contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    self.assertEqual(cli.main(argv + (["--stop-on-agent-error"] if stop else [])), 1)
+                report = json.loads((output / "summary.json").read_text())
+                self.assertEqual(report["completed"], completed)
+                self.assertEqual(report["error_sources"], {"agent": 1, "environment": 0})
+
     def test_inspect_accepts_partial_prefix_and_rejects_unknown_schema(self) -> None:
         path = self.directory / "partial.jsonl"
         self.run_episode(FakeEnv(), path)

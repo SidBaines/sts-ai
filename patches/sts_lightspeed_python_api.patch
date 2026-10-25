@@ -1,8 +1,8 @@
 diff --git a/bindings/slaythespire.cpp b/bindings/slaythespire.cpp
-index a9afe35..5115165 100644
+index a9afe35..21949d4 100644
 --- a/bindings/slaythespire.cpp
 +++ b/bindings/slaythespire.cpp
-@@ -9,24 +9,1579 @@
+@@ -9,24 +9,1586 @@
 
  #include <sstream>
  #include <algorithm>
@@ -838,16 +838,23 @@ index a9afe35..5115165 100644
 +       << ", gold: " << gc.gold
 +       << "\nDeck: " << gc.deck
 +       << "\nRelics: " << gc.relics
-+       << "\nPotions: ";
++       << "\nPotions (capacity " << gc.potionCapacity << "): ";
 +
-+    if (gc.potionCount == 0) {
++    // Every slot, by slot index, as in public combat text. Potion actions name
++    // their slot, and slots fill out of order once an earlier potion is used.
++    if (gc.potionCapacity == 0) {
 +        os << "none";
-+    } else {
-+        for (int i = 0; i < gc.potionCount; ++i) {
-+            if (i > 0) {
-+                os << ", ";
-+            }
-+            os << safePotionName(gc.potions[i]);
++    }
++    for (int i = 0; i < gc.potionCapacity; ++i) {
++        if (i > 0) {
++            os << ", ";
++        }
++        os << "[" << i << "] ";
++        const auto potion = gc.potions[i];
++        if (potion == Potion::EMPTY_POTION_SLOT) {
++            os << "empty";
++        } else {
++            os << safePotionName(potion);
 +        }
 +    }
 +
@@ -1582,7 +1589,7 @@ index a9afe35..5115165 100644
 
      pybind11::class_<NNInterface> nnInterface(m, "NNInterface");
      nnInterface.def("getObservation", &NNInterface::getObservation, "get observation array given a GameContext")
-@@ -39,7 +1594,232 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -39,7 +1601,232 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("boss_simulation_multiplier", &search::ScumSearchAgent2::bossSimulationMultiplier, "bonus multiplier to the simulation count for boss fights")
          .def_readwrite("pause_on_card_reward", &search::ScumSearchAgent2::pauseOnCardReward, "causes the agent to pause so as to cede control to the user when it encounters a card reward choice")
          .def_readwrite("print_logs", &search::ScumSearchAgent2::printLogs, "when set to true, the agent prints state information as it makes actions")
@@ -1816,7 +1823,7 @@ index a9afe35..5115165 100644
 
      pybind11::class_<GameContext> gameContext(m, "GameContext");
      gameContext.def(pybind11::init<CharacterClass, std::uint64_t, int>())
-@@ -55,6 +1835,14 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -55,6 +1842,14 @@ PYBIND11_MODULE(slaythespire, m) {
               [](GameContext &gc, Card card) { gc.deck.obtain(gc, card); },
               "add a card to the deck"
          )
@@ -1831,7 +1838,7 @@ index a9afe35..5115165 100644
          .def("remove_card",
              [](GameContext &gc, int idx) {
                  if (idx < 0 || idx >= gc.deck.size()) {
-@@ -75,6 +1863,76 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -75,6 +1870,76 @@ PYBIND11_MODULE(slaythespire, m) {
              return oss.str();
          }, "returns a string representation of the GameContext");
 
@@ -1908,7 +1915,7 @@ index a9afe35..5115165 100644
      gameContext.def_readwrite("outcome", &GameContext::outcome)
          .def_readwrite("act", &GameContext::act)
          .def_readwrite("floor_num", &GameContext::floorNum)
-@@ -84,7 +1942,8 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -84,7 +1949,8 @@ PYBIND11_MODULE(slaythespire, m) {
          .def_readwrite("cur_map_node_x", &GameContext::curMapNodeX)
          .def_readwrite("cur_map_node_y", &GameContext::curMapNodeY)
          .def_readwrite("cur_room", &GameContext::curRoom)
@@ -1918,7 +1925,7 @@ index a9afe35..5115165 100644
          .def_readwrite("boss", &GameContext::boss)
 
          .def_readwrite("cur_hp", &GameContext::curHp)
-@@ -836,5 +2695,3 @@ PYBIND11_MODULE(slaythespire, m) {
+@@ -836,5 +2702,3 @@ PYBIND11_MODULE(slaythespire, m) {
  }
 
  // os.add_dll_directory("C:\\Program Files\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin")
