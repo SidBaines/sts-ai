@@ -234,6 +234,9 @@ def synchronize(device: str) -> None:
     import torch
     if device.startswith("cuda"):
         torch.cuda.synchronize()
+    elif device.startswith("mps"):
+        # MPS kernels run asynchronously too; timings need an explicit wait.
+        torch.mps.synchronize()
 
 
 def trainable_hash(model: Any) -> str:

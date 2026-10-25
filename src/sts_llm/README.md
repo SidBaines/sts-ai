@@ -165,7 +165,9 @@ Validate the full test set and a real CUDA update before a study.
 
 The initial BF16 cache probes were not bitwise equivalent: a completed greedy
 combat action changed. FP32 probes on the same two states matched within
-0.0001 logit tolerance and preserved completed actions. Batch-size changes also
+0.0001 logit tolerance, but only at low effort with about 10-token outputs;
+there is no medium-effort FP32 control, although the BF16 check also failed at
+medium effort. Batch-size changes also
 shifted BF16 logits. Keep cache/backend/dtype settings fixed within a study;
 treat a change as a new numerical condition. The optional HF reuse path stays
 off by default. Frozen old-policy scores are recomputed full-sequence scores;
