@@ -21,9 +21,25 @@ for this offline serving benchmark.
 
 Use `collate.py --source RUN/remote --output RUN/analysis_complete` for separate
 serving, HF generation, update, fixed-work, cache-pair and mechanics CSVs. Failed
-checks, OOMs and timeouts remain visible. `analyze.py` additionally compares
-saved-decision teacher scores with source-world bootstrap intervals. These
-scores are teacher preferences, not game strength.
+checks, OOMs and timeouts remain visible.
+
+`analyze.py --teacher RUN/teacher128.jsonl --results RUN/remote/results --panel
+RUN/prompts_primary64.jsonl --output RUN/analysis_teacher` scores saved decisions
+against the teacher and writes `teacher_cases.csv`, `teacher_comparisons.csv` and
+`teacher_baselines.csv`; copy those three into `research/figures/llm-throughput/`.
+Comparisons pair the same states, bootstrap whole source worlds, and give no
+interval with fewer than 10 worlds (`--min-clusters`). Each effort comparison
+also has a valid-pairs-only sensitivity row. The baselines are a random legal
+action, always the first menu option and the teacher's own top choice, and every
+arm on the full panel is compared with always-first. Cohorts that reproduced
+another cohort's token sequences are flagged (`identical_outputs_to`,
+`duplicate_of`): they are not replications. These scores are teacher
+preferences, not game strength.
+
+`reasoning_lengths.py --results RUN/remote/results --output
+research/figures/llm-throughput/reasoning_lengths.csv` counts reasoning tokens in
+the matched FlashInfer runs. It needs Transformers (the main checkout's venv has
+it) and the pinned tokenizer.
 
 `diagnose_prompt_cache.py` compares full and split prefill across batch sizes
 and dtypes under the pinned HF/PEFT runtime. Run each dtype in a fresh output
