@@ -133,6 +133,9 @@ def baselines(teachers, panel, cases, *, seed, replicates, min_clusters):
             left = [{k: x[k] for k in ("prompt_id", "world_id", "value")} for x in always_first if in_phase(phase, x["phase"])]
             report = paired_cluster_bootstrap(left, as_records(decisions, "teacher_probability"),
                                               seed=seed, replicates=replicates, min_clusters=min_clusters)
+            # Sensitivity: states with at least one valid answer, scored over valid answers only.
+            valid_only = paired_cluster_bootstrap(left, as_records(decisions, "valid_teacher_probability"),
+                                                  seed=seed, replicates=replicates, min_clusters=min_clusters)
             valid = sum(d["valid_repeats"] for d in decisions)
             output.append({"kind": "arm", "name": arm["case_name"], "phase": phase, "effort": arm["effort"],
                 "identical_outputs_to": arm["identical_outputs_to"],
@@ -144,7 +147,11 @@ def baselines(teachers, panel, cases, *, seed, replicates, min_clusters):
                 "ci95_low": report["ci95"][0] if report["ci95"] else None,
                 "ci95_high": report["ci95"][1] if report["ci95"] else None,
                 "n_pairs": report["n_pairs"], "n_worlds": report["n_worlds"],
-                "interval_unavailable_reason": report["interval_unavailable_reason"]})
+                "interval_unavailable_reason": report["interval_unavailable_reason"],
+                "valid_only_difference_vs_always_first": valid_only["difference"],
+                "valid_only_ci95_low": valid_only["ci95"][0] if valid_only["ci95"] else None,
+                "valid_only_ci95_high": valid_only["ci95"][1] if valid_only["ci95"] else None,
+                "valid_only_n_pairs": valid_only["n_pairs"]})
     return output
 
 
