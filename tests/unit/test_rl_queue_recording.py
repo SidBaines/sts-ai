@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import importlib.util
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -51,6 +52,36 @@ class QueueRecordingTests(unittest.TestCase):
         self.assertEqual(module.launch_inputs(['python', '--bank']), [])
         self.assertEqual(module.launch_inputs(['python', '--bank', '/bank/a', '/bank/b', '--out', '/run']), ['/bank/a', '/bank/b'])
         self.assertEqual(module.launch_inputs(['python', '--records', '/rows.json', '--baseline', '/baseline.json']), ['/rows.json', '/baseline.json'])
+
+    def test_last_activity_counts_collection_progress(self):
+        spec = importlib.util.spec_from_file_location('rl_queue_activity', Path(__file__).parents[2] / 'scripts/rl/queue_runner.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            runs = root / 'data/rl_runs'
+            with patch.object(module, 'ROOT', root), patch.object(module, 'RUNS', runs):
+                for output in (None, 'relative-labels', str(root / 'absolute-labels')):
+                    with self.subTest(output=output):
+                        run = {'name': 'queued', 'cmd': ['python'], 'started': 100, 'resumed_at': 150}
+                        if output is not None:
+                            run['cmd'] += ['--out', output]
+                        out = root / output if output is not None else runs / run['name']
+                        out.mkdir(parents=True, exist_ok=True)
+                        stdout = runs / run['name'] / 'stdout.log'
+                        stdout.parent.mkdir(parents=True, exist_ok=True)
+                        stdout.write_text('working\n')
+                        os.utime(stdout, (200, 200))
+                        self.assertEqual(module.last_activity(run), (200, False))
+                        log = out / 'log.jsonl'
+                        log.write_text('{}\n')
+                        os.utime(log, (250, 250))
+                        self.assertEqual(module.last_activity(run), (250, True))
+                        progress = out / 'progress.jsonl'
+                        progress.write_text('{}\n')
+                        os.utime(progress, (300, 300))
+                        self.assertEqual(module.last_activity(run), (300, True))
+                        log.unlink()
+                        self.assertEqual(module.last_activity(run), (300, True))
 
     def test_stalled_job_fails_without_rewriting_command_or_retry(self):
         spec = importlib.util.spec_from_file_location('rl_queue_stall', Path(__file__).parents[2] / 'scripts/rl/queue_runner.py')

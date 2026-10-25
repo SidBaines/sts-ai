@@ -101,9 +101,10 @@ def run_log(run: dict) -> Path:
 def last_activity(run: dict) -> tuple[float, bool]:
     """Latest sign of progress, and whether the run writes a progress log at all."""
     log, stdout = run_log(run), RUNS / run["name"] / "stdout.log"
+    progress = log.with_name("progress.jsonl")
     times = [run.get("started", 0), run.get("resumed_at", 0)]
-    times += [f.stat().st_mtime for f in (log, stdout) if f.exists()]
-    return max(times), log.exists()
+    times += [f.stat().st_mtime for f in (log, stdout, progress) if f.exists()]
+    return max(times), log.exists() or progress.exists()
 
 
 def launch_inputs(cmd: list[str]) -> list[str]:

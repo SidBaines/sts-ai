@@ -55,6 +55,10 @@ what failed. Commands and module usage: [src/sts_rl/README.md](../../src/sts_rl/
   run whose queue name differed from its out dir was killed 40 minutes after
   launch. Restart the runner process after editing `queue_runner.py`; running
   jobs survive, since they are in their own sessions.
+  The watchdog also counts `<--out>/progress.jsonl`, which `fresh_collect.py`
+  writes after every world (added 2026-10-25, after it killed eight healthy
+  labelling jobs). Any other job that prints nothing for 40 minutes needs a
+  progress file or a keep-alive.
 - **Branching a run:** copy its `latest.pt` into a new `--out` and pass
   `--resume`. Same `--seed` means the same training worlds, so comparisons are
   paired. `--lr` now overrides the optimizer's saved lr on resume; it used to
