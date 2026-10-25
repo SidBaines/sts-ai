@@ -48,7 +48,10 @@ better refits there? Approach:
 
 ## Log
 
-- 25 Oct: six fits started on the 1,752 labelled worlds.
+- 25 Oct: six fits started on the 1,752 labelled worlds. The two fits of
+  today's recipe were refused because the fitter would not mix corpora
+  recorded with and without search statistics (which does not change the
+  votes); after a fix (commit 42bc115) they were rerun.
 - 23 Oct, 18:18: the queue's stall watchdog stopped all eight labelling
   jobs after two hours without log output (the collector writes no progress
   to its log), with 1,753 of 2,000 worlds labelled and saved. The plan can
