@@ -125,7 +125,8 @@ confirmation worlds apart.
 | 0.1.5.1 | Reward ablation, comparison at 24 iterations (only if 12 does not decide) | 109,000,000,000 | 16,384 |
 | 0.1.5.1 | Value-target students in the champion, play test (selection set) | 110,000,000,000 | 8,192 |
 | 0.1.5.1 | Teacher labels with search statistics, value-target refits | 90,502,000,000 | 2,000 |
-| 0.1.5.1 | Value-target refits in the champion, play test | 111,000,000,000 | 8,192 |
+| 0.1.5.1 | Value-target refits and hybrid-target students in the champion, play test | 111,000,000,000 | 8,192 |
+| 0.1.5.1 | Confirmation for a hybrid-target student that beats the champion | 112,000,000,000 | 8,192 |
 | 0.1.5.1 | Probe worlds for the round 2 and round 3 fits (unlabelled, movement monitoring only) | 93,000,000,100; 93,000,000,200 | 8 each |
 | All | Out-of-combat PPO training worlds (`train_ooc.py`): 7,000,000,000 plus 500,000,000 per training seed plus 10,000,000 per iteration | 7,000,000,000 | games per iteration |
 

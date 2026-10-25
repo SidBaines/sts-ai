@@ -29,7 +29,8 @@ training setup, the headroom and the options.
 
 ## Now
 
-Nothing running ([status](status.md)). Latest results:
+Running ([status](status.md)): [hybrid targets](experiments/2026-10-25-hybrid-targets.md),
+value targets on new rows and votes on the older corpora. Latest results:
 - [Value-target refits](experiments/2026-10-23-value-target-refits.md):
   fitting refits to the teacher's move values instead of its votes adds about
   6 points of wins on the same data, and these refits pass the Act 3 boss far
