@@ -19,10 +19,12 @@ The [23 October pilot design](experiments/2026-10-23-medium-teacher-pilot.md)
 would probably end inconclusive. The
 [25 October review](brainstorms/2026-10-25-getting-the-model-to-learn.md)
 proposes a staged replacement:
-- an overfit test on decisive out-of-combat states;
+- an overfit test on decisive states;
 - mean-centred advantages;
 - a prompt fixed on design grounds before training;
 - held-out top-1 agreement on decisive states as the early signal.
+
+Stage 1 (an overfit test on 32 decisive states, combat and out of combat together, labelled by the 25 October champion) is built and smoke-tested on the laptop and awaits approval: [page](experiments/2026-10-25-overfit-test.md).
 
 Full-game RL now scores model-invalid games as losses. It is unit-tested, with
 no learning run, and is far too slow per game at current generation rates.

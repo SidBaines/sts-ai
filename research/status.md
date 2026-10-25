@@ -15,11 +15,14 @@ Nothing is running. Updated 25 October 2026.
   - Mac runs are in `data/llm_runs/mac_local_20261025`.
 - RTX runs are in `data/llm_runs/k2_throughput_20261023` (local). The RTX pod
   from 23 October no longer exists: `runpodctl` finds no pods.
-- The pilot is on hold until Sid decides the questions in
-  `research/brainstorms/2026-10-25-getting-the-model-to-learn.md`.
-- Environment bug for `main`: the out-of-combat text lists potions by count
-  rather than slot (`slaythespire.cpp` around line 849). Also for `main`:
-  `run_episode` swallows agent errors, so a CUDA out-of-memory error in the
-  clean CLI path becomes an "error" game.
+- Stage 1 (`research/experiments/2026-10-25-overfit-test.md`) awaits approval.
+  To launch it, keep the Mac plugged in and run
+  `python3 experiments/2026-10-25-overfit-test/launch_screen.py stage1_screen_<date> 1e-5 3e-5 1e-4`.
+  Stop between runs with `data/llm_runs/<screen>/STOP`, or mid-run with
+  `<screen>/lr_<rate>/STOP`.
+- Inputs: `data/llm_runs/stage1_states_20261025`. Smoke runs:
+  `stage1_smoke_functional_20261025` and `stage1_smoke_timing_20261025`.
+- Environment release 0.1.6 (potion line, agent-error source) is pull request
+  #10 to `main`; merge its tag here once it lands.
 - Tests: the full suite passes 355 with 36 skipped (PyTorch, gym and fixture
   extras). With PyTorch installed, the four LLM test modules pass 76 of 76.

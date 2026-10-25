@@ -31,6 +31,9 @@
 - **Always-first baseline:** always choosing the first option of the current menu (index 0), scored the same way. Model arms are compared with it state by state.
 - **Teacher top-choice baseline:** the teacher's own most probable action on each state; the highest teacher probability score attainable there.
 - **First-option rate:** the fraction of valid answers that choose the first menu option.
+- **First-displayed-option rate:** with prompt version 2's shuffled, letter-labelled menu, the fraction of valid answers choosing label A. Under random menu orders it cannot earn reward, so a rising rate is drift towards a position shortcut.
+- **Prompt version 2:** the unchanged state text plus a letter-labelled menu in a fresh random order per presentation; the answer is `{"action": "<label>"}`.
+- **Pass (stage 1):** one sweep through all training states (8 iterations of 4 states, 8 samples each: 256 decisions).
 - **Valid-pairs-only sensitivity:** the teacher probability averaged over valid answers only, keeping a state only when both compared arms have a valid answer. It checks whether invalid answers scored as zero drive a comparison; the zero-scored version stays the main result.
 - **Zero-variance group fraction:** fraction of sampled groups whose action rewards provide no group-relative policy advantage; identical preferred actions and uninformative rewards can both produce flat groups.
 - **End-to-end training rate:** updated responses divided by total measured wall time, including generation, teacher lookup, old/reference scoring, updates, adapter refresh and checkpoint saving.

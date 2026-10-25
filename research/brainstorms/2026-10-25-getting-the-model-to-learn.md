@@ -206,3 +206,9 @@ only as the "before" reference.
   checkpointed updates ([Mac study](../experiments/2026-10-25-mac-local-speed.md)).
   A rented GPU with vLLM serving is only needed for full-game panels or much
   larger runs. Is the laptop acceptable for stages 0–2?
+
+Later decision, 25 October: Sid chose to train combat and out-of-combat
+decisions together from stage 1, rather than out of combat first, and to use
+the 25 October champion as teacher. Mean-centred advantages and decisive-state
+selection make that safe. Stage 1's learning-rate screen moved down to
+0.00001–0.0001 after the timing smoke (see the stage-1 page).
