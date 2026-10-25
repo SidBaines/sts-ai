@@ -113,6 +113,12 @@ def baselines(teachers, panel, cases, *, seed, replicates, min_clusters):
         "always_first_option": lambda r: teacher_reward(r, r["legal_indices"][0]),
         "teacher_top_choice": lambda r: teacher_reward(r, teacher_top(r)),
     }
+    # Probability that each fixed policy picks the first menu option on a state.
+    picks_first = {
+        "random_legal_action": lambda r: 1/len(r["legal_indices"]),
+        "always_first_option": lambda r: 1.,
+        "teacher_top_choice": lambda r: float(teacher_top(r) == r["legal_indices"][0]),
+    }
     def in_phase(phase, value):
         return phase == "all" or value == phase
     output = []
@@ -122,7 +128,8 @@ def baselines(teachers, panel, cases, *, seed, replicates, min_clusters):
             output.append({"kind": "baseline", "name": name, "phase": phase, "states": len(selected),
                 "worlds": len({r["world_identity"] for r in selected}),
                 "median_menu_size": statistics.median(len(r["legal_indices"]) for r in selected) if selected else None,
-                "mean_teacher_probability": mean(score(r) for r in selected)})
+                "mean_teacher_probability": mean(score(r) for r in selected),
+                "first_option_rate": mean(picks_first[name](r) for r in selected)})
     always_first = [{"prompt_id": str(r["id"]), "world_id": r["world_identity"], "phase": r.get("phase"),
                      "value": fixed["always_first_option"](r)} for r in rows]
     for arm in cases:
