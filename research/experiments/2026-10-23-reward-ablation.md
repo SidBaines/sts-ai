@@ -126,14 +126,15 @@ Caveats:
 ## Next
 
 - Keep the current reward (wins plus 0.05 per floor).
-- Promotion candidate: the wins-plus-floors arm's iteration-24 checkpoint
-  (`reward_ablation_20261023/floors/iter_0024.pt`, 29.4% against the
-  champion's 26.0%); Sid's decision.
+- Promoted (Sid, 25 October): the wins-plus-floors arm's iteration-24
+  checkpoint, as `champion_4058cbf0e271.pt`.
 - When comparing training choices, compare at the end of a full-length run;
   early leads can fade.
 
 ## Log
 
+- 25 Oct, 09:42: Sid promoted the wins-plus-floors arm's iteration-24
+  checkpoint (`champion_4058cbf0e271.pt`).
 - 25 Oct, 03:00: 24-iteration comparison: wins plus floors 4,822 against
   wins only 4,728 (p = 0.15); the 12-iteration lead did not last.
 - 23 Oct, 18:28: Sid asked to resume both arms to 24 iterations for a

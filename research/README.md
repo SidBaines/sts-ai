@@ -10,11 +10,12 @@ used to make better teachers, not to play.
 
 | Player | Win rate | Evidence |
 |---|---|---|
-| Reward ablation, wins-plus-floors arm, iteration 24 (`reward_ablation_20261023/floors/iter_0024.pt`; 24 more iterations of out-of-combat PPO from the champion, current reward) | 29.4% on 16,384 unused worlds from 109,000,000,000 (4,822 against the champion's 4,262, p < 0.001); the wins-only arm reached 28.9% (4,728; no clear difference, p = 0.15) | Confirmed; promotion candidate (Sid's decision) |
-| **Champion from 23 October, 09:58:** joint run 2's final checkpoint (`champion_c8553bc33e53.pt`; out-of-combat PPO with two gated combat refits) | 26.8% on 4,096 unused worlds from 107,000,000,000 (1,096 against the fourth continued training's 952, p < 0.001) | Confirmed; current default |
-| Champion from 22 October, 16:32 (`champion_af2fb9f1f260.pt`) | 21.1% on 4,096 unused worlds from 100,000,000,000 | Confirmed |
+| **Champion from 25 October, 09:42:** 24 more iterations of out-of-combat PPO from the previous champion, current reward (`champions/champion_4058cbf0e271.pt`, from `reward_ablation_20261023/floors/iter_0024.pt`) | 29.4% on 16,384 unused worlds from 109,000,000,000 (4,822 against the previous champion's 4,262, +3.4 points, p < 0.001) | Confirmed; current default |
+| The same run rewarded only for wins (`reward_ablation_20261023/wins/iter_0024.pt`) | 28.9% on the same worlds (4,728; no clear difference from the champion's run, p = 0.15) | Confirmed; not promoted |
+| Champion from 23 October: joint run 2's final checkpoint (`champions/champion_c8553bc33e53.pt`; two gated combat refits) | 26.8% on 4,096 unused worlds from 107,000,000,000 (1,096 against the fourth continued training's 952, p < 0.001) | Confirmed |
 
-Earlier players and every comparison are in the [results ledger](results.md).
+Champions are kept with their promotion records in `data/rl_runs/champions/`
+(worktree `nonllm-large-batch`). Earlier players and every comparison are in the [results ledger](results.md).
 Compare numbers only within one environment version and world set.
 
 The agent loses mainly at bosses: of the champion's losses, about 41% are at
