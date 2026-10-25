@@ -1,6 +1,6 @@
 # Status
 
-**Updated 25 October 2026, 09:50 GMT.** Nothing running. Champion:
+**Updated 25 October 2026, 09:40 GMT.** Nothing running. Champion:
 `champion_c8553bc33e53.pt`, joint run 2's final checkpoint (26.8% on unused
 worlds). Promotion candidate: the reward ablation's wins-plus-floors arm at
 iteration 24 (29.4% against the champion's 26.0% on 16,384 unused worlds);
