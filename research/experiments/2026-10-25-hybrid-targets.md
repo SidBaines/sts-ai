@@ -77,7 +77,7 @@ Caveats:
 ## Log
 
 - 25 Oct, 11:55: play tests done: the hybrid is worse than either recipe.
-- 25 Oct, 10:58: fits started.
+- 25 Oct, 10:56: fits started.
 
 Code: commit a8b0ea4, run from worktree `nonllm-hybrid-targets` (do not edit
 it). Data: run `value_refits_20261023` (local, worktree `nonllm-large-batch`).
