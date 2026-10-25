@@ -1,6 +1,6 @@
 # Status
 
-**Updated 25 October 2026, 11:57 GMT.** Nothing running. Champion:
+**Updated 25 October 2026, 14:25 GMT.** Nothing running. Champion:
 `champion_4058cbf0e271.pt` (promoted by Sid on 25 October; 29.4% on unused
 worlds), kept with earlier champions in `data/rl_runs/champions/` (worktree
 `nonllm-large-batch`).
@@ -17,9 +17,11 @@ worlds), kept with earlier champions in `data/rl_runs/champions/` (worktree
   `build015`), `nonllm-better-teacher` (teacher build), `nonllm-dashboard`
   (dashboard), and the frozen code of runs, which must not be edited:
   `nonllm-continued-frozen`, `nonllm-joint-frozen`, `nonllm-joint2-frozen`,
-  `nonllm-reward-ablation`, `nonllm-value-targets`.
+  `nonllm-reward-ablation`, `nonllm-value-targets`,
+  `nonllm-mixed-record-search`, `nonllm-hybrid-targets`.
 
 ## Next
 
-With Sid: label more of the champion's fights with search statistics for
-value-target refits on a bigger corpus.
+Sid's choice among the proposals in the README's Next section (the
+value-target head for late bosses, another GPU-updated PPO round, or the
+imitation-gap tests).

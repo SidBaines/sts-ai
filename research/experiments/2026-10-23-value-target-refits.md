@@ -73,6 +73,21 @@ same corpus.** Each refit spliced into the champion; 8,192 unused worlds from
 - Validation boss regret again separated value from vote fits (51 to 55
   against 73 to 82) in line with play at the Act 3 boss.
 
+**Why value heads are weak early (exploratory, after the play tests).**
+- On held-out labelled positions, the value heads match the pooled teacher
+  better than every other head in every fight group, Act 1 included
+  (validation regret in Act 1 hallways 49 to 58 against 80 to 90; Act 1 boss
+  59 to 62 against 99 to 103). So their weaker early play is not poor
+  imitation where labels exist, and more hallway labels alone may not fix it.
+- The teacher's two best moves are almost tied at the late bosses (median
+  gap 9 evaluation points at the Act 3 boss, 28 at the Act 2 boss) but not in
+  hallways (150 to 190). There a luckiest-line vote picks almost arbitrarily
+  among near-equal moves, which value targets avoid; this fits value targets
+  helping most at the Act 3 boss. The pooled and luckiest-line choices agree
+  50 to 59% of the time in every fight group, so the two signals do not
+  diverge more in easy fights.
+- Why copying the teacher more closely in Act 1 plays worse is unexplained.
+
 ## Conclusion
 
 Value targets make much better combat students than vote targets on the
@@ -90,11 +105,12 @@ Caveats:
 
 ## Next
 
-- Fit one student with value targets on the new rows and vote targets on
-  the round 2 and round 3 corpora (`--target-mode pooled_values_or_votes`,
-  being added), two seeds, and play it in the champion.
-- Label future refit corpora with `--record-search`, and with more hallway
-  fights, so value targets cover every fight type.
+- Superseded: the hybrid fit (value targets on new rows, votes on older
+  corpora) was worse than either recipe ([hybrid targets](2026-10-25-hybrid-targets.md)).
+- Proposed, awaiting Sid: use the value-target head only for the Act 2 and
+  Act 3 boss fights and the champion's head elsewhere (fight type is public,
+  so this stays a pure policy); if it helps, label more late-boss fights with
+  search statistics to strengthen that head.
 
 ## Log
 

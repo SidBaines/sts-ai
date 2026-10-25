@@ -29,32 +29,28 @@ training setup, the headroom and the options.
 
 ## Now
 
-Nothing running ([status](status.md)). Latest results:
-- [Value-target refits](experiments/2026-10-23-value-target-refits.md):
-  fitting refits to the teacher's move values instead of its votes adds about
-  6 points of wins on the same data, and these refits pass the Act 3 boss far
-  more often than the champion (58 to 61% against 51%), though they lose more
-  early fights.
-- [Hybrid targets](experiments/2026-10-25-hybrid-targets.md): mixing value
-  targets with votes from the older corpora in one fit was worse than either.
-- [Reward ablation](experiments/2026-10-23-reward-ablation.md): dropping the
-  floor reward helped for 12 iterations but not over 24; keep it. Its
-  24-iteration run became the champion.
+Nothing running ([status](status.md)). Latest: [value-target refits](experiments/2026-10-23-value-target-refits.md)
+add about 6 points over vote targets on the same data and pass the Act 3
+boss far more often (58 to 61% against 51%), but lose more early fights;
+[mixing them with older vote corpora](experiments/2026-10-25-hybrid-targets.md)
+was worse. Dropping the floor reward did not help over 24 iterations
+([reward ablation](experiments/2026-10-23-reward-ablation.md)). The PPO
+update can now run on the GPU (twice as fast; see `scripts/rl/CLAUDE.md`).
 
 ## Next
 
-1. **Value targets in refits:** fit and play-test refits on the 1,753
-   labelled worlds (values against votes, two seeds each).
-2. **Refit-and-gate cycles as standard** beside out-of-combat training, with
-   shorter cycles, value targets if they win, and validation boss regret to
-   screen fits before the gate.
-3. **Distil potion decisions at bosses:** the teacher deciding only potion
-   drinks is worth about 4 points; the champion drinks about half as often
-   as the teacher ([better teacher](experiments/2026-10-22-better-teacher.md)).
-4. **Close the imitation gap:** test whether missing enemy move history (or
-   known top cards) explains why students copy the teacher poorly.
-5. **Learn deck strength** (a deck-value network trained on oracle scores).
-   To discuss with Sid.
+Proposed on 25 October, awaiting Sid's choice:
+1. **Value-target head for late bosses only:** a policy that uses the
+   value-target combat head in Act 2 and Act 3 boss fights and the champion's
+   head elsewhere (Codex work for a routed checkpoint, then play on worlds
+   from 111,000,000,000 and confirm on 112,000,000,000). If it helps, label
+   more late-boss fights with search statistics.
+2. **Another out-of-combat PPO round from the champion**, with the PPO update
+   on the GPU (`--update-device mps`, about 25 to 30% faster per iteration;
+   use one device for every arm of a comparison).
+3. **Close the imitation gap:** test missing information (enemy move
+   history, known top cards).
+4. **Learn deck strength** (a deck-value network trained on oracle scores).
 
 ## Open questions
 
@@ -62,7 +58,8 @@ Nothing running ([status](status.md)). Latest results:
   could not?
 - Why does the old encoder still beat the structured encoder by about 1.4
   points once rule features and size are matched?
-- Does a recurrent policy (memory across turns) matter? Left for later.
+- Why do value-target heads play Act 1 worse while copying the teacher
+  better there?
 
 ## Pages
 
