@@ -68,6 +68,5 @@ Nothing running ([status](status.md)). Finished since 23 October:
 - [metrics.md](metrics.md): definitions of metrics, evaluation worlds and terms.
 - [experiments/](experiments/): one page per study.
 - [brainstorms/](brainstorms/): dated records of strategy discussions.
-- [log.md](log.md): temporary running experiment log, newest first.
 - [status.md](status.md): what is running now.
 - [archive.md](archive.md): where the retired documents went.

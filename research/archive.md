@@ -145,3 +145,10 @@ controller code hashes it as a pinned input.
   [src/sts_policy/entity_encoding.md](../src/sts_policy/entity_encoding.md).
 - The top-level `README.md` workstream summary is replaced by
   [README.md](README.md).
+
+## Retired 25 October 2026
+
+- `research/log.md`: the temporary running experiment log kept at Sid's
+  request from 20 to 25 October. Everything in it is also in the experiment
+  pages, the results ledger and strategies. Read it with
+  `git show df2e93eesearch/log.md`.
