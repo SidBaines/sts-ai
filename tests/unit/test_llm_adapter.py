@@ -1,3 +1,4 @@
+import hashlib
 import json
 import math
 import random
@@ -6,12 +7,13 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
-from sts_llm.teacher_worker import source_revision
-from sts_llm.observations import prompt
+from sts_llm.teacher_worker import checkpoint_versions, source_revision
+from sts_llm.observations import PROMPT_VERSION, prompt
 from sts_llm.generation import parse_action, K2_REASONING_CLOSERS
-from sts_llm.teacher import teacher_reward, validate_teacher
-from sts_llm.dataset import world_split, prepare_rows
-from sts_llm.eval import LLMAgent, InvalidModelAction, evaluate_saved
+from sts_llm.teacher import NonLLMTeacher, teacher_reward, validate_teacher
+from sts_llm.dataset import (SPLIT_SCHEME_VERSION, canonical_world_identity, prepare_rows, verified_split,
+                             world_split)
+from sts_llm.eval import LLMAgent, InvalidModelAction, evaluate_saved, main as eval_main
 
 OBS = {'phase': 'combat', 'state': {'act': 2, 'observation_version': 'sts_env_public_v3'},
        'text': 'Player HP20/80. Enemy intends12. Strike: Deal6 damage. Defend: Gain5 Block.',
@@ -80,6 +82,31 @@ class RuntimeProvenanceTests(unittest.TestCase):
                 self.assertEqual(source_revision(Path(tmp)), 'teacher-original')
                 git.assert_not_called()
 
+    def test_checkpoint_versions_come_from_metadata_with_recorded_fallback(self):
+        recorded = checkpoint_versions({'format_version': 7, 'metadata': {'encoder_version': 'public_candidate_v9'}})
+        self.assertEqual((recorded['encoder_version'], recorded['checkpoint_format_version']), ('public_candidate_v9', 7))
+        self.assertEqual(set(recorded['version_source'].values()), {'checkpoint_metadata'})
+        for payload in (None, {}, {'metadata': {}}):
+            fallback = checkpoint_versions(payload)
+            self.assertEqual((fallback['encoder_version'], fallback['checkpoint_format_version']),
+                             ('public_candidate_v2', 1))
+            self.assertEqual(set(fallback['version_source'].values()), {'fallback_constant'})
+
+    def test_teacher_requests_are_bounded_chunks(self):
+        teacher = NonLLMTeacher.__new__(NonLLMTeacher)
+        teacher.batch_size = 2
+        sizes = []
+        def rpc(op, observations):
+            sizes.append(len(observations))
+            return [{'legal_indices': [3, 9], 'probabilities': [.5, .5], 'excluded_indices': []}
+                    for _ in observations]
+        teacher._rpc = rpc
+        self.assertEqual(len(teacher.distributions([OBS] * 5)), 5)
+        self.assertEqual(sizes, [2, 2, 1])
+        teacher._rpc = lambda op, observations: []
+        with self.assertRaisesRegex(Exception, 'incomplete batch'):
+            teacher.distributions([OBS])
+
 
 class PromptAndDatasetTests(unittest.TestCase):
     def test_prompt_whitelists_public_text_and_menu(self):
@@ -100,6 +127,50 @@ class PromptAndDatasetTests(unittest.TestCase):
         self.assertEqual(prepared[0]['split'], prepared[1]['split'])
         self.assertEqual(prepared[0]['split'], world_split('same-world'))
         self.assertNotIn('SECRET', json.dumps(prepared[0]['messages']))
+
+    class UniformTeacher:
+        def distributions(self, observations):
+            return [{'legal_indices': [3, 9], 'probabilities': [.25, .75], 'excluded_indices': []}
+                    for _ in observations]
+
+    def test_inline_and_source_referenced_forms_of_one_world_share_a_split(self):
+        # Find a seed whose raw decimal string and 'world:<seed>' hashed to different v1 buckets.
+        def v1_split(text):
+            bucket = int(hashlib.sha256(('sts-llm-world-split-v1:' + text).encode()).hexdigest()[:8], 16) % 10
+            return 'test' if bucket == 0 else 'validation' if bucket == 1 else 'train'
+        seed = next(n for n in range(1000) if v1_split(str(n)) != v1_split(f'world:{n}'))
+        with tempfile.TemporaryDirectory() as tmp:
+            blob = json.dumps({'world_seed': seed, 'labels': [{'public_hash': 'h', 'observation': OBS}]}).encode()
+            source = Path(tmp) / f'{seed}.json'
+            source.write_bytes(blob)
+            reference = {'path': str(source), 'file_sha256': hashlib.sha256(blob).hexdigest(),
+                         'label_ordinal': 0, 'public_hash': 'h'}
+            rows = [{'id': 'int', 'observation': OBS, 'world_identity': seed},
+                    {'id': 'text', 'observation': OBS, 'world_identity': str(seed)},
+                    {'id': 'source', 'source_record_identity': reference}]
+            prepared = prepare_rows(rows, self.UniformTeacher())
+        self.assertEqual({row['world_identity'] for row in prepared}, {f'world:{seed}'})
+        self.assertEqual({row['split'] for row in prepared}, {v1_split(f'world:{seed}')})
+        self.assertEqual({row['split_scheme_version'] for row in prepared}, {SPLIT_SCHEME_VERSION})
+        for row in prepared:
+            self.assertEqual(verified_split(row), row['split'])
+
+    def test_canonical_world_identity(self):
+        for value in (12, '12', 'world:12', 'world:012'):
+            self.assertEqual(canonical_world_identity(value), 'world:12')
+        self.assertEqual(canonical_world_identity('same-world'), 'same-world')
+        for bad in (True, None, 1.5, -1, ''):
+            with self.assertRaises(ValueError):
+                canonical_world_identity(bad)
+
+    def test_verified_split_refuses_forged_or_unknown_scheme_rows(self):
+        world = next(f'world:{n}' for n in range(1000) if world_split(f'world:{n}') == 'test')
+        self.assertEqual(verified_split({'id': 'v1', 'world_identity': world, 'split': 'test'}), 'test')
+        with self.assertRaisesRegex(ValueError, 'declares split'):
+            verified_split({'id': 'forged', 'world_identity': world, 'split': 'train'})
+        with self.assertRaisesRegex(ValueError, 'unknown split scheme'):
+            verified_split({'id': 'future', 'world_identity': world, 'split': 'test',
+                            'split_scheme_version': SPLIT_SCHEME_VERSION + 1})
 
 
 class EvaluationTests(unittest.TestCase):
@@ -171,6 +242,43 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(summary['legal_rate'], 1.)
         self.assertEqual(summary['mean_teacher_probability'], 0.)
         self.assertEqual(summary['teacher_filtered_action_rate'], 1.)
+
+
+
+class SavedEvaluationCommandTests(unittest.TestCase):
+    def run_eval(self, split_rows, *arguments):
+        with tempfile.TemporaryDirectory() as tmp:
+            dataset = Path(tmp) / 'rows.jsonl'
+            dataset.write_text(''.join(json.dumps(row) + '\n' for row in split_rows))
+            argv = ['--dataset', str(dataset), '--base-url', 'http://127.0.0.1:1/v1', '--model', 'm',
+                    '--output', str(Path(tmp) / 'out.jsonl'), *arguments]
+            with patch('sts_llm.eval.OpenAIChatClient'), patch('sys.stdout'), \
+                 patch('sts_llm.eval.evaluate_saved', return_value={}) as evaluate:
+                eval_main(argv)
+                summary = json.loads((Path(tmp) / 'out.jsonl.summary.json').read_text())
+            return evaluate.call_args.args[0], summary
+
+    @staticmethod
+    def row(world_split_name, **extra):
+        world = next(f'world:{n}' for n in range(1000) if world_split(f'world:{n}') == world_split_name)
+        return {**ROW, 'id': world_split_name, 'split': world_split_name, 'world_identity': world,
+                'messages': prompt(OBS), 'prompt_version': PROMPT_VERSION,
+                'observation_version': 'sts_env_public_v3', **extra}
+
+    def test_default_split_is_validation_and_test_needs_an_explicit_flag(self):
+        rows = [self.row('train'), self.row('validation'), self.row('test')]
+        selected, summary = self.run_eval(rows)
+        self.assertEqual([row['id'] for row in selected], ['validation'])
+        self.assertEqual((summary['split'], summary['split_scheme_version']), ('validation', SPLIT_SCHEME_VERSION))
+        with self.assertRaises(SystemExit), patch('sys.stderr'):
+            self.run_eval(rows, '--split', 'test')
+        selected, _ = self.run_eval(rows, '--split', 'test', '--allow-test-split')
+        self.assertEqual([row['id'] for row in selected], ['test'])
+
+    def test_rows_with_forged_splits_are_refused(self):
+        forged = self.row('test', split='validation')
+        with self.assertRaisesRegex(ValueError, 'declares split'):
+            self.run_eval([self.row('validation'), forged])
 
 
 if __name__ == '__main__':

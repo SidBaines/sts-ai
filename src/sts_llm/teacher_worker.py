@@ -1,13 +1,26 @@
 """JSON-lines subprocess. Only this child imports the non-LLM source tree."""
 from __future__ import annotations
-import argparse
-import hashlib
-import json
 import os
-from pathlib import Path
-import subprocess
 import sys
-import traceback
+
+# Run as a script, Python puts this file's directory (src/sts_llm) first on
+# sys.path. Modules there, such as sts_llm/statistics.py, would then shadow
+# standard-library modules for the teacher code, NumPy and PyTorch. Remove it
+# before importing anything else; this works on every Python version.
+_PACKAGE_DIRECTORY = os.path.realpath(os.path.dirname(os.path.abspath(__file__)))
+sys.path[:] = [entry for entry in sys.path
+               if os.path.realpath(os.path.abspath(entry or os.curdir)) != _PACKAGE_DIRECTORY]
+
+import argparse  # noqa: E402
+import hashlib  # noqa: E402
+import json  # noqa: E402
+from pathlib import Path  # noqa: E402
+import subprocess  # noqa: E402
+import traceback  # noqa: E402
+
+# Used only when the checkpoint does not record its own versions (older files).
+FALLBACK_ENCODER_VERSION = 'public_candidate_v2'
+FALLBACK_CHECKPOINT_FORMAT_VERSION = 1
 
 
 def identity(path):
@@ -28,6 +41,35 @@ def source_revision(root):
         return None
 
 
+def checkpoint_versions(payload) -> dict:
+    """Encoder and checkpoint format versions recorded in a policy checkpoint.
+
+    Each field falls back to the historical constant when the checkpoint does
+    not record it, and ``version_source`` says which was used.
+    """
+    metadata = payload.get('metadata') if isinstance(payload, dict) else None
+    encoder = metadata.get('encoder_version') if isinstance(metadata, dict) else None
+    checkpoint_format = payload.get('format_version') if isinstance(payload, dict) else None
+    return {'encoder_version': FALLBACK_ENCODER_VERSION if encoder is None else encoder,
+            'checkpoint_format_version': (FALLBACK_CHECKPOINT_FORMAT_VERSION if checkpoint_format is None
+                                          else checkpoint_format),
+            'version_source': {
+                'encoder_version': 'fallback_constant' if encoder is None else 'checkpoint_metadata',
+                'checkpoint_format_version': ('fallback_constant' if checkpoint_format is None
+                                              else 'checkpoint_metadata')}}
+
+
+def read_checkpoint_versions(path, expected_identity) -> dict:
+    try:
+        import torch
+        payload = torch.load(path, map_location='cpu', weights_only=False)
+    except Exception as exc:  # Unreadable here: keep the historical constants, say why.
+        return {**checkpoint_versions(None), 'version_source_error': f'{type(exc).__name__}: {exc}'}
+    if identity(path) != expected_identity:
+        raise RuntimeError('Teacher checkpoint changed while its versions were read')
+    return checkpoint_versions(payload)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--teacher-root', required=True)
@@ -42,6 +84,7 @@ def main():
     from sts_rl.fresh_study import StudyPolicy, FILTER_ID, DEAD_FILTER_ID, PUBLIC_CONTEXT_ID
     checkpoint = identity(args.checkpoint)
     policy = StudyPolicy(checkpoint['path'])
+    versions = read_checkpoint_versions(checkpoint['path'], checkpoint)
     revision = source_revision(root)
     def metadata():
         runtime_files = []
@@ -59,7 +102,7 @@ def main():
         return {'kind': 'nonllm_policy_probability_v1', 'checkpoint': checkpoint,
                 'source_revision': revision, 'teacher_root': str(root),
                 'filter_ids': [FILTER_ID, DEAD_FILTER_ID], 'public_context_id': PUBLIC_CONTEXT_ID,
-                'encoder_version': 'public_candidate_v2', 'checkpoint_format_version': 1,
+                **versions,
                 'runtime_files': sorted(runtime_files, key=lambda x: x['relative_path']),
                 'native_simulator_loaded': any(name == 'slaythespire' or name.startswith('slaythespire.')
                                                for name in sys.modules)}

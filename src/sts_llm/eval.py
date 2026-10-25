@@ -5,6 +5,7 @@ import json
 import random
 import time
 from pathlib import Path
+from .dataset import SPLIT_SCHEME_VERSION, check_row_versions, verified_split
 from .generation import OpenAIChatClient, parse_action
 from .observations import prompt, legal_indices, observation_identity
 from .teacher import teacher_reward, validate_teacher
@@ -127,7 +128,9 @@ def evaluate_saved(rows, client, *, output: str, require_reasoning_boundary=True
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dataset', required=True)
-    parser.add_argument('--split', choices=('train', 'validation', 'test'), default='test')
+    parser.add_argument('--split', choices=('train', 'validation', 'test'), default='validation')
+    parser.add_argument('--allow-test-split', action='store_true',
+                        help='Required to evaluate the held-out test split (final, planned evaluations only)')
     parser.add_argument('--base-url', required=True)
     parser.add_argument('--model', required=True)
     parser.add_argument('--max-tokens', type=int, default=4096)
@@ -136,14 +139,20 @@ def main(argv=None):
     parser.add_argument('--allow-final-channel-only', action='store_true')
     parser.add_argument('--output', required=True)
     args = parser.parse_args(argv)
+    if args.split == 'test' and not args.allow_test_split:
+        parser.error('the test split is held out; pass --allow-test-split only for a final, planned evaluation')
     rows = [json.loads(line) for line in Path(args.dataset).read_text().splitlines() if line.strip()]
-    rows = [row for row in rows if row['split'] == args.split]
+    for row in rows:
+        check_row_versions(row)
+    # The stored split field is recomputed from each row's world, never trusted alone.
+    rows = [row for row in rows if verified_split(row) == args.split]
     if not rows:
         raise ValueError('Requested split is empty')
     client = OpenAIChatClient(base_url=args.base_url, model=args.model, max_tokens=args.max_tokens,
                              temperature=args.temperature, extra_body=args.extra_body)
     summary = evaluate_saved(rows, client, output=args.output,
                               require_reasoning_boundary=not args.allow_final_channel_only)
+    summary.update(split=args.split, split_scheme_version=SPLIT_SCHEME_VERSION)
     Path(args.output + '.summary.json').write_text(json.dumps(summary, indent=2) + '\n')
     print(json.dumps(summary))
 

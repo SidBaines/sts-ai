@@ -6,16 +6,16 @@ This package provides single-decision teacher-guided training inputs and saved-s
 
 - `observations.prompt(observation)` returns the shared two-message prompt. It copies only complete public observation text and the raw current action menu. It never serializes `info`, world seeds, teacher labels, provenance or policy features into messages. `legal_indices(observation)` preserves native display indices.
 - `generation.parse_action(text, legal_indices, finish_reason=None, reasoning_content=None, final_channel=False, require_reasoning_boundary=True)` returns `ActionParse(action_index, valid, error, reasoning, final_text, truncated)`. Raw K2 completions require a reasoning closer; any of its three effort closers is accepted, regardless of requested effort. The opening tag may be absent because the chat template already supplies it. A native separate reasoning field establishes a final channel. Truncation is a failure even if the visible suffix contains JSON. Final output must be one JSON object with only an integer `action_index`. The actual K2 assistant-end and end-of-text tokens are stripped after the boundary.
-- `teacher.NonLLMTeacher(teacher_root=..., checkpoint=..., python=..., timeout=60)` launches one isolated inference subprocess. `distribution(observation)` or `distributions(observations)` returns display indices, probabilities, excluded menu indices, checkpoint identity and source revision. The parent never imports the non-LLM environment package. No native simulator is loaded or queried.
+- `teacher.NonLLMTeacher(teacher_root=..., checkpoint=..., python=..., timeout=60, batch_size=64)` launches one isolated inference subprocess. `distribution(observation)` or `distributions(observations)` returns display indices, probabilities, excluded menu indices, checkpoint identity and source revision. Requests carry at most `batch_size` observations, and `timeout` applies to startup and to each request separately. The parent never imports the non-LLM environment package. No native simulator is loaded or queried. The worker removes its own directory (`src/sts_llm`) from its import path, so `sts_llm/statistics.py` cannot shadow the standard library. Teacher metadata reads the encoder and checkpoint format versions from the checkpoint; `version_source` says whether they came from the checkpoint or from the historical constants (`public_candidate_v2`, format 1).
 - `teacher.teacher_reward(row, action_index, mode='probability', invalid_reward=None, log_floor=1e-8)` uses the prepared row's teacher distribution. Probability is the default bounded reward. A legal action filtered out of the champion's deployment menu receives zero probability and remains distinct from malformed/illegal output. Log probability is optional; its invalid reward must be no larger than `log(log_floor)`, to avoid rewarding invalid output over valid low-probability choices. Default invalid reward is zero for probability or `log(log_floor)` for log probability.
-- `dataset.prepare_rows(rows, teacher)` prepares messages and complete target distributions with a stable train/validation/test split over whole source worlds. Source file and public-record identities are checked before loading. Repeated decisions from one world remain in one split.
+- `dataset.prepare_rows(rows, teacher)` prepares messages and complete target distributions with a stable train/validation/test split over whole source worlds. Source file and public-record identities are checked before loading. Repeated decisions from one world remain in one split. World identities are canonicalized before hashing (split scheme version 2, recorded on every row and in the manifest): an integer seed, its decimal string and `world:<seed>` are one world, so inline and source-referenced rows for the same seed share a split. Rows whose identity was already `world:<seed>` keep their earlier split. `dataset.verified_split(row)` recomputes a row's split from its world and refuses a stored `split` that disagrees; `dataset.check_row_versions(row)` refuses rows whose `prompt_version` or `observation_version` differs from the current prompt and environment.
 - `eval.evaluate_saved(rows, client, output=...)` reports legality, truncation, mean teacher probability, top-action agreement and filtered-menu actions. `eval.make_agent(...)` provides `choose_action` for the clean CLI. Invalid model output raises `InvalidModelAction`; it is not turned into a game loss. Forced one-option menus can be stepped without generation. Full response logs retain messages, parse results and raw API responses outside model inputs.
 
 The HTTP client accepts explicit `extra_body` for the serving engine's model-specific reasoning/template options. It does not guess how an endpoint implements effort settings. Raw Hugging Face training completions should retain special tokens when decoding so reasoning boundaries remain visible.
 
 ## Prepare data and a portable teacher
 
-Run with this package on `PYTHONPATH`; the teacher's Python needs PyTorch and NumPy. The clean parent runtime needs only the standard library for preparation/evaluation adapters.
+Run with this package on `PYTHONPATH`; the teacher's Python needs PyTorch and NumPy. The clean parent runtime needs only the standard library for preparation/evaluation adapters. `--teacher-batch-size` (default 64) and `--teacher-timeout` (default 60 seconds per request) bound each teacher request, so thousands of states need no single long deadline.
 
 ```sh
 PYTHONPATH=src python -m sts_llm.dataset \
@@ -28,7 +28,7 @@ PYTHONPATH=src python -m sts_llm.dataset \
   --include-checkpoint
 ```
 
-Input rows can contain `observation` plus `world_identity`, or the immutable `source_record_identity` emitted by the throughput prompt preparer. Output JSONL contains `id`, `phase`, `legal_indices`, `messages`, `teacher`, `world_identity`, `split` and provenance. Submit only `messages` to the model. `teacher` uses `{legal_indices: [...], probabilities: [...], excluded_indices: [...]}`; its menu is a subset of the raw prompt menu because the champion hides OOC potion and key/recall actions.
+Input rows can contain `observation` plus `world_identity`, or the immutable `source_record_identity` emitted by the throughput prompt preparer. Output JSONL contains `id`, `phase`, `legal_indices`, `messages`, `teacher`, canonical `world_identity`, `split`, `split_scheme_version`, `prompt_version`, `observation_version` and provenance. Submit only `messages` to the model. `teacher` uses `{legal_indices: [...], probabilities: [...], excluded_indices: [...]}`; its menu is a subset of the raw prompt menu because the champion hides OOC potion and key/recall actions.
 
 The portable teacher export contains only the source modules actually imported for inference, a checkpoint if requested, and `teacher_runtime_manifest.json`. It is a dependency artifact for `data/`, not core environment code. Point `teacher_root` at this exported directory and `checkpoint` at the included file on another machine. Install compatible PyTorch/NumPy; no native simulator binary is needed. Source hashes record provenance and do not impose byte-for-byte checkpoint compatibility gates.
 
@@ -38,14 +38,14 @@ The prepared scratch example `data/teacher128.jsonl` has 128 distinct states fro
 
 ```sh
 PYTHONPATH=src python -m sts_llm.eval \
-  --dataset data/llm_runs/pilot/teacher.jsonl --split test \
+  --dataset data/llm_runs/pilot/teacher.jsonl --split validation \
   --base-url http://127.0.0.1:8000/v1 --model MODEL_NAME \
   --max-tokens 4096 --temperature 0 \
   --extra-body '{}' \
   --output data/llm_runs/pilot/saved_eval.jsonl
 ```
 
-The example template option must match the selected serving implementation. For full-game evaluation use the existing clean CLI's `--agent sts_llm.eval:make_agent`, with endpoint/model configuration and a fresh `response_log`. Its ordinary game trace remains the authority for game outcomes, simulator faults and truncations; saved-state agreement is not a win-rate estimate. Greedy and sampled decoding differ through the explicit temperature. Environment operation timeouts/process isolation stay in the clean CLI.
+The default split is `validation`. The held-out `test` split requires `--allow-test-split`, for a final, planned evaluation only. Each row's split is recomputed from its world before selection, and rows built for another prompt or observation version are refused. The summary records the split and split scheme version. The example template option must match the selected serving implementation. For full-game evaluation use the existing clean CLI's `--agent sts_llm.eval:make_agent`, with endpoint/model configuration and a fresh `response_log`. Its ordinary game trace remains the authority for game outcomes, simulator faults and truncations; saved-state agreement is not a win-rate estimate. Greedy and sampled decoding differ through the explicit temperature. Environment operation timeouts/process isolation stay in the clean CLI.
 
 ## Validation
 
@@ -84,7 +84,12 @@ invalid truncated thoughts; report this with the reward variance and validity.
 The main study requires separately approved settings and is not launched here.
 
 Training requires an explicit `split` on every row and selects only `train`.
-Validation/test rows are never sampled for updates. Benchmark modes may consume
+Validation/test rows are never sampled for updates. Every row's split is
+recomputed from its `world_identity`; a missing world or a stored split that
+disagrees stops the run, as does a `prompt_version` or `observation_version`
+other than the current one (benchmark modes check these versions only when a
+row records them). The selected training worlds are written to `config.json`
+as `training_world_identities`, so full-game evaluation can refuse them. Benchmark modes may consume
 all explicitly provided states and record that selection as benchmark-only.
 The selected split, row count, resolved selection hash and limit are recorded;
 exact resume validates them as well as the whole dataset hash.
@@ -141,6 +146,12 @@ The incomplete next iteration is regenerated. A changed model, data, sampling
 or optimizer setting fails exact-resume validation. Device/kernel determinism
 still depends on the pinned runtime. `--warm-start-adapter` (alias `--adapter`)
 loads weights and explicitly resets optimizer/RNG; it is a new condition.
+Before loading, the adapter's saved training state is read: a recorded model,
+revision, effort, trainer format version or prompt version that differs from
+this run is refused unless `--allow-adapter-mismatch` is given. The check result
+is recorded in `config.json` as `adapter_compatibility`. A directory with no saved
+training state loads and is recorded as `unrecorded`. Source-file hashes are
+never compared.
 
 Config records model revision, input and source hashes, teacher checkpoint,
 actual framework/device details, and warm-start/resume semantics. Checkpoints
@@ -175,6 +186,8 @@ successful full-game learning. The module has fake-environment/unit tests. No
 actual full-game GPU learning run has been performed.
 
 Use a JSON seed file containing only the explicitly selected training worlds.
+Full-game checkpoints record those worlds (and, for a warm start, the worlds the
+starting adapter was trained on) in `game_training_state.pt`.
 World seeds must be distinct integers in `[0, 2**63 - 1]`, matching the clean
 environment. Both training and evaluation require `--max-act 3`.
 Training repeats each world `group-size` times with separate policy seeds, freezes
@@ -182,16 +195,39 @@ the behavior and base-reference log probabilities before any optimizer update,
 then assigns each game's terminal advantage to all of its generated decisions.
 Rewards must be explicit; the intended values are win +1 and defeat -1.
 
-Failures, simulator timeouts, context/output caps and act/decision truncations
-are unscored. One incomplete game excludes its entire comparison group. Completed
-game outcomes are still reported even if another game invalidates their group.
-Every game retains a clean replayable `game.jsonl`, a model `responses.jsonl` and
-`result.json`; failed/incomplete games never become ordinary losses.
+Every game ends in exactly one status, recorded in its `result.json` and
+counted separately in each `collection_NNNN.json` (`status_counts`) and
+`summary.json`:
+
+| Status | Meaning | Scored |
+|---|---|---|
+| `win`, `loss` | The game reached a genuine ending | `--win-reward`, `--loss-reward` |
+| `model_invalid` | The model's output was unparseable, illegal or cut off at `--max-new-tokens`; the game ends there | `--invalid-game-reward` (default and maximum: the loss reward) |
+| `simulator_fault` | A simulator error, timeout or undefined behaviour | No |
+| `budget_truncated` | The decision or act limit, or a prompt that cannot fit `--max-new-tokens` within `--max-sequence-length` | No |
+| `unknown_terminal` | Terminated without a recognized outcome | No |
+| `stopped` | A STOP file or interrupt during the game | No |
+
+A model-invalid game stays in its comparison group, and all of its decisions,
+including the invalid completion, receive the game's advantage; invalid output
+is therefore pushed down like any losing move. One unscored game excludes its
+entire group, and unscored games are never counted as losses. Any other
+exception inside the policy (for example CUDA out of memory or a chat-template
+error) is re-raised after the game's `result.json` is written (status
+`policy_error`), so the run writes `failure.json` and exits nonzero. Every game
+retains a clean replayable `game.jsonl`, a model `responses.jsonl` and `result.json`.
+
+Each training iteration records `eligible_groups`, `groups_with_outcome_signal`,
+`updated` and, when no update was possible, `update_skipped`. After
+`--max-no-update-iterations` (default 3) consecutive iterations without an
+optimizer update the run stops with an error naming the latest status counts.
+Checkpoints up to that point remain valid; resuming with a larger limit is allowed.
 
 These choices must be reviewed before a study:
 
-- Dropping model-invalid groups conditions updates on valid rollouts. It supplies
-  no direct penalty for malformed output and can create selection bias.
+- The invalid-game reward makes invalid output at least as bad as a loss. A game
+  that ends early on invalid output and a game lost after hundreds of decisions
+  receive the same reward by default.
 - The baseline/normalization is the shared trainer's group mean and population
   standard deviation. Constant-reward groups have no outcome-policy gradient.
 - Decisions are summed within each game, then games are averaged. The helper
@@ -218,8 +254,9 @@ PYTHONPATH=src python -m sts_llm.game_training \
   --loss-normalization fixed_token_budget --loss-token-budget 2048
 ```
 
-The decision limit above normally produces incomplete groups, which verifies
-fault handling without pretending to provide positive learning signal. Shorter
+The decision limit above normally produces budget-truncated groups, which
+verifies fault handling without pretending to provide positive learning signal;
+a longer run of such iterations stops at the no-update limit. Shorter
 act limits are rejected: they could retain early defeats while truncating
 stronger games and silently change the learning target. For an
 approved learning study choose adequate decision/output budgets, the
@@ -231,9 +268,19 @@ For full-game evaluation of a trained checkpoint, add `--evaluate-only
 fresh output, `--group-size 1`, Acts 1–3 and the chosen evaluation budgets. It
 loads the actual PEFT adapter into the same HF policy path; no serving endpoint
 or merge/unmerge is required. Evaluation performs no optimizer update and saves
-no adapter. Counts of wins, losses, failures and incomplete episodes are separate.
-Temperature zero selects greedy evaluation; positive temperatures sample.
-It does not by itself compute a paired win-rate interval or reasoning faithfulness.
+no adapter. Seeds that the adapter (or the adapter it was warm-started from) was
+trained on are refused unless `--allow-training-worlds` is given; teacher-trained
+adapters are checked against `training_world_identities` in their run's
+`config.json`, and adapters from runs that did not record their worlds are
+reported as unrecorded. The check is saved as `evaluation_world_check` in
+`config.json` and `summary.json`. The adapter compatibility check above also
+applies. `summary.json`'s `evaluation` block counts every status separately and
+reports `win_rate_over_attempted` (wins over all games started, so faults and
+truncations count as non-wins) and `win_rate_over_scored` (wins over win, loss
+and model-invalid games). Model-invalid games count against the model; faults
+and truncations are never losses. Temperature zero selects greedy evaluation;
+positive temperatures sample. It does not by itself compute a paired win-rate
+interval or reasoning faithfulness.
 
 Create the output's `STOP` file to stop between decisions/games/whole optimizer
 updates. Every completed checkpoint includes optimizer and Python/Torch/CUDA RNG
@@ -243,5 +290,8 @@ Partial iteration outputs remain intact and that iteration is regenerated from
 the last completed checkpoint. Warm starts reset optimizer/RNG. Source hashes
 record provenance; they are not byte-compatibility gates. Reproducing exact
 trajectories additionally requires the same runtime and native build recorded
-in the traces. Thirteen fake-environment/credit/contract tests passed locally; the Torch
-checkpoint roundtrip test requires the actual training runtime.
+in the traces. Full-game format version 2 (scored model-invalid games and the
+status names above) cannot resume a version-1 checkpoint; warm-starting from one
+is allowed. Tests cover status classification, credit, failure propagation and,
+with PyTorch, the HF policy's stop-token trimming, the iteration loop with a
+fake environment, evaluation accounting and the command-line refusals.

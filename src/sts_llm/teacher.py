@@ -66,12 +66,19 @@ class NonLLMTeacher:
 
     Teacher source/checkpoint are explicit dependencies, not vendored training
     code. Python must have the non-LLM runtime's torch and numpy installed.
+    ``distributions`` sends at most ``batch_size`` observations per request, and
+    ``timeout`` bounds startup and each request separately, so a large dataset
+    needs no single long deadline.
     """
     def __init__(self, *, teacher_root: str, checkpoint: str, python: str | None = None,
-                 timeout: float = 60., expected_checkpoint_sha256: str | None = None):
+                 timeout: float = 60., batch_size: int = 64,
+                 expected_checkpoint_sha256: str | None = None):
         self.timeout, self._lock, self._counter, self._buffer = timeout, threading.Lock(), 0, b''
         if timeout <= 0 or not math.isfinite(timeout):
             raise ValueError('Teacher timeout must be finite and positive')
+        if type(batch_size) is not int or batch_size <= 0:
+            raise ValueError('Teacher batch size must be a positive integer')
+        self.batch_size = batch_size
         self.teacher_root, self.checkpoint = Path(teacher_root).resolve(), Path(checkpoint).resolve()
         if expected_checkpoint_sha256 and hashlib.sha256(self.checkpoint.read_bytes()).hexdigest() != expected_checkpoint_sha256:
             raise ValueError('Teacher checkpoint differs from explicitly requested identity')
@@ -132,9 +139,13 @@ class NonLLMTeacher:
 
     def distributions(self, observations: list[dict]) -> list[dict]:
         menus = [legal_indices(o) for o in observations]
-        results = self._rpc('distributions', observations=observations)
-        if len(results) != len(observations):
-            raise TeacherError('Teacher returned incomplete batch')
+        results = []
+        for start in range(0, len(observations), self.batch_size):
+            chunk = observations[start:start + self.batch_size]
+            answer = self._rpc('distributions', observations=chunk)
+            if not isinstance(answer, list) or len(answer) != len(chunk):
+                raise TeacherError('Teacher returned incomplete batch')
+            results.extend(answer)
         for full, teacher in zip(menus, results):
             validate_teacher({'legal_indices': full, 'teacher': teacher})
         return results

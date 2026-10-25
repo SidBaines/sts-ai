@@ -277,6 +277,7 @@ def load_model(args: Any) -> tuple[Any, Any, int]:
 
 
 def load_rows(path: Path, tokenizer: Any, args: Any) -> list[dict[str, Any]]:
+    from .dataset import canonical_world_identity, check_row_versions, verified_split
     rows = []
     benchmark_only = args.benchmark_updates or args.benchmark_generation or getattr(args, "check_prompt_cache", False)
     source_rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
@@ -286,6 +287,13 @@ def load_rows(path: Path, tokenizer: Any, args: Any) -> list[dict[str, Any]]:
         for row in source_rows:
             if row.get("split") not in {"train", "validation", "test"}:
                 raise ValueError("training requires every dataset row to declare split=train/validation/test")
+        for row in source_rows:
+            # Recompute each split from its world; a stored label alone could leak held-out worlds.
+            verified_split(row)
+            check_row_versions(row, required=True)
+    else:
+        for row in source_rows:
+            check_row_versions(row, required=False)
     for row in source_rows:
         if not benchmark_only and row["split"] != "train":
             continue
@@ -318,7 +326,74 @@ def load_rows(path: Path, tokenizer: Any, args: Any) -> list[dict[str, Any]]:
         {"id": row["id"], "split": row.get("split"), "world_identity": row.get("world_identity"),
          "prompt_ids": row["prompt_ids"]} for row in rows],
         sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+    # Recorded in config.json so later full-game evaluation can refuse these worlds.
+    args.selected_world_identities = None if benchmark_only else sorted(
+        {canonical_world_identity(row["world_identity"]) for row in rows})
     return rows
+
+
+ADAPTER_STATE_FILES = (("full_game", "game_training_state.pt"), ("teacher_feedback", "training_state.pt"))
+
+
+def read_adapter_record(path: Path) -> dict[str, Any]:
+    """Training metadata saved beside a PEFT adapter, if any.
+
+    Returns the kind of training that produced it, its recorded settings and,
+    when present, its run's config.json (the adapter's parent directory).
+    """
+    path = Path(path)
+    for kind, name in ADAPTER_STATE_FILES:
+        state_path = path / name
+        if state_path.exists():
+            import torch
+            # Our own explicitly selected training artifact; RNG tuples need weights_only=False.
+            state = torch.load(state_path, map_location="cpu", weights_only=False)
+            config_path = path.parent / "config.json"
+            return {"kind": kind, "path": str(path), "state_file": str(state_path),
+                    "settings": state.get("settings") or {},
+                    "inherited_training_worlds": state.get("inherited_training_worlds"),
+                    "run_config": json.loads(config_path.read_text()) if config_path.exists() else None}
+    return {"kind": "unrecorded", "path": str(path), "settings": {}, "inherited_training_worlds": None,
+            "run_config": None}
+
+
+def adapter_recorded_versions(record: dict[str, Any]) -> dict[str, Any]:
+    settings = record.get("settings") or {}
+    if record.get("kind") == "full_game":
+        arguments = settings.get("arguments") or {}
+        return {"model": arguments.get("model"), "revision": arguments.get("revision"),
+                "effort": arguments.get("effort"),
+                "training_format_version": settings.get("shared_trainer_format_version"),
+                "prompt_version": settings.get("prompt_version")}
+    if record.get("kind") == "teacher_feedback":
+        return {"model": settings.get("model"), "revision": settings.get("revision"),
+                "effort": settings.get("effort"),
+                "training_format_version": settings.get("training_format_version"),
+                "prompt_version": None}
+    return {}
+
+
+def adapter_mismatches(record: dict[str, Any], *, model: str, revision: str, effort: str) -> list[str]:
+    """Recorded settings that differ from this run. Source-file hashes are never compared."""
+    from .observations import PROMPT_VERSION
+    expected = {"model": model, "revision": revision, "effort": effort,
+                "training_format_version": TRAINING_FORMAT_VERSION, "prompt_version": PROMPT_VERSION}
+    recorded = adapter_recorded_versions(record)
+    return [f"{key}: adapter {recorded[key]!r}, this run {expected[key]!r}" for key in expected
+            if recorded.get(key) is not None and recorded[key] != expected[key]]
+
+
+def check_adapter(path: Path, *, model: str, revision: str, effort: str,
+                  allow_mismatch: bool) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Refuse a warm-start/evaluation adapter trained under other recorded settings."""
+    record = read_adapter_record(path)
+    mismatches = adapter_mismatches(record, model=model, revision=revision, effort=effort)
+    if mismatches and not allow_mismatch:
+        raise ValueError("adapter was trained under different recorded settings: " + "; ".join(mismatches) +
+                         ". Pass --allow-adapter-mismatch to load it as a declared new condition.")
+    result = {"adapter": str(path), "kind": record["kind"], "recorded": adapter_recorded_versions(record),
+              "mismatches": mismatches, "mismatch_allowed_by_flag": bool(mismatches and allow_mismatch)}
+    return result, record
 
 
 def prefill_prompt_cache(model: Any, prompt_ids: Sequence[int]) -> Any | None:
@@ -807,6 +882,8 @@ def main() -> int:
     parser.add_argument("--warm-start-adapter", "--adapter", dest="adapter",
                         help="Weights-only warm start: resets optimizer/RNG; not an exact resume")
     parser.add_argument("--resume", type=Path, help="Completed adapter checkpoint containing training_state.pt; restores optimizer/RNG")
+    parser.add_argument("--allow-adapter-mismatch", action="store_true",
+                        help="Load a warm-start adapter whose recorded model/revision/effort/format differs")
     parser.add_argument("--stop-file", type=Path, help="Checked between iterations and optimizer steps; defaults to OUTPUT/STOP")
     parser.add_argument("--effort", choices=("low", "medium", "high"), default="medium")
     parser.add_argument("--device", default="cuda")
@@ -910,12 +987,18 @@ def main() -> int:
     try:
         import torch
         torch.manual_seed(args.seed)
+        if args.adapter:
+            config["adapter_compatibility"], _ = check_adapter(
+                Path(args.adapter), model=args.model, revision=args.revision, effort=args.effort,
+                allow_mismatch=args.allow_adapter_mismatch)
+            atomic_json(args.output / "config.json", config)
         model, tokenizer, stop_id = load_model(args)
         rows = load_rows(args.prompts, tokenizer, args)
         config.update(stop_token_ids=[stop_id], torch_version=torch.__version__,
                       selected_split=args.selected_split,
                       selected_row_count=args.selected_row_count,
                       selected_selection_sha256=args.selected_selection_sha256,
+                      training_world_identities=args.selected_world_identities,
                       cuda_version=torch.version.cuda,
                       device_name=torch.cuda.get_device_name() if args.device.startswith("cuda") else args.device,
                       trainable_parameters=sum(p.numel() for p in model.parameters() if p.requires_grad),

@@ -9,7 +9,40 @@ import unittest
 from contextlib import contextmanager
 from types import SimpleNamespace
 
-from sts_llm.training import Completion, generation_backend_kwargs, load_rows, normalized_advantages
+from sts_llm.dataset import world_split
+from sts_llm.observations import PROMPT_VERSION
+from sts_llm.training import (TRAINING_FORMAT_VERSION, Completion, adapter_mismatches, check_adapter,
+                              generation_backend_kwargs, load_rows, normalized_advantages)
+
+
+def world_in(split, start=0):
+    """A canonical world identity that the split scheme assigns to ``split``."""
+    number = start
+    while world_split(f"world:{number}") != split:
+        number += 1
+    return f"world:{number}"
+
+
+def dataset_row(row_id, split, **extra):
+    row = {"id": row_id, "split": split, "world_identity": world_in(split), "legal_indices": [0],
+           "teacher": {"checkpoint_sha256": "champion"}, "prompt_version": PROMPT_VERSION,
+           "observation_version": "sts_env_public_v3", "messages": [{"role": "user", "content": "go"}]}
+    row.update(extra)
+    return row
+
+
+TRAIN_ARGS = dict(benchmark_updates=False, benchmark_generation=False, effort="medium",
+                  max_new_tokens=10, max_sequence_length=20, limit=None)
+
+
+class Tokens:
+    def apply_chat_template(self, *args, **kwargs): return [2, 4]
+
+
+def write_rows(directory, rows):
+    path = Path(directory) / "prompts.jsonl"
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    return path
 
 
 class AdvantageTests(unittest.TestCase):
@@ -67,9 +100,7 @@ class AdvantageTests(unittest.TestCase):
         args = SimpleNamespace(benchmark_updates=False, benchmark_generation=False,
                                effort="medium", max_new_tokens=10,
                                max_sequence_length=20, limit=None)
-        records = [{"id": split, "split": split, "world_identity": f"world{number}",
-                    "legal_indices":[0], "teacher":{"checkpoint_sha256":"champion"},
-                    "messages":[{"role":"user", "content":str(number)}]}
+        records = [dataset_row(split, split, messages=[{"role": "user", "content": str(number)}])
                    for number, split in enumerate(("validation", "train", "test"), 1)]
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "prompts.jsonl"
@@ -79,6 +110,7 @@ class AdvantageTests(unittest.TestCase):
         self.assertEqual(args.selected_split, "train")
         self.assertEqual(args.selected_row_count, 1)
         self.assertEqual(len(args.selected_selection_sha256), 64)
+        self.assertEqual(args.selected_world_identities, [world_in("train")])
 
     def test_unsplit_teacher_data_rejected_even_after_smoke_limit(self):
         class Tokenizer:
@@ -86,8 +118,7 @@ class AdvantageTests(unittest.TestCase):
         args = SimpleNamespace(benchmark_updates=False, benchmark_generation=False,
                                effort="medium", max_new_tokens=10,
                                max_sequence_length=20, limit=1)
-        row = {"id":"train", "split":"train", "legal_indices":[0], "teacher":{},
-               "messages":[{"role":"user", "content":"go"}]}
+        row = dataset_row("train", "train")
         unsplit = dict(row, id="unsplit"); del unsplit["split"]
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "prompts.jsonl"
@@ -101,8 +132,7 @@ class AdvantageTests(unittest.TestCase):
         args = SimpleNamespace(benchmark_updates=False, benchmark_generation=False,
                                effort="medium", max_new_tokens=10,
                                max_sequence_length=20, limit=None)
-        row = {"id":"a", "split":"train", "legal_indices":[0], "teacher":{},
-               "messages":[{"role":"user", "content":"go"}]}
+        row = dataset_row("a", "train")
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "prompts.jsonl"
             path.write_text(json.dumps(row) + "\n" + json.dumps(dict(row, id="b")) + "\n")
@@ -112,6 +142,44 @@ class AdvantageTests(unittest.TestCase):
             load_rows(path, Tokenizer(), args)
         self.assertNotEqual(full_identity, args.selected_selection_sha256)
         self.assertEqual(args.selected_row_count, 1)
+
+    def test_training_recomputes_each_split_and_refuses_a_forged_label(self):
+        forged = dataset_row("leak", "train", world_identity=world_in("test"))
+        for rows in ([dataset_row("ok", "train"), forged],
+                     [dataset_row("ok", "train"), dict(dataset_row("hidden", "validation"), split="test")]):
+            with tempfile.TemporaryDirectory() as directory:
+                with self.assertRaisesRegex(ValueError, "declares split"):
+                    load_rows(write_rows(directory, rows), Tokens(), SimpleNamespace(**TRAIN_ARGS))
+        missing = dataset_row("unknown", "train"); del missing["world_identity"]
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "lacks world_identity"):
+                load_rows(write_rows(directory, [missing]), Tokens(), SimpleNamespace(**TRAIN_ARGS))
+
+    def test_integer_and_string_forms_of_one_world_verify_identically(self):
+        seed = int(world_in("train").split(":")[1])
+        rows = [dataset_row("int", "train", world_identity=seed),
+                dataset_row("text", "train", world_identity=str(seed)),
+                dataset_row("prefixed", "train", world_identity=f"world:{seed}")]
+        args = SimpleNamespace(**TRAIN_ARGS)
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual(len(load_rows(write_rows(directory, rows), Tokens(), args)), 3)
+        self.assertEqual(args.selected_world_identities, [f"world:{seed}"])
+
+    def test_rows_for_other_prompt_or_observation_versions_are_refused(self):
+        for key, value in (("prompt_version", "public_text_menu_v0"), ("observation_version", "sts_env_public_v2")):
+            with tempfile.TemporaryDirectory() as directory:
+                path = write_rows(directory, [dataset_row("old", "train", **{key: value})])
+                with self.assertRaisesRegex(ValueError, key):
+                    load_rows(path, Tokens(), SimpleNamespace(**TRAIN_ARGS))
+                # Benchmarks accept rows without versions but not rows built for another version.
+                with self.assertRaisesRegex(ValueError, key):
+                    load_rows(path, Tokens(), SimpleNamespace(**dict(TRAIN_ARGS, benchmark_updates=True)))
+        unversioned = dataset_row("unversioned", "train"); del unversioned["prompt_version"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = write_rows(directory, [unversioned])
+            with self.assertRaisesRegex(ValueError, "lacks prompt_version"):
+                load_rows(path, Tokens(), SimpleNamespace(**TRAIN_ARGS))
+            self.assertEqual(len(load_rows(path, Tokens(), SimpleNamespace(**dict(TRAIN_ARGS, benchmark_updates=True)))), 1)
 
     def test_static_cache_budget_is_checked_as_hard_input_contract(self):
         class Tokenizer:
@@ -138,6 +206,56 @@ class AdvantageTests(unittest.TestCase):
         self.assertFalse(result["disable_compile"])
         self.assertEqual(result["compile_config"], {"backend":"inductor", "fullgraph":False,
             "dynamic":False, "mode":"reduce-overhead"})
+
+
+class AdapterContracts(unittest.TestCase):
+    TEACHER = {"kind": "teacher_feedback", "path": "a", "settings": {"model": "m", "revision": "r",
+               "effort": "medium", "training_format_version": TRAINING_FORMAT_VERSION}}
+    GAME = {"kind": "full_game", "path": "g", "settings": {"arguments": {"model": "m", "revision": "r",
+            "effort": "medium"}, "shared_trainer_format_version": TRAINING_FORMAT_VERSION,
+            "prompt_version": PROMPT_VERSION, "source_files_sha256": {"training.py": "anything"}}}
+
+    def test_recorded_model_revision_effort_and_versions_must_match(self):
+        for record in (self.TEACHER, self.GAME):
+            self.assertEqual(adapter_mismatches(record, model="m", revision="r", effort="medium"), [])
+            self.assertEqual(len(adapter_mismatches(record, model="m", revision="r2", effort="high")), 2)
+        old_format = {**self.TEACHER, "settings": {**self.TEACHER["settings"], "training_format_version": 2}}
+        self.assertIn("training_format_version", adapter_mismatches(old_format, model="m", revision="r",
+                                                                   effort="medium")[0])
+        old_prompt = {**self.GAME, "settings": {**self.GAME["settings"], "prompt_version": "public_text_menu_v0"}}
+        self.assertIn("prompt_version", adapter_mismatches(old_prompt, model="m", revision="r",
+                                                           effort="medium")[0])
+        self.assertEqual(adapter_mismatches({"kind": "unrecorded"}, model="m", revision="r", effort="low"), [])
+
+    def test_mismatched_adapter_is_refused_unless_overridden_and_the_result_is_recorded(self):
+        with patch("sts_llm.training.read_adapter_record", return_value=self.TEACHER):
+            with self.assertRaisesRegex(ValueError, "allow-adapter-mismatch"):
+                check_adapter(Path("a"), model="m", revision="r", effort="high", allow_mismatch=False)
+            result, _ = check_adapter(Path("a"), model="m", revision="r", effort="high", allow_mismatch=True)
+            self.assertTrue(result["mismatch_allowed_by_flag"])
+            self.assertEqual(len(result["mismatches"]), 1)
+            result, _ = check_adapter(Path("a"), model="m", revision="r", effort="medium", allow_mismatch=False)
+            self.assertEqual(result["mismatches"], [])
+
+    def test_unrecorded_directory_loads_and_says_so(self):
+        from sts_llm.training import read_adapter_record
+        with tempfile.TemporaryDirectory() as directory:
+            record = read_adapter_record(Path(directory))
+        self.assertEqual(record["kind"], "unrecorded")
+
+    @unittest.skipUnless(importlib.util.find_spec("torch"), "PyTorch needed to read saved training state")
+    def test_saved_teacher_state_and_run_config_are_read(self):
+        import torch
+        from sts_llm.training import read_adapter_record
+        with tempfile.TemporaryDirectory() as directory:
+            adapter = Path(directory) / "adapter_0000"
+            adapter.mkdir()
+            torch.save({"settings": self.TEACHER["settings"], "optimizer": {}}, adapter / "training_state.pt")
+            (Path(directory) / "config.json").write_text(json.dumps({"training_world_identities": ["world:1"]}))
+            record = read_adapter_record(adapter)
+        self.assertEqual(record["kind"], "teacher_feedback")
+        self.assertEqual(record["settings"]["effort"], "medium")
+        self.assertEqual(record["run_config"]["training_world_identities"], ["world:1"])
 
 
 @unittest.skipUnless(importlib.util.find_spec("torch"), "PyTorch required for numerical gradient tests")
