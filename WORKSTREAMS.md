@@ -30,9 +30,11 @@ workstream that predates that convention names its entry document below.
 
 Releases 0.1.2–0.1.4 carried the non-LLM workstream's environment changes to
 `main` with identical native patches. Release 0.1.5 then fixed the remaining
-known faults (see `docs/release_v0.1.5.md`). Neither workstream has adopted
-0.1.5 yet; `ws/nonllm` runs on the 0.1.4 patch plus a research-only overlay, and
-`ws/llm` still uses its pre-extraction harness.
+known faults (see `docs/release_v0.1.5.md`), and 0.1.6 corrected the
+out-of-combat potion line and tagged agent errors (`docs/release_v0.1.6.md`).
+Neither workstream has adopted 0.1.5 or later yet; `ws/nonllm` runs on the
+0.1.4 patch plus a research-only overlay, and `ws/llm` still uses its
+pre-extraction harness.
 
 Remaining known limits are listed in
 [the environment contract](docs/environment_base.md).

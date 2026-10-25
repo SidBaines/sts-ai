@@ -1,4 +1,10 @@
-"""Hashes captured before the step-path optimization, including reset and defeat.
+"""Per-step hashes of fixed seeded games, including reset and defeat.
+
+The fixture was recorded from release 0.1.6 with `scripts/benchmark_env_step.py
+--record-fixture`. Re-record it only for a deliberate, versioned change to
+observations, info or rewards. (Its 0.1.5.1 predecessor certified that the
+step-path optimization was byte-identical; 0.1.6 was checked against it with the
+potion line converted back to the old format.)
 
 Source/runtime/build identities describe the running code, not gameplay. Pin only
 those fields to the recorded identities when hashing info, so this test can check
@@ -8,27 +14,16 @@ Seeded trajectories are certified within a native platform, not across platforms
 from __future__ import annotations
 
 from copy import deepcopy
-import hashlib
 import json
 from pathlib import Path
 import unittest
 
-from scripts.benchmark_env_step import CONFIG, SEEDS, choose_action
+from scripts.benchmark_env_step import CONFIG, SEEDS, choose_action, digest, hashes
 from sts_env.env import _Episode
 from tests.support import requires_simulator
 
 
-FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "env_step_original.json"
-
-
-def digest(value) -> str:
-    serialized = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    return hashlib.sha256(serialized.encode("ascii")).hexdigest()
-
-
-def hashes(observation, info, reward, identities) -> list[str]:
-    normalized = {key: identities.get(key, value) for key, value in info.items()}
-    return [digest(observation), digest(normalized), digest(reward)]
+FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "env_step_reference.json"
 
 
 @requires_simulator

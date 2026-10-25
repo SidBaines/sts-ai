@@ -96,8 +96,8 @@ undefined-behaviour flags do not certify all reachable game states as free of
 upstream undefined-memory bugs. Unflagged corrupted states may still evade
 detection.
 
-Known open faults and limits as of 0.1.5 (see [the 0.1.5 record](release_v0.1.5.md)
-for what was fixed):
+Known open faults and limits as of 0.1.6 (see [the 0.1.5 record](release_v0.1.5.md)
+and [the 0.1.6 record](release_v0.1.6.md) for what was fixed):
 
 - Combat menus still merge copies of a card that differ only in base cost (same
   cost for this turn). This is rare.
@@ -150,14 +150,16 @@ and upstream source are ignored; never depend on an untracked edit for a fix.
 
 Step-path performance can be checked without IPC using
 `PYTHONPATH=src python scripts/benchmark_env_step.py` (`--profile` adds cProfile).
-It reuses the deterministic policy and eight complete worlds recorded by
-`tests/integration/test_step_equivalence.py` before the optimization. The fixture
-checks every observation, reward, info field and episode boundary, substituting
-only source/runtime/build identity values while separately checking live identity
-reporting. These worlds cover Act 1 and Act 2, including shops, events, rest sites,
-card selections and boss relic rewards; they do not reach Act 3 or a victory.
-The optimization changes no public versions or gameplay/text output. Source
-identity still changes normally, so historical traces retain their replay boundary.
+It reuses the deterministic policy and eight complete worlds that
+`tests/integration/test_step_equivalence.py` replays from
+`tests/fixtures/env_step_reference.json`. The fixture checks every observation,
+reward, info field and episode boundary, substituting only source/runtime/build
+identity values while separately checking live identity reporting. These worlds
+cover Act 1 and Act 2, including shops, events, rest sites, card selections and
+boss relic rewards; they do not reach Act 3 or a victory. A change that is meant
+to leave output unchanged must pass it as it is. A deliberate, versioned output
+change re-records it with `--record-fixture PATH`, after checking that only the
+intended difference appears (see the 0.1.6 record).
 
 Run these checks from a fresh source checkout before tagging. The build must be
 present; `STS_REQUIRE_SIMULATOR=1` prevents missing binaries from being silently
@@ -249,3 +251,22 @@ observation label stays `sts_env_public_v3`. The in-process step costs about a
 third as much (1,119 to 356 µs per decision). Source identity
 (`python_interface_sha256`) changes, as for any source edit, so traces
 recorded under 0.1.5 keep their usual replay boundary.
+
+## Release 0.1.6: potion line and agent errors
+
+Release 0.1.6 fixes two faults:
+- The out-of-combat `Potions` line listed potions by count rather than slot,
+  so an empty earlier slot hid potions that the menu still offered. It now
+  lists every slot by index, as public combat text does:
+  `Potions (capacity 3): [0] empty, [1] Fire Potion, [2] Fruit Juice`.
+- Episode error records now carry `source: agent` or `source: environment`,
+  so an exception in agent code (an out-of-memory error, say) is no longer
+  indistinguishable from a simulator fault.
+  `run_episode(raise_agent_errors=True)` re-raises agent exceptions after
+  writing the trace's end record. `sts-env evaluate` counts errors by source
+  and accepts `--stop-on-agent-error`.
+
+The patch also adds the `<algorithm>` includes that GCC 15 requires; the macOS
+binary is unchanged. The observation label advances to `sts_env_public_v4`. Game logic, menus,
+rewards and the trace schema are unchanged. See
+[the release record](release_v0.1.6.md).

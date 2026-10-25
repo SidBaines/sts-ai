@@ -16,6 +16,17 @@ from sts_env.agents import NativeAgent, choose_action, load_agent
 TRACE_SCHEMA = "sts_env_trace_v1"
 
 
+class AgentError(Exception):
+    """Carries an exception raised by agent code, so it is never recorded as a simulator fault."""
+
+
+def _agent_call(function: Any, *args: Any) -> Any:
+    try:
+        return function(*args)
+    except Exception as exc:
+        raise AgentError(exc) from exc
+
+
 def make_env(config: dict[str, Any]) -> Any:
     # Lazy: --help, inspect and doctor do not import the simulator.
     from sts_env.env import SlayTheSpireEnv
@@ -50,7 +61,16 @@ def run_episode(
     *, seed: int, policy_seed: int, agent_spec: str, agent_config: dict[str, Any],
     config: dict[str, Any], output: Path | None = None, human: bool = False,
     show_steps: bool = False, agent_cache: dict[str, Any] | None = None,
+    raise_agent_errors: bool = False,
 ) -> dict[str, Any]:
+    """Play one episode and return its end record.
+
+    Errors are recorded rather than raised. ``error["source"]`` is ``"agent"``
+    for exceptions from loading, resetting or querying the agent (including an
+    illegal returned action) and ``"environment"`` for everything else. With
+    ``raise_agent_errors`` an agent exception is re-raised after the trace's end
+    record is written, so callers can stop on, for example, out-of-memory errors.
+    """
     # Claim output before loading an expensive model or launching the simulator.
     if output is not None:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -63,6 +83,7 @@ def run_episode(
     info: dict[str, Any] = {}
     status = "error"
     error = None
+    agent_exception = None
     try:
         write_record(stream, {
             "type": "header", "schema": TRACE_SCHEMA, "seed": seed,
@@ -72,9 +93,9 @@ def run_episode(
         })
         agent = agent_cache.get("agent") if agent_cache is not None else None
         if not human and agent is None:
-            agent = load_agent(agent_spec, agent_config)
+            agent = _agent_call(load_agent, agent_spec, agent_config)
         if agent is not None and callable(getattr(agent, "reset", None)):
-            agent.reset(policy_seed)
+            _agent_call(agent.reset, policy_seed)
             if agent_cache is not None:
                 agent_cache["agent"] = agent
         env = make_env(config)
@@ -94,8 +115,11 @@ def run_episode(
                     status = "quit"
                     truncated = True
                     break
-            else:
+            elif isinstance(agent, NativeAgent):
+                # The native baseline queries the simulator, not agent code.
                 action = choose_action(agent, observation, env)
+            else:
+                action = _agent_call(choose_action, agent, observation, env)
             before_hash = observation_hash(observation)
             if show_steps:
                 description = next(a["description"] for a in observation["legal_actions"] if a["index"] == action)
@@ -115,8 +139,12 @@ def run_episode(
     except (KeyboardInterrupt, EOFError):
         status = "interrupted"
         truncated = True
+    except AgentError as exc:
+        agent_exception = exc.__cause__
+        error = {"kind": type(agent_exception).__name__, "message": str(agent_exception), "source": "agent"}
+        truncated = True
     except Exception as exc:
-        error = {"kind": type(exc).__name__, "message": str(exc)}
+        error = {"kind": type(exc).__name__, "message": str(exc), "source": "environment"}
         truncated = True
     finally:
         if env is not None:
@@ -124,7 +152,8 @@ def run_episode(
                 env.close()
             except Exception as exc:
                 if error is None:
-                    error = {"kind": type(exc).__name__, "message": f"close failed: {exc}"}
+                    error = {"kind": type(exc).__name__, "message": f"close failed: {exc}",
+                             "source": "environment"}
                     status = "error"
         summary = {
             "type": "end", "seed": seed, "policy_seed": policy_seed,
@@ -135,6 +164,8 @@ def run_episode(
         write_record(stream, summary)
         if stream is not None:
             stream.close()
+    if raise_agent_errors and agent_exception is not None:
+        raise agent_exception
     return summary
 
 
@@ -374,6 +405,8 @@ def build_parser() -> argparse.ArgumentParser:
     seeds.add_argument("--seeds", help="comma-separated integers or START:STOP ranges (stop exclusive)")
     seeds.add_argument("--seed-file", type=Path, help="JSON integer list or one integer per line")
     evaluate.add_argument("--output", type=Path, required=True, help="new directory for per-seed traces and summary.json")
+    evaluate.add_argument("--stop-on-agent-error", action="store_true",
+                          help="stop the batch after an episode whose error came from the agent (e.g. out of memory)")
     play = sub.add_parser("play", help="choose legal action indices interactively")
     add_episode_flags(play, human=True)
     play.add_argument("--seed", type=int, default=3)
@@ -417,15 +450,20 @@ def main(argv: list[str] | None = None) -> int:
                     result = {"type": "end", "seed": seed, "policy_seed": policy_seed,
                               "status": "error", "steps": 0, "reward": 0.0,
                               "terminated": False, "truncated": True, "info": {},
-                              "error": {"kind": type(exc).__name__, "message": str(exc)},
+                              "error": {"kind": type(exc).__name__, "message": str(exc),
+                                        "source": "environment"},
                               "elapsed_seconds": 0.0}
                 summaries.append(result)
                 print(json.dumps(result, sort_keys=True), file=sys.stderr)
                 if result["status"] == "interrupted":
                     break
+                if args.stop_on_agent_error and (result.get("error") or {}).get("source") == "agent":
+                    break
             report = {
                 "seeds_requested": seeds, "episodes": summaries,
                 "completed": len(summaries), "errors": sum(r["status"] in {"error", "interrupted"} for r in summaries),
+                "error_sources": {name: sum((r.get("error") or {}).get("source") == name for r in summaries)
+                                  for name in ("agent", "environment")},
                 "mean_reward": sum(r["reward"] for r in summaries) / len(summaries),
                 "statuses": {name: sum(r["status"] == name for r in summaries) for name in ("terminated", "truncated", "error", "interrupted")},
                 "outcomes": {str(name): sum(r["info"].get("outcome") == name for r in summaries)

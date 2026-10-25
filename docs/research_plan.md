@@ -49,3 +49,9 @@ against the real game (the 0.1.4 "phantom powers" were the burning elite's
 buff). It changes menus, observation text and some game logic, so the
 observation label advances to `sts_env_public_v3`; see [the release
 record](release_v0.1.5.md). The immutable release reference is `env-v0.1.5`.
+
+Release 0.1.6 corrects the out-of-combat potion line, which hid potions after
+an earlier slot emptied, and tags episode errors as agent or environment
+errors. The observation label advances to `sts_env_public_v4`; see [the
+release record](release_v0.1.6.md). The immutable release reference is
+`env-v0.1.6`.
