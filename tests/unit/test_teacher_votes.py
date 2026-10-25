@@ -43,6 +43,16 @@ class TeacherVotesTests(unittest.TestCase):
             with self.subTest(scale=scale), self.assertRaisesRegex(ValueError, 'value_scale'):
                 pooled_value_target([], scale)
 
+    def test_pooled_values_ignore_native_choices_that_determine_votes(self):
+        details=[{'chosen':index,'edges':[edge(2,100,1000),edge(7,10,1100)]}
+                 for index in (2,2,2,7)]
+        original=deepcopy(details)
+        self.assertEqual(votes_from_details(details,'best_line'),{2:3,7:1})
+        target=pooled_value_target(details,100.)
+        self.assertAlmostEqual(target[2],1/(1+math.e))
+        self.assertAlmostEqual(target[7],math.e/(1+math.e))
+        self.assertEqual(details,original)
+
     def test_empty_and_unknown_rule(self):
         for rule in RULES:
             self.assertEqual(votes_from_details([], rule), {})

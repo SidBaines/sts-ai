@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'src'))
-from sts_rl.fresh_training import run_training
+from sts_rl.fresh_training import TARGET_MODES, run_training
 from sts_rl.teacher_votes import RULES
 
 
@@ -22,10 +22,10 @@ def parser():
                    help='With --mixed-sources, also allow different teacher-probability sampling profiles; all other teacher settings must match')
     p.add_argument('--relabel-vote-rule',choices=RULES,default=argparse.SUPPRESS,
                    help='Combat only: recompute votes and labels from recorded search_details; requires --record-search collection. Omit to use stored votes. The rule changes the manifest and scientific fit identity; probes are unaffected')
-    p.add_argument('--target-mode',choices=('votes','pooled_values'),default=argparse.SUPPRESS,
-                   help='Combat only: votes (default) or soft pooled search values; pooled_values requires --record-search collection')
+    p.add_argument('--target-mode',choices=TARGET_MODES,default=argparse.SUPPRESS,
+                   help='Combat only: votes (default), pooled_values (requires --record-search), or pooled_values_or_votes (use values where search_details exist, stored votes otherwise)')
     p.add_argument('--value-scale',type=float,default=argparse.SUPPRESS,
-                   help='Positive softmax scale in search evaluation units for pooled_values (default: 100)')
+                   help='Positive softmax scale in search evaluation units for either pooled value target mode (default: 100)')
     p.add_argument('--preencoded-cache',default=argparse.SUPPRESS,metavar='RECEIPT.json',
                    help='Opt-in lossless controlled/combat/full FIT+VALIDATION cache; requires --manifest and --defer-test')
     p.add_argument('--probe',nargs='+',help='Required for production: immutable unlabelled 93e9 world shards; movement monitoring only')

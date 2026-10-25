@@ -337,6 +337,16 @@ against the best eligible move, so it can be slightly negative when the model
 picks a rarely visited move with a higher mean. The high-confidence group is
 defined from the target, so it is not comparable across target modes.
 
+Combat `--target-mode pooled_values_or_votes` supports mixed corpora: rows
+with `search_details` use the same pooled value target and `--value-scale`;
+rows without that field use stored votes. Present but malformed or unvisited
+details on a labelled row remain errors. This mode also cannot be combined
+with `--relabel-vote-rule`. The manifest's `target_kind_counts` records labelled
+combat rows using each target kind, overall and per fight group, and is printed
+at fit start. These counts include forced choices and exclude abstentions and
+out-of-combat labels. Omitting `--target-mode` preserves existing vote targets
+and manifest identities.
+
 Abstentions are excluded from targets; forced choices stay in evaluation but
 not optimization. Fixed unlabelled probes never supply targets or select
 weights. Use `--defer-test` until validation-only selection freezes. The

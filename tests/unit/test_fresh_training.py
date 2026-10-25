@@ -225,14 +225,103 @@ class FreshTrainingTests(unittest.TestCase):
             self.assertEqual(list(iter_rows([data])),original)
             self.assertEqual([file_identity(p) for p in sorted((data/'worlds').glob('*'))],files)
 
+    def test_pooled_values_or_votes_uses_field_presence_and_preserves_validation(self):
+        raw=row(combat_observation(),92_000_000_000,{}, {})
+        original=deepcopy(raw)
+        for scale in (100.,32.):
+            actual,indices=target_distribution(raw,target_mode='pooled_values_or_votes',value_scale=scale)
+            expected,_=target_distribution(raw)
+            np.testing.assert_array_equal(actual,expected)
+            details=[{'edges':[edge(10,100,1000),edge(17,10,1100),edge(16,9,9000)]}]
+            newer={**raw,'search_details':details}
+            actual,new_indices=target_distribution(newer,target_mode='pooled_values_or_votes',value_scale=scale)
+            expected,_=target_distribution(newer,target_mode='pooled_values',value_scale=scale)
+            np.testing.assert_array_equal(actual,expected)
+            self.assertEqual(new_indices,indices)
+            self.assertGreater(actual[-1],actual[0])
+        self.assertEqual(raw,original)
+        for details,message in ((None,'to be a list'),([], 'requires visited search_details'),
+                                ([{'edges':[edge(10,0,1)]}],'requires visited search_details'),
+                                ([{'edges':[edge(99,100,1)]}],'teacher.*index')):
+            with self.subTest(details=details),self.assertRaisesRegex(ValueError,message):
+                target_distribution({**raw,'search_details':details},target_mode='pooled_values_or_votes')
+        for abstention in ({**raw,'label':None,'votes':{}},
+                           {**raw,'label':None,'votes':{},'search_details':[]}):
+            self.assertIsNone(target_distribution(abstention,target_mode='pooled_values_or_votes')[0])
+        invalid={**raw,'label':17}
+        with self.assertRaisesRegex(ValueError,'plurality/index mapping mismatch'):
+            target_distribution(invalid,target_mode='pooled_values_or_votes')
+
+    def test_pooled_values_or_votes_mixed_manifest_counts_and_all_encoders(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            legacy,_=fixture(root/'legacy')
+            newer,_=fixture(root/'newer',record_search=True,config={'world_start':92_000_001_000})
+            # Both kinds occur in both fight groups; one abstention per source is excluded.
+            for data in (legacy,newer):
+                for i,path in enumerate(sorted((data/'worlds').glob('*'))):
+                    shard=read_json(path)
+                    raw=shard['labels'][0]
+                    raw['observation']['state'].update(room='Room.BOSS',act=2 if i<4 else 3)
+                    raw['group']='BOSS2' if i<4 else 'BOSS3'
+                    raw['public_hash']=digest_public(raw['observation'])
+                    if i==0:
+                        raw.update(label=None,votes={})
+                        if 'search_details' in raw:
+                            raw['search_details']=[]
+                    # Forced choices still count as targets.
+                    if i==1:
+                        raw['observation']['legal_actions']=raw['observation']['legal_actions'][:1]
+                        raw['public_hash']=digest_public(raw['observation'])
+                        raw['votes']={'10':4}
+                        if 'search_details' in raw:
+                            raw['search_details']=[{'edges':[edge(10,100,1000)]}]
+                    atomic_json(path,shard,compressed=True)
+            sources=[legacy,newer]
+            files=[file_identity(p) for data in sources for p in sorted((data/'worlds').glob('*'))]
+            baseline=freeze_manifest(sources,mixed_sources=True)
+            self.assertNotIn('target_kind_counts',baseline)
+            identities={baseline['data_identity']}
+            for scale in (100.,.5):
+                manifest=freeze_manifest(sources,mixed_sources=True,
+                                         target_mode='pooled_values_or_votes',value_scale=scale)
+                self.assertEqual(manifest['target_mode'],'pooled_values_or_votes')
+                self.assertEqual(manifest['value_scale'],scale)
+                self.assertEqual(manifest['target_kind_counts'],{
+                    'overall':{'pooled_values':8,'votes':8},
+                    'by_group':{'BOSS2':{'pooled_values':3,'votes':3},
+                                'BOSS3':{'pooled_values':5,'votes':5}}})
+                self.assertEqual(manifest['counts']['combat_abstentions'],2)
+                self.assertEqual(manifest['counts']['target_rows'],34)
+                self.assertEqual(manifest['data_identity'],digest({k:v for k,v in manifest.items() if k!='data_identity'}))
+                identities.add(manifest['data_identity'])
+                expected={meta['source_row_id']:target_distribution(raw,
+                    target_mode='pooled_values' if 'search_details' in raw else 'votes',
+                    value_scale=scale if 'search_details' in raw else 100.)[0]
+                    for raw,meta in iter_rows(sources,mixed_sources=True)
+                    if meta['phase']=='combat' and meta['has_target']}
+                for architecture in ('old','new','controlled'):
+                    dataset=preencode(sources,manifest,'combat',architecture)
+                    self.assertEqual(sum(map(len,dataset.values())),16)
+                    for examples in dataset.values():
+                        for example in examples:
+                            np.testing.assert_array_equal(example.target,expected[example.meta['source_row_id']])
+                            self.assertEqual(example.value_regrets is not None,
+                                             Path(example.meta['shard']).is_relative_to(newer.resolve()))
+            self.assertEqual(len(identities),3)
+            self.assertEqual(freeze_manifest(sources,mixed_sources=True),baseline)
+            self.assertEqual([file_identity(p) for data in sources for p in sorted((data/'worlds').glob('*'))],files)
+
     def test_pooled_values_reject_relabel_rules_at_config_and_row_validation(self):
-        for rule in RULES:
-            options=dict(target_mode='pooled_values',relabel_vote_rule=rule)
-            with self.subTest(rule=rule):
-                with self.assertRaisesRegex(ValueError,'relabel_vote_rule cannot be combined with target_mode=pooled_values'):
-                    validate_training_config({'phase':'combat',**options},synthetic=True)
-                with self.assertRaisesRegex(ValueError,'relabel_vote_rule cannot be combined with target_mode=pooled_values'):
-                    list(iter_rows([],**options))
+        for mode in ('pooled_values','pooled_values_or_votes'):
+            for rule in RULES:
+                options=dict(target_mode=mode,relabel_vote_rule=rule)
+                message='relabel_vote_rule cannot be combined with target_mode='+mode
+                with self.subTest(mode=mode,rule=rule):
+                    with self.assertRaisesRegex(ValueError,message):
+                        validate_training_config({'phase':'combat',**options},synthetic=True)
+                    with self.assertRaisesRegex(ValueError,message):
+                        list(iter_rows([],**options))
 
     def test_value_regret_and_pooled_agreement_use_greedy_actions_and_available_rows(self):
         from sts_policy.encoding import encode_observation
@@ -283,26 +372,32 @@ class FreshTrainingTests(unittest.TestCase):
         for key in ('target_mode','value_scale'):
             self.assertNotIn(key,vars(parser.parse_args(args)))
         for flags in (['--target-mode','votes'],['--target-mode','pooled_values'],
-                      ['--target-mode','pooled_values','--value-scale','32']):
+                      ['--target-mode','pooled_values','--value-scale','32'],
+                      ['--target-mode','pooled_values_or_votes'],
+                      ['--target-mode','pooled_values_or_votes','--value-scale','32']):
             config=vars(parser.parse_args(args+flags))
             validate_training_config(config,synthetic=True)
             with self.assertRaisesRegex(ValueError,'only valid for combat fits'):
                 validate_training_config({**config,'phase':'ooc'},synthetic=True)
         for options,message in (({'target_mode':'bad'},'target_mode must be one of'),
                                 ({'value_scale':32.},'requires target_mode=pooled_values'),
-                                *[({'target_mode':'pooled_values','value_scale':s},'finite and positive')
+                                *[({'target_mode':mode,'value_scale':s},'finite and positive')
+                                  for mode in ('pooled_values','pooled_values_or_votes')
                                   for s in (0,-1,float('nan'),float('inf'),True,None,'100')]):
             with self.subTest(options=options):
                 with self.assertRaisesRegex(ValueError,message):
                     validate_training_config(options,synthetic=True)
                 with self.assertRaisesRegex(ValueError,message):
                     list(iter_rows([],**options))
-        for config,manifest,key in (({'target_mode':'pooled_values'},{},'target_mode'),
-                                    ({},{'target_mode':'pooled_values'},'target_mode'),
-                                    ({'target_mode':'pooled_values','value_scale':32.},
-                                     {'target_mode':'pooled_values','value_scale':100.},'value_scale')):
-            with self.subTest(key=key),self.assertRaisesRegex(ValueError,'config/manifest '+key+' mismatch'):
-                fit(None,{},config,None,manifest,{},None)
+        for mode in ('pooled_values','pooled_values_or_votes'):
+            for config,manifest,key in (({'target_mode':mode},{},'target_mode'),
+                                        ({},{'target_mode':mode},'target_mode'),
+                                        ({'target_mode':mode,'value_scale':32.},
+                                         {'target_mode':mode,'value_scale':100.},'value_scale'),
+                                        ({'target_mode':mode},{'target_mode':'pooled_values_or_votes'
+                                          if mode=='pooled_values' else 'pooled_values'},'target_mode')):
+                with self.subTest(mode=mode,key=key),self.assertRaisesRegex(ValueError,'config/manifest '+key+' mismatch'):
+                    fit(None,{},config,None,manifest,{},None)
 
     def test_relabel_recomputes_votes_labels_and_encoded_targets_without_changing_sources(self):
         expected={'best_line':({10:3,17:1},10), 'most_visited':({10:4},10),

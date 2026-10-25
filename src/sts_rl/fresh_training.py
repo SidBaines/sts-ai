@@ -42,6 +42,7 @@ from sts_rl.teacher_votes import RULES, pooled_edges, pooled_value_target, votes
 SPLIT_VERSION = 'fresh-start-split-v1'
 TEACHER_PROTOCOL = 'canonical_rng_resampled_native_v2'
 FILTERS = [FILTER_ID, DEAD_FILTER_ID]
+TARGET_MODES = ('votes', 'pooled_values', 'pooled_values_or_votes')
 
 
 def digest(value):
@@ -66,14 +67,14 @@ def _integer(value, name):
 
 
 def _target_options(target_mode='votes', value_scale=100.):
-    if target_mode not in ('votes', 'pooled_values'):
-        raise ValueError('target_mode must be one of votes, pooled_values')
+    if target_mode not in TARGET_MODES:
+        raise ValueError('target_mode must be one of '+', '.join(TARGET_MODES))
     if (isinstance(value_scale, bool) or not isinstance(value_scale, (int, float))
             or not math.isfinite(value_scale) or value_scale <= 0):
         raise ValueError('value_scale must be finite and positive')
     if target_mode == 'votes':
         if value_scale != 100.:
-            raise ValueError('value_scale requires target_mode=pooled_values')
+            raise ValueError('value_scale requires target_mode=pooled_values or pooled_values_or_votes')
         return {}
     return {'target_mode': target_mode, 'value_scale': float(value_scale)}
 
@@ -81,6 +82,12 @@ def _target_options(target_mode='votes', value_scale=100.):
 def _target_config(config):
     options = _target_options(config.get('target_mode', 'votes'), config.get('value_scale', 100.))
     return {**{k:v for k,v in config.items() if k not in ('target_mode', 'value_scale')}, **options}
+
+
+def _combat_target_kind(row, target_mode):
+    if target_mode == 'pooled_values_or_votes':
+        return 'pooled_values' if 'search_details' in row else 'votes'
+    return target_mode
 
 
 def _teacher_index(key, indices, mapped):
@@ -105,7 +112,8 @@ def target_distribution(row, *, check_label=True, target_mode='votes', value_sca
     if observation['phase'] == 'combat':
         if row.get('label_kind') != TEACHER_PROTOCOL:
             raise ValueError('Combat requires original native vote targets')
-        if target_mode == 'pooled_values':
+        target_kind = _combat_target_kind(row, target_mode)
+        if target_kind == 'pooled_values':
             if 'search_details' not in row:
                 raise ValueError('pooled_values requires search_details on every combat row; collect with --record-search')
             if not isinstance(row['search_details'], list):
@@ -135,7 +143,7 @@ def target_distribution(row, *, check_label=True, target_mode='votes', value_sca
         samples = search.get('samples', [])
         if not samples or len(set(samples))!=len(samples) or total != len(samples):
             raise ValueError('Incomplete teacher histogram')
-        if target_mode == 'pooled_values':
+        if target_kind == 'pooled_values':
             mapped = {}
             for key, value in pooled_value_target(row['search_details'], value_scale).items():
                 index = _teacher_index(key, indices, mapped)
@@ -333,8 +341,8 @@ def iter_rows(sources, *, control=None, mixed_sources=False, mixed_sampling=Fals
     if relabel_vote_rule is not None and relabel_vote_rule not in RULES:
         raise ValueError('relabel_vote_rule must be one of '+', '.join(RULES))
     _target_options(target_mode, value_scale)
-    if relabel_vote_rule is not None and target_mode == 'pooled_values':
-        raise ValueError('relabel_vote_rule cannot be combined with target_mode=pooled_values')
+    if relabel_vote_rule is not None and target_mode != 'votes':
+        raise ValueError('relabel_vote_rule cannot be combined with target_mode='+target_mode)
     verified, worlds = {}, set()
     scientific, expected = None, None
     for path in shard_files(sources):
@@ -462,12 +470,18 @@ def freeze_manifest(sources, *, control=None, mixed_sources=False, mixed_samplin
     files = [file_identity(p) for p in shard_files(sources)]
     rows, seen, collection_sources = [], set(), {}
     interfaces = set()
+    target_counts = Counter(pooled_values=0, votes=0)
+    target_groups = defaultdict(lambda: Counter(pooled_values=0, votes=0))
     for raw, meta in iter_rows(sources, control=control, mixed_sources=mixed_sources, mixed_sampling=mixed_sampling,
                                relabel_vote_rule=relabel_vote_rule, target_mode=target_mode, value_scale=value_scale):
         if meta['source_row_id'] in seen:
             raise ValueError('Duplicate source row identity')
         seen.add(meta['source_row_id'])
         rows.append(meta)
+        if target_mode == 'pooled_values_or_votes' and meta['phase'] == 'combat' and meta['has_target']:
+            kind = _combat_target_kind(raw, target_mode)
+            target_counts[kind] += 1
+            target_groups[meta['group']][kind] += 1
         collection_sources[digest(raw['source'])] = raw['source']
         if mixed_sources:
             interfaces.add(raw['expected_provenance']['python_interface_sha256'])
@@ -512,6 +526,9 @@ def freeze_manifest(sources, *, control=None, mixed_sources=False, mixed_samplin
     if relabel_vote_rule is not None:
         result['relabel_vote_rule'] = relabel_vote_rule
     result.update(_target_options(target_mode, value_scale))
+    if target_mode == 'pooled_values_or_votes':
+        result['target_kind_counts'] = {'overall': dict(target_counts),
+            'by_group': {group: dict(counts) for group, counts in sorted(target_groups.items())}}
     result['data_identity'] = digest(result)
     if files != [file_identity(p) for p in shard_files(sources)]:
         raise ValueError('Data changed during manifest freeze')
@@ -1099,8 +1116,8 @@ def validate_training_config(config, *, synthetic=False):
         if config.get('phase') != 'combat':
             raise ValueError('relabel_vote_rule is only valid for combat fits')
     _target_options(config.get('target_mode', 'votes'), config.get('value_scale', 100.))
-    if config.get('relabel_vote_rule') is not None and config.get('target_mode') == 'pooled_values':
-        raise ValueError('relabel_vote_rule cannot be combined with target_mode=pooled_values')
+    if config.get('relabel_vote_rule') is not None and config.get('target_mode', 'votes') != 'votes':
+        raise ValueError('relabel_vote_rule cannot be combined with target_mode='+config['target_mode'])
     if ('target_mode' in config or 'value_scale' in config) and config.get('phase') != 'combat':
         raise ValueError('target_mode/value_scale are only valid for combat fits')
     for key in ('steps','min_steps','eval_every','patience','width','layers','heads'):
@@ -1148,6 +1165,8 @@ def run_training(config):
                 raise ValueError('Frozen manifest/source identities differ')
             if 'preencoded_cache' in config:
                 del frozen
+        if 'target_kind_counts' in manifest:
+            print(json.dumps({'target_kind_counts': manifest['target_kind_counts']}, sort_keys=True), flush=True)
         atomic_json(out/'manifest.json.gz',manifest,compressed=True)
         probe_selection, probe_rows = None, None
         if config.get('probe'):

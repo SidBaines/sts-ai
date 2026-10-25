@@ -225,15 +225,29 @@ class FreshScoringTests(unittest.TestCase):
                 self.assertEqual(row['target'],[0.]*7+[1.])
 
     def test_pooled_values_training_and_deferred_scoring_preserve_options_and_metrics(self):
-        for scale in (None,.5):
-            with self.subTest(scale=scale),tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:
+        for mode,scale in ((mode,scale) for mode in ('pooled_values','pooled_values_or_votes') for scale in (None,.5)):
+            with self.subTest(mode=mode,scale=scale),tempfile.TemporaryDirectory() as tmp,ExitStack() as stack:
                 root=Path(tmp)
                 data,source=fixture(root,record_search=True)
+                if mode=='pooled_values_or_votes':
+                    legacy_splits=set()
+                    for shard_path in sorted((data/'worlds').glob('*')):
+                        shard=read_json(shard_path)
+                        split=fresh_training.world_split(shard['world_seed'])
+                        if split not in legacy_splits:
+                            del shard['labels'][0]['search_details']
+                            atomic_json(shard_path,shard,compressed=True)
+                            legacy_splits.add(split)
                 self.runtime(stack,source)
-                options={'target_mode':'pooled_values',**({'value_scale':scale} if scale is not None else {})}
-                self.train(root,data,'old',old_size='small',**options)
-                expected={'target_mode':'pooled_values','value_scale':100. if scale is None else scale}
+                options={'target_mode':mode,**({'value_scale':scale} if scale is not None else {})}
+                with patch('sts_rl.fresh_training.print') as printed:
+                    self.train(root,data,'old',old_size='small',**options)
+                expected={'target_mode':mode,'value_scale':100. if scale is None else scale}
                 manifest=read_json(fit_manifest_path(root/'run'))
+                if mode=='pooled_values_or_votes':
+                    counts=manifest['target_kind_counts']
+                    self.assertEqual(counts['overall'],{'pooled_values':6,'votes':3})
+                    printed.assert_any_call(json.dumps({'target_kind_counts':counts},sort_keys=True),flush=True)
                 payload=load_checkpoint(root/'run'/'best.pt')
                 condition=fresh_training.checkpoint_training_condition(payload)
                 launch=read_json(payload['metadata']['source_receipt']['launch']['path'])
@@ -242,7 +256,8 @@ class FreshScoringTests(unittest.TestCase):
                     for key,value in expected.items():
                         self.assertEqual(record[key],value)
                 path,_=self.selection(root)
-                for key,value in (('target_mode','votes'),('value_scale',32.)):
+                for key,value in (('target_mode','votes'),('value_scale',32.),
+                                  ('target_mode','pooled_values_or_votes' if mode=='pooled_values' else 'pooled_values')):
                     invalid=deepcopy(payload)
                     invalid['metadata']['config'][key]=value
                     with patch.object(fresh_scoring,'load_checkpoint',return_value=invalid), \
@@ -252,13 +267,16 @@ class FreshScoringTests(unittest.TestCase):
                 summary=score_deferred(path,root/'score')
                 self.assertEqual(summary['status'],'completed')
                 stats=summary['test']['groups']['all_rows']
-                self.assertEqual(stats['value_rows'],3)
+                self.assertEqual(stats['value_rows'],2 if mode=='pooled_values_or_votes' else 3)
                 self.assertIn('value_regret',stats)
                 self.assertIn('pooled_agreement',stats)
                 rows=list(map(json.loads,(root/'score'/'test_rows.jsonl').read_text().splitlines()))
                 self.assertTrue(all(r['training_condition']==condition for r in rows))
-                self.assertTrue(all(0<r['target'][0]<r['target'][-1]<1 for r in rows))
                 for row in rows:
+                    if row.get('value_regret') is None:
+                        self.assertEqual(row['target'],[.75]+[0.]*6+[.25])
+                        continue
+                    self.assertTrue(0<row['target'][0]<row['target'][-1]<1)
                     self.assertIs(type(row['value_regret']),float)
                     self.assertIs(type(row['pooled_agreement']),bool)
                     self.assertEqual(row['value_regret'],0. if row['prediction_index']==17 else 1.)

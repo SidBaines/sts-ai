@@ -420,7 +420,8 @@ class ControlledCacheTests(unittest.TestCase):
             'teacher_probabilities':{'BOSS2':1.0,'MONSTER1':0.0}})
         sources=[str(first),str(second)]
         original_control=ft.TrainingControl
-        for options in ({'relabel_vote_rule':'pooled_mean'}, {'target_mode':'pooled_values','value_scale':32.}):
+        for options in ({'relabel_vote_rule':'pooled_mean'}, {'target_mode':'pooled_values','value_scale':32.},
+                        {'target_mode':'pooled_values_or_votes','value_scale':32.}):
             with self.subTest(options=options),ExitStack() as stack:
                 manifest=ft.freeze_manifest(sources,mixed_sources=True,mixed_sampling=True,**options)
                 path=self.out/'mixed_manifest.json'
