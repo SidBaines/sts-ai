@@ -1,6 +1,6 @@
 # Status
 
-**Updated 25 October 2026, 09:55 GMT.** Nothing running. Champion:
+**Updated 25 October 2026, 09:45 GMT.** Nothing running. Champion:
 `champion_4058cbf0e271.pt` (promoted by Sid on 25 October; 29.4% on unused
 worlds), kept with earlier champions in `data/rl_runs/champions/` (worktree
 `nonllm-large-batch`).
@@ -18,8 +18,7 @@ worlds), kept with earlier champions in `data/rl_runs/champions/` (worktree
 - **Worktrees in use:** `nonllm-large-batch` (data and queue),
   `nonllm-boss-rares` (notes and queue), `nonllm-fresh-start` (native build
   `build015`), `nonllm-better-teacher` (teacher build), `nonllm-dashboard`
-  (dashboard), `nonllm-collect-progress` (merged; removable), and the frozen
-  code of runs, which must not be edited:
+  (dashboard), and the frozen code of runs, which must not be edited:
   `nonllm-continued-frozen`, `nonllm-joint-frozen`, `nonllm-joint2-frozen`,
   `nonllm-reward-ablation`, `nonllm-value-targets`.
 
