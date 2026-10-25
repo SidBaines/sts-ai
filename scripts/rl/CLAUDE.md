@@ -59,6 +59,14 @@ what failed. Commands and module usage: [src/sts_rl/README.md](../../src/sts_rl/
   writes after every world (added 2026-10-25, after it killed eight healthy
   labelling jobs). Any other job that prints nothing for 40 minutes needs a
   progress file or a keep-alive.
+- **PPO update on the GPU:** `train_ooc.py --update-device mps` runs the PPO
+  update on Apple's GPU (25 October benchmark, one 3,072-game iteration: update
+  233 s on CPU, 109 to 113 s on MPS; whole iteration 433 s to about 315 s).
+  MPS runs repeat bit for bit, but MPS and CPU runs diverge (largest weight
+  difference after one update 0.016, against 0.047 for the update itself). So
+  use one device for every arm of a matched comparison and for resuming a run.
+  `update_seconds` includes the CPU gradient-cosine health check
+  (`--health-every`).
 - **Branching a run:** copy its `latest.pt` into a new `--out` and pass
   `--resume`. Same `--seed` means the same training worlds, so comparisons are
   paired. `--lr` now overrides the optimizer's saved lr on resume; it used to
