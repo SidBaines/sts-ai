@@ -1,6 +1,6 @@
 # Continue learning on a broader set of decisions
 
-**Status:** planned 26 October 2026. **Verdict:** the small-set result is enough
+**Status:** running 26 October 2026. **Verdict:** the small-set result is enough
 to try broader learning; reliability across training seeds is not the present goal.
 
 ## Question
@@ -63,8 +63,9 @@ Rules chosen before training:
 
 ## Results
 
-No learning result yet. Data preparation produced the counts above. All 112
-LLM unit tests passed after the initialization/evaluation seed fixes.
+No learning result yet. Data preparation produced the counts above. The 112-test LLM suite passed after the seed fixes; the final 113-test suite
+also passed, including the training-panel subset regression. Shell syntax and
+Python compilation checks passed. The initial evaluation is running.
 
 ## Conclusion
 
@@ -97,5 +98,5 @@ evaluation. Test game transfer once decision learning is promising.
   randomness. Earlier results remain valid, but their initial adapters cannot
   be reconstructed from the recorded seed alone.
 
-Code: `experiments/2026-10-26-broader-training/` and `src/sts_llm/`.
+Code: `experiments/2026-10-26-broader-training/` and `src/sts_llm/` at commit 05476ed.
 Data: runs `broader_states_selected_20261026` and `broader_training_20261026` (local).

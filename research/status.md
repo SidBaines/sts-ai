@@ -1,6 +1,6 @@
 # Status
 
-Preparing broader local training, updated 26 October 2026.
+Broader local training is running, updated 26 October 2026.
 
 Sid authorized a longer monitored run instead of another stage-1 seed repeat.
 Read [the design](experiments/2026-10-26-broader-training.md). The code and
@@ -15,6 +15,8 @@ launch instructions are in `experiments/2026-10-26-broader-training/README.md`.
 - Parent: `stage1_screen_ps_20261026/lr_3e-5`, iteration 48. AdamW resets.
 - Run: `broader_training_20261026`, at most 256 steps or eight elapsed hours,
   plus the current iteration and final evaluation; mains power only.
+- App monitor: `llm-broader-training-monitor`, every 20 minutes; quiet unless
+  meaningful progress, deterioration, failure or completion.
 - Check: `cat data/llm_runs/broader_training_20261026/watch.log` and
   `cat data/llm_runs/broader_training_20261026/lr_3e-5/evaluations.jsonl`.
 - Stop: `touch data/llm_runs/broader_training_20261026/STOP`.

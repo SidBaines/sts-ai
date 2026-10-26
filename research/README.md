@@ -25,7 +25,7 @@ It has won no games; none have been attempted. Definitions are in
 
 ## Now
 
-Preparing a longer laptop continuation from the passing adapter on 512 decisive
+Running a longer laptop continuation from the passing adapter on 512 decisive
 states, with a 96-state held-out probe
 ([design](experiments/2026-10-26-broader-training.md), [status](status.md)).
 Sid chose signs-of-life progress over another seed repeat on 26 October.
