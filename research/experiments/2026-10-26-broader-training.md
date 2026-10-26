@@ -1,7 +1,7 @@
 # Continue learning on a broader set of decisions
 
-**Status:** running 26 October 2026. **Verdict:** the small-set result is enough
-to try broader learning; reliability across training seeds is not the present goal.
+**Status:** running, stop requested 26 October 2026. **Verdict:** continuation
+developed repetitive output and cap failures; the final evaluation is pending.
 
 ## Question
 
@@ -63,7 +63,13 @@ Rules chosen before training:
 
 ## Results
 
-No post-update learning result yet. The starting adapter is valid on all 160
+Training is stopping after severe repetition and cap failures. Steps 19–20
+produced 41 valid answers and 23 capped answers out of 64; step durations rose
+to 414 and 475 seconds, versus an 85-second mean over steps 1–8. The sampled
+states differ, but saved failing traces show repeated phrases rather than a
+completed decision. The final fixed-panel comparison is pending.
+
+The starting adapter is valid on all 160
 evaluation decisions. This is a new panel, so its scores cannot be compared
 directly with the earlier 32-state panel.
 
@@ -83,8 +89,9 @@ regression. Shell syntax and Python compilation checks passed.
 
 ## Conclusion
 
-Stage 1 establishes that the loop can improve selected training decisions;
-whether learning transfers is the next useful question.
+The unregularized continuation has an observed repetition failure mode.
+Whether any decision improvement survived is still unknown; finish the final
+evaluation before choosing the next intervention.
 
 Caveats:
 - Teacher preferences are not game values, and no full games have been tested.
@@ -96,12 +103,19 @@ Caveats:
 
 ## Next
 
-Use the observed failure mode or held-out improvement to choose the next
-intervention. Adopt environment 0.1.6 before a newly simulated corpus or game
-evaluation. Test game transfer once decision learning is promising.
+After the final evaluation, consider a small KL penalty or a lower learning
+rate from the original passing adapter. Log the KL and policy-loss components
+before selecting a penalty scale; the existing KL reference is the foundation
+model, so its pull on learned behavior must be measured. Do not launch another
+experiment automatically. Adopt environment 0.1.6 before a newly simulated
+corpus or game evaluation.
 
 ## Log
 
+- 26 October: requested a safe stop after step 20: 23/64 recent responses hit
+  the token cap, with repeated phrases, and steps slowed to seven to eight
+  minutes. This adaptive intervention precedes the automatic two-window
+  threshold; it is exploratory, not a predeclared stopping-rule result.
 - 26 October: early reasoning grew substantially in both phases, slowing
   updates; saved outputs included repetitive menu restatement and a token-cap
   loop. Validity remained above the stop rule. Continue to the first fixed-panel

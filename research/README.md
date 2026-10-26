@@ -25,8 +25,8 @@ It has won no games; none have been attempted. Definitions are in
 
 ## Now
 
-Running a longer laptop continuation from the passing adapter on 512 decisive
-states, with a 96-state held-out probe
+Stopping the laptop continuation on 512 decisive states after repetition and
+answer validity deteriorated; the 96-state held-out evaluation is pending
 ([design](experiments/2026-10-26-broader-training.md), [status](status.md)).
 Sid chose signs-of-life progress over another seed repeat on 26 October.
 The existing teacher, prompt and learning rate stay fixed. Optimizer moments
@@ -34,9 +34,9 @@ restart because the parent checkpoint holds only adapter weights.
 
 ## Next
 
-1. Continue while held-out decisions and validity remain healthy; use observed
-   deterioration to choose a targeted intervention. KL and larger batches are
-   deferred rather than prerequisites.
+1. Finish the stopped run's evaluation and compare it with its starting adapter.
+   Repetition and token-cap failures motivate a targeted stability intervention.
+   Do not launch another run automatically.
 2. Assess transfer by phase and inspect position dependence and reasoning.
 3. Adopt env-v0.1.6 after release before collecting newly simulated states or
    testing game transfer. The current run uses existing filtered observations.

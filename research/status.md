@@ -1,6 +1,7 @@
 # Status
 
-Broader local training is running, updated 26 October 2026.
+A stop has been requested for broader training; final evaluation is pending.
+Updated 26 October 2026.
 
 Sid authorized a longer monitored run instead of another stage-1 seed repeat.
 Read [the design](experiments/2026-10-26-broader-training.md). The code and
@@ -15,9 +16,13 @@ launch instructions are in `experiments/2026-10-26-broader-training/README.md`.
 - Starting evaluation: train 31/64 and validation 56/96 teacher matches;
   all 160 answers valid. The first update completed in 98 seconds with 32/32
   valid samples and finite nonzero gradients; no post-update evaluation yet.
-- Current concern: reasoning growth and repeated phrases are slowing updates.
-  Validity is above the stop threshold; await the first fixed-panel comparison.
-  Details and counts are in the run's `monitor_review.json`.
+- Reason for stopping: steps 19–20 produced 23 capped responses out of 64,
+  with repeated text, and steps slowed to seven to eight minutes. This is an
+  adaptive manual stop before the automatic two-window validity rule fired.
+- Root and trainer STOP files are present. Let the current iteration finish,
+  save its adapter, and complete the configured final evaluation. Do not restart.
+- The monitor remains active to collect the final results, update the ledger,
+  and then pause itself. No additional experiment is authorized by the monitor.
 - Parent: `stage1_screen_ps_20261026/lr_3e-5`, iteration 48. AdamW resets.
 - Run: `broader_training_20261026`, at most 256 steps or eight elapsed hours,
   plus the current iteration and final evaluation; mains power only.
