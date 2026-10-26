@@ -35,10 +35,11 @@ the drift. Do not launch anything until Sid has approved a written design:
 
 ## Practicalities
 
-- Branch `ws/llm` (this work, fast-forwarded from `codex/llm-throughput`),
-  worktree `~/.codex/worktrees/llm-throughput/SlayTheSpireAI` on Sid's
-  MacBook. Data, models and virtual environments are gitignored and live only
-  in that worktree.
+- Code: `ws/llm` on GitHub, identical to `codex/llm-throughput`, which is
+  checked out in the worktree `~/.codex/worktrees/llm-throughput/SlayTheSpireAI`
+  on Sid's MacBook. Cut your topic branch from `ws/llm` and merge it back.
+  Data, models and virtual environments are gitignored and live only in that
+  worktree, so run there (or copy them).
 - Laptop setup: `.venv-mlx/` (mlx 0.32.4, mlx-lm 0.31.3, matplotlib); model
   `data/models/k2-horizon-0.9b-mlx`. Install packages with
   `uv pip install --python .venv-mlx/bin/python`, because the venv has no pip.
