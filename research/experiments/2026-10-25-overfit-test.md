@@ -1,6 +1,6 @@
 # Stage 1: can teacher feedback teach the model 32 decisive states?
 
-**Status:** planned 25 October 2026, awaiting Sid's approval. **Verdict:** not run.
+**Status:** running since 26 October 2026. **Verdict:** not yet known.
 
 ## Question
 
@@ -88,8 +88,7 @@ If none passes, investigate before stage 2 rather than adding states.
 The screen runs only on mains power: `launch_screen.py` holds `caffeinate`
 while plugged in and pauses the job on battery. No GPU rental is needed.
 
-**Approval:** awaiting Sid (setup approved on 25 October; the screen is not
-started).
+**Approval:** Sid approved this design on 26 October 2026.
 
 ## Results
 
@@ -115,6 +114,9 @@ gate.
   learning rate 0.0001 (see Design), so the screen moved down by a factor of 3.
 - 25 October: the Mac slept for about 20 minutes during the smoke. Iteration
   timers exclude sleep; wall time did not. Use the launcher for the screen.
+
+- 26 October: Sid approved the design; the screen started as run
+  `stage1_screen_20261026`, learning rates in the order 0.00001, 0.00003, 0.0001.
 
 Code: `experiments/2026-10-25-overfit-test/` and `src/sts_llm/mlx_training.py`.
 Data: `stage1_states_20261025` (local).

@@ -1,7 +1,7 @@
 # Learning full-game play with a reasoning language model
 
-No learning run has happened yet. Stage 1, an overfit test on the laptop, is
-built and smoke-tested, and awaits Sid's approval.
+No learning result yet. Stage 1, an overfit test on the laptop, has been
+running since 26 October.
 
 The goal is an LLM that makes combat and out-of-combat decisions for Ironclad,
 Ascension 0, Acts 1–3, while we watch how its reasoning changes during RL. No
@@ -22,10 +22,10 @@ It has won no games; none have been attempted. Definitions are in
 
 ## Now
 
-Nothing is running ([status](status.md)). Stage 1, an overfit test of the
-laptop training loop on 32 decisive states (16 combat, 16 out of combat), is
-written and smoke-tested. It awaits Sid's approval of
-[its page](experiments/2026-10-25-overfit-test.md). Ready:
+Stage 1's learning-rate screen is running on the laptop
+([status](status.md)): an overfit test of the training loop on 32 decisive
+states (16 combat, 16 out of combat), approved by Sid on 26 October
+([its page](experiments/2026-10-25-overfit-test.md)). It uses:
 - prompt version 2: letter-labelled menus in a fresh random order;
 - the MLX teacher-feedback trainer in `src/sts_llm/mlx_training.py`;
 - the state set, labelled by the 25 October champion.
@@ -38,8 +38,8 @@ Earlier on 25 October:
 
 ## Next
 
-1. Sid approves (or changes) the stage-1 page. Then run its learning-rate
-   screen on the laptop, plugged in: about 4.5 hours.
+1. Finish the stage-1 screen (about 4.5 hours, plugged in) and apply its
+   pass rule.
 2. Merge env-v0.1.6 into this branch once pull request #10 merges, and build
    later state sets under it.
 3. If stage 1 passes: stage 2, a larger set of decisive states from training
