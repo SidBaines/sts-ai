@@ -25,25 +25,21 @@ It has won no games; none have been attempted. Definitions are in
 
 ## Now
 
-Nothing is running ([status](status.md)). Stage 1 results, 26 October
-([page](experiments/2026-10-25-overfit-test.md)):
-- 0.00003 passed: greedy matches 10 → 22 of 32 (+6 to +18), and teacher
-  probability rose 0.35 → 0.51, mostly through content rather than menu
-  position.
-- 0.00001 learned too slowly; 0.0001 broke the answer format.
-- A first screen that shared one menu order per group taught "answer A" and
-  was rerun.
+Preparing a longer laptop continuation from the passing adapter on 512 decisive
+states, with a 96-state held-out probe
+([design](experiments/2026-10-26-broader-training.md), [status](status.md)).
+Sid chose signs-of-life progress over another seed repeat on 26 October.
+The existing teacher, prompt and learning rate stay fixed. Optimizer moments
+restart because the parent checkpoint holds only adapter weights.
 
 ## Next
 
-1. Stability check on the same 32 states at 0.00003: a repeat with a new
-   seed, a small KL penalty, and 8 states per step. Write its page first and
-   get Sid's approval; [status](status.md) has the step-by-step handoff.
-2. Stage 2: many more decisive states from training worlds at 0.00003, gated
-   on held-out top-choice agreement on decisive states. Needs a page and Sid's
-   approval.
-3. Merge env-v0.1.6 into this branch once pull request #10 merges, and build
-   stage-2 states under it.
+1. Continue while held-out decisions and validity remain healthy; use observed
+   deterioration to choose a targeted intervention. KL and larger batches are
+   deferred rather than prerequisites.
+2. Assess transfer by phase and inspect position dependence and reasoning.
+3. Adopt env-v0.1.6 after release before collecting newly simulated states or
+   testing game transfer. The current run uses existing filtered observations.
 
 ## Evidence and open questions
 

@@ -37,7 +37,7 @@ from .generation import K2_ASSISTANT_END_TOKEN_ID, parse_action
 from .observations import LABELLED_PROMPT_VERSION, labelled_prompt, legal_indices
 from .teacher import teacher_reward
 
-MLX_TRAINING_FORMAT_VERSION = 2
+MLX_TRAINING_FORMAT_VERSION = 3
 LORA_KEYS = ("self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj",
              "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj")
 
@@ -61,6 +61,14 @@ def menu_order(rng: random.Random, row: dict) -> list[int]:
     return order
 
 
+def training_evaluation_rows(train_rows: list[dict], path: Path | None) -> list[dict]:
+    rows = load_states(path, split="train") if path else train_rows
+    train_by_id = {row["id"]: row for row in train_rows}
+    if not rows or any(train_by_id.get(row["id"]) != row for row in rows):
+        raise ValueError("train-eval must be a nonempty unchanged subset of the training states")
+    return rows
+
+
 def group_orders(rng: random.Random, row: dict, group_size: int, per_sample: bool) -> list[list[int]]:
     """Menu orders for one group. With one shared order, a label and its action always
     coincide inside the group, so the group baseline cannot tell position from content;
@@ -68,6 +76,16 @@ def group_orders(rng: random.Random, row: dict, group_size: int, per_sample: boo
     if per_sample:
         return [menu_order(rng, row) for _ in range(group_size)]
     return [menu_order(rng, row)] * group_size
+
+
+def evaluation_orders(sets: dict[str, list[dict]], seed: int, count: int) -> dict[str, list[list[int]]]:
+    """Keep evaluation menus fixed independently of training randomness.
+
+    The offset preserves the menus produced by format 2 for the same seed.
+    """
+    rng = random.Random(seed + 2)
+    return {row["id"]: [menu_order(rng, row) for _ in range(count)]
+            for rows in sets.values() for row in rows}
 
 
 def score_answer(row: dict, prompt, output_ids: Sequence[int], text: str, finish_reason: str,
@@ -136,6 +154,9 @@ class MLXPolicy:
         self.tokenizer = AutoTokenizer.from_pretrained(args.model_repo, revision=args.revision, trust_remote_code=True)
         self.model, _ = load(str(args.mlx_model))
         self.model.freeze()
+        # Generation seeds are set later; they cannot seed the random LoRA
+        # factors already created here. Seed immediately before initialization.
+        mx.random.seed(args.seed)
         linear_to_lora_layers(self.model, len(self.model.layers), {
             "rank": args.lora_rank, "scale": args.lora_alpha / args.lora_rank, "dropout": 0.0, "keys": list(LORA_KEYS)})
         if args.adapter:
@@ -254,7 +275,7 @@ def evaluate(policy: MLXPolicy, sets: dict[str, list[dict]], orders: dict[str, l
     jobs = [(name, row, labelled_prompt(row["observation"], order))
             for name, rows in sets.items() for row in rows for order in orders[row["id"]]]
     results = policy.generate([policy.prompt_ids(prompt.messages) for _, _, prompt in jobs],
-                              temperature=0.0, seed=args.seed, concurrency=args.eval_concurrency)
+                              temperature=0.0, seed=args.eval_seed, concurrency=args.eval_concurrency)
     records = []
     for (name, row, prompt), (output_ids, reason) in zip(jobs, results):
         text = policy.tokenizer.decode(output_ids, skip_special_tokens=False)
@@ -289,8 +310,12 @@ def run_record(args: Any, policy: MLXPolicy, train_rows: list[dict], probe_rows:
                        if isinstance(v, (str, int, float))},
             "mlx_model_config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
             "states_sha256": {"train": hashlib.sha256(Path(args.train).read_bytes()).hexdigest(),
+                              "train_eval": hashlib.sha256(Path(args.train_eval).read_bytes()).hexdigest()
+                              if args.train_eval else None,
                               "probe": hashlib.sha256(Path(args.probe).read_bytes()).hexdigest()
                               if args.probe else None},
+            "parent_adapter_sha256": hashlib.sha256(Path(args.adapter).read_bytes()).hexdigest()
+            if args.adapter else None,
             "teacher_checkpoint_sha256": teachers,
             "trainable_parameters": sum(v.size for _, v in policy.trainable_items()),
             "train_states": len(train_rows), "probe_states": len(probe_rows)}
@@ -303,10 +328,14 @@ def main(argv=None) -> int:
     parser.add_argument("--revision", default="7c75f2f49e74ac97c1852e62b4c860091d6a00ea")
     parser.add_argument("--train", type=Path, required=True, help="JSONL of training-split states with teacher labels")
     parser.add_argument("--probe", type=Path, help="JSONL of validation-split states for the held-out probe")
+    parser.add_argument("--train-eval", type=Path,
+                        help="optional smaller training-state panel for frequent evaluations")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--adapter", type=Path, help="warm-start LoRA weights (optimizer and RNG reset)")
     parser.add_argument("--effort", choices=("low", "medium", "high"), default="medium")
     parser.add_argument("--iterations", type=int, required=True)
+    parser.add_argument("--max-run-seconds", type=float, default=0,
+                        help="0 disables the wall-time bound; stop between iterations and save final weights")
     parser.add_argument("--states-per-iteration", type=int, default=4)
     parser.add_argument("--group-size", type=int, default=8)
     parser.add_argument("--menu-order", choices=("per_sample", "per_group"), default="per_sample",
@@ -328,12 +357,17 @@ def main(argv=None) -> int:
     parser.add_argument("--eval-concurrency", type=int, default=16, help="evaluation answers decoded at once")
     parser.add_argument("--save-every", type=int, default=10)
     parser.add_argument("--seed", type=int, default=1729)
+    parser.add_argument("--eval-seed", type=int, default=None,
+                        help="evaluation menu seed; defaults to --seed; hold fixed across training repeats")
     args = parser.parse_args(argv)
+    if args.eval_seed is None:
+        args.eval_seed = args.seed
     if min(args.iterations, args.states_per_iteration, args.group_size, args.max_new_tokens,
            args.loss_token_budget, args.lora_rank, args.eval_orders, args.eval_concurrency) < 1 or args.group_size < 2:
         parser.error("sizes must be positive and group size at least 2")
     if not (args.temperature > 0 and args.learning_rate > 0 and args.max_grad_norm > 0 and args.kl_beta >= 0
-            and math.isfinite(args.invalid_reward)):
+            and math.isfinite(args.invalid_reward) and math.isfinite(args.max_run_seconds)
+            and args.max_run_seconds >= 0):
         parser.error("temperature, learning rate and gradient norm must be positive; KL nonnegative")
     args.output.mkdir(parents=True, exist_ok=False)
     for name in ("generations", "evaluations", "adapters"):
@@ -344,23 +378,25 @@ def main(argv=None) -> int:
     import mlx.optimizers as optim
     train_rows = load_states(args.train, split="train")
     probe_rows = load_states(args.probe, split="validation") if args.probe else []
+    train_eval_rows = training_evaluation_rows(train_rows, args.train_eval)
     policy = MLXPolicy(args)
     record = run_record(args, policy, train_rows, probe_rows)
     (args.output / "config.json").write_text(json.dumps(record, indent=2) + "\n")
     optimizer = optim.AdamW(learning_rate=args.learning_rate, weight_decay=0.0)
     rng = random.Random(args.seed)
     order_rng = random.Random(args.seed + 1)
-    eval_rng = random.Random(args.seed + 2)
-    eval_sets = {"train": train_rows, **({"probe": probe_rows} if probe_rows else {})}
-    eval_orders = {row["id"]: [menu_order(eval_rng, row) for _ in range(args.eval_orders)]
-                   for rows in eval_sets.values() for row in rows}
+    eval_sets = {"train": train_eval_rows, **({"probe": probe_rows} if probe_rows else {})}
+    eval_orders = evaluation_orders(eval_sets, args.eval_seed, args.eval_orders)
     adapter_metadata = {"format_version": MLX_TRAINING_FORMAT_VERSION, "model_repo": args.model_repo,
                         "revision": args.revision, "lora_rank": args.lora_rank, "lora_alpha": args.lora_alpha,
                         "lora_keys": list(LORA_KEYS), "effort": args.effort, "prompt_version": LABELLED_PROMPT_VERSION}
     log = (args.output / "iterations.jsonl").open("a")
     queue: list[dict] = []
+    run_started = time.monotonic()
+    last_iteration, last_evaluation, stop_reason = 0, None, "iterations_complete"
 
     def evaluation(iteration):
+        nonlocal last_evaluation
         started = time.perf_counter()
         summary = evaluate(policy, eval_sets, eval_orders, args, iteration, args.output)
         summary["seconds"] = time.perf_counter() - started
@@ -368,12 +404,15 @@ def main(argv=None) -> int:
             stream.write(json.dumps(summary) + "\n")
         print(json.dumps({"event": "evaluation", **{k: v for k, v in summary.items() if k.endswith("/all")},
                           "iteration": iteration, "seconds": summary["seconds"]}), flush=True)
+        last_evaluation = iteration
 
     if args.eval_every:
         evaluation(0)
     for iteration in range(1, args.iterations + 1):
-        if stop_file.exists():
-            print(json.dumps({"event": "stopped", "before_iteration": iteration}), flush=True)
+        timed_out = args.max_run_seconds > 0 and time.monotonic() - run_started >= args.max_run_seconds
+        if stop_file.exists() or timed_out:
+            stop_reason = "time_limit" if timed_out else "stop_file"
+            print(json.dumps({"event": "stopped", "before_iteration": iteration, "reason": stop_reason}), flush=True)
             break
         began = time.perf_counter()
         if len(queue) < args.states_per_iteration:
@@ -419,6 +458,7 @@ def main(argv=None) -> int:
                    "peak_memory_gb": mx.get_peak_memory() / 1e9}
         log.write(json.dumps(summary) + "\n")
         log.flush()
+        last_iteration = iteration
         print(json.dumps({k: summary[k] for k in ("iteration", "mean_reward", "zero_variance_group_fraction",
                                                   "iteration_seconds")} | {"all": summary["all"]}), flush=True)
         if iteration % args.save_every == 0 or iteration == args.iterations:
@@ -427,6 +467,15 @@ def main(argv=None) -> int:
         if args.eval_every and (iteration % args.eval_every == 0 or iteration == args.iterations):
             evaluation(iteration)
     log.close()
+    if last_iteration:
+        final = args.output / "adapters" / f"iter_{last_iteration:04d}.safetensors"
+        if not final.exists():
+            policy.save_adapter(final, {**adapter_metadata, "iteration": last_iteration})
+        if args.eval_every and last_evaluation != last_iteration:
+            evaluation(last_iteration)
+    (args.output / "run_summary.json").write_text(json.dumps({
+        "last_iteration": last_iteration, "stop_reason": stop_reason,
+        "elapsed_seconds": time.monotonic() - run_started}, indent=2) + "\n")
     return 0
 
 

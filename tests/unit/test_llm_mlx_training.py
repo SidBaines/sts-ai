@@ -7,6 +7,7 @@ import random
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 try:
     import mlx.core as mx
@@ -42,6 +43,29 @@ def tiny_policy():
 
 @unittest.skipIf(mx is None, "mlx-lm is not installed")
 class MLXTrainerTests(unittest.TestCase):
+    def test_lora_initialization_uses_the_recorded_seed(self):
+        def load_base(_path):
+            mx.random.seed(100)
+            model = Model(ModelArgs(model_type="llama", hidden_size=32, num_hidden_layers=2,
+                                    intermediate_size=64, num_attention_heads=4,
+                                    num_key_value_heads=2, rms_norm_eps=1e-6, vocab_size=40,
+                                    tie_word_embeddings=False))
+            mx.eval(model.parameters())
+            return model, None
+
+        def initialized(seed):
+            settings = args(seed=seed, model_repo="local-test", revision="test", mlx_model="unused",
+                            lora_rank=4, lora_alpha=8, adapter=None, grad_checkpoint=False)
+            with patch("mlx_lm.load", side_effect=load_base), \
+                 patch("transformers.AutoTokenizer.from_pretrained") as tokenizer:
+                tokenizer.return_value.eos_token_id = 2
+                policy = mlx_training.MLXPolicy(settings)
+            return {key: value.tolist() for key, value in policy.trainable_items()}
+
+        first = initialized(17)
+        self.assertEqual(first, initialized(17))
+        self.assertNotEqual(first, initialized(18))
+
     def test_token_logps_score_exactly_the_generated_tokens(self):
         policy = tiny_policy()
         prompt, output = [1, 2, 3, 4], [5, 6, 7]
@@ -133,6 +157,24 @@ class StateAndScoringTests(unittest.TestCase):
         self.assertEqual((capped["valid"], capped["reward"], capped["teacher_probability"]), (False, -1.0, 0.0))
         self.assertTrue(capped["capped"])
 
+    def test_training_evaluation_subset_cannot_change_labels_or_add_states(self):
+        seeds = [s for s in range(100) if world_split(s) == "train"][:3]
+        train = [self.state(s) for s in seeds[:2]]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "panel.jsonl"
+            path.write_text(json.dumps(train[0]) + "\n")
+            self.assertEqual(mlx_training.training_evaluation_rows(train, path), train[:1])
+            self.assertEqual(mlx_training.training_evaluation_rows(train, None), train)
+            changed = json.loads(json.dumps(train[0]))
+            changed["teacher"]["probabilities"] = [.8, .2]
+            for invalid in (changed, self.state(seeds[2])):
+                path.write_text(json.dumps(invalid) + "\n")
+                with self.assertRaises(ValueError):
+                    mlx_training.training_evaluation_rows(train, path)
+            path.write_text("")
+            with self.assertRaises(ValueError):
+                mlx_training.training_evaluation_rows(train, path)
+
     def test_menu_orders_are_permutations_and_reproducible(self):
         state = self.state()
         first = [mlx_training.menu_order(random.Random(3), state) for _ in range(3)]
@@ -148,6 +190,18 @@ class StateAndScoringTests(unittest.TestCase):
         self.assertEqual(len(separate), 8)
         self.assertGreater(len({tuple(order) for order in separate}), 1)
         self.assertTrue(all(sorted(order) == list(range(6)) for order in separate))
+
+    def test_evaluation_orders_preserve_historical_menus_and_ignore_training_seed(self):
+        sets = {"train": [{"id": "a", "legal_indices": list(range(8))}],
+                "probe": [{"id": "b", "legal_indices": list(range(7))}]}
+        historical_rng = random.Random(1729 + 2)
+        historical = {row["id"]: [mlx_training.menu_order(historical_rng, row)]
+                      for rows in sets.values() for row in rows}
+        fixed = mlx_training.evaluation_orders(sets, 1729, 1)
+        self.assertEqual(fixed, historical)
+        random.seed(2718)
+        self.assertEqual(fixed, mlx_training.evaluation_orders(sets, 1729, 1))
+        self.assertNotEqual(fixed, mlx_training.evaluation_orders(sets, 2718, 1))
 
     def test_group_statistics_and_summary(self):
         group = [{"reward": 0.9, "action_index": 0}, {"reward": 0.9, "action_index": 0}]

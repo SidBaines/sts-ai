@@ -19,6 +19,9 @@ Known hazards:
   before recovering (no KL anchor);
 - 0.0001 breaks the answer format.
 
+On 26 October Sid chose a [broader continuation](experiments/2026-10-26-broader-training.md)
+over repeat-seed stability checks: signs of life take priority.
+
 The untrained model's trivial-baseline play is only the "before" reference.
 Full-game RL scores model-invalid games as losses; it is unit-tested but has
 no learning run and is too slow per game.
@@ -34,8 +37,8 @@ log-probabilities agree within 0.0013).
 - Batches that mix prompt lengths are 2–3× slower.
 - The estimated pilot iteration is about 95 s, against about 165 s for the RTX
   Hugging Face path.
-- The existing PyTorch trainer works on MPS but is 3.7× slower, so the next
-  step is a small MLX trainer.
+- The existing PyTorch trainer works on MPS but is 3.7× slower; the MLX
+  trainer now runs stage-1 and the broader continuation.
 
 [Evidence](experiments/2026-10-25-mac-local-speed.md).
 

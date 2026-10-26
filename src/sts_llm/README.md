@@ -234,6 +234,23 @@ hashes, MLX versions, device, input hashes and teacher checkpoint. Create
 `OUTPUT/STOP` to stop between iterations. `--adapter` warm-starts weights; the
 optimizer and random state start fresh.
 
+Format 3 explicitly seeds LoRA initialization with `--seed`; earlier formats
+seeded generation but left the initial random adapter factors uncontrolled.
+Use `--eval-seed` to hold evaluation menus fixed across training seeds. It
+defaults to the training seed and retains the earlier menu-order algorithm;
+`--eval-seed 1729 --eval-orders 1` reproduces the original stage-1 menus.
+Older adapter weights remain loadable. Exact reproduction of an earlier run's
+initial adapter is not possible from its recorded seed alone. No environment
+or prompt version changes with this trainer update.
+
+For larger corpora, `--train-eval PATH` selects a smaller fixed training panel;
+every row must be an unchanged subset of `--train`. The probe remains separate.
+`--max-run-seconds` bounds elapsed time between iterations (zero disables it).
+On a time limit or STOP file, save the final weights and evaluate once if needed;
+the current iteration and final evaluation may extend beyond the time limit.
+`run_summary.json` distinguishes completion, a time limit and a requested stop.
+The parent-adapter and evaluation-panel hashes are retained in `config.json`.
+
 ## Full-game outcome learning and evaluation
 
 `sts_llm.game_training` provides the later full-game path. It reuses the clean
