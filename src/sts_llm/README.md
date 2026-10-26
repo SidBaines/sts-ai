@@ -211,7 +211,9 @@ log-probability is divided by `--loss-token-budget` (default 2048), or by its
 own length with `--loss-normalization response_mean`. Responses with zero
 advantage are skipped in the backward pass. An optional sampled KL penalty to
 the base model (`--kl-beta`, default 0) scores references with the adapters
-switched off. Gradient checkpointing is on by default; on this machine it is
+switched off. It costs one extra forward pass per response and has been tested
+only at unit level (it pulls a drifted adapter back to the reference); no
+training run has used it yet, and no good scale for it is known. Gradient checkpointing is on by default; on this machine it is
 both faster and smaller.
 
 Every completion is written to `generations/iter_NNNN.jsonl`, including its

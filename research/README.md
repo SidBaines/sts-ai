@@ -36,8 +36,9 @@ Nothing is running ([status](status.md)). Stage 1 results, 26 October
 
 ## Next
 
-1. Stability check on the same 32 states: a small KL penalty and 8 or more
-   states per step at 0.00003, plus a repeat with a new seed.
+1. Stability check on the same 32 states at 0.00003: a repeat with a new
+   seed, a small KL penalty, and 8 states per step. Write its page first and
+   get Sid's approval; [status](status.md) has the step-by-step handoff.
 2. Stage 2: many more decisive states from training worlds at 0.00003, gated
    on held-out top-choice agreement on decisive states. Needs a page and Sid's
    approval.

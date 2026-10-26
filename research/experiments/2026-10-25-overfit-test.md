@@ -148,17 +148,16 @@ Caveats:
 
 ## Next
 
-- Stage 2 at learning rate 0.00003 with an order per sample:
-  - many more decisive states from training worlds, gated on held-out
-    top-choice agreement on decisive states;
-  - track the share of A answers against the content-only rate, and agreement
-    when the top choice is not shown first.
-- Before or alongside it, test a small KL penalty to the original model, and
-  8 or more states per step, on these 32 states. The aim is to remove the
-  pass 2–3 drift without slowing learning. Repeat 0.00003 with a new seed to
-  see whether the pass holds.
-- Consider accepting the duplicated JSON ending only if it recurs at stage-2
-  learning rates; for now the strict format stays.
+1. A stability check on these 32 states at 0.00003, on its own page with
+   Sid's approval: a repeat with a new seed, a small KL penalty to the
+   original model, and 8 states per step. The aim is to confirm the pass and
+   remove the pass 2–3 drift without slowing learning.
+2. Stage 2 at 0.00003 with an order per sample: many more decisive states
+   from training worlds, gated on held-out top-choice agreement on decisive
+   states. Track the share of A answers against the content-only rate, and
+   agreement when the top choice is not shown first.
+3. Keep the strict answer format. Accept the duplicated JSON ending only if it
+   recurs at stage-2 learning rates.
 
 ## Log
 
