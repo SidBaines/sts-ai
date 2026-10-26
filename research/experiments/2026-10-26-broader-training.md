@@ -63,9 +63,23 @@ Rules chosen before training:
 
 ## Results
 
-No learning result yet. Data preparation produced the counts above. The 112-test LLM suite passed after the seed fixes; the final 113-test suite
-also passed, including the training-panel subset regression. Shell syntax and
-Python compilation checks passed. The initial evaluation is running.
+No post-update learning result yet. The starting adapter is valid on all 160
+evaluation decisions. This is a new panel, so its scores cannot be compared
+directly with the earlier 32-state panel.
+
+| Starting evaluation | Decisions | Teacher top-choice matches | Mean teacher probability |
+|---|---:|---:|---:|
+| Fixed training subset | 64 | 31 (48.4%) | 0.396 |
+| Held-out validation | 96 | 56 (58.3%) | 0.505 |
+
+The evaluation took 289 seconds. The first optimizer step completed in 98
+seconds with 32/32 valid samples, finite nonzero gradients and 21.2 GB peak
+memory. Its four-state sampled score is not comparable to the fixed panels.
+No post-update evaluation has completed.
+
+The 112-test LLM suite passed after the seed
+fixes; the final 113-test suite also passed, including the training-panel subset
+regression. Shell syntax and Python compilation checks passed.
 
 ## Conclusion
 

@@ -12,6 +12,9 @@ launch instructions are in `experiments/2026-10-26-broader-training/README.md`.
   live in this worktree's own `data/llm_runs/`.
 - Input: `broader_states_selected_20261026`; 512 training states, 96 validation
   states and a 64-state training evaluation panel. World overlap is zero.
+- Starting evaluation: train 31/64 and validation 56/96 teacher matches;
+  all 160 answers valid. The first update completed in 98 seconds with 32/32
+  valid samples and finite nonzero gradients; no post-update evaluation yet.
 - Parent: `stage1_screen_ps_20261026/lr_3e-5`, iteration 48. AdamW resets.
 - Run: `broader_training_20261026`, at most 256 steps or eight elapsed hours,
   plus the current iteration and final evaluation; mains power only.

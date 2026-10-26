@@ -148,16 +148,12 @@ Caveats:
 
 ## Next
 
-1. A stability check on these 32 states at 0.00003, on its own page with
-   Sid's approval: a repeat with a new seed, a small KL penalty to the
-   original model, and 8 states per step. The aim is to confirm the pass and
-   remove the pass 2–3 drift without slowing learning.
-2. Stage 2 at 0.00003 with an order per sample: many more decisive states
-   from training worlds, gated on held-out top-choice agreement on decisive
-   states. Track the share of A answers against the content-only rate, and
-   agreement when the top choice is not shown first.
-3. Keep the strict answer format. Accept the duplicated JSON ending only if it
-   recurs at stage-2 learning rates.
+Sid chose a [longer broader continuation](2026-10-26-broader-training.md) on
+26 October. Continue from the passing adapter on many more decisive states,
+watch held-out choices and validity, and change course if the metrics worsen.
+The suggested seed repeat, KL arm and larger-batch arm are deferred: the
+current goal is signs of life, not reliability estimates. Keep the strict
+answer format and inspect menu-position dependence separately from agreement.
 
 ## Log
 

@@ -10,7 +10,7 @@ SFT or teacher-forced reasoning traces are used.
 
 ## Current best
 
-There is no model trained beyond the 32 stage-1 states (adapter
+The last completed model was trained on the 32 stage-1 states (adapter
 `stage1_screen_ps_20261026/lr_3e-5`, iteration 48), which shows no clear
 transfer to held-out states. As expected for a model that has never played, the
 unchanged K2-Horizon-0.9B scores no better than always choosing the first menu
