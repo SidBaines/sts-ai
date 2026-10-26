@@ -30,3 +30,26 @@ Research page: `research/experiments/2026-10-25-overfit-test.md`.
 2. Training uses `python -m sts_llm.mlx_training`; see `src/sts_llm/README.md`.
    `run_screen.sh` runs one learning rate per call, with the settings fixed on
    the research page.
+
+
+3. The read-only live dashboard uses the Python standard library and does not
+   load the model. From the worktree root:
+
+   ```sh
+   python3 -u experiments/2026-10-25-overfit-test/dashboard.py --port 8766
+   ```
+
+   Open http://127.0.0.1:8766. It refreshes every five seconds, follows all
+   three rates in `stage1_screen_ps_20261026`, and offers the original
+   `stage1_screen_20261026` as a clearly labelled shared-order reference.
+   `--screen` and `--reference` can select other screens with the same layout.
+   Charts and tables show every evaluation, full and partial training passes,
+   combat or out-of-combat metrics, position-bias checks, and saved reasoning
+   with its exact displayed menu. Process state, stalled output, parser
+   failures and power state are visible. An unfinished JSONL line is ignored
+   until its writer completes it.
+
+   The detached server's PID and URL are in
+   `data/llm_runs/stage1_screen_ps_20261026/dashboard/server.json`; its output
+   is in the adjacent `server.log`. To stop only the dashboard, read that PID
+   and use `kill <pid>`. This does not stop or change the training run.

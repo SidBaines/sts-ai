@@ -12,6 +12,8 @@ per sample. Updated 26 October 2026.
 - It runs detached in its own process group (ID in `pids.txt`). A babysitter
   holds `caffeinate` on mains power and pauses the job on battery
   (`babysitter.log`).
+- Live dashboard: http://127.0.0.1:8766 (refreshes every five seconds). Server
+  details and stop instructions: `experiments/2026-10-25-overfit-test/README.md`.
 - Check: `tail data/llm_runs/stage1_screen_ps_20261026/screen.log` (one line per
   rate) and `lr_<rate>.log`; per-iteration records are in
   `lr_<rate>/iterations.jsonl`, evaluations in `lr_<rate>/evaluations.jsonl`.
