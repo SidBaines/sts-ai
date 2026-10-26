@@ -48,12 +48,10 @@ Its combat network is the same as the previous champion's.
 - 48 iterations, which is 6 passes over every state (8 samples per state per
   pass).
 - Learning rates 0.00001, 0.00003 and 0.0001, one run each, run one after
-  another on the laptop. In the timing smoke, three steps at 0.0001 already
-  shortened median sampled reasoning from 374 to 113 tokens and raised the
-  first-displayed-option rate from 0.06 to 0.44. Within groups, reward was not
-  linked to either: the correlation with advantage was −0.11 for reasoning
-  length and −0.07 for picking "A", over 12 groups. So the screen goes no
-  higher than 0.0001.
+  another on the laptop. The screen goes no higher than 0.0001 because the
+  timing smoke seemed to drift fast at that rate. That reading was mostly
+  wrong (see Log): each iteration draws the same states in every run, and the
+  first ones happened to differ.
 
 **Measurements:**
 - From the training samples of each pass (256 decisions): mean teacher
@@ -110,13 +108,22 @@ gate.
 - 25 October: Sid chose to train combat and out-of-combat decisions together
   and to use the latest champion as teacher.
 - 25 October: the untrained model answered validly in the new label format
-  (64/64 at the first evaluation). The timing smoke showed fast drift at
-  learning rate 0.0001 (see Design), so the screen moved down by a factor of 3.
+  (64/64 at the first evaluation). Over three steps at learning rate 0.0001,
+  the timing smoke's median reasoning fell from 374 to 113 tokens and its
+  first-displayed-option rate rose from 0.06 to 0.44, so the screen moved down
+  by a factor of 3.
 - 25 October: the Mac slept for about 20 minutes during the smoke. Iteration
   timers exclude sleep; wall time did not. Use the launcher for the screen.
 
 - 26 October: Sid approved the design; the screen started as run
   `stage1_screen_20261026`, learning rates in the order 0.00001, 0.00003, 0.0001.
+- 26 October: the smoke's drift was mostly batch composition. With the same
+  seed, every run samples the same states at each iteration. At 0.00001, ten
+  times lower, iterations 2 and 3 gave first-displayed-option rates of 0.37 and
+  0.34 against the smoke's 0.38 and 0.44. Medians were 246 and 212 tokens
+  against 210 and 113. Iteration 1's batch is simply unusual (rate 0.06 in
+  both). Runs can therefore be compared iteration by iteration on the same
+  states.
 
 Code: `experiments/2026-10-25-overfit-test/` and `src/sts_llm/mlx_training.py`.
 Data: `stage1_states_20261025` (local).
