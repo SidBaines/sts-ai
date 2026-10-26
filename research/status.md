@@ -1,26 +1,23 @@
 # Status
 
-Stage 1's learning-rate screen is finishing learning rate 0.00003 on the
-laptop, then stops (a screen `STOP` file is set). Keep that file until the
-run ends: the trainer's default has changed, so starting 0.0001 would mix
-designs. A shared menu order per group let the policy learn "answer A" (see
-the page's Log). A rerun with an order per sample awaits Sid. Updated
-26 October 2026.
+Stage 1's learning-rate screen is rerunning on the laptop with a menu order
+per sample. Updated 26 October 2026.
 
-- Run `stage1_screen_20261026` in `data/llm_runs/` of the worktree
+- Run `stage1_screen_ps_20261026` in `data/llm_runs/` of the worktree
   `~/.codex/worktrees/llm-throughput/SlayTheSpireAI` (branch
   `codex/llm-throughput`). Learning rates 0.00001, 0.00003 and 0.0001, one
-  after another, 48 iterations each; about 90 minutes per rate. Started
-  26 October; page: `research/experiments/2026-10-25-overfit-test.md`.
+  after another, 48 iterations each, about 2.5 hours in all. The first screen,
+  `stage1_screen_20261026` (shared order per group; 0.00001 complete, 0.00003
+  stopped at 15), is kept as a reference.
 - It runs detached in its own process group (ID in `pids.txt`). A babysitter
   holds `caffeinate` on mains power and pauses the job on battery
   (`babysitter.log`).
-- Check: `tail data/llm_runs/stage1_screen_20261026/screen.log` (one line per
+- Check: `tail data/llm_runs/stage1_screen_ps_20261026/screen.log` (one line per
   rate) and `lr_<rate>.log`; per-iteration records are in
   `lr_<rate>/iterations.jsonl`, evaluations in `lr_<rate>/evaluations.jsonl`.
-- Stop after the current rate: `touch data/llm_runs/stage1_screen_20261026/STOP`.
+- Stop after the current rate: `touch data/llm_runs/stage1_screen_ps_20261026/STOP`.
   Stop the current rate between iterations:
-  `touch data/llm_runs/stage1_screen_20261026/lr_<rate>/STOP`.
+  `touch data/llm_runs/stage1_screen_ps_20261026/lr_<rate>/STOP`.
 - Next: apply the page's pass rule to each rate, fill in Results.
 - Laptop setup: `.venv-mlx/` (mlx-lm 0.31.3); model
   `data/models/k2-horizon-0.9b-mlx`; inputs `data/llm_runs/stage1_states_20261025`.

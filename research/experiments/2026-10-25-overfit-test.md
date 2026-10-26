@@ -1,6 +1,6 @@
 # Stage 1: can teacher feedback teach the model 32 decisive states?
 
-**Status:** paused 26 October 2026 after a design flaw (see Log). **Verdict:** not yet known.
+**Status:** rerunning since 26 October 2026 with an order per sample (see Log). **Verdict:** not yet known.
 
 ## Question
 
@@ -42,6 +42,8 @@ Its combat network is the same as the previous champion's.
 - Rewards: the teacher's probability of the chosen action; invalid or capped
   answers get -1.
 - Group-mean advantages, with no standard-deviation scaling.
+- Every sample gets its own random menu order (from the rerun on 26 October;
+  the first screen shared one order per group).
 - One AdamW step per iteration (REINFORCE with a baseline).
 - Each response's token log-probabilities are summed and divided by 2,048.
 - Gradient-norm clip 1, no KL penalty.
@@ -86,7 +88,7 @@ If none passes, investigate before stage 2 rather than adding states.
 The screen runs only on mains power: `launch_screen.py` holds `caffeinate`
 while plugged in and pauses the job on battery. No GPU rental is needed.
 
-**Approval:** Sid approved this design on 26 October 2026.
+**Approval:** Sid approved this design on 26 October 2026, and the rerun with an order per sample the same day.
 
 ## Results
 
@@ -132,8 +134,11 @@ gate.
   choice was shown as A, but only from 0.30 to 0.43 when it was shown
   elsewhere. 0.00001 narrowly failed the pass rule (+0.12 teacher
   probability; +7 matching states). The screen was stopped before 0.0001.
-  The trainer now gives every sample its own order (commit f131813); a
-  rerun needs Sid's approval.
+  The trainer now gives every sample its own order (commit f131813).
+- 26 October: Sid approved a rerun of all three learning rates with an order
+  per sample, under the same pass rule, as run `stage1_screen_ps_20261026`.
+  The flawed 0.00003 run was stopped after 15 iterations. The first screen
+  (`stage1_screen_20261026`) is kept as the shared-order reference.
 
 Code: `experiments/2026-10-25-overfit-test/` and `src/sts_llm/mlx_training.py`.
 Data: `stage1_states_20261025` (local).
