@@ -25,8 +25,8 @@ It has won no games; none have been attempted. Definitions are in
 
 ## Now
 
-Stopping the laptop continuation on 512 decisive states after repetition and
-answer validity deteriorated; the 96-state held-out evaluation is pending
+The laptop continuation stopped after 21 updates because repetition and
+answer validity deteriorated; the final held-out evaluation is paused on battery
 ([design](experiments/2026-10-26-broader-training.md), [status](status.md)).
 Sid chose signs-of-life progress over another seed repeat on 26 October.
 The existing teacher, prompt and learning rate stay fixed. Optimizer moments
