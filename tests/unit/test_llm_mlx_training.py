@@ -79,6 +79,22 @@ class MLXTrainerTests(unittest.TestCase):
         self.assertNotEqual(policy.token_logps([1, 2], [3, 4]).tolist(), base)
 
 
+    def test_kl_penalty_pulls_a_drifted_adapter_back_towards_the_reference(self):
+        policy = tiny_policy()
+        item = {"prompt_ids": [1, 2, 3], "output_token_ids": [9, 10, 11], "advantage": 1.0}
+        reference = policy.token_logps(item["prompt_ids"], item["output_token_ids"])
+        mlx_training.update(policy, optim.SGD(learning_rate=0.5), [item], args())
+        drifted = policy.token_logps(item["prompt_ids"], item["output_token_ids"]).sum().item()
+        self.assertGreater(drifted, reference.sum().item())
+        with policy.adapters_disabled():
+            ref_logps = policy.token_logps(item["prompt_ids"], item["output_token_ids"]).tolist()
+        flat = dict(item, advantage=0.0, ref_logps=ref_logps)
+        step = mlx_training.update(policy, optim.SGD(learning_rate=0.5), [flat], args(kl_beta=1.0))
+        after = policy.token_logps(item["prompt_ids"], item["output_token_ids"]).sum().item()
+        self.assertTrue(step["optimizer_step"])
+        self.assertLess(after, drifted)
+
+
 class StateAndScoringTests(unittest.TestCase):
     def state(self, seed=11, split=None):
         world = canonical_world_identity(seed)
