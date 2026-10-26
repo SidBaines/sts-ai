@@ -139,6 +139,10 @@ gate.
   per sample, under the same pass rule, as run `stage1_screen_ps_20261026`.
   The flawed 0.00003 run was stopped after 15 iterations. The first screen
   (`stage1_screen_20261026`) is kept as the shared-order reference.
+- 26 October, rerun: 0.00001 failed (+0.10 teacher probability; +4 matching
+  states). 0.00003 passed all three criteria (+0.16; +12, from 10 to 22 of 32;
+  validity at least 96%) after drifting towards answering A in passes 2 and 3
+  and recovering. 0.0001 started at 16:38.
 
 Code: `experiments/2026-10-25-overfit-test/` and `src/sts_llm/mlx_training.py`.
 Data: `stage1_states_20261025` (local).
