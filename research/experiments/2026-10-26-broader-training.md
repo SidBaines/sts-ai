@@ -102,6 +102,10 @@ evaluation. Test game transfer once decision learning is promising.
 
 ## Log
 
+- 26 October: early reasoning grew substantially in both phases, slowing
+  updates; saved outputs included repetitive menu restatement and a token-cap
+  loop. Validity remained above the stop rule. Continue to the first fixed-panel
+  evaluation before choosing a targeted intervention.
 - 26 October: Sid rejected a seed repeat as premature for signs-of-life work
   and authorized longer monitored training. Broader states replace repetition
   on the original 32; KL and batch-size changes are deferred.
