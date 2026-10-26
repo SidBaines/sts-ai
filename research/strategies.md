@@ -2,32 +2,26 @@
 
 ## Teacher-feedback RL followed by full-game outcomes
 
-On hold since 25 October, pending Sid's decisions. The idea:
-- The model produces its own reasoning and action.
-- A frozen non-LLM policy supplies a reward for each single decision, with no
-  target reasoning.
-- Full-game terminal outcomes come later.
+Promising. The idea: the model produces its own reasoning and action, a frozen
+non-LLM policy rewards each single decision (no target reasoning), and
+full-game outcomes come later.
 
-As expected before any training, the unchanged model plays at
-trivial-baseline level. No effort level beats always choosing the first menu
-option on the teacher measure, and high effort scores below it. These numbers
-are the "before" reference, not a finding.
+Stage 1 passed on 26 October
+([page](experiments/2026-10-25-overfit-test.md)). On 32 decisive states, half
+combat and half out of combat, learning rate 0.00003 raised greedy
+top-choice matches from 10 to 22. Agreement rose mainly through content. The
+setup that worked: mean-centred advantages, decisive states, letter-labelled
+menus, and a fresh menu order for every sample.
 
-Most combat rewards are near-ties: the teacher's top combat action averages
-0.37 probability. The group standard-deviation scaling amplifies those ties.
-The [23 October pilot design](experiments/2026-10-23-medium-teacher-pilot.md)
-would probably end inconclusive. The
-[25 October review](brainstorms/2026-10-25-getting-the-model-to-learn.md)
-proposes a staged replacement:
-- an overfit test on decisive states;
-- mean-centred advantages;
-- a prompt fixed on design grounds before training;
-- held-out top-1 agreement on decisive states as the early signal.
+Known hazards:
+- sharing a menu order within a group teaches "answer A";
+- even with orders per sample, the label distribution drifted for two passes
+  before recovering (no KL anchor);
+- 0.0001 breaks the answer format.
 
-Stage 1 (an overfit test on 32 decisive states, combat and out of combat together, labelled by the 25 October champion) is built and smoke-tested on the laptop and awaits approval: [page](experiments/2026-10-25-overfit-test.md).
-
-Full-game RL now scores model-invalid games as losses. It is unit-tested, with
-no learning run, and is far too slow per game at current generation rates.
+The untrained model's trivial-baseline play is only the "before" reference.
+Full-game RL scores model-invalid games as losses; it is unit-tested but has
+no learning run and is too slow per game.
 
 ## Running on the laptop with MLX
 

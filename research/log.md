@@ -2,6 +2,7 @@
 
 Temporary running log, newest first. Anything that matters is also in its home file.
 
+- 2026-10-26: Stage 1 passed at learning rate 0.00003 (10 → 22 of 32 training states matching the teacher), after a rerun that fixed a shared-menu-order flaw. See [the page](experiments/2026-10-25-overfit-test.md).
 - 2026-10-25: Stage 1 is built: prompt v2 (letter-labelled, shuffled menus), the MLX trainer, and 32 decisive states (16 combat, 16 out of combat) labelled by the 25 October champion. The timing smoke ran at about 100 s per iteration; its apparent fast drift at learning rate 0.0001 later proved mostly to be batch composition (see the page's Log). Awaiting approval of [the page](experiments/2026-10-25-overfit-test.md).
 - 2026-10-25: Environment release 0.1.6 opened as pull request #10 to main.
 - 2026-10-25: Review of the pilot plan written up in [the brainstorm](brainstorms/2026-10-25-getting-the-model-to-learn.md): the model is at trivial-baseline skill, combat rewards are mostly near-ties, and a staged plan starting with decisive out-of-combat states is proposed. Pilot on hold pending Sid's decisions.

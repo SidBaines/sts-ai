@@ -1,28 +1,21 @@
 # Status
 
-Stage 1's learning-rate screen is rerunning on the laptop with a menu order
-per sample. Updated 26 October 2026.
+Nothing is running. Updated 26 October 2026.
 
-- Run `stage1_screen_ps_20261026` in `data/llm_runs/` of the worktree
-  `~/.codex/worktrees/llm-throughput/SlayTheSpireAI` (branch
-  `codex/llm-throughput`). Learning rates 0.00001, 0.00003 and 0.0001, one
-  after another, 48 iterations each, about 2.5 hours in all. The first screen,
-  `stage1_screen_20261026` (shared order per group; 0.00001 complete, 0.00003
-  stopped at 15), is kept as a reference.
-- It runs detached in its own process group (ID in `pids.txt`). A babysitter
-  holds `caffeinate` on mains power and pauses the job on battery
-  (`babysitter.log`).
-- Live dashboard: http://127.0.0.1:8766 (refreshes every five seconds). Server
-  details and stop instructions: `experiments/2026-10-25-overfit-test/README.md`.
-- Check: `tail data/llm_runs/stage1_screen_ps_20261026/screen.log` (one line per
-  rate) and `lr_<rate>.log`; per-iteration records are in
-  `lr_<rate>/iterations.jsonl`, evaluations in `lr_<rate>/evaluations.jsonl`.
-- Stop after the current rate: `touch data/llm_runs/stage1_screen_ps_20261026/STOP`.
-  Stop the current rate between iterations:
-  `touch data/llm_runs/stage1_screen_ps_20261026/lr_<rate>/STOP`.
-- Next: apply the page's pass rule to each rate, fill in Results.
-- Laptop setup: `.venv-mlx/` (mlx-lm 0.31.3); model
-  `data/models/k2-horizon-0.9b-mlx`; inputs `data/llm_runs/stage1_states_20261025`.
-- Not pushed: this branch and the local tag `archive/llm/pre-cli`.
+- Branch `codex/llm-throughput`, local only and not pushed, in the worktree
+  `~/.codex/worktrees/llm-throughput/SlayTheSpireAI`. The local tag
+  `archive/llm/pre-cli` is not pushed either.
+- Stage 1 finished. Runs are in `data/llm_runs/`: `stage1_screen_ps_20261026`
+  (an order per sample; the passing adapter is
+  `lr_3e-5/adapters/iter_0048.safetensors`) and `stage1_screen_20261026`
+  (shared order, flawed). Inputs: `stage1_states_20261025`.
+- To run a screen: keep the Mac plugged in and run
+  `python3 experiments/2026-10-25-overfit-test/launch_screen.py <run name> <rates…>`.
+  Stop between rates with `data/llm_runs/<run>/STOP`, or mid-rate with
+  `<run>/lr_<rate>/STOP`.
+- Laptop setup: `.venv-mlx/` (mlx-lm 0.31.3, matplotlib for figures); model
+  `data/models/k2-horizon-0.9b-mlx`.
+- Next: the stage-1 stability check (KL penalty, larger steps, new seed), then
+  a stage-2 page for Sid's approval.
 - Environment release 0.1.6 is pull request #10 to `main` (CI green); merge
   its tag here once it lands.

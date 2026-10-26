@@ -1,7 +1,8 @@
 # Learning full-game play with a reasoning language model
 
-No learning result yet. Stage 1, an overfit test on the laptop, has been
-running since 26 October.
+Stage 1 passed on 26 October: teacher-feedback RL on the laptop taught the
+model the teacher's choice on 22 of 32 decisive training states (from 10), at
+learning rate 0.00003 ([page](experiments/2026-10-25-overfit-test.md)).
 
 The goal is an LLM that makes combat and out-of-combat decisions for Ironclad,
 Ascension 0, Acts 1–3, while we watch how its reasoning changes during RL. No
@@ -9,7 +10,9 @@ SFT or teacher-forced reasoning traces are used.
 
 ## Current best
 
-There is no trained model. As expected for a model that has never played, the
+There is no model trained beyond the 32 stage-1 states (adapter
+`stage1_screen_ps_20261026/lr_3e-5`, iteration 48), which shows no clear
+transfer to held-out states. As expected for a model that has never played, the
 unchanged K2-Horizon-0.9B scores no better than always choosing the first menu
 option on the teacher measure. This is the "before" reference only:
 - teacher probability 0.26–0.33 at medium effort, against 0.30 for
@@ -22,35 +25,31 @@ It has won no games; none have been attempted. Definitions are in
 
 ## Now
 
-Stage 1's learning-rate screen is running on the laptop
-([status](status.md)): an overfit test of the training loop on 32 decisive
-states (16 combat, 16 out of combat), approved by Sid on 26 October
-([its page](experiments/2026-10-25-overfit-test.md)). It uses:
-- prompt version 2: letter-labelled menus in a fresh random order;
-- the MLX teacher-feedback trainer in `src/sts_llm/mlx_training.py`;
-- the state set, labelled by the 25 October champion.
-
-Earlier on 25 October:
-- a [review of the plan](brainstorms/2026-10-25-getting-the-model-to-learn.md);
-- the [Mac speed study](experiments/2026-10-25-mac-local-speed.md);
-- code fixes;
-- the environment fixes in `main` pull request #10 (release 0.1.6).
+Nothing is running ([status](status.md)). Stage 1 results, 26 October
+([page](experiments/2026-10-25-overfit-test.md)):
+- 0.00003 passed: greedy matches 10 → 22 of 32 (+6 to +18), and teacher
+  probability rose 0.35 → 0.51, mostly through content rather than menu
+  position.
+- 0.00001 learned too slowly; 0.0001 broke the answer format.
+- A first screen that shared one menu order per group taught "answer A" and
+  was rerun.
 
 ## Next
 
-1. Finish the stage-1 screen (about 4.5 hours, plugged in) and apply its
-   pass rule.
-2. Merge env-v0.1.6 into this branch once pull request #10 merges, and build
-   later state sets under it.
-3. If stage 1 passes: stage 2, a larger set of decisive states from training
-   worlds, gated on held-out top-choice agreement on decisive states.
+1. Stability check on the same 32 states: a small KL penalty and 8 or more
+   states per step at 0.00003, plus a repeat with a new seed.
+2. Stage 2: many more decisive states from training worlds at 0.00003, gated
+   on held-out top-choice agreement on decisive states. Needs a page and Sid's
+   approval.
+3. Merge env-v0.1.6 into this branch once pull request #10 merges, and build
+   stage-2 states under it.
 
 ## Evidence and open questions
 
 - Teacher probabilities are the preferences of a 27–29%-win policy, not game
   values, and transfer to full games is untested.
 - Open questions:
-  - Can the model learn decisive choices at all, in combat and out of it?
+  - Does learning on decisive states transfer to held-out states?
   - Does its reasoning shrink under this reward?
   - Is the champion's diffuse combat policy a usable combat teacher, or is a
     search teacher needed?

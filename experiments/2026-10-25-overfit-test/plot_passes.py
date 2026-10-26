@@ -79,7 +79,7 @@ def main() -> None:
         ax.grid(axis="y", color="#e6e5e0", linewidth=0.8)
         ax.spines[["top", "right"]].set_visible(False)
         ax.tick_params(labelsize=8, colors="#52514e")
-    axes[0].legend(fontsize=8, frameon=False)
+    axes[0].legend(fontsize=8, frameon=False, loc="upper left")
     fig.tight_layout()
     fig.savefig(out / "passes.png", dpi=110)
 

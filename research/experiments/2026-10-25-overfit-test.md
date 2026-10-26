@@ -1,6 +1,6 @@
 # Stage 1: can teacher feedback teach the model 32 decisive states?
 
-**Status:** rerunning since 26 October 2026 with an order per sample (see Log). **Verdict:** not yet known.
+**Status:** finished 26 October 2026. **Verdict:** stage 1 passes: at learning rate 0.00003 the loop taught the model the teacher's choice on 22 of 32 training states (from 10), mostly through content rather than menu position.
 
 ## Question
 
@@ -15,52 +15,38 @@ Approach: [teacher feedback](../strategies.md#teacher-feedback-rl-followed-by-fu
 
 ## Design
 
-**States** (`stage1_states_20261025`, from `select_states.py`):
-- Source: saved champion games from the non-LLM corpus, with the env-v0.1.5.1
-  potion-line fault excluded.
-- Selection: kept only if the teacher's top action leads the next by at least
-  0.3 probability. Mean margin 0.66.
-- Training set: 16 out-of-combat states (3 card rewards, 3 events, 3 map
-  choices, 2 rest sites, 2 shops, 3 other) and 16 combat states (6 boss, 5
-  elite, 5 hallway). All come from distinct training-split worlds.
-- Probe: the same shape from validation-split worlds. It is reported but
-  decides nothing.
+**States** (`stage1_states_20261025`, from `select_states.py`): champion
+games from the non-LLM corpus, excluding the env-v0.1.5.1 potion-line fault,
+kept only where the teacher's top action leads the next by at least 0.3
+(mean margin 0.66).
+- Training set: 16 out-of-combat states (card rewards, events, map, rest sites,
+  shops) and 16 combat states (6 boss, 5 elite, 5 hallway), from distinct
+  training-split worlds.
+- Probe: the same shape from validation-split worlds; it decides nothing.
 
 **Teacher:** the 25 October champion (`champion_4058cbf0e271`, 29.4% wins).
-Its combat network is the same as the previous champion's.
 
-**Model and prompt:**
-- K2-Horizon-0.9B in MLX (BF16), medium effort, a fresh LoRA adapter (rank 16,
-  alpha 32, all projections).
-- Prompt version 2: the unchanged state text, then a letter-labelled menu in a
-  fresh random order at every presentation. The answer is
-  `{"action": "<label>"}`.
+**Model and prompt:** K2-Horizon-0.9B in MLX (BF16), medium effort, a fresh
+LoRA adapter (rank 16, alpha 32, all projections). Prompt version 2: the state
+text, then a letter-labelled menu in random order, answered with
+`{"action": "<label>"}`. In the rerun, every sample gets its own order; the
+first screen shared one per group.
 
 **Learning:**
-- 4 states per iteration, with 8 samples each at temperature 0.6, top-p 1 and
-  a 4,096-token cap.
-- Rewards: the teacher's probability of the chosen action; invalid or capped
-  answers get -1.
-- Group-mean advantages, with no standard-deviation scaling.
-- Every sample gets its own random menu order (from the rerun on 26 October;
-  the first screen shared one order per group).
-- One AdamW step per iteration (REINFORCE with a baseline).
-- Each response's token log-probabilities are summed and divided by 2,048.
-- Gradient-norm clip 1, no KL penalty.
-- 48 iterations, which is 6 passes over every state (8 samples per state per
-  pass).
-- Learning rates 0.00001, 0.00003 and 0.0001, one run each, run one after
-  another on the laptop. The screen goes no higher than 0.0001 because the
-  timing smoke seemed to drift fast at that rate. That reading was mostly
-  wrong (see Log): each iteration draws the same states in every run, and the
-  first ones happened to differ.
+- Each iteration takes 4 states and 8 samples per state (temperature 0.6,
+  top-p 1, 4,096-token cap).
+- Reward: the teacher's probability of the chosen action, or −1 if invalid or
+  capped.
+- Group-mean advantages with no standard-deviation scaling. One AdamW step per
+  iteration. Summed log-probabilities divided by 2,048, gradient clip 1, no KL
+  penalty.
+- 48 iterations, which is 6 passes over every state. Learning rates 0.00001,
+  0.00003 and 0.0001, one run each.
 
-**Measurements:**
-- From the training samples of each pass (256 decisions): mean teacher
-  probability, top-choice agreement, validity, reasoning length and
-  first-displayed-option rate. All are reported per phase.
-- A greedy evaluation of one fixed menu order per state, on the training
-  states and the probe, at iterations 0, 24 and 48.
+**Measurements:** per pass, from 256 sampled answers: teacher probability,
+top-choice agreement, validity, reasoning length and first-displayed-option
+rate, per phase. A greedy evaluation of one fixed menu order per state, on the
+training states and the probe, at iterations 0, 24 and 48.
 
 **Decision rule, fixed before any run.** A learning rate passes if all of
 these hold:
@@ -73,76 +59,125 @@ these hold:
 The stage passes if any learning rate passes; report the best one per phase.
 If none passes, investigate before stage 2 rather than adding states.
 
-**Also reported, deciding nothing:**
-- Reasoning length per pass: median, 95th percentile and share empty.
-- First-displayed-option rate. Under random menu orders, "always A" cannot
-  earn reward, so a rising rate signals drift.
-- Per pass: zero-variance group share, group reward range and gradient norm.
-- Probe results.
+**Also reported, deciding nothing:** reasoning length, the
+first-displayed-option rate, group statistics and probe results.
 
-**Budget:** measured in the timing smoke at this shape:
-- 81–118 s per iteration (about 100 s), so 48 iterations take about 80 minutes;
-- 2–3 minutes per evaluation of all 64 states;
-- about 90 minutes per learning rate, and about 4.5 hours for the screen.
-
-The screen runs only on mains power: `launch_screen.py` holds `caffeinate`
-while plugged in and pauses the job on battery. No GPU rental is needed.
+**Budget:** about 90 minutes per learning rate on the laptop (timing smoke:
+about 100 s per iteration, 2–3 minutes per evaluation), on mains power only.
 
 **Approval:** Sid approved this design on 26 October 2026, and the rerun with an order per sample the same day.
 
 ## Results
 
-Not run. The smoke runs only check the mechanics: `stage1_smoke_functional_20261025`
-and `stage1_smoke_timing_20261025`.
+**0.00003 passed; 0.00001 learned too slowly and 0.0001 broke the answer
+format.** Rerun with an order per sample (`stage1_screen_ps_20261026`); 32
+training states, 256 sampled answers per pass:
+
+| Learning rate | Teacher probability, pass 1 → 6 | Training states matching the teacher's top choice (greedy), iteration 0 → 48 | Lowest validity in a pass | Verdict |
+|---|---|---|---|---|
+| 0.00001 | 0.336 → 0.433 (+0.10) | 10 → 14 (+4) | 98.8% | Fail |
+| **0.00003** | **0.354 → 0.512 (+0.16)** | **10 → 22 (+12)** | **96.1%** | **Pass** |
+| 0.0001 | 0.263 in pass 1; stopped after 9 iterations | not evaluated | 81.6% (pass 1) | Fail (validity) |
+| Shared order, 0.00001 (first screen) | 0.346 → 0.468 (+0.12) | 10 → 17 (+7) | 98.8% | Fail; flawed design |
+
+Training-state gains, paired by state (each from a different world), 95%
+bootstrap interval: +12 at 0.00003 (13 gained, 1 lost; +6 to +18), and +4 at
+0.00001 (7 gained, 3 lost; −2 to +10).
+
+![Per-pass teacher probability, agreement when the teacher's top choice is
+not shown first, and the share of answers picking A](../figures/overfit-test/passes.png)
+
+Data: `figures/overfit-test/passes.csv`.
+
+**Position against content.** A content-only policy matches the teacher
+equally often wherever its top choice is shown, and answers A at 0.27 here.
+- At 0.00003, agreement when the top choice was not shown first fell from 0.33
+  to 0.25 over passes 1–3 while A answers rose to 0.65. It then recovered to
+  0.61 by pass 6, with A at 0.23 (16% in the final greedy evaluation).
+- At 0.00001 it rose from 0.33 to 0.42, with the A share at 0.32–0.44.
+- With a shared order, agreement rose from 0.57 to 0.88 when the top choice
+  was shown first, but only from 0.30 to 0.43 otherwise.
+
+**By phase at 0.00003** (greedy evaluation, iteration 0 → 48; 16 states each):
+- out of combat: 3 → 10 matching, teacher probability 0.21 → 0.59;
+- combat: 7 → 12 matching, 0.40 → 0.50.
+
+**Other results:**
+- **Probe** (validation worlds; decides nothing): 15 of 32 matching at the
+  start. It reached 19 at 0.00003 and 14 at 0.00001, both within the noise of
+  one 32-state evaluation.
+- **Format failures at 0.0001.** 47 of 288 answers were invalid in 9
+  iterations: 27 had malformed endings (the reasoning closer and JSON written
+  twice, or a bare letter), 16 hit the 4,096-token cap in repetition loops, and
+  4 used labels not on the menu. 0.00003 showed the duplicated ending briefly
+  (6 of 32 at iteration 6) and recovered by iteration 8.
+- **Reasoning length** (median sampled tokens, passes 1 → 6): 271 → 201 at
+  0.00001, and 180 → 196 at 0.00003, with a peak of 647 during the drift.
+  The shared-order run shortened to about 100.
+- **Time:** about 90 minutes per learning rate. Iterations took 37–300 s,
+  depending on reasoning length.
 
 ## Conclusion
 
-Not run.
+The loop can teach this model. At learning rate 0.00003, with a fresh menu
+order for every sample, it more than doubled the training states on which the
+greedy model picks the teacher's choice. By the end that came from reading
+the options, not from position. Both phases improved, out of combat more than
+combat.
+
+Two failure modes bound the usable learning rate:
+- At 0.0001, updates break the answer format faster than the −1 penalty
+  repairs it.
+- Without a KL anchor, the label distribution can drift, as 0.00003 did in
+  passes 2–3. A content-blind lean towards one label earns the group average,
+  so the reward neither pushes it nor pulls it back. This explanation is
+  untested.
+
+Sharing one menu order across a group made that drift much worse, and it was a
+design flaw.
+
+Caveats:
+- One run per learning rate and one seed. 0.00003 passed after a dip, so
+  whether a repeat passes, or how often runs collapse, is unknown.
+- 32 states; this tests fitting, not generalisation.
+- The rerun's design change (an order per sample) was made after seeing the
+  first screen. The pass rule itself was fixed in advance.
+- 0.0001 was stopped once its validity failure was certain. It might have
+  recovered on teacher probability, but it could not pass.
+- Teacher agreement measures imitation of a 29%-win policy, not game skill.
 
 ## Next
 
-If stage 1 passes: stage 2, training on a larger set of decisive states from
-training worlds, with held-out top-choice agreement on decisive states as the
-gate.
+- Stage 2 at learning rate 0.00003 with an order per sample:
+  - many more decisive states from training worlds, gated on held-out
+    top-choice agreement on decisive states;
+  - track the share of A answers against the content-only rate, and agreement
+    when the top choice is not shown first.
+- Before or alongside it, test a small KL penalty to the original model, and
+  8 or more states per step, on these 32 states. The aim is to remove the
+  pass 2–3 drift without slowing learning. Repeat 0.00003 with a new seed to
+  see whether the pass holds.
+- Consider accepting the duplicated JSON ending only if it recurs at stage-2
+  learning rates; for now the strict format stays.
 
 ## Log
 
-- 25 October: Sid chose to train combat and out-of-combat decisions together
-  and to use the latest champion as teacher.
-- 25 October: the untrained model answered validly in the new label format
-  (64/64 at the first evaluation). Over three steps at learning rate 0.0001,
-  the timing smoke's median reasoning fell from 374 to 113 tokens and its
-  first-displayed-option rate rose from 0.06 to 0.44, so the screen moved down
-  by a factor of 3.
-- 25 October: the Mac slept for about 20 minutes during the smoke. Iteration
-  timers exclude sleep; wall time did not. Use the launcher for the screen.
+- 25 October: Sid chose combat and out-of-combat decisions together, with the
+  latest champion as teacher. The timing smoke seemed to drift fast at 0.0001,
+  so the screen was lowered by a factor of 3. On 26 October that drift turned
+  out to be mostly batch composition: every run draws the same states at each
+  iteration.
+- 26 October: Sid approved the design; first screen `stage1_screen_20261026`.
+- 26 October: design flaw. All 8 samples of a state shared one menu order, so
+  the reward for an action was also the reward for its label. 0.00001 failed
+  (+0.12; +7), much of it positional. 0.00003 drifted to 88% A answers by
+  iteration 8 and was stopped at 15. The trainer now gives each sample its
+  own order.
+- 26 October: Sid approved the rerun under the same rule
+  (`stage1_screen_ps_20261026`). 0.0001 was stopped after 9 iterations, once
+  its first-pass validity of 81.6% had already failed the rule.
 
-- 26 October: Sid approved the design; the screen started as run
-  `stage1_screen_20261026`, learning rates in the order 0.00001, 0.00003, 0.0001.
-- 26 October: the smoke's drift was mostly batch composition. With the same
-  seed, every run samples the same states at each iteration. At 0.00001, ten
-  times lower, iterations 2 and 3 gave first-displayed-option rates of 0.37 and
-  0.34 against the smoke's 0.38 and 0.44. Medians were 246 and 212 tokens
-  against 210 and 113. Iteration 1's batch is simply unusual (rate 0.06 in
-  both). Runs can therefore be compared iteration by iteration on the same
-  states.
-- 26 October: design flaw found. All 8 samples of a state shared one menu
-  order, so within a group the reward for an action was also the reward for
-  its label. At 0.00003 the policy collapsed towards answering A: 88% of
-  answers at iterations 7 and 8, with median reasoning at 56 tokens. At
-  0.00001, agreement with the teacher rose from 0.57 to 0.88 when its top
-  choice was shown as A, but only from 0.30 to 0.43 when it was shown
-  elsewhere. 0.00001 narrowly failed the pass rule (+0.12 teacher
-  probability; +7 matching states). The screen was stopped before 0.0001.
-  The trainer now gives every sample its own order (commit f131813).
-- 26 October: Sid approved a rerun of all three learning rates with an order
-  per sample, under the same pass rule, as run `stage1_screen_ps_20261026`.
-  The flawed 0.00003 run was stopped after 15 iterations. The first screen
-  (`stage1_screen_20261026`) is kept as the shared-order reference.
-- 26 October, rerun: 0.00001 failed (+0.10 teacher probability; +4 matching
-  states). 0.00003 passed all three criteria (+0.16; +12, from 10 to 22 of 32;
-  validity at least 96%) after drifting towards answering A in passes 2 and 3
-  and recovering. 0.0001 started at 16:38.
-
-Code: `experiments/2026-10-25-overfit-test/` and `src/sts_llm/mlx_training.py`.
-Data: `stage1_states_20261025` (local).
+Code: `experiments/2026-10-25-overfit-test/` and `src/sts_llm/mlx_training.py`
+at commit f131813 (an order per sample; the first screen ran at 1052bd4).
+Data: runs `stage1_screen_ps_20261026` and `stage1_screen_20261026`; states
+`stage1_states_20261025` (local).
