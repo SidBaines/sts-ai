@@ -64,7 +64,7 @@ Rules chosen before training:
 ## Results
 
 Training stopped after 21 updates, with 637/672 valid sampled answers and
-33/672 token-cap failures; the other two failures used illegal action labels.
+33/672 token-cap failures, one malformed final JSON and one illegal action label.
 The final adapter is saved. Repetition and cap failures prompted the stop. Steps 19–20
 produced 41 valid answers and 23 capped answers out of 64; step durations rose
 to 414 and 475 seconds, versus an 85-second mean over steps 1–8. The sampled
