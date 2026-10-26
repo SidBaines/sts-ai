@@ -193,7 +193,11 @@ match the original model within 0.0013. The input files are JSONL states with
 Each iteration:
 - takes `--states-per-iteration` states, cycling through a shuffled order so
   every state is seen equally often;
-- presents each state with a fresh random menu order under prompt version 2;
+- presents each state under prompt version 2 with a fresh random menu order
+  for every sample (`--menu-order per_sample`, format 2). Format 1 shared one
+  order across the group, which lets the group baseline reward a label as much
+  as its action; `per_group` keeps that behaviour for comparison. The permuted
+  prompts have identical token lengths, so batching speed is unchanged;
 - samples `--group-size` answers in one batch from the live adapter
   (temperature `--temperature`, top-p 1, cap `--max-new-tokens`);
 - rewards a valid answer with the teacher's probability of the chosen action,

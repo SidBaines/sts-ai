@@ -37,7 +37,7 @@ from .generation import K2_ASSISTANT_END_TOKEN_ID, parse_action
 from .observations import LABELLED_PROMPT_VERSION, labelled_prompt, legal_indices
 from .teacher import teacher_reward
 
-MLX_TRAINING_FORMAT_VERSION = 1
+MLX_TRAINING_FORMAT_VERSION = 2
 LORA_KEYS = ("self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj",
              "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj")
 
@@ -59,6 +59,15 @@ def menu_order(rng: random.Random, row: dict) -> list[int]:
     order = list(row["legal_indices"])
     rng.shuffle(order)
     return order
+
+
+def group_orders(rng: random.Random, row: dict, group_size: int, per_sample: bool) -> list[list[int]]:
+    """Menu orders for one group. With one shared order, a label and its action always
+    coincide inside the group, so the group baseline cannot tell position from content;
+    an order per sample lets it."""
+    if per_sample:
+        return [menu_order(rng, row) for _ in range(group_size)]
+    return [menu_order(rng, row)] * group_size
 
 
 def score_answer(row: dict, prompt, output_ids: Sequence[int], text: str, finish_reason: str,
@@ -300,6 +309,8 @@ def main(argv=None) -> int:
     parser.add_argument("--iterations", type=int, required=True)
     parser.add_argument("--states-per-iteration", type=int, default=4)
     parser.add_argument("--group-size", type=int, default=8)
+    parser.add_argument("--menu-order", choices=("per_sample", "per_group"), default="per_sample",
+                        help="a fresh menu order for every sample, or one shared by the group (format 1 behaviour)")
     parser.add_argument("--temperature", type=float, default=0.6)
     parser.add_argument("--max-new-tokens", type=int, default=4096)
     parser.add_argument("--learning-rate", type=float, required=True)
@@ -372,12 +383,13 @@ def main(argv=None) -> int:
         states, queue = queue[:args.states_per_iteration], queue[args.states_per_iteration:]
         groups, items = [], []
         for position, row in enumerate(states):
-            prompt = labelled_prompt(row["observation"], menu_order(order_rng, row))
-            ids = policy.prompt_ids(prompt.messages)
-            results = policy.generate([ids] * args.group_size, temperature=args.temperature,
+            prompts = [labelled_prompt(row["observation"], order) for order in
+                       group_orders(order_rng, row, args.group_size, args.menu_order == "per_sample")]
+            prompt_ids = [policy.prompt_ids(prompt.messages) for prompt in prompts]
+            results = policy.generate(prompt_ids, temperature=args.temperature,
                                       seed=args.seed + iteration * 1000 + position)
             group = []
-            for sample, (output_ids, reason) in enumerate(results):
+            for sample, (prompt, ids, (output_ids, reason)) in enumerate(zip(prompts, prompt_ids, results)):
                 text = policy.tokenizer.decode(output_ids, skip_special_tokens=False)
                 group.append({"iteration": iteration, "id": row["id"], "phase": row["phase"], "sample": sample,
                               "order": prompt.order, "prompt_ids": ids, "output_token_ids": output_ids,

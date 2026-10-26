@@ -124,6 +124,15 @@ class StateAndScoringTests(unittest.TestCase):
         self.assertEqual(first, again)
         self.assertTrue(all(sorted(order) == [0, 1] for order in first))
 
+    def test_group_orders_are_shared_or_per_sample(self):
+        row = {"legal_indices": list(range(6))}
+        shared = mlx_training.group_orders(random.Random(5), row, 8, per_sample=False)
+        self.assertEqual(len({tuple(order) for order in shared}), 1)
+        separate = mlx_training.group_orders(random.Random(5), row, 8, per_sample=True)
+        self.assertEqual(len(separate), 8)
+        self.assertGreater(len({tuple(order) for order in separate}), 1)
+        self.assertTrue(all(sorted(order) == list(range(6)) for order in separate))
+
     def test_group_statistics_and_summary(self):
         group = [{"reward": 0.9, "action_index": 0}, {"reward": 0.9, "action_index": 0}]
         mixed = [{"reward": 0.9, "action_index": 0}, {"reward": 0.1, "action_index": 1}]
