@@ -1,6 +1,11 @@
 # Status
 
-Stage 1's learning-rate screen is running on the laptop. Updated 26 October 2026.
+Stage 1's learning-rate screen is finishing learning rate 0.00003 on the
+laptop, then stops (a screen `STOP` file is set). Keep that file until the
+run ends: the trainer's default has changed, so starting 0.0001 would mix
+designs. A shared menu order per group let the policy learn "answer A" (see
+the page's Log). A rerun with an order per sample awaits Sid. Updated
+26 October 2026.
 
 - Run `stage1_screen_20261026` in `data/llm_runs/` of the worktree
   `~/.codex/worktrees/llm-throughput/SlayTheSpireAI` (branch

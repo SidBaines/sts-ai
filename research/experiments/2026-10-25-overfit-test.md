@@ -1,6 +1,6 @@
 # Stage 1: can teacher feedback teach the model 32 decisive states?
 
-**Status:** running since 26 October 2026. **Verdict:** not yet known.
+**Status:** paused 26 October 2026 after a design flaw (see Log). **Verdict:** not yet known.
 
 ## Question
 
@@ -124,6 +124,16 @@ gate.
   against 210 and 113. Iteration 1's batch is simply unusual (rate 0.06 in
   both). Runs can therefore be compared iteration by iteration on the same
   states.
+- 26 October: design flaw found. All 8 samples of a state shared one menu
+  order, so within a group the reward for an action was also the reward for
+  its label. At 0.00003 the policy collapsed towards answering A: 88% of
+  answers at iterations 7 and 8, with median reasoning at 56 tokens. At
+  0.00001, agreement with the teacher rose from 0.57 to 0.88 when its top
+  choice was shown as A, but only from 0.30 to 0.43 when it was shown
+  elsewhere. 0.00001 narrowly failed the pass rule (+0.12 teacher
+  probability; +7 matching states). The screen was stopped before 0.0001.
+  The trainer now gives every sample its own order (commit f131813); a
+  rerun needs Sid's approval.
 
 Code: `experiments/2026-10-25-overfit-test/` and `src/sts_llm/mlx_training.py`.
 Data: `stage1_states_20261025` (local).
