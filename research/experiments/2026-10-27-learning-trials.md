@@ -52,8 +52,8 @@ Stop launching work at the session deadline; retain every outcome, including
 flat or worse arms. Everything runs locally, detached and on mains power.
 
 ## Results
-The first two trials stayed usable and showed tentative held-out gains, with
-no clear advantage between them. Answer-credit training is running. All results
+The first three trials stayed usable and showed tentative held-out gains, with
+no clear advantage between them. Length-penalty training is running. All results
 are exploratory.
 
 | Smaller-update evaluation | Training matches / 16 | Held-out matches / 48 | Held-out teacher probability | Held-out valid |
@@ -82,6 +82,17 @@ paired difference −0.0004 [−0.107, +0.114]; agreement differs by −2.1 poin
 These comparisons remain inconclusive. KL used 11 updates versus 15 in the same
 time allocation because reference scoring and regularization add work.
 All saved evaluations and contrasts are in run `trial_comparisons.json`.
+
+The answer-credit trial finished after 12 updates: training matches 10 → 8/16
+(−12.5 points, 95% world-cluster interval −31.2 to 0.0); held-out matches
+22 → 25/48 (+6.2, −4.3 to +16.7), with all 64 answers valid. Teacher probability
+changed by −0.087 [−0.236, 0.000] on training and +0.051 [−0.041, +0.140]
+held out. Median held-out reasoning length was 183 tokens, versus 188 at the start.
+Against the smaller-update trial, its held-out agreement difference was −4.2
+[−16.7, +6.7] points and teacher probability difference −0.003
+[−0.102, +0.093]. Training differences were 0.0 [−18.8, +18.8] points and
++0.045 [−0.056, +0.190] probability. Restricting reward credit to the answer
+has not shown an advantage in this short screen; the comparison is inconclusive.
 
 ## Next
 Continue what learns, or use the observed failure to choose a different intervention.
