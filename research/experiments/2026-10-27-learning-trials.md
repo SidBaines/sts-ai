@@ -52,9 +52,10 @@ Stop launching work at the session deadline; retain every outcome, including
 flat or worse arms. Everything runs locally, detached and on mains power.
 
 ## Results
-The first three trials stayed usable and showed tentative held-out gains, with
-no clear advantage between them. Length-penalty training is running. All results
-are exploratory.
+All four trials stayed usable. Three showed tentative held-out gains; the
+length penalty was flat. The smaller-update candidate is continuing because it
+had the highest held-out teacher probability, without a clear lead over the
+other candidates. All results are exploratory.
 
 | Smaller-update evaluation | Training matches / 16 | Held-out matches / 48 | Held-out teacher probability | Held-out valid |
 |---|---:|---:|---:|---:|
@@ -94,8 +95,22 @@ Against the smaller-update trial, its held-out agreement difference was −4.2
 +0.045 [−0.056, +0.190] probability. Restricting reward credit to the answer
 has not shown an advantage in this short screen; the comparison is inconclusive.
 
+The length-penalty trial finished after 12 updates: training matches 10 → 8/16
+(−12.5 points, 95% world-cluster interval −31.2 to 0.0); held-out matches
+22 → 21/48 (−2.1, −16.3 to +11.1), with all 64 answers valid. Teacher probability
+changed by −0.084 [−0.221, 0.000] on training and −0.001 [−0.108, +0.105]
+held out. Median held-out reasoning length rose from 188 to 199.5 tokens, so
+this short screen showed neither shorter reasoning nor a learning benefit.
+Against smaller updates, held-out differences were −12.5 [−26.5, +1.9] agreement
+points and −0.055 [−0.162, +0.054] teacher probability; training differences
+were 0.0 [−18.8, +18.8] points and +0.047 [−0.053, +0.193] probability.
+These differences remain inconclusive on the small panels.
+
 ## Next
-Continue what learns, or use the observed failure to choose a different intervention.
+Continue the smaller-update candidate within the remaining allocation, then
+compare the original and selected adapters on the full panels. Its 0.4784
+held-out score only narrowly exceeds the KL arm's 0.4779; selection does not
+establish a winner. Keep medium effort and the same continuation settings.
 
 Code: `experiments/2026-10-27-learning-trials/` and `src/sts_llm/mlx_training.py`.
 Data: `learning_trials_20261027` and `learning_panels_20261027` (local).
