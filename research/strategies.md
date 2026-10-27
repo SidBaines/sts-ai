@@ -2,29 +2,18 @@
 
 ## Teacher-feedback RL followed by full-game outcomes
 
-Promising. The idea: the model produces its own reasoning and action, a frozen
-non-LLM policy rewards each single decision (no target reasoning), and
-full-game outcomes come later.
-
-Stage 1 passed on 26 October
-([page](experiments/2026-10-25-overfit-test.md)). On 32 decisive states, half
-combat and half out of combat, learning rate 0.00003 raised greedy
-top-choice matches from 10 to 22. Agreement rose mainly through content. The
-setup that worked: mean-centred advantages, decisive states, letter-labelled
-menus, and a fresh menu order for every sample.
-
-Known hazards:
-- sharing a menu order within a group teaches "answer A";
-- even with orders per sample, the label distribution drifted for two passes
-  before recovering (no KL anchor);
-- 0.0001 breaks the answer format.
-
-On 26 October Sid chose a [broader continuation](experiments/2026-10-26-broader-training.md)
-over repeat-seed stability checks: signs of life take priority.
-
-The untrained model's trivial-baseline play is only the "before" reference.
-Full-game RL scores model-invalid games as losses; it is unit-tested but has
-no learning run and is too slow per game.
+Stalled at broader learning. The model produces its own reasoning and action,
+a frozen non-LLM policy rewards each decision, and full-game outcomes come later.
+[Stage 1](experiments/2026-10-25-overfit-test.md) worked on 32 selected states:
+learning rate 0.00003 raised teacher matches from 10 to 22. The
+[broader continuation](experiments/2026-10-26-broader-training.md) failed after
+21 updates: held-out matches 56 → 6/96 (−52.1 points, 95% interval −62.1 to
+−41.8; 73 worlds, Exploratory), with 86/96 final answers reaching the cap.
+The observed failure is repetitive output; its cause is not isolated.
+Mean-centred rewards and per-sample shuffled menus permit small-set learning,
+but do not ensure stable continuation. The original passing adapter is retained.
+Next: a targeted lower-rate/KL comparison with measured loss terms, not a seed
+repeat. No further experiment is running. Full-game RL is not yet tested.
 
 ## Running on the laptop with MLX
 

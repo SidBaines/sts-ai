@@ -120,6 +120,8 @@ class Dashboard:
             settings = config.get("settings", {})
             iterations = self.records.read(arm_folder / "iterations.jsonl")
             evaluations = self.records.read(arm_folder / "evaluations.jsonl")
+            progress_file = arm_folder / "evaluation_progress.json"
+            evaluation_progress = json.loads(progress_file.read_text()) if progress_file.exists() else None
             completed = max((r["iteration"] for r in iterations), default=0)
             is_live = trainer is not None and f"lr_{rate}" in trainer[5]
             log = tail(folder / f"lr_{rate}.log")
@@ -151,7 +153,7 @@ class Dashboard:
             else:
                 status = "waiting" if processes is not None else "process unknown"
             paths = [p for p in [arm_folder / "iterations.jsonl", arm_folder / "evaluations.jsonl",
-                                 folder / f"lr_{rate}.log"] if p.exists()]
+                                 folder / f"lr_{rate}.log", progress_file] if p.exists()]
             age = time.time() - max((p.stat().st_mtime for p in paths), default=time.time())
             power_log = folder / "babysitter.log"
             since_power_event = time.time() - power_log.stat().st_mtime if power_log.exists() else age
@@ -191,6 +193,7 @@ class Dashboard:
                          "long_evaluation": status == "evaluating" and active_age > 1200,
                          "active_record_age_seconds": active_age,
                          "run_summary": run_summary,
+                         "evaluation_progress": evaluation_progress,
                          "process": {"pid": trainer[0], "state": trainer[3], "elapsed": trainer[4]} if is_live else None,
                          "log_tail": log[-3000:], "exit_code": exit_code,
                          "stop_requested": (arm_folder / "STOP").exists()})

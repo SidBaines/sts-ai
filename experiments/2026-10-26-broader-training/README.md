@@ -36,3 +36,18 @@ Run `python3 -u scripts/llm/dashboard.py --port 8767` and open
 http://127.0.0.1:8767/. The defaults select this continuation and the previous
 stage-1 screen. See `scripts/llm/README.md` for data-update behavior. Server
 metadata and logs are in `data/llm_runs/broader_training_20261026/dashboard/`.
+
+## Completed-run analysis
+
+Run `PYTHONPATH=src .venv-mlx/bin/python experiments/2026-10-26-broader-training/analyze.py`
+to verify pairing, compare every saved evaluation, and regenerate run
+`analysis.json` plus the figure and CSVs in `research/figures/broader-training/`.
+Statistics use the tested `sts_llm.statistics` library. Active wall time is
+estimated from file timestamps and power logs; raw monotonic timers include
+awake battery pauses and must not be labelled compute time.
+
+The completed run predates evaluation progress counters. New trainer runs
+report token and response counts every 30 seconds; this reporting change was
+made only after the run finished, without modifying historical outputs.
+
+Verification after adding progress counters: 26 focused MLX/statistics tests passed; JavaScript syntax and completed-run/progress-counter dashboard smoke checks passed.

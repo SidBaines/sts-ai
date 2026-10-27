@@ -45,3 +45,6 @@
 - **Menu-shuffle consistency:** the fraction of states where the model picks the same action content when the menu is presented in a different order. It detects position shortcuts. Proposed.
 - **Grouped generation:** generating one state's samples together as one batch, so every prompt in the batch has the same length; on the Mac this was 2–3× faster than mixing prompt lengths in one batch (the cause inside mlx-lm is not established).
 - **Equal-work probe (Mac):** the same fixed-token probe as above, run with mlx-lm with no stop tokens.
+
+- **Broader continuation panels:** 512 candidate training states from 436 worlds; fixed evaluation subsets of 64 training-pool states from 64 worlds and 96 validation states from 73 worlds. Only 14 of the 64 training-panel states were encountered before the 21-update stop. Results compare the starting stage-1 adapter with the final adapter under identical fixed menus.
+- **Active wall-time estimate:** wall time between recorded file timestamps, minus overlapping battery-pause intervals from the power log. Approximate elapsed work time, not measured GPU time. Raw monotonic/performance timers include awake pauses and may exclude system sleep.

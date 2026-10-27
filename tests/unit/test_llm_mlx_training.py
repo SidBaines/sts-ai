@@ -43,6 +43,38 @@ def tiny_policy():
 
 @unittest.skipIf(mx is None, "mlx-lm is not installed")
 class MLXTrainerTests(unittest.TestCase):
+    def test_generation_progress_counts_finished_responses_without_changing_outputs(self):
+        from itertools import count
+
+        class Generator:
+            def __init__(self, *args, **kwargs):
+                self.batches = iter([
+                    [SimpleNamespace(uid=17, token=7, finish_reason=None),
+                     SimpleNamespace(uid=29, token=9, finish_reason="length")],
+                    [SimpleNamespace(uid=17, token=8, finish_reason="stop")], []])
+            def insert(self, prompts, limits):
+                return [17, 29]
+            def next_generated(self):
+                return next(self.batches)
+            def close(self):
+                pass
+
+        policy = tiny_policy()
+        policy.args.max_new_tokens = 16
+        policy.stops = [[2]]
+        progress = []
+        with patch("mlx_lm.generate.BatchGenerator", Generator):
+            without = policy.generate([[1], [2]], temperature=.6, seed=3)
+            with patch.object(mlx_training.time, "monotonic", side_effect=count(0, 31)):
+                observed = policy.generate([[1], [2]], temperature=.6, seed=3,
+                                           progress_callback=progress.append)
+        self.assertEqual(observed, without)
+        self.assertEqual(observed, [([7, 8], "stop"), ([9], "length")])
+        self.assertEqual((progress[0]["completed"], progress[0]["generated_tokens"]), (0, 0))
+        self.assertTrue(any(p["completed"] == 1 and p["generated_tokens"] == 2 for p in progress))
+        self.assertEqual((progress[-1]["completed"], progress[-1]["total"],
+                          progress[-1]["generated_tokens"]), (2, 2, 3))
+
     def test_lora_initialization_uses_the_recorded_seed(self):
         def load_base(_path):
             mx.random.seed(100)

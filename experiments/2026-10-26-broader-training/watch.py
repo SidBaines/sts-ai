@@ -38,7 +38,10 @@ def main():
         now = time.monotonic()
         iterations = records(arm / 'iterations.jsonl')
         evaluations = records(arm / 'evaluations.jsonl')
-        progress = (len(iterations), len(evaluations))
+        progress_file = arm / 'evaluation_progress.json'
+        evaluation_progress = json.loads(progress_file.read_text()) if progress_file.exists() else {}
+        progress = (len(iterations), len(evaluations),
+                    evaluation_progress.get('completed'), evaluation_progress.get('generated_tokens'))
         power = root / 'babysitter.log'
         power_stamp = power.stat().st_mtime_ns if power.exists() else None
         if power_stamp != last_power:

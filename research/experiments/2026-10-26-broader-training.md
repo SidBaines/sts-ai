@@ -1,12 +1,12 @@
-# Continue learning on a broader set of decisions
+# Broader training collapsed into repetitive output
 
-**Status:** training stopped; final evaluation pending, 26 October 2026.
-**Verdict:** continuation developed repetitive output and cap failures.
+**Status:** finished 27 October 2026. **Verdict:** worse: held-out teacher
+matches fell from 56/96 to 6/96, mostly because answers never reached a valid ending.
 
 ## Question
 
-Does continuing the passing stage-1 adapter on many more decisive states improve
-held-out choices while preserving valid answers and useful reasoning?
+Does continuing the passing stage-1 adapter on broader decisive states improve
+held-out decisions while preserving valid answers and reasoning?
 Approach: [teacher feedback](../strategies.md#teacher-feedback-rl-followed-by-full-game-outcomes).
 
 ## Design
@@ -63,74 +63,87 @@ Rules chosen before training:
 
 ## Results
 
-Training stopped after 21 updates, with 637/672 valid sampled answers and
-33/672 token-cap failures, one malformed final JSON and one illegal action label.
-The final adapter is saved. Repetition and cap failures prompted the stop. Steps 19–20
-produced 41 valid answers and 23 capped answers out of 64; step durations rose
-to 414 and 475 seconds, versus an 85-second mean over steps 1–8. The sampled
-states differ, but saved failing traces show repeated phrases rather than a
-completed decision. The final fixed-panel comparison is pending.
+The final adapter failed on both phases and both fixed panels. These are all
+saved evaluations: the starting adapter and the adapter after 21 updates.
+Every before/after pair used the same state and menu order. Differences below
+are percentage points with 95% world-cluster bootstrap intervals; all evidence
+is **Exploratory**. Invalid and capped answers count as disagreement.
 
-The starting adapter is valid on all 160
-evaluation decisions. This is a new panel, so its scores cannot be compared
-directly with the earlier 32-state panel.
+| Panel | States / worlds | Teacher matches, start → final | Difference [95% interval] | Final valid |
+|---|---:|---:|---:|---:|
+| Held-out · all decisions | 96 / 73 | 56 → 6 | -52.1 [-62.1, -41.8] | 10/96 |
+| Held-out · combat | 48 / 48 | 35 → 4 | -64.6 [-77.1, -50.0] | 4/48 |
+| Held-out · out of combat | 48 / 48 | 21 → 2 | -39.6 [-54.2, -25.0] | 6/48 |
+| Training panel · all decisions | 64 / 64 | 31 → 6 | -39.1 [-51.6, -26.6] | 13/64 |
+| Training panel · combat | 32 / 32 | 20 → 5 | -46.9 [-65.6, -31.2] | 5/32 |
+| Training panel · out of combat | 32 / 32 | 11 → 1 | -31.2 [-46.9, -15.6] | 8/32 |
 
-| Starting evaluation | Decisions | Teacher top-choice matches | Mean teacher probability |
-|---|---:|---:|---:|
-| Fixed training subset | 64 | 31 (48.4%) | 0.396 |
-| Held-out validation | 96 | 56 (58.3%) | 0.505 |
+All 160 initial evaluation answers were valid. Final failures were exclusively
+truncations: 51/64 on the training panel and 86/96 held out. Teacher probability
+fell from 0.396 to 0.070 on the training panel (−0.326 [−0.417, −0.238]) and
+from 0.505 to 0.052 held out (−0.452 [−0.541, −0.364]). All phase-specific
+probability changes were negative with intervals below zero; the complete
+metrics and intervals are in [the CSV](../figures/broader-training/comparisons.csv).
 
-The evaluation took 289 seconds. The first optimizer step completed in 98
-seconds with 32/32 valid samples, finite nonzero gradients and 21.2 GB peak
-memory. Its four-state sampled score is not comparable to the fixed panels.
-No post-update evaluation has completed.
+![Answer validity, reasoning length and held-out collapse](../figures/broader-training/outcome.png)
 
-The 112-test LLM suite passed after the seed
-fixes; the final 113-test suite also passed, including the training-panel subset
-regression. Shell syntax and Python compilation checks passed.
+Figure data: [training](../figures/broader-training/training.csv) and
+[comparisons](../figures/broader-training/comparisons.csv).
+
+**Valid-pairs-only sensitivity is inconclusive.** Among the 13 training-panel
+answers valid at both endpoints, teacher matches changed 9 → 6 (−23.1 points,
+95% interval −46.2 to 0); teacher probability changed by −0.188 [−0.409, 0].
+Among the 10 held-out answers valid at both endpoints, matches changed 8 → 6
+(−20.0 points, −60.0 to +20.0); teacher probability changed by −0.184
+[−0.556, +0.200]. These small selected subsets cannot rescue the primary result.
+
+**Training stopped before a full pass.** It completed 21 updates and 672 sampled
+answers on 84 of the 512 states; 14 of the 64 training-panel states were seen.
+There were 637 valid answers, 33 caps, one malformed final JSON and one illegal
+label. The last two steps available when stopping was requested had 23 caps
+among 64 answers. Saved traces repeat phrases such as “Probably the A is A”
+until the cap. Final greedy reasoning had median 4,096 tokens in every panel,
+against 175 held out and 198 on the training panel initially.
+
+**Time:** approximately 127 minutes excluding logged power pauses: 63 minutes
+of updates, 5 minutes for the baseline, and 60 for the final evaluation. The
+final evaluation generated 588,220 tokens and finished at 11:48 GMT on 27 October.
+Raw timers include awake battery pauses and must not be reported as compute time.
 
 ## Conclusion
 
-The unregularized continuation has an observed repetition failure mode.
-Whether any decision improvement survived is still unknown; finish the final
-evaluation before choosing the next intervention.
+The small-set learning result did not yield a stable broader continuation.
+The observed failure is repetitive generation and failure to finish answers;
+we have no evidence that latent decision preferences improved. The original
+passing adapter remains the working reference. No game evaluation was run.
 
 Caveats:
-- Teacher preferences are not game values, and no full games have been tested.
-- Decisive teacher states are a selected, easier subset of gameplay.
-- Warm-starting resets optimizer moments; this is a continuation, not an
-  exact optimizer resume or a controlled comparison with training from scratch.
-- Frequent validation and adaptive stopping make results exploratory.
-- One fixed evaluation permutation cannot establish menu invariance.
+- Teacher agreement measures imitation, not game strength; decisive states are selected.
+- This was one warm-started run with reset optimizer moments and zero KL penalty.
+  Its failure does not isolate which setting caused the drift.
+- Stopping was adaptive, before the automatic two-window rule fired. Only the
+  initial and final checkpoints were evaluated; intermediate checkpoints are preserved.
+- Greedy evaluation and sampled training differ in states, temperature and update point.
+- Each state had one fixed evaluation order; valid-pairs-only subsets are selected.
 
 ## Next
 
-After the final evaluation, consider a small KL penalty or a lower learning
-rate from the original passing adapter. Log the KL and policy-loss components
-before selecting a penalty scale; the existing KL reference is the foundation
-model, so its pull on learned behavior must be measured. Do not launch another
-experiment automatically. Adopt environment 0.1.6 before a newly simulated
-corpus or game evaluation.
+Run a targeted stability comparison, not another seed repeat: a lower learning
+rate versus a small measured KL penalty, starting from the original passing
+adapter and retaining the broader states. First log policy-loss and KL components;
+the current KL reference is the foundation model, not the passing adapter.
+The comparison is proposed, not launched. Adopt environment 0.1.6 before a new
+simulator corpus or game evaluation.
 
 ## Log
 
-- 26 October: requested a safe stop after step 20: 23/64 recent responses hit
-  the token cap, with repeated phrases, and steps slowed to seven to eight
-  minutes. This adaptive intervention precedes the automatic two-window
-  threshold; it is exploratory, not a predeclared stopping-rule result.
-- 26 October: early reasoning grew substantially in both phases, slowing
-  updates; saved outputs included repetitive menu restatement and a token-cap
-  loop. Validity remained above the stop rule. Continue to the first fixed-panel
-  evaluation before choosing a targeted intervention.
-- 26 October: Sid rejected a seed repeat as premature for signs-of-life work
-  and authorized longer monitored training. Broader states replace repetition
-  on the original 32; KL and batch-size changes are deferred.
-- 26 October: only 50 distinct decisive combat validation worlds were available
-  in the saved corpus; use 48 states per phase rather than the initially planned
-  64. All labels were preserved and reused after this selection adjustment.
-- 26 October: seed LoRA initialization explicitly and decouple evaluation-menu
-  randomness. Earlier results remain valid, but their initial adapters cannot
-  be reconstructed from the recorded seed alone.
+- 26 October: Sid prioritized a longer monitored run over a seed repeat. Validation
+  selection used 48 states per phase because only 50 eligible combat worlds existed.
+- 26 October: requested a safe stop after step 20 due to repetition, 23/64 caps,
+  and seven-to-eight-minute steps. Step 21 finished and its adapter was preserved.
+- 27 October: final evaluation completed after the overnight power pause; both
+  fixed panels deteriorated. No further experiment was started.
 
-Code: `experiments/2026-10-26-broader-training/` and `src/sts_llm/` at commit 05476ed.
-Data: runs `broader_states_selected_20261026` and `broader_training_20261026` (local).
+Code: `experiments/2026-10-26-broader-training/` and `src/sts_llm/`; training at
+commit 05476ed. Data: `broader_training_20261026` and
+`broader_states_selected_20261026` (local). Analysis: `analyze.py` in the code folder.

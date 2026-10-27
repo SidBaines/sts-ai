@@ -22,8 +22,9 @@ It shows training samples, reasoning lengths, position checks, every saved
 evaluation, full responses and logs. Historical screens have different panels;
 their raw scores must not be treated as paired comparisons.
 
-The server performs no model work. The current evaluator writes a complete
-panel at once, so a live page may show unchanged evaluation metrics while
-generation is still running. Long-evaluation warnings mean no new saved record,
-not a confirmed process failure. The power log distinguishes battery pauses.
+The server performs no model work. Evaluation metrics publish when the complete panel is saved. New trainer
+runs also publish completed-response and generated-token counters every 30
+seconds; older runs lack these counters. Long-evaluation warnings mean no new
+saved record, not a confirmed process failure. The power log distinguishes
+battery pauses.
 The existing server's PID, URL and logs are in the run's `dashboard/` directory.

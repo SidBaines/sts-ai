@@ -171,7 +171,7 @@ class MLXPolicy:
         return list(ids)
 
     def generate(self, prompts: list[list[int]], *, temperature: float, seed: int,
-                 concurrency: int | None = None) -> list[tuple[list[int], str]]:
+                 concurrency: int | None = None, progress_callback=None) -> list[tuple[list[int], str]]:
         """One completion per prompt. A batch of identical prompts is about twice as fast
         per decision as a batch mixing prompt lengths."""
         from mlx_lm.generate import BatchGenerator
@@ -184,12 +184,30 @@ class MLXPolicy:
                                    completion_batch_size=width, prefill_batch_size=min(8, width))
         uids = generator.insert(prompts, [self.args.max_new_tokens] * len(prompts))
         tokens, finished = {uid: [] for uid in uids}, {}
+        started = last_report = time.monotonic()
+        generated_tokens = 0
+
+        def report(force=False):
+            nonlocal last_report
+            if progress_callback is None:
+                return
+            now = time.monotonic()
+            if force or now - last_report >= 30:
+                progress_callback({"completed": len(finished), "total": len(uids),
+                                   "generated_tokens": generated_tokens,
+                                   "elapsed_seconds": now - started})
+                last_report = now
+
+        report(force=True)
         while responses := generator.next_generated():
             for response in responses:
                 tokens[response.uid].append(int(response.token))
+                generated_tokens += 1
                 if response.finish_reason is not None:
                     finished[response.uid] = response.finish_reason
+            report()
         generator.close()
+        report(force=True)
         return [(tokens[uid], finished[uid]) for uid in uids]
 
     def token_logps(self, prompt: list[int], output: list[int]):
@@ -274,8 +292,17 @@ def evaluate(policy: MLXPolicy, sets: dict[str, list[dict]], orders: dict[str, l
     """Greedy answers for fixed menu orders, all states in one bounded-width batch."""
     jobs = [(name, row, labelled_prompt(row["observation"], order))
             for name, rows in sets.items() for row in rows for order in orders[row["id"]]]
+    def progress(record):
+        # Atomic replacement lets the watcher/dashboard read while generation runs.
+        path = output / "evaluation_progress.json"
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(json.dumps({"iteration": iteration, "updated_at": time.time(),
+                                         **record}) + "\n")
+        temporary.replace(path)
+
     results = policy.generate([policy.prompt_ids(prompt.messages) for _, _, prompt in jobs],
-                              temperature=0.0, seed=args.eval_seed, concurrency=args.eval_concurrency)
+                              temperature=0.0, seed=args.eval_seed, concurrency=args.eval_concurrency,
+                              progress_callback=progress)
     records = []
     for (name, row, prompt), (output_ids, reason) in zip(jobs, results):
         text = policy.tokenizer.decode(output_ids, skip_special_tokens=False)

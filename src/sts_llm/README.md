@@ -250,6 +250,13 @@ On a time limit or STOP file, save the final weights and evaluate once if needed
 the current iteration and final evaluation may extend beyond the time limit.
 `run_summary.json` distinguishes completion, a time limit and a requested stop.
 The parent-adapter and evaluation-panel hashes are retained in `config.json`.
+During future evaluations, `evaluation_progress.json` is atomically refreshed
+at least every 30 seconds of returned generation steps, with completed/total
+responses and generated-token counts. A hung generation call cannot emit this
+heartbeat. Panel metrics still publish only after the complete evaluation; the
+watcher uses token progress to distinguish a long output from a lack of activity.
+This reporting-only change preserves sampling settings, token sequences and
+checkpoint compatibility; the completed broader run predates these counters.
 
 ## Full-game outcome learning and evaluation
 
