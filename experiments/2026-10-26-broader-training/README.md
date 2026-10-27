@@ -29,3 +29,10 @@ selection command options, and `manifest.json` records its input identity.
 `train_eval.jsonl` holds the first 32 selected states of each training phase.
 `verification.json` records counts and the zero world overlap with training,
 including the parent adapter's training states.
+
+## Live dashboard
+
+Run `python3 -u scripts/llm/dashboard.py --port 8767` and open
+http://127.0.0.1:8767/. The defaults select this continuation and the previous
+stage-1 screen. See `scripts/llm/README.md` for data-update behavior. Server
+metadata and logs are in `data/llm_runs/broader_training_20261026/dashboard/`.

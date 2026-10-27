@@ -29,6 +29,8 @@ launch instructions are in `experiments/2026-10-26-broader-training/README.md`.
   plus the current iteration and final evaluation; mains power only.
 - App monitor: `llm-broader-training-monitor`, every 20 minutes; quiet unless
   meaningful progress, deterioration, failure or completion.
+- Live dashboard: http://127.0.0.1:8767/ (refreshes every five seconds).
+  Evaluation metrics appear only when the whole panel finishes.
 - Check: `cat data/llm_runs/broader_training_20261026/watch.log` and
   `cat data/llm_runs/broader_training_20261026/lr_3e-5/evaluations.jsonl`.
 - Stop: `touch data/llm_runs/broader_training_20261026/STOP`.
