@@ -13,9 +13,9 @@ def read_rows(path):
             if line.endswith('\n') and line.strip()]
 
 
-def paired(before, after, states, panel, metric):
-    left = [r for r in before if r['set'] == panel]
-    right = [r for r in after if r['set'] == panel]
+def paired(before, after, states, panel, metric, phase=None):
+    left = [r for r in before if r['set'] == panel and (phase is None or r['phase'] == phase)]
+    right = [r for r in after if r['set'] == panel and (phase is None or r['phase'] == phase)]
     assert {(r['id'], tuple(r['order'])) for r in left} == {(r['id'], tuple(r['order'])) for r in right}
     def pack(rows):
         return [{'prompt_id': r['id'], 'world_id': states[r['id']]['world_identity'],
@@ -69,8 +69,18 @@ def main():
                 for metric in ('teacher_top_agreement', 'teacher_probability'):
                     contrasts.append({'left': 'lr_small_step', 'right': name, 'panel': panel,
                                       'metric': metric, **paired(final_rows['lr_small_step'], rows, states, panel, metric)})
+    full_comparisons = []
+    if summaries.get('lr_full_parent') and summaries.get('lr_full_candidate'):
+        before = read_rows(args.run / 'lr_full_parent/evaluations/iter_0000.jsonl')
+        after = read_rows(args.run / 'lr_full_candidate/evaluations/iter_0000.jsonl')
+        for panel in ('train', 'probe'):
+            for phase in (None, 'out_of_combat', 'combat'):
+                for metric in ('teacher_top_agreement', 'teacher_probability', 'valid', 'capped'):
+                    full_comparisons.append({'panel': panel, 'phase': phase or 'all', 'metric': metric,
+                                             **paired(before, after, states, panel, metric, phase)})
     result = {'evaluations': summaries, 'within_arm': comparisons,
-              'against_original': original_comparisons, 'against_small_step': contrasts}
+              'against_original': original_comparisons, 'against_small_step': contrasts,
+              'full_panel': full_comparisons}
     (args.run / 'trial_comparisons.json').write_text(json.dumps(result, indent=2) + '\n')
     for name, evaluations in summaries.items():
         for e in evaluations:
