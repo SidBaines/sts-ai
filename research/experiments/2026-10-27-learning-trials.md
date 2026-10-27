@@ -61,10 +61,14 @@ the KL-anchor trial is now running. All results are exploratory.
 | Update 12 | 9 | 26 | 0.471 | 48/48 |
 | Update 15, final | 8 | 27 | 0.478 | 47/48 |
 
-The starting and final comparisons use the same states and menus. The panels
-are small; the direction is promising on held-out states and mixed on the
-training check, not a confirmed improvement. Paired intervals are retained in
-the run's `small_step_comparisons.json`; all arms will be compared at completion.
+Paired agreement changes (percentage points, 95% world-cluster intervals):
+update 12, held out +8.3 [−5.9, +21.7] and training −6.2 [−25.0, +12.5];
+update 15, held out +10.4 [−2.2, +23.9] and training −12.5 [−37.5, +12.5].
+The held-out panel has 44 worlds; the training panel has 16. Final teacher
+probability changes are +0.054 [−0.051, +0.160] held out and −0.132
+[−0.319, +0.018] on training. The small-panel evidence is inconclusive;
+its held-out direction is promising enough to keep this candidate in the screen.
+Complete interval records are in the run's `small_step_comparisons.json`.
 
 ## Next
 Continue what learns, or use the observed failure to choose a different intervention.
