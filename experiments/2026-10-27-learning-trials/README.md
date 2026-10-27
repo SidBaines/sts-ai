@@ -12,3 +12,5 @@ arm only within the remaining allocation, and finishes with paired full-panel
 evaluations. Use root/STOP to stop between work units; per-arm STOP files stop
 training between iterations. The launcher pauses the process group on battery.
 No code in the active launch loop should be edited while it runs.
+
+Run `PYTHONPATH=src .venv-mlx/bin/python experiments/2026-10-27-learning-trials/summarize.py` to update paired comparisons from every completed evaluation without model work.

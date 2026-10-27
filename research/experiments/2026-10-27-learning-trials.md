@@ -52,8 +52,9 @@ Stop launching work at the session deadline; retain every outcome, including
 flat or worse arms. Everything runs locally, detached and on mains power.
 
 ## Results
-The smaller-update trial stayed usable and showed a tentative held-out gain;
-the KL-anchor trial is now running. All results are exploratory.
+The first two trials stayed usable and showed tentative held-out gains, with
+no clear advantage between them. Answer-credit training is running. All results
+are exploratory.
 
 | Smaller-update evaluation | Training matches / 16 | Held-out matches / 48 | Held-out teacher probability | Held-out valid |
 |---|---:|---:|---:|---:|
@@ -69,6 +70,18 @@ probability changes are +0.054 [−0.051, +0.160] held out and −0.132
 [−0.319, +0.018] on training. The small-panel evidence is inconclusive;
 its held-out direction is promising enough to keep this candidate in the screen.
 Complete interval records are in the run's `small_step_comparisons.json`.
+
+The KL-anchor trial finished after 11 updates: training matches 10 → 7/16
+(−18.8 points, 95% interval −43.8 to +6.2); held-out matches 22 → 26/48
+(+8.3, −6.2 to +23.9), all 48 valid. Teacher probability changed by −0.105
+[−0.316, +0.104] on training and +0.054 [−0.063, +0.173] held out.
+Its held-out score of 0.4779 is essentially the smaller-update arm's 0.4784:
+paired difference −0.0004 [−0.107, +0.114]; agreement differs by −2.1 points
+[−15.2, +12.2]. Training-panel KL-minus-small-step differences are −6.2
+[−25.0, +12.5] points and +0.026 [−0.081, +0.175] teacher probability.
+These comparisons remain inconclusive. KL used 11 updates versus 15 in the same
+time allocation because reference scoring and regularization add work.
+All saved evaluations and contrasts are in run `trial_comparisons.json`.
 
 ## Next
 Continue what learns, or use the observed failure to choose a different intervention.
