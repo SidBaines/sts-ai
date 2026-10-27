@@ -14,3 +14,9 @@ training between iterations. The launcher pauses the process group on battery.
 No code in the active launch loop should be edited while it runs.
 
 Run `PYTHONPATH=src .venv-mlx/bin/python experiments/2026-10-27-learning-trials/summarize.py` to update paired comparisons from every completed evaluation without model work.
+
+After both full evaluations finish, add `--figures research/figures/learning-trials`
+to export every evaluation and paired contrast as CSV and a compact outcome plot.
+Use `MPLCONFIGDIR=/tmp/sts-learning-trials-matplotlib` if the default cache is not writable.
+The full-panel analysis also separates previously screened validation states from
+the other validation states; these are exploratory subsets, not fresh-world tests.

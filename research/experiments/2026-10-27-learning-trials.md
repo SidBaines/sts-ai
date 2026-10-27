@@ -1,143 +1,137 @@
 # Four short trials to find a stable learning signal
 
-**Status:** running 27 October 2026. **Verdict:** try interventions that address
-update size, policy drift, noisy reasoning credit and growing reasoning length.
+**Status:** finished 27 October 2026. **Verdict:** tentative combat learning, but no reliable overall improvement and worse answer validity; retain the original adapter as the working reference.
 
 ## Question
-Can teacher-feedback RL improve decisions on broader states without teaching
-repetitive output? Sid authorized about four hours on this MacBook and asked
-for signs-of-life experiments with minimal setup, not seed repeats or elaborate gates.
+Can teacher-feedback RL improve broader decisions without teaching repetitive output?
+Sid authorized about four hours on this MacBook on 27 October, prioritizing signs
+of life over seed repeats and explicitly requiring medium effort instead of low effort.
 
 ## Design
-Start every screen from the original passing stage-1 adapter, with a fresh
-optimizer, the same 512 training states, 4 states × 8 sampled responses per
-update, shuffled menus, teacher-probability rewards, invalid reward −1, and
-learning rate 0.00001. Use a common 1,024-token cap; every response in the prior
-160-state starting evaluation finished below this cap. This changes the protocol
-from the failed 4,096-token run, so that historical run is context, not a matched control.
+All four screens started from the passing stage-1 adapter with fresh AdamW,
+learning rate 0.00001, 512 training states from 436 worlds, four states × eight
+sampled responses per iteration, shuffled letter menus, teacher-probability
+rewards, invalid reward −1 and a fixed 2,048-token loss denominator. No SFT.
+All used medium effort and a 1,024-token output cap. The previous failed broader
+run used 4,096 tokens, so it is historical context, not a matched control.
 
-| Trial | Reasoning | Reward-gradient tokens | KL penalty |
-|---|---|---|---|
-| Smaller updates | Medium | Whole completion | None |
-| Anchor the starting policy | Medium | Whole completion | 0.05, frozen passing adapter |
-| Credit the answer | Medium | Reasoning closer, answer and end token | Same anchor |
-| Keep reasoning bounded | Medium; length cost after 256 tokens | Whole completion | Same anchor |
+| Screen | Reward-gradient tokens | Frozen-adapter KL | Length cost |
+|---|---|---:|---|
+| Smaller updates | Whole completion | 0 | None |
+| KL anchor | Whole completion | 0.05 | None |
+| Answer credit | Reasoning closer, answer, end token | 0.05 on whole completion | None |
+| Length cost | Whole completion | 0.05 | 0.1 per 256 reasoning tokens beyond 256, valid answers only |
 
-Sid explicitly rejected low-effort mode: all trials use medium effort. The
-length-cost arm subtracts 0.1 reward per 256 reasoning tokens beyond the first
-256, for valid answers only; invalid answers retain reward −1. Evaluation and
-selection still use unpenalized teacher probabilities. At this token cap the
-maximum valid-answer cost is below 0.3, preserving the selected states' minimum
-teacher gap between the best and second-best action.
-
-The answer-credit arm still generates its own reasoning. Capped responses with
-no closer have no answer-token gradient; their KL penalty still acts, and their
-−1 reward contributes to the group baseline. No teacher-forced reasoning or SFT.
-The frozen adapter anchor avoids pulling back toward an untrained foundation.
-Log policy loss, KL loss and sampled per-token KL to inspect their actual scale.
-
-Allow roughly 25 minutes per screen plus its final evaluation. Use 16 fixed
-training-panel states and 48 validation states (balanced by phase), evaluated
-at the start, every 12 updates,
-and at stopping. Both phase results, validity, cap rate, length and position
-bias matter. Stop an arm promptly if the latest 64 sampled answers are below
-80% valid. This is a practical screen, not a statistical acceptance test.
-
-Use the remaining allocation to continue the usable arm with highest held-out
-teacher probability; report this selection as exploratory. The continuation
-resets optimizer moments, uses a new training order and retains the original
-KL anchor. Reserve time to evaluate its starting adapter and selected candidate
-on the full 64 + 96 panels under the same cap and effort. No significance gate.
-Stop launching work at the session deadline; retain every outcome, including
-flat or worse arms. Everything runs locally, detached and on mains power.
+Invalid/capped responses stayed at −1. Evaluation scores excluded the length
+cost. Answer-credit responses without a closer had no policy-gradient tokens;
+KL still acted and their rewards contributed to the group baseline.
+Each screen received about 25 minutes plus stopping evaluation. Fixed screening
+panels contained 16 training-pool states/16 worlds and 48 validation states/44
+worlds, balanced by phase. Evaluate at the start, every 12 iterations and stopping;
+stop promptly if recent sampled validity falls below 80% or behavior deteriorates.
+Select the usable final screen with highest held-out teacher probability (at least
+90% valid), continue within budget, then compare original and selected adapters
+on 64 training-pool and 96 validation states. Selection is exploratory.
+The continuation reset Adam moments and changed training order; its reference
+anchor, if used, remained the original adapter. Deadline: 17:51:49 London time,
+with an already-running bounded final evaluation allowed to finish. No external compute.
 
 ## Results
-All four screens stayed usable. Three showed tentative held-out gains; the
-length penalty was flat. The smaller-update candidate was selected by its
-narrow score lead, but its continuation stopped as reasoning length
-and capped answers increase. The full-panel comparison is pending. All results
-are exploratory.
+The selected adapter improved held-out matches from 56 to 61/96, but the paired
+interval includes no improvement and validity fell from 96 to 90/96. Combat
+teacher probability improved; out-of-combat performance did not. All results
+below are **Exploratory**. Brackets are descriptive 95% world-cluster intervals.
 
-| Smaller-update evaluation | Training matches / 16 | Held-out matches / 48 | Held-out teacher probability | Held-out valid |
+| Full-panel comparison | Decisions / worlds | Teacher matches, start → final | Agreement change, points [95% interval] | Teacher-probability change [95% interval] | Valid, start → final |
+|---|---:|---:|---:|---:|---:|
+| Held out: all | 96 / 73 | 56 → 61 | +5.2 [−4.1, +14.9] | +0.020 [−0.056, +0.097] | 96 → 90 |
+| Held out: combat | 48 / 48 | 35 → 41 | +12.5 [+0.0, +25.0] | +0.056 [+0.006, +0.111] | 48 → 47 |
+| Held out: out of combat | 48 / 48 | 21 → 20 | −2.1 [−16.7, +12.5] | −0.016 [−0.161, +0.126] | 48 → 43 |
+| Training pool: all | 64 / 64 | 31 → 37 | +9.4 [−3.1, +23.4] | +0.076 [−0.025, +0.182] | 64 → 58 |
+| Training pool: combat | 32 / 32 | 20 → 21 | +3.1 [−15.6, +21.9] | −0.005 [−0.077, +0.066] | 32 → 28 |
+| Training pool: out of combat | 32 / 32 | 11 → 16 | +15.6 [−3.1, +34.4] | +0.158 [−0.031, +0.339] | 32 → 30 |
+
+Held-out validity changed by −6.2 [−11.6, −2.0] points; training-pool validity by
+−9.4 [−17.2, −3.1]. All 12 invalid final answers reached the cap. Held-out median
+reasoning grew from 175 to 371 tokens; training median from 198 to 424.5.
+Held-out first-displayed-option rate was 32.3% → 31.1% of valid answers: no upward drift observed.
+
+![Trial comparisons and reasoning growth](../figures/learning-trials/outcome.png)
+
+Every saved evaluation is listed below. Iterations count sampled training batches;
+the continuation had 26 batches but 25 optimizer updates because one had no
+policy gradient. The selected adapter therefore has 40 optimizer updates after
+the original adapter. The continuation-start evaluation reproduces the first
+screen's final result; all four original screening evaluations are identical.
+
+| Evaluation, iteration | Training matches | Held-out matches | Teacher probability, train / held out | Valid, train; held out | Held-out median reasoning tokens |
+|---|---:|---:|---:|---:|---:|
+| Smaller updates, 0 | 10/16 | 22/48 | 0.476 / 0.424 | 16/16; 48/48 | 188 |
+| Smaller updates, 12 | 9/16 | 26/48 | 0.452 / 0.471 | 16/16; 48/48 | 182 |
+| Smaller updates, 15 | 8/16 | 27/48 | 0.345 / 0.478 | 16/16; 47/48 | 172 |
+| KL anchor, 0 | 10/16 | 22/48 | 0.476 / 0.424 | 16/16; 48/48 | 188 |
+| KL anchor, 11 | 7/16 | 26/48 | 0.371 / 0.478 | 16/16; 48/48 | 190.5 |
+| Answer credit, 0 | 10/16 | 22/48 | 0.476 / 0.424 | 16/16; 48/48 | 188 |
+| Answer credit, 12 | 8/16 | 25/48 | 0.389 / 0.475 | 16/16; 48/48 | 183 |
+| Length cost, 0 | 10/16 | 22/48 | 0.476 / 0.424 | 16/16; 48/48 | 188 |
+| Length cost, 12 | 8/16 | 21/48 | 0.392 / 0.424 | 16/16; 48/48 | 199.5 |
+| Continuation, 0 | 8/16 | 27/48 | 0.345 / 0.478 | 16/16; 47/48 | 172 |
+| Continuation, 12 | 11/16 | 27/48 | 0.539 / 0.504 | 16/16; 48/48 | 242 |
+| Continuation, 24 | 9/16 | 28/48 | 0.454 / 0.509 | 15/16; 44/48 | 360 |
+| Continuation, 26 | 9/16 | 28/48 | 0.388 / 0.505 | 15/16; 45/48 | 379.5 |
+| Full starting adapter, 0 | 31/64 | 56/96 | 0.396 / 0.505 | 64/64; 96/96 | 175 |
+| Full selected adapter, 0 | 37/64 | 61/96 | 0.472 / 0.525 | 58/64; 90/96 | 371 |
+
+Every post-training screening comparison against the original adapter:
+
+| Evaluation, iteration | Training agreement change, points | Held-out agreement change, points | Training probability change | Held-out probability change |
 |---|---:|---:|---:|---:|
-| Start | 10 | 22 | 0.424 | 48/48 |
-| Update 12 | 9 | 26 | 0.471 | 48/48 |
-| Update 15, final | 8 | 27 | 0.478 | 47/48 |
+| Smaller updates, 12 | −6.2 [−25.0, +12.5] | +8.3 [−5.9, +21.7] | −0.025 [−0.200, +0.162] | +0.047 [−0.071, +0.161] |
+| Smaller updates, 15 | −12.5 [−37.5, +12.5] | +10.4 [−2.2, +23.9] | −0.132 [−0.319, +0.018] | +0.054 [−0.051, +0.160] |
+| KL anchor, 11 | −18.8 [−43.8, +6.2] | +8.3 [−6.2, +23.9] | −0.105 [−0.316, +0.104] | +0.054 [−0.063, +0.173] |
+| Answer credit, 12 | −12.5 [−31.2, +0.0] | +6.2 [−4.3, +16.7] | −0.087 [−0.236, +0.000] | +0.051 [−0.041, +0.140] |
+| Length cost, 12 | −12.5 [−31.2, +0.0] | −2.1 [−16.3, +11.1] | −0.084 [−0.221, +0.000] | −0.001 [−0.108, +0.105] |
+| Continuation, 12 | +6.2 [−18.8, +31.2] | +10.4 [+0.0, +22.4] | +0.063 [−0.144, +0.271] | +0.080 [−0.018, +0.182] |
+| Continuation, 24 | −6.2 [−25.0, +12.5] | +12.5 [+0.0, +25.0] | −0.023 [−0.205, +0.162] | +0.085 [−0.014, +0.188] |
+| Continuation, 26 | −6.2 [−25.0, +12.5] | +12.5 [−1.9, +26.5] | −0.089 [−0.259, +0.041] | +0.081 [−0.028, +0.193] |
 
-Paired agreement changes (percentage points, 95% world-cluster intervals):
-update 12, held out +8.3 [−5.9, +21.7] and training −6.2 [−25.0, +12.5];
-update 15, held out +10.4 [−2.2, +23.9] and training −12.5 [−37.5, +12.5].
-The held-out panel has 44 worlds; the training panel has 16. Final teacher
-probability changes are +0.054 [−0.051, +0.160] held out and −0.132
-[−0.319, +0.018] on training. The small-panel evidence is inconclusive;
-its held-out direction is promising enough to keep this candidate in the screen.
-Complete interval records are in the run's `small_step_comparisons.json`.
+The four short arms remained usable, with no clear advantage between them.
+Length cost showed no shortening or learning benefit at this duration. The
+smaller-update screen was selected by 0.4784 versus the KL arm's 0.4779 teacher
+probability; this tiny difference does not establish a winner. Its continuation
+reached median held-out lengths of 172, 242, 360 and 379.5 tokens. At iteration
+24, five of 64 fixed-panel answers capped; saved traces copied menus/map text
+and included a repetitive “Clash+” loop. We requested STOP, preserved the
+in-flight iteration and final checkpoint at 26, then finished the full comparison.
 
-The KL-anchor trial finished after 11 updates: training matches 10 → 7/16
-(−18.8 points, 95% interval −43.8 to +6.2); held-out matches 22 → 26/48
-(+8.3, −6.2 to +23.9), all 48 valid. Teacher probability changed by −0.105
-[−0.316, +0.104] on training and +0.054 [−0.063, +0.173] held out.
-Its held-out score of 0.4779 is essentially the smaller-update arm's 0.4784:
-paired difference −0.0004 [−0.107, +0.114]; agreement differs by −2.1 points
-[−15.2, +12.2]. Training-panel KL-minus-small-step differences are −6.2
-[−25.0, +12.5] points and +0.026 [−0.081, +0.175] teacher probability.
-These comparisons remain inconclusive. KL used 11 updates versus 15 in the same
-time allocation because reference scoring and regularization add work.
-All saved evaluations and contrasts are in run `trial_comparisons.json`.
+The remaining validation states did not show an agreement gain. These post-hoc
+subsets use the matched full-panel menus; they are not fresh-world confirmation.
 
-The answer-credit trial finished after 12 updates: training matches 10 → 8/16
-(−12.5 points, 95% world-cluster interval −31.2 to 0.0); held-out matches
-22 → 25/48 (+6.2, −4.3 to +16.7), with all 64 answers valid. Teacher probability
-changed by −0.087 [−0.236, 0.000] on training and +0.051 [−0.041, +0.140]
-held out. Median held-out reasoning length was 183 tokens, versus 188 at the start.
-Against the smaller-update trial, its held-out agreement difference was −4.2
-[−16.7, +6.7] points and teacher probability difference −0.003
-[−0.102, +0.093]. Training differences were 0.0 [−18.8, +18.8] points and
-+0.045 [−0.056, +0.190] probability. Restricting reward credit to the answer
-has not shown an advantage in this short screen; the comparison is inconclusive.
+| Full-panel validation subset | Decisions / worlds | Matches, start → final | Agreement change, points | Probability change |
+|---|---:|---:|---:|---:|
+| Previously screened states | 48 / 44 | 25 → 30 | +10.4 [−4.1, +25.5] | +0.047 [−0.069, +0.170] |
+| Other validation states | 48 / 41 | 31 → 31 | +0.0 [−13.0, +13.0] | −0.007 [−0.107, +0.095] |
 
-The length-penalty trial finished after 12 updates: training matches 10 → 8/16
-(−12.5 points, 95% world-cluster interval −31.2 to 0.0); held-out matches
-22 → 21/48 (−2.1, −16.3 to +11.1), with all 64 answers valid. Teacher probability
-changed by −0.084 [−0.221, 0.000] on training and −0.001 [−0.108, +0.105]
-held out. Median held-out reasoning length rose from 188 to 199.5 tokens, so
-this short screen showed neither shorter reasoning nor a learning benefit.
-Against smaller updates, held-out differences were −12.5 [−26.5, +1.9] agreement
-points and −0.055 [−0.162, +0.054] teacher probability; training differences
-were 0.0 [−18.8, +18.8] points and +0.047 [−0.053, +0.193] probability.
-These differences remain inconclusive on the small panels.
+## Conclusion
+Smaller updates postponed the previous rapid collapse and produced a tentative
+combat-preference signal. They did not solve growing reasoning or establish a
+reliable overall gain. Retain the original passing adapter; preserve all candidates.
 
-At continuation update 12 (27 total updates), training matches recovered from
-8 to 11/16 and held-out matches stayed at 27/48; all 64 answers were valid.
-Teacher probabilities rose from 0.345 to 0.539 on training and 0.478 to 0.504
-held out. Against the continuation start, agreement changes were +18.8
-[−6.2, +43.8] points on training and 0.0 [−11.8, +11.8] held out; probability
-changes were +0.195 [+0.008, +0.405] and +0.025 [−0.075, +0.130], respectively.
-Against the original adapter, training agreement was 10 → 11/16 (+6.2
-[−18.8, +31.2] points) and held-out agreement 22 → 27/48 (+10.4 [0.0, +22.4]);
-probability changes were +0.063 [−0.144, +0.271] and +0.080 [−0.018, +0.182].
-These are descriptive 95% world-cluster intervals on repeatedly inspected
-panels, not confirmation. Held-out median reasoning rose from 172 to 242 tokens
-during this first continuation interval.
-
-At continuation update 24 (39 total updates), training matches were 9/16,
-with 15/16 valid; held-out matches were 28/48, with 44/48 valid. Teacher
-probabilities were 0.454 and 0.509. Against the original adapter, agreement
-changes were −6.2 [−25.0, +12.5] points on training and +12.5 [0.0, +25.0]
-held out; probability changes were −0.023 [−0.205, +0.162] and +0.085
-[−0.014, +0.188]. Against the continuation start, agreement changes were +6.2
-[−18.8, +31.2] and +2.1 [−10.9, +15.2] points; probability changes were +0.109
-[−0.057, +0.301] and +0.031 [−0.089, +0.154]. Held-out median reasoning reached
-360 tokens. The five capped traces include copied menus/map text and a repetitive
-"Clash+" loop. This is a useful learning signal with worsening reliability;
-the continuation's STOP file was requested after 25 completed updates. It
-finished the in-flight update, stopped at 26 and began its final evaluation.
+- Panels were reused for inspection and selection; intervals do not account for that selection or training-seed variability.
+- Full-panel menus match between adapters but differ from screening menus; absolute scores across those panels are not directly comparable.
+- Screens used equal time, not equal optimizer steps; the KL arms cost more per iteration. This was a practical learning-speed screen, not an isolated mechanism proof.
+- Rewards reflect a frozen policy's preferences, not game correctness or win rate. No full games were run.
+- The final evaluation paused on battery for about 56 minutes and finished at 18:05; training had stopped before the deadline. No extra training allocation was used.
 
 ## Next
-Finish saving and evaluating the stopped continuation, then let the existing
-launcher compare the original and selected adapters on the full panels.
-Further training should target reasoning growth while retaining medium effort;
-the short length-cost screen has not established how to do that successfully.
+A targeted next trial should separate action learning from reasoning-length control:
+scale answer-token reward gradients independently, apply an explicit full-completion
+length cost, and anchor medium-effort reasoning to the original adapter with KL.
+The answer-credit screen's fixed whole-completion denominator also reduced its
+gradient scale, so its result does not isolate credit assignment. This is a
+hypothesis for the next authorized experiment; no further experiment was started.
 
-Code: `experiments/2026-10-27-learning-trials/` and `src/sts_llm/mlx_training.py`.
-Data: `learning_trials_20261027` and `learning_panels_20261027` (local).
+Code: `experiments/2026-10-27-learning-trials/`; training source at `f583ce2`,
+analysis in `summarize.py` saved with this report. Data: run `learning_trials_20261027`.
+All evaluations and intervals: [evaluation CSV](../figures/learning-trials/evaluations.csv),
+[comparison CSV](../figures/learning-trials/comparisons.csv), and run `trial_comparisons.json`.

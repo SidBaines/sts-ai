@@ -21,7 +21,7 @@
 - **BF16 / FP32:** bfloat16 and float32 numerical formats. Changing precision, batch shape or kernels can change numerical outputs even under the same weights and random seed.
 - **HF / PEFT / LoRA:** Hugging Face model generation, the parameter-efficient fine-tuning library, and low-rank trainable adapters over frozen base weights.
 - **SDPA:** PyTorch scaled dot-product attention, selected through Hugging Face. This name alone does not identify which CUDA attention kernel ran.
-- **KL:** Kullback–Leibler divergence. The training loss uses a sampled nonnegative proxy to the frozen foundation-model reference, not an exact full-vocabulary KL.
+- **KL:** Kullback–Leibler divergence. The training loss uses a sampled nonnegative proxy against a frozen reference, not an exact full-vocabulary KL. The reference is the foundation model in older runs and the passing stage-1 adapter in the learning trials; continuation keeps that original anchor.
 - **World / group:** one environment world seed; a group repeats either a saved state or one world under different policy samples. Whole-world splits prevent related decisions crossing train and held-out sets.
 
 - **Reasoning tokens:** generated content tokens before the first reasoning closer, excluding control tokens and final JSON. An unclosed capped trace is an observed lower bound, reported separately.
@@ -48,3 +48,7 @@
 
 - **Broader continuation panels:** 512 candidate training states from 436 worlds; fixed evaluation subsets of 64 training-pool states from 64 worlds and 96 validation states from 73 worlds. Only 14 of the 64 training-panel states were encountered before the 21-update stop. Results compare the starting stage-1 adapter with the final adapter under identical fixed menus.
 - **Active wall-time estimate:** wall time between recorded file timestamps, minus overlapping battery-pause intervals from the power log. Approximate elapsed work time, not measured GPU time. Raw monotonic/performance timers include awake pauses and may exclude system sleep.
+- **Learning-trial screening panels:** 16 training-pool states from 16 worlds and 48 validation states from 44 worlds, balanced by phase. Every arm reuses them; intervals after repeated inspection or candidate selection are descriptive and exploratory.
+- **Learning-trial full panels:** the broader 64 training-pool and 96 validation states. Starting and selected adapters share exactly the same menus within this comparison. Menus differ from the smaller screening panels because their construction consumes a sequential random stream; screening and full-panel scores are separate comparisons.
+- **Answer-token credit:** apply policy-reward gradients only to the reasoning closer, final answer and end token; the KL term still covers the whole completion. Unclosed responses have no answer-token policy gradient.
+- **Soft reasoning-length cost:** subtract 0.1 reward per 256 reasoning tokens beyond the first 256, on valid training answers only. Invalid reward remains −1; evaluation teacher probabilities are unpenalized.

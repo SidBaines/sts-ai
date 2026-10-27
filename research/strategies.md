@@ -2,18 +2,18 @@
 
 ## Teacher-feedback RL followed by full-game outcomes
 
-Stalled at broader learning. The model produces its own reasoning and action,
-a frozen non-LLM policy rewards each decision, and full-game outcomes come later.
-[Stage 1](experiments/2026-10-25-overfit-test.md) worked on 32 selected states:
-learning rate 0.00003 raised teacher matches from 10 to 22. The
-[broader continuation](experiments/2026-10-26-broader-training.md) failed after
-21 updates: held-out matches 56 → 6/96 (−52.1 points, 95% interval −62.1 to
-−41.8; 73 worlds, Exploratory), with 86/96 final answers reaching the cap.
-The observed failure is repetitive output; its cause is not isolated.
-Mean-centred rewards and per-sample shuffled menus permit small-set learning,
-but do not ensure stable continuation. The original passing adapter is retained.
-Next: a targeted lower-rate/KL comparison with measured loss terms, not a seed
-repeat. No further experiment is running. Full-game RL is not yet tested.
+Promising for combat preferences, stalled on reliability. The model generates
+its own reasoning and action; a frozen non-LLM policy supplies rewards.
+[Stage 1](experiments/2026-10-25-overfit-test.md) learned 22/32 trained choices
+from 10/32. The [broader run](experiments/2026-10-26-broader-training.md) collapsed.
+[Four local trials](experiments/2026-10-27-learning-trials.md) delayed that failure:
+full held-out matches 56 → 61/96 (+5.2 points [−4.1, +14.9], 73 worlds,
+Exploratory), but valid answers fell 96 → 90/96 and reasoning doubled.
+Combat teacher probability improved; out-of-combat and the additional validation
+states did not. The short length penalty did not help. Retain the original
+passing adapter. Next: independently scale answer-token learning and full-output
+length control, with a frozen-adapter KL anchor and medium effort. No new run
+is active; full-game learning and reliable transfer are untested.
 
 ## Running on the laptop with MLX
 
