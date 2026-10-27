@@ -52,10 +52,11 @@ Stop launching work at the session deadline; retain every outcome, including
 flat or worse arms. Everything runs locally, detached and on mains power.
 
 ## Results
-All four trials stayed usable. Three showed tentative held-out gains; the
-length penalty was flat. The smaller-update candidate is continuing because it
-had the highest held-out teacher probability, without a clear lead over the
-other candidates. All results are exploratory.
+All four screens stayed usable. Three showed tentative held-out gains; the
+length penalty was flat. The smaller-update candidate was selected by its
+narrow score lead, but its continuation stopped as reasoning length
+and capped answers increase. The full-panel comparison is pending. All results
+are exploratory.
 
 | Smaller-update evaluation | Training matches / 16 | Held-out matches / 48 | Held-out teacher probability | Held-out valid |
 |---|---:|---:|---:|---:|
@@ -117,13 +118,26 @@ Against the original adapter, training agreement was 10 → 11/16 (+6.2
 probability changes were +0.063 [−0.144, +0.271] and +0.080 [−0.018, +0.182].
 These are descriptive 95% world-cluster intervals on repeatedly inspected
 panels, not confirmation. Held-out median reasoning rose from 172 to 242 tokens
-during the continuation; validity and decision metrics currently support continuing.
+during this first continuation interval.
+
+At continuation update 24 (39 total updates), training matches were 9/16,
+with 15/16 valid; held-out matches were 28/48, with 44/48 valid. Teacher
+probabilities were 0.454 and 0.509. Against the original adapter, agreement
+changes were −6.2 [−25.0, +12.5] points on training and +12.5 [0.0, +25.0]
+held out; probability changes were −0.023 [−0.205, +0.162] and +0.085
+[−0.014, +0.188]. Against the continuation start, agreement changes were +6.2
+[−18.8, +31.2] and +2.1 [−10.9, +15.2] points; probability changes were +0.109
+[−0.057, +0.301] and +0.031 [−0.089, +0.154]. Held-out median reasoning reached
+360 tokens. The five capped traces include copied menus/map text and a repetitive
+"Clash+" loop. This is a useful learning signal with worsening reliability;
+the continuation's STOP file was requested after 25 completed updates. It
+finished the in-flight update, stopped at 26 and began its final evaluation.
 
 ## Next
-Continue the smaller-update candidate within the remaining allocation, then
-compare the original and selected adapters on the full panels. Its 0.4784
-held-out score only narrowly exceeds the KL arm's 0.4779; selection does not
-establish a winner. Keep medium effort and the same continuation settings.
+Finish saving and evaluating the stopped continuation, then let the existing
+launcher compare the original and selected adapters on the full panels.
+Further training should target reasoning growth while retaining medium effort;
+the short length-cost screen has not established how to do that successfully.
 
 Code: `experiments/2026-10-27-learning-trials/` and `src/sts_llm/mlx_training.py`.
 Data: `learning_trials_20261027` and `learning_panels_20261027` (local).
