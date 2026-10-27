@@ -30,6 +30,8 @@ def main():
     parser.add_argument('--run', type=Path, default=Path('data/llm_runs/learning_trials_20261027'))
     args = parser.parse_args()
     comparisons, final_rows, summaries, states = [], {}, {}, {}
+    original_comparisons = []
+    original = read_rows(args.run / 'lr_small_step/evaluations/iter_0000.jsonl')
     for arm in sorted(args.run.glob('lr_*')):
         if not arm.is_dir() or not (arm / 'config.json').exists():
             continue
@@ -48,6 +50,14 @@ def main():
                     comparisons.append({'arm': arm.name, 'iteration': evaluation['iteration'],
                                         'panel': panel, 'metric': metric,
                                         **paired(baseline, after, states, panel, metric)})
+        if arm.name.startswith('lr_continue_') and original:
+            for evaluation in evaluations:
+                after = read_rows(arm / 'evaluations' / f"iter_{evaluation['iteration']:04d}.jsonl")
+                for panel in ('train', 'probe'):
+                    for metric in ('teacher_top_agreement', 'teacher_probability'):
+                        original_comparisons.append({'arm': arm.name, 'iteration': evaluation['iteration'],
+                                                     'panel': panel, 'metric': metric,
+                                                     **paired(original, after, states, panel, metric)})
         if (arm / 'run_summary.json').exists() and len(evaluations) > 1:
             final_rows[arm.name] = read_rows(arm / 'evaluations' / f"iter_{evaluations[-1]['iteration']:04d}.jsonl")
     contrasts = []
@@ -59,7 +69,8 @@ def main():
                 for metric in ('teacher_top_agreement', 'teacher_probability'):
                     contrasts.append({'left': 'lr_small_step', 'right': name, 'panel': panel,
                                       'metric': metric, **paired(final_rows['lr_small_step'], rows, states, panel, metric)})
-    result = {'evaluations': summaries, 'within_arm': comparisons, 'against_small_step': contrasts}
+    result = {'evaluations': summaries, 'within_arm': comparisons,
+              'against_original': original_comparisons, 'against_small_step': contrasts}
     (args.run / 'trial_comparisons.json').write_text(json.dumps(result, indent=2) + '\n')
     for name, evaluations in summaries.items():
         for e in evaluations:

@@ -106,6 +106,19 @@ points and −0.055 [−0.162, +0.054] teacher probability; training differences
 were 0.0 [−18.8, +18.8] points and +0.047 [−0.053, +0.193] probability.
 These differences remain inconclusive on the small panels.
 
+At continuation update 12 (27 total updates), training matches recovered from
+8 to 11/16 and held-out matches stayed at 27/48; all 64 answers were valid.
+Teacher probabilities rose from 0.345 to 0.539 on training and 0.478 to 0.504
+held out. Against the continuation start, agreement changes were +18.8
+[−6.2, +43.8] points on training and 0.0 [−11.8, +11.8] held out; probability
+changes were +0.195 [+0.008, +0.405] and +0.025 [−0.075, +0.130], respectively.
+Against the original adapter, training agreement was 10 → 11/16 (+6.2
+[−18.8, +31.2] points) and held-out agreement 22 → 27/48 (+10.4 [0.0, +22.4]);
+probability changes were +0.063 [−0.144, +0.271] and +0.080 [−0.018, +0.182].
+These are descriptive 95% world-cluster intervals on repeatedly inspected
+panels, not confirmation. Held-out median reasoning rose from 172 to 242 tokens
+during the continuation; validity and decision metrics currently support continuing.
+
 ## Next
 Continue the smaller-update candidate within the remaining allocation, then
 compare the original and selected adapters on the full panels. Its 0.4784
