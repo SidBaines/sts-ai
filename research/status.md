@@ -1,7 +1,7 @@
 # Status
 
-Training stopped after 21 updates; final evaluation is paused on battery.
-Updated 26 October 2026.
+Training stopped after 21 updates; final evaluation has resumed on mains power.
+Updated 27 October 2026.
 
 Sid authorized a longer monitored run instead of another stage-1 seed repeat.
 Read [the design](experiments/2026-10-26-broader-training.md). The code and
@@ -20,8 +20,8 @@ launch instructions are in `experiments/2026-10-26-broader-training/README.md`.
   with repeated text, and steps slowed to seven to eight minutes. This is an
   adaptive manual stop before the automatic two-window validity rule fired.
 - The final adapter at iteration 21 is saved. Root and trainer STOP files
-  remain present. The power babysitter paused the final evaluation on battery;
-  it will resume automatically on mains power. Do not restart training.
+  remain present. The final evaluation resumed on mains power after the
+  overnight battery/sleep pause. Do not restart training.
 - The monitor remains active to collect the final results, update the ledger,
   and then pause itself. No additional experiment is authorized by the monitor.
 - Parent: `stage1_screen_ps_20261026/lr_3e-5`, iteration 48. AdamW resets.
