@@ -1,6 +1,6 @@
 # Four short trials to find a stable learning signal
 
-**Status:** planned 27 October 2026. **Verdict:** try interventions that address
+**Status:** running 27 October 2026. **Verdict:** try interventions that address
 update size, policy drift, noisy reasoning credit and growing reasoning length.
 
 ## Question
@@ -26,7 +26,9 @@ from the failed 4,096-token run, so that historical run is context, not a matche
 Sid explicitly rejected low-effort mode: all trials use medium effort. The
 length-cost arm subtracts 0.1 reward per 256 reasoning tokens beyond the first
 256, for valid answers only; invalid answers retain reward −1. Evaluation and
-selection still use unpenalized teacher probabilities.
+selection still use unpenalized teacher probabilities. At this token cap the
+maximum valid-answer cost is below 0.3, preserving the selected states' minimum
+teacher gap between the best and second-best action.
 
 The answer-credit arm still generates its own reasoning. Capped responses with
 no closer have no answer-token gradient; their KL penalty still acts, and their
@@ -50,8 +52,10 @@ Stop launching work at the session deadline; retain every outcome, including
 flat or worse arms. Everything runs locally, detached and on mains power.
 
 ## Results
-Pending. Existing tiny-model checks plus two checks for the new mask/reference
-are the only setup tests. The initial adapter, data and previous runs are preserved.
+The first trial has completed its starting evaluation and optimizer updates.
+Its fixed probe baseline is 22/48 teacher matches (all 48 answers valid); the
+training-panel baseline is 10/16 (all valid). No post-update comparison yet.
+The initial adapter, data and previous runs are preserved.
 
 ## Next
 Continue what learns, or use the observed failure to choose a different intervention.

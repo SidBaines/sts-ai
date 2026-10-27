@@ -2,6 +2,7 @@
 
 Temporary running log, newest first. Anything that matters is also in its home file.
 
+- 2026-10-27: Started the [four-hour medium-effort trials](experiments/2026-10-27-learning-trials.md): smaller steps, an initial-policy KL anchor, answer-token credit, and a soft length penalty. Sid excluded low effort.
 - 2026-10-27: [Broader continuation failed](experiments/2026-10-26-broader-training.md): after 21 updates, held-out teacher matches fell 56 → 6/96, with 86/96 capped answers. Final evaluation complete; original adapter retained, no new experiment.
 - 2026-10-26: Started [broader local training](experiments/2026-10-26-broader-training.md) from the passing adapter: 512 training states and 96 validation states, up to 256 steps/eight hours. Sid chose progress over a seed repeat; monitor flags deterioration.
 - 2026-10-26: Stage 1 passed at learning rate 0.00003 (10 → 22 of 32 training states matching the teacher), after a rerun that fixed a shared-menu-order flaw. See [the page](experiments/2026-10-25-overfit-test.md).

@@ -127,16 +127,21 @@ class Dashboard:
             log = tail(folder / f"lr_{rate}.log")
             exits = re.findall(rf"end learning rate {re.escape(rate)} exit (\d+)", screen_log)
             exit_code = int(exits[-1]) if exits else None
+            outcome_file = folder / "outcomes.json"
+            if outcome_file.exists():
+                for outcome in json.loads(outcome_file.read_text()):
+                    if outcome["arm"]["key"] == rate:
+                        exit_code = outcome["exit_code"]
             failed = (exit_code is not None and exit_code != 0) or "Traceback (most recent call last)" in log
             summary_path = arm_folder / "run_summary.json"
             run_summary = json.loads(summary_path.read_text()) if summary_path.exists() else None
             stopped_training = '\"event\": \"stopped\"' in log
             final_step = run_summary.get("last_iteration", completed) if run_summary else completed
-            final_eval = any(r["iteration"] == final_step and final_step > 0 for r in evaluations)
+            final_eval = any(r["iteration"] == final_step and (final_step > 0 or settings.get("eval_only")) for r in evaluations)
             if failed:
                 status = "failed"
             elif run_summary and final_eval:
-                status = "complete" if run_summary["stop_reason"] == "iterations_complete" else "stopped"
+                status = "complete" if run_summary["stop_reason"] in ("iterations_complete", "evaluation_only") else "stopped"
             elif completed >= settings.get("iterations", 48) and final_eval and exit_code == 0:
                 status = "complete"
             elif is_live:
@@ -182,7 +187,7 @@ class Dashboard:
                     if row.get(phase):
                         row[phase]["content_only_a_expectation"] = (statistics.fmean(1 / len(r["order"]) for r in selected)
                                                                    if selected else None)
-            arms.append({"rate": rate, "status": status, "completed": completed,
+            arms.append({"rate": rate, "label": settings.get("label") or rate, "status": status, "completed": completed,
                          "target": settings.get("iterations", 48), "config": config,
                          "iterations": iterations, "evaluations": evaluations, "passes": passes,
                          "totals": {phase: metrics([r for r in all_generations
@@ -223,8 +228,11 @@ class Dashboard:
             return self.cached
 
     def traces(self, screen, rate, iteration, kind):
-        if screen not in (self.screen, self.reference) or rate not in RATES or kind not in ("generations", "evaluations"):
+        if screen not in (self.screen, self.reference) or kind not in ("generations", "evaluations"):
             raise ValueError("Unknown run")
+        allowed = {p.name[3:] for p in (self.root / "data/llm_runs" / screen).glob("lr_*") if (p / "config.json").exists()}
+        if rate not in allowed:
+            raise ValueError("Unknown arm")
         if not 0 <= iteration <= 100000:
             raise ValueError("Unknown iteration")
         with self.lock:
