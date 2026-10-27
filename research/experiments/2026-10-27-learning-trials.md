@@ -52,10 +52,19 @@ Stop launching work at the session deadline; retain every outcome, including
 flat or worse arms. Everything runs locally, detached and on mains power.
 
 ## Results
-The first trial has completed its starting evaluation and optimizer updates.
-Its fixed probe baseline is 22/48 teacher matches (all 48 answers valid); the
-training-panel baseline is 10/16 (all valid). No post-update comparison yet.
-The initial adapter, data and previous runs are preserved.
+The smaller-update trial stayed usable and showed a tentative held-out gain;
+the KL-anchor trial is now running. All results are exploratory.
+
+| Smaller-update evaluation | Training matches / 16 | Held-out matches / 48 | Held-out teacher probability | Held-out valid |
+|---|---:|---:|---:|---:|
+| Start | 10 | 22 | 0.424 | 48/48 |
+| Update 12 | 9 | 26 | 0.471 | 48/48 |
+| Update 15, final | 8 | 27 | 0.478 | 47/48 |
+
+The starting and final comparisons use the same states and menus. The panels
+are small; the direction is promising on held-out states and mixed on the
+training check, not a confirmed improvement. Paired intervals are retained in
+the run's `small_step_comparisons.json`; all arms will be compared at completion.
 
 ## Next
 Continue what learns, or use the observed failure to choose a different intervention.
