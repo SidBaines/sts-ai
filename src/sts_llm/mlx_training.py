@@ -37,7 +37,7 @@ from .generation import K2_ASSISTANT_END_TOKEN_ID, parse_action
 from .observations import LABELLED_PROMPT_VERSION, labelled_prompt, legal_indices
 from .teacher import teacher_reward
 
-MLX_TRAINING_FORMAT_VERSION = 3
+MLX_TRAINING_FORMAT_VERSION = 4
 LORA_KEYS = ("self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj",
              "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj")
 
@@ -89,15 +89,19 @@ def evaluation_orders(sets: dict[str, list[dict]], seed: int, count: int) -> dic
 
 
 def score_answer(row: dict, prompt, output_ids: Sequence[int], text: str, finish_reason: str,
-                 invalid_reward: float) -> dict:
+                 invalid_reward: float, *, length_penalty_per_256: float = 0.0,
+                 free_reasoning_tokens: int = 256) -> dict:
     """Parse one completion against its labelled menu and score it."""
     parsed = parse_action(text, row["legal_indices"], finish_reason=finish_reason, labels=prompt.labels)
     action = parsed.action_index if parsed.valid else None
     reasoning_tokens, closed = reasoning_token_count(output_ids)
+    length_cost = (length_penalty_per_256 * max(0, reasoning_tokens - free_reasoning_tokens) / 256
+                   if parsed.valid else 0.0)
     label = next((k for k, v in prompt.labels.items() if v == action), None)
     return {"valid": parsed.valid, "error": parsed.error, "action_index": action, "label": label,
             "capped": finish_reason == "length",
-            "reward": teacher_reward(row, action, invalid_reward=invalid_reward),
+            "reward": teacher_reward(row, action, invalid_reward=invalid_reward) - length_cost,
+            "length_penalty": length_cost,
             "teacher_probability": teacher_reward(row, action, invalid_reward=0.),
             "teacher_top_agreement": action == teacher_top(row),
             "normalized_teacher_score": normalized_teacher_score(row, action),
@@ -164,6 +168,14 @@ class MLXPolicy:
         if args.grad_checkpoint:
             grad_checkpoint(self.model.layers[0])
         self.stops = [[K2_ASSISTANT_END_TOKEN_ID], [self.tokenizer.eos_token_id]]
+        self.reference_weights = None
+        if getattr(args, "kl_reference", "foundation") == "initial":
+            current = dict(self.trainable_items())
+            if getattr(args, "reference_adapter", None):
+                self.model.load_weights(str(args.reference_adapter), strict=False)
+            self.reference_weights = {k: mx.array(v) for k, v in self.trainable_items()}
+            mx.eval(list(self.reference_weights.values()))
+            self.model.load_weights(list(current.items()), strict=False)
 
     def prompt_ids(self, messages) -> list[int]:
         ids = self.tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True,
@@ -233,6 +245,20 @@ class MLXPolicy:
             for layer, scale in zip(layers, scales):
                 layer.scale = scale
 
+    @contextmanager
+    def reference_policy(self):
+        """Score against either the foundation or the frozen starting adapter."""
+        if self.reference_weights is None:
+            with self.adapters_disabled():
+                yield
+            return
+        current = dict(self.trainable_items())
+        try:
+            self.model.load_weights(list(self.reference_weights.items()), strict=False)
+            yield
+        finally:
+            self.model.load_weights(list(current.items()), strict=False)
+
     def trainable_items(self):
         from mlx.utils import tree_flatten
         return tree_flatten(self.model.trainable_parameters())
@@ -243,14 +269,24 @@ class MLXPolicy:
 
 
 def response_loss(policy: MLXPolicy, item: dict, *, advantage: float, ref_logps, denominator: float,
-                  kl_beta: float):
+                  kl_beta: float, token_scope: str = "all", with_metrics: bool = False):
     mx = policy.mx
     new = policy.token_logps(item["prompt_ids"], item["output_token_ids"])
-    loss = -advantage * new.sum() / denominator
+    start = 0
+    if token_scope == "answer":
+        # Include the reasoning closer, final answer and end token. A capped
+        # response with no closer has no answer gradient; KL still anchors it.
+        start, _ = reasoning_token_count(item["output_token_ids"])
+    policy_loss = -advantage * new[start:].sum() / denominator
+    kl_loss = mx.array(0.0)
+    kl_mean = mx.array(0.0)
     if kl_beta > 0:
         delta = ref_logps - new
-        loss = loss + kl_beta * (mx.exp(delta) - delta - 1).sum() / denominator
-    return loss
+        divergence = mx.exp(delta) - delta - 1
+        kl_mean = divergence.mean()
+        kl_loss = kl_beta * divergence.sum() / denominator
+    loss = policy_loss + kl_loss
+    return (loss, {"policy_loss": policy_loss, "kl_loss": kl_loss, "sampled_kl_per_token": kl_mean}) if with_metrics else loss
 
 
 def update(policy: MLXPolicy, optimizer, items: list[dict], args: Any) -> dict:
@@ -264,19 +300,23 @@ def update(policy: MLXPolicy, optimizer, items: list[dict], args: Any) -> dict:
     if not active:
         return {"optimizer_step": False, "responses_with_gradient": 0}
     total, loss_sum = None, 0.0
+    components = {"policy_loss": 0.0, "kl_loss": 0.0, "sampled_kl_per_token": 0.0}
     for item in active:
         ref = mx.array(item["ref_logps"]) if args.kl_beta > 0 else None
         denominator = (args.loss_token_budget if args.loss_normalization == "fixed_token_budget"
                        else len(item["output_token_ids"]))
         grad_fn = nn.value_and_grad(policy.model, lambda: response_loss(
             policy, item, advantage=item["advantage"], ref_logps=ref,
-            denominator=denominator, kl_beta=args.kl_beta))
-        loss, grads = grad_fn()
+            denominator=denominator, kl_beta=args.kl_beta,
+            token_scope=getattr(args, "policy_token_scope", "all"), with_metrics=True))
+        (loss, metrics), grads = grad_fn()
         # Weight by 1/N over all responses; zero-advantage ones contribute nothing.
         grads = tree_map(lambda g: g / len(items), grads)
         total = grads if total is None else tree_map(mx.add, total, grads)
-        mx.eval(total, loss)
+        mx.eval(total, loss, metrics)
         loss_sum += loss.item() / len(items)
+        for key in components:
+            components[key] += metrics[key].item() / len(items)
     total, norm = optim.clip_grad_norm(total, args.max_grad_norm)
     norm = norm.item()
     if not math.isfinite(norm) or not math.isfinite(loss_sum):
@@ -284,7 +324,7 @@ def update(policy: MLXPolicy, optimizer, items: list[dict], args: Any) -> dict:
     optimizer.update(policy.model, total)
     mx.eval(policy.model.trainable_parameters(), optimizer.state)
     return {"optimizer_step": True, "loss": loss_sum, "gradient_norm_before_clip": norm,
-            "responses_with_gradient": len(active)}
+            "responses_with_gradient": len(active), **components}
 
 
 def evaluate(policy: MLXPolicy, sets: dict[str, list[dict]], orders: dict[str, list[list[int]]],
@@ -308,7 +348,9 @@ def evaluate(policy: MLXPolicy, sets: dict[str, list[dict]], orders: dict[str, l
         text = policy.tokenizer.decode(output_ids, skip_special_tokens=False)
         records.append({"set": name, "id": row["id"], "phase": row["phase"], "order": prompt.order,
                         "raw_text": text, "output_token_ids": output_ids, "finish_reason": reason,
-                        **score_answer(row, prompt, output_ids, text, reason, args.invalid_reward)})
+                        **score_answer(row, prompt, output_ids, text, reason, args.invalid_reward,
+                                       length_penalty_per_256=args.length_penalty_per_256,
+                                       free_reasoning_tokens=args.free_reasoning_tokens)})
     with (output / "evaluations" / f"iter_{iteration:04d}.jsonl").open("x") as stream:
         for record in records:
             stream.write(json.dumps(record) + "\n")
@@ -343,6 +385,8 @@ def run_record(args: Any, policy: MLXPolicy, train_rows: list[dict], probe_rows:
                               if args.probe else None},
             "parent_adapter_sha256": hashlib.sha256(Path(args.adapter).read_bytes()).hexdigest()
             if args.adapter else None,
+            "reference_adapter_sha256": hashlib.sha256(Path(args.reference_adapter).read_bytes()).hexdigest()
+            if args.reference_adapter else None,
             "teacher_checkpoint_sha256": teachers,
             "trainable_parameters": sum(v.size for _, v in policy.trainable_items()),
             "train_states": len(train_rows), "probe_states": len(probe_rows)}
@@ -359,6 +403,9 @@ def main(argv=None) -> int:
                         help="optional smaller training-state panel for frequent evaluations")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--adapter", type=Path, help="warm-start LoRA weights (optimizer and RNG reset)")
+    parser.add_argument("--reference-adapter", type=Path, help="optional fixed adapter for the initial-policy KL reference")
+    parser.add_argument("--label", help="human-readable experiment label, recorded in config")
+    parser.add_argument("--eval-only", action="store_true", help="evaluate the supplied adapter without an optimizer update")
     parser.add_argument("--effort", choices=("low", "medium", "high"), default="medium")
     parser.add_argument("--iterations", type=int, required=True)
     parser.add_argument("--max-run-seconds", type=float, default=0,
@@ -372,7 +419,11 @@ def main(argv=None) -> int:
     parser.add_argument("--learning-rate", type=float, required=True)
     parser.add_argument("--max-grad-norm", type=float, default=1.0)
     parser.add_argument("--kl-beta", type=float, default=0.0)
+    parser.add_argument("--kl-reference", choices=("foundation", "initial"), default="foundation")
+    parser.add_argument("--policy-token-scope", choices=("all", "answer"), default="all")
     parser.add_argument("--invalid-reward", type=float, default=-1.0)
+    parser.add_argument("--length-penalty-per-256", type=float, default=0.0)
+    parser.add_argument("--free-reasoning-tokens", type=int, default=256)
     parser.add_argument("--loss-normalization", choices=("fixed_token_budget", "response_mean"),
                         default="fixed_token_budget")
     parser.add_argument("--loss-token-budget", type=int, default=2048)
@@ -394,7 +445,8 @@ def main(argv=None) -> int:
         parser.error("sizes must be positive and group size at least 2")
     if not (args.temperature > 0 and args.learning_rate > 0 and args.max_grad_norm > 0 and args.kl_beta >= 0
             and math.isfinite(args.invalid_reward) and math.isfinite(args.max_run_seconds)
-            and args.max_run_seconds >= 0):
+            and args.max_run_seconds >= 0 and math.isfinite(args.length_penalty_per_256)
+            and args.length_penalty_per_256 >= 0 and args.free_reasoning_tokens >= 0):
         parser.error("temperature, learning rate and gradient norm must be positive; KL nonnegative")
     args.output.mkdir(parents=True, exist_ok=False)
     for name in ("generations", "evaluations", "adapters"):
@@ -433,8 +485,14 @@ def main(argv=None) -> int:
                           "iteration": iteration, "seconds": summary["seconds"]}), flush=True)
         last_evaluation = iteration
 
-    if args.eval_every:
+    if args.eval_every or args.eval_only:
         evaluation(0)
+    if args.eval_only:
+        log.close()
+        (args.output / "run_summary.json").write_text(json.dumps({
+            "last_iteration": 0, "stop_reason": "evaluation_only",
+            "elapsed_seconds": time.monotonic() - run_started}, indent=2) + "\n")
+        return 0
     for iteration in range(1, args.iterations + 1):
         timed_out = args.max_run_seconds > 0 and time.monotonic() - run_started >= args.max_run_seconds
         if stop_file.exists() or timed_out:
@@ -460,7 +518,9 @@ def main(argv=None) -> int:
                 group.append({"iteration": iteration, "id": row["id"], "phase": row["phase"], "sample": sample,
                               "order": prompt.order, "prompt_ids": ids, "output_token_ids": output_ids,
                               "raw_text": text, "finish_reason": reason,
-                              **score_answer(row, prompt, output_ids, text, reason, args.invalid_reward)})
+                              **score_answer(row, prompt, output_ids, text, reason, args.invalid_reward,
+                                             length_penalty_per_256=args.length_penalty_per_256,
+                                             free_reasoning_tokens=args.free_reasoning_tokens)})
             for item, advantage in zip(group, centered_advantages([r["reward"] for r in group])):
                 item["advantage"] = advantage
             groups.append(group)
@@ -468,7 +528,7 @@ def main(argv=None) -> int:
         generation_seconds = time.perf_counter() - began
         scoring_started = time.perf_counter()
         if args.kl_beta > 0:
-            with policy.adapters_disabled():
+            with policy.reference_policy():
                 for item in items:
                     item["ref_logps"] = policy.token_logps(item["prompt_ids"], item["output_token_ids"]).tolist()
         scoring_seconds = time.perf_counter() - scoring_started

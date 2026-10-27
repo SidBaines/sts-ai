@@ -23,19 +23,17 @@ Definitions and the untrained-model references are in [metrics](metrics.md).
 
 ## Now
 
-No training or evaluation is running ([status](status.md)). The stopped run's
-final evaluation finished on 27 October; the dashboard has the complete results.
-The original adapter and intermediate/final checkpoints are preserved.
+Starting an authorized four-hour MacBook session of short learning trials:
+smaller updates, KL to the passing adapter, answer-token credit, and a soft
+length penalty. All use medium effort; Sid explicitly excluded low-effort mode.
+See [the design](experiments/2026-10-27-learning-trials.md) and [status](status.md).
 
 ## Next
 
-1. Propose a targeted stability comparison on the broader states: lower learning
-   rate versus a small KL penalty, starting from the original passing adapter.
-   Measure KL and policy-loss terms before choosing its scale; the current
-   reference is the foundation model. Do not launch another run automatically.
-2. Keep Sid's signs-of-life priority: try useful interventions, rather than
-   require another seed repeat before moving forward.
-3. Adopt env-v0.1.6 after release before newly simulated states or game evaluation.
+Screen the four interventions briefly, then spend the remaining allocation on
+the most promising usable result. Preserve every outcome and finish with a
+paired full-panel comparison when time permits. Signs of life take priority;
+no seed-repeat prerequisite and no full-game run in this allocation.
 
 ## Evidence and open questions
 

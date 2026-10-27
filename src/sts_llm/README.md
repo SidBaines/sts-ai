@@ -381,3 +381,12 @@ status names above) cannot resume a version-1 checkpoint; warm-starting from one
 is allowed. Tests cover status classification, credit, failure propagation and,
 with PyTorch, the HF policy's stop-token trimming, the iteration loop with a
 fake environment, evaluation accounting and the command-line refusals.
+
+Format 4 adds optional initial-adapter KL anchoring (`--kl-reference initial`,
+with `--reference-adapter` to keep that anchor across warm-starts), answer-token
+credit (`--policy-token-scope answer`), and a soft reward cost
+(`--length-penalty-per-256`, beyond `--free-reasoning-tokens`, valid responses
+only). Teacher-probability evaluation metrics remain unpenalized. Policy and
+KL loss components are logged separately. `--eval-only` evaluates an adapter
+without updating it. Previous weights remain loadable; old defaults retain
+whole-completion credit, foundation KL and zero length cost.

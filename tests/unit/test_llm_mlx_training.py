@@ -43,6 +43,30 @@ def tiny_policy():
 
 @unittest.skipIf(mx is None, "mlx-lm is not installed")
 class MLXTrainerTests(unittest.TestCase):
+    def test_answer_scope_excludes_reasoning_but_includes_closer_and_answer(self):
+        policy = SimpleNamespace(mx=mx, token_logps=lambda *_: mx.array([1., 2., 3., 4.]))
+        item = {"prompt_ids": [1], "output_token_ids": [7, 64051, 8, 9]}
+        loss = mlx_training.response_loss(policy, item, advantage=1., ref_logps=None,
+                                         denominator=1., kl_beta=0., token_scope="answer")
+        self.assertEqual(loss.item(), -9.)
+        item["output_token_ids"] = [7, 8, 9, 10]
+        loss = mlx_training.response_loss(policy, item, advantage=1., ref_logps=None,
+                                         denominator=1., kl_beta=0., token_scope="answer")
+        self.assertEqual(loss.item(), 0.)
+
+    def test_initial_reference_restores_the_updated_policy_after_scoring(self):
+        policy = tiny_policy()
+        policy.reference_weights = {k: mx.array(v) for k, v in policy.trainable_items()}
+        mx.eval(list(policy.reference_weights.values()))
+        item = {"prompt_ids": [1, 2], "output_token_ids": [3, 4], "advantage": 1.}
+        original = policy.token_logps([1, 2], [3, 4]).tolist()
+        mlx_training.update(policy, optim.SGD(learning_rate=.5), [item], args())
+        changed = policy.token_logps([1, 2], [3, 4]).tolist()
+        self.assertNotEqual(changed, original)
+        with policy.reference_policy():
+            self.assertEqual(policy.token_logps([1, 2], [3, 4]).tolist(), original)
+        self.assertEqual(policy.token_logps([1, 2], [3, 4]).tolist(), changed)
+
     def test_generation_progress_counts_finished_responses_without_changing_outputs(self):
         from itertools import count
 
