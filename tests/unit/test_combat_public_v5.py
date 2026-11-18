@@ -19,6 +19,36 @@ class CombatPublicV5Test(unittest.TestCase):
                              f"{verb}: hand [0] Defend [Skill] (cost 1); hand [2] Defend+ [Skill] (cost 1)")
         self.assertEqual(selection_label(LegalAction(0, 1610612736, "{ EXHAUST_MANY none"), []), "exhaust no cards")
 
+    def test_regular_card_menu_and_history_do_not_request_full_snapshots(self):
+        class HistoryBackend:
+            combat_observation = "combat_public_v3"
+
+            def __init__(self):
+                self.menu = [LegalAction(0, 7, "play Strike")]
+                self.recent = []
+
+            def phase(self):
+                return "combat"
+
+            def legal_actions(self):
+                return self.menu
+
+            def step(self, index):
+                self.recent.append(self.menu[index].description)
+                return self.menu[index]
+
+            def combat_history_context(self):
+                return 0, list(self.recent)
+
+            def describe_state(self):
+                return "Recent actions this turn: none"
+
+        base = HistoryBackend()
+        env = CombatPublicV5Env(base)
+        env.legal_actions().clear()
+        self.assertEqual(env.step(0), base.menu[0])
+        self.assertEqual(env.describe_state(), "Recent actions this turn: play Strike\nAscension: 0")
+
     def test_all_selection_surfaces_and_execution_keep_identity(self):
         base = Mock(combat_observation="combat_public_v3")
         base.phase.return_value = "combat"
