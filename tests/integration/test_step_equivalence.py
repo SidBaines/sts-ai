@@ -1,8 +1,10 @@
 """Hashes captured before the step-path optimization, including reset and defeat.
 
 Source/runtime/build identities describe the running code, not gameplay. Pin only
-those fields to the recorded identities when hashing info, so this test can check
-new source with another compatible build. Live identities are checked separately.
+those fields to the recorded identities when hashing info. Project out the v4
+combat identifier and ascension info, and restore the v3 release labels, so the
+historical artifact continues to check unchanged A0 gameplay and text. Live
+identities are checked separately; this is not cross-version replay support.
 Seeded trajectories are certified within a native platform, not across platforms.
 """
 from __future__ import annotations
@@ -27,13 +29,18 @@ def digest(value) -> str:
 
 
 def hashes(observation, info, reward, identities) -> list[str]:
+    observation = deepcopy(observation)
+    observation["state"].pop("combat_id")
+    observation["state"]["observation_version"] = "sts_env_public_v3"
     normalized = {key: identities.get(key, value) for key, value in info.items()}
+    normalized.pop("ascension")
+    normalized.update(environment_version="0.1.5", observation_version="sts_env_public_v3")
     return [digest(observation), digest(normalized), digest(reward)]
 
 
 @requires_simulator
 class StepEquivalenceTests(unittest.TestCase):
-    def test_original_full_games_are_byte_identical(self):
+    def test_original_full_games_match_after_documented_v4_projection(self):
         fixture = json.loads(FIXTURE.read_text())
         self.assertEqual(CONFIG, fixture["config"])
         self.assertEqual(SEEDS, tuple(game["seed"] for game in fixture["games"]))

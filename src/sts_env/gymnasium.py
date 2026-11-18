@@ -26,7 +26,7 @@ class GymnasiumEnv(gym.Env):
     metadata = {"render_modes": ["ansi"]}
     FEATURE_NAMES = ("hp", "max_hp", "gold", "act", "floor", "combat",
                      "turn", "energy", "block", "enemy_count", "enemy_hp",
-                     "hand_count", "draw_count", "discard_count", "exhaust_count")
+                     "hand_count", "draw_count", "discard_count", "exhaust_count", "ascension")
 
     def __init__(self, *, max_actions: int = 2048, render_mode: str | None = None,
                  invalid_action_reward: float = 0.0, **kwargs: Any) -> None:
@@ -71,6 +71,7 @@ class GymnasiumEnv(gym.Env):
             combat.get("turn", 0), combat.get("player_energy", 0), combat.get("player_block", 0),
             len(enemies), sum(enemy.get("hp", enemy.get("cur_hp", 0)) for enemy in enemies),
             pile_count("hand"), pile_count("draw"), pile_count("discard"), pile_count("exhaust"),
+            state.get("ascension", 0),
         ], dtype=np.float64)
         mask = np.zeros(self.max_actions, dtype=np.int8)
         mask[:len(actions)] = 1
