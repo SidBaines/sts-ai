@@ -211,6 +211,8 @@ in a student that wins a gate, so the two halves can adapt to each other.
   often, toward the search teacher, yet still at about half the teacher's
   rate. Promoted to champion on 23 October.
 
+- [Act 3 boss refits](experiments/2026-11-18-act3-boss-refits.md) is testing the same gated approach with deployment restricted to the final boss.
+
 ## Distilling strategy rules
 
 **Working, used selectively.** Measure a strategic habit with a menu overlay

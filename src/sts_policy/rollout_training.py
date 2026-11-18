@@ -123,7 +123,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         raise ValueError("Episode sinks require deferred sparse collection without teachers/continuations")
     if actor_only and (not deterministic or not streaming):
         raise ValueError("Actor-only collection requires deterministic episode sinks")
-    from .model_agent import collate_public, collate_public_with_encodings
+    from .model_agent import collate_public, collate_public_with_encodings, route_batch
     retain_encodings = reuse_encodings and collate is collate_public
     model.eval()
     started = time.monotonic()
@@ -145,7 +145,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         if not observations:
             return []
         bootstrap_started = time.monotonic()
-        _, next_values, _ = forward(model, collate(observations, device))
+        _, next_values, _ = forward(model, route_batch(model, collate(observations, device), observations))
         output = next_values.cpu().tolist()
         timings["bootstrap_seconds"] += time.monotonic() - bootstrap_started
         forward_counts["bootstrap_batches"] += 1
@@ -270,7 +270,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
             policy_batch, actor_encodings = collate_public_with_encodings(observations, device)
         else:
             policy_batch, actor_encodings = collate(observations, device), [None] * len(observations)
-        logits, values, mask = forward(model, policy_batch)
+        logits, values, mask = forward(model, route_batch(model, policy_batch, observations))
         if actor_only:
             if logits.shape != mask.shape or mask.dtype != torch.bool or not bool(mask.any(-1).all()) or not bool(torch.isfinite(logits[mask]).all()):
                 raise ValueError("Invalid actor-only legal logits/mask")
@@ -424,7 +424,7 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
     model.to(device).train()
     # Each PPO buffer is immutable throughout its epochs. Encode public state
     # once instead of repeating Python feature extraction every minibatch/epoch.
-    from .model_agent import collate_public, cached_public_collator
+    from .model_agent import collate_public, cached_public_collator, route_batch
     reused_encoding_count = 0
     if collate is collate_public:
         for transition in transitions:
@@ -467,7 +467,8 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
                 current = {}
                 for start in range(0, len(chosen), micro_batch):
                     part, part_indices = chosen[start:start + micro_batch], indices[start:start + micro_batch]
-                    logits, values, mask = forward(model, collate([t.observation for t in part], device))
+                    observations = [t.observation for t in part]
+                    logits, values, mask = forward(model, route_batch(model, collate(observations, device), observations))
                     loss, stats = ppo_objective(
                         logits, mask, values, torch.tensor([t.action_position for t in part], device=device),
                         torch.tensor([t.behavior_log_prob for t in part], device=device),
@@ -492,7 +493,8 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
                     stopped = True
                     break
                 continue
-            logits, values, mask = forward(model, collate([t.observation for t in chosen], device))
+            observations = [t.observation for t in chosen]
+            logits, values, mask = forward(model, route_batch(model, collate(observations, device), observations))
             actions = torch.tensor([t.action_position for t in chosen], device=device)
             old_log_probs = torch.tensor([t.behavior_log_prob for t in chosen], device=device)
             returns = torch.tensor([t.returns / return_scale for t in chosen], device=device)

@@ -62,6 +62,24 @@
       "parent_run": "ooc_main_s1",
       "iteration": 33,
       "note": "notes: branch of ooc_main_s1 (smith at HP >= 70% overlay); first resume event is iteration 33"
+    },
+    {
+      "run": "joint_a3_from_0f52/joint_after_8_control",
+      "parent_run": "joint_a3_from_0f52/control",
+      "iteration": 8,
+      "note": "Exact strategy and optimizer continuation at the accepted boss refit."
+    },
+    {
+      "run": "joint_a3_from_0f52/joint_after_16_control",
+      "parent_run": "joint_a3_from_0f52/control",
+      "iteration": 16,
+      "note": "Exact strategy and optimizer continuation at the accepted boss refit."
+    },
+    {
+      "run": "joint_a3_from_0f52/joint_after_16_joint",
+      "parent_run": "joint_a3_from_0f52/joint_after_8_control",
+      "iteration": 16,
+      "note": "Exact strategy and optimizer continuation at the accepted boss refit."
     }
   ],
   "champions": [

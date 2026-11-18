@@ -60,6 +60,10 @@ PORT = 8791
 
 # Descriptions do not affect the default selection.
 LABELS = {
+    "joint_a3_from_0f52/control": "Frozen combat · shares early updates with joint arm",
+    "joint_a3_from_0f52/joint_after_8_control": "Joint · Act 3 boss refit at 8",
+    "joint_a3_from_0f52/joint_after_16_control": "Joint · first Act 3 boss refit at 16",
+    "joint_a3_from_0f52/joint_after_16_joint": "Joint · Act 3 boss refits at 8 and 16",
     "joint2_20261022/train": "Second joint training run",
     "reward_ablation_20261023/floors": "Champion parent · wins plus floors",
     "ppo_fresh_worlds_from_4058/control": "PPO control · learning rate 0.0003",
@@ -80,7 +84,11 @@ LABELS = {
     "ooc_rep_s2": "E8 replicate, seed 2",
 }
 # Key runs, shown by default (in this order). Everything else is archived unless active.
-KEY_RUNS = ("ppo_fresh_worlds_from_4058/control", "ppo_fresh_worlds_from_4058/challenger",
+KEY_RUNS = ("joint_a3_from_0f52/control",
+            "joint_a3_from_0f52/joint_after_8_control",
+            "joint_a3_from_0f52/joint_after_16_control",
+            "joint_a3_from_0f52/joint_after_16_joint",
+            "ppo_fresh_worlds_from_4058/control", "ppo_fresh_worlds_from_4058/challenger",
             "round4_20261021/round4", "continued2_20261021/train", "continued3_20261022/train",
             "continued4_20261022/train", "joint_20261022/train", "joint2_20261022/train",
             "reward_ablation_20261023/floors")

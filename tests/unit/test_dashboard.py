@@ -57,7 +57,9 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(runs["batch/recipe"]["name"], "batch/recipe")
 
     def test_current_lineage_is_ordered_and_old_labels_do_not_make_runs_key(self):
-        lineage = ("ppo_fresh_worlds_from_4058/control", "ppo_fresh_worlds_from_4058/challenger",
+        lineage = ("joint_a3_from_0f52/control", "joint_a3_from_0f52/joint_after_8_control",
+                   "joint_a3_from_0f52/joint_after_16_control", "joint_a3_from_0f52/joint_after_16_joint",
+                   "ppo_fresh_worlds_from_4058/control", "ppo_fresh_worlds_from_4058/challenger",
                    "round4_20261021/round4", "continued2_20261021/train", "continued3_20261022/train",
                    "continued4_20261022/train", "joint_20261022/train", "joint2_20261022/train",
                    "reward_ablation_20261023/floors")

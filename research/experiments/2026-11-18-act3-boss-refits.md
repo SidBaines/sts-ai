@@ -23,6 +23,7 @@ Training is underway. The [progress log](../log.md) follows training, gate decis
 
 ## Log
 
+- 18 November, 22:25 GMT: the routed policy completed a real optimizer resume, full games and identical-start replay checks. A separate small fit completed 2,000 updates. The smoke test caught the replay tool’s required bank namespace before either study gate opened.
 - 18 November: fixed the design and reused the exact control trajectory until the first accepted refit. Each gate and each final panel has its own world roster.
 
 Code: `experiments/2026-11-18-act3-boss-refits/`. Local data: run `joint_a3_from_0f52`.

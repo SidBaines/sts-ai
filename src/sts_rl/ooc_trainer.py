@@ -527,7 +527,7 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
     saved_combat = {}
     normalizer = ReturnNormalizer()
     start_state = {k: v.clone() for k, v in model.state_dict().items()}
-    combat_keys = [k for k in start_state if k.startswith("combat.")]
+    combat_keys = [k for k in start_state if k.startswith(("combat.", "boss_specialist."))]
     for name, p in model.named_parameters():
         p.requires_grad_(name.startswith("ooc.") or (cfg.train_combat and name.startswith("combat.")))
     trainable = [p for p in model.parameters() if p.requires_grad]

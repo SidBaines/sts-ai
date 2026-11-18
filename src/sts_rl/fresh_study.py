@@ -90,6 +90,11 @@ class StudyPolicy:
             raise RuntimeError("Champion changed during load")
         self._validate_finite(self.champion)
         self.champion.to("cpu").eval()
+        # The original singleton inference method is a verified archive contract.
+        # Keep it available for all historical corpora and phase replacements.
+        from sts_policy.model_agent import Act3BossActorCritic
+        if isinstance(self.champion, Act3BossActorCritic):
+            self._logits = self._boss_policy_logits
         self.replacements = {}
         self._lock = threading.RLock()
         self.identity = {"protocol": PROTOCOL, "filter_ids": [FILTER_ID, DEAD_FILTER_ID],
@@ -137,6 +142,19 @@ class StudyPolicy:
         for name, value in model.state_dict().items():
             if not torch.isfinite(value).all():
                 raise ValueError(f'Nonfinite policy weight: {name}')
+
+    def _boss_policy_logits(self, observation):
+        import torch
+        from sts_policy.model_agent import collate_public, route_batch
+        phase = "combat" if observation["phase"] == "combat" else "ooc"
+        if phase in self.replacements:
+            return type(self)._logits(self, observation)
+        batch = route_batch(self.champion, collate_public([observation]), [observation])
+        with self._lock, torch.inference_mode():
+            logits = self.champion.actor_logits(*batch)
+            if logits.shape != (1, len(observation["legal_actions"])) or not torch.isfinite(logits).all():
+                raise ValueError("Invalid Act 3 boss policy logits")
+            return logits[0].detach().clone()
 
     def _logits(self, observation):
         import torch

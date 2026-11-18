@@ -106,7 +106,7 @@ class ModelAgent:
 
     @torch.no_grad()
     def choose_actions(self, observations: Sequence[dict[str, Any]]) -> list[int]:
-        logits, _, mask = forward_policy(self.model, collate_public(observations, self.device))
+        logits, _, mask = forward_policy(self.model, route_batch(self.model, collate_public(observations, self.device), observations))
         positions = (logits.argmax(-1) if self.deterministic
                      else masked_distribution(logits, mask).sample())
         return [int(obs["legal_actions"][position]["index"])
@@ -196,6 +196,52 @@ class CompositeActorCritic(torch.nn.Module):
         return logits.index_copy(0, combat, a).index_copy(0, ooc, b)
 
 
+class Act3BossActorCritic(CompositeActorCritic):
+    """Use a frozen specialist only at publicly identifiable Act 3 boss fights."""
+    kind = "composite_act3_boss_v1"
+
+    def __init__(self, combat, ooc, boss_specialist):
+        super().__init__(combat, ooc)
+        self.boss_specialist = boss_specialist
+
+    def metadata(self):
+        return {**super().metadata(), "kind": self.kind,
+                "boss_specialist": self.boss_specialist.metadata()}
+
+    def _rows(self, state, boss_rows):
+        if boss_rows is None:
+            if (state[:, 7] > .5).any():
+                raise ValueError("Combat inference requires the public boss-room context")
+            return None
+        return boss_rows.nonzero(as_tuple=True)[0]
+
+    def forward(self, state, actions, mask, boss_rows=None):
+        # Keep baseline matrix shapes and tie-breaking for every ordinary row.
+        logits, values = super().forward(state, actions, mask)
+        rows = self._rows(state, boss_rows)
+        if rows is not None and rows.numel():
+            special, estimates = self.boss_specialist(state[rows], actions[rows], mask[rows])
+            logits, values = logits.index_copy(0, rows, special), values.index_copy(0, rows, estimates)
+        return logits, values
+
+    def actor_logits(self, state, actions, mask, boss_rows=None):
+        logits = super().actor_logits(state, actions, mask)
+        rows = self._rows(state, boss_rows)
+        if rows is not None and rows.numel():
+            special = self.boss_specialist.actor_logits(state[rows], actions[rows], mask[rows])
+            logits = logits.index_copy(0, rows, special)
+        return logits
+
+
+def route_batch(model, batch, observations):
+    if not isinstance(model, Act3BossActorCritic):
+        return batch
+    rows = [obs["phase"] == "combat" and obs["state"].get("act") == 3
+            and str(obs["state"].get("room", "")).rsplit(".", 1)[-1] == "BOSS"
+            for obs in observations]
+    return (*batch, torch.tensor(rows, device=batch[0].device, dtype=torch.bool))
+
+
 def make_agent(checkpoint: str | None = None, device: str = "cpu", deterministic: bool = True,
                seed: int = 0, combat_checkpoint: str | None = None,
                ooc_checkpoint: str | None = None) -> ModelAgent | CompositeAgent:
@@ -221,6 +267,13 @@ def policy_from_config(config: dict[str, Any]) -> torch.nn.Module:
         if options.get("state_dim", STATE_DIM) != STATE_DIM or options.get("action_dim", ACTION_DIM) != ACTION_DIM:
             raise ValueError("policy feature dimensions differ from the current public encoder")
         return CandidateActorCritic(**options)
+    if kind == Act3BossActorCritic.kind:
+        if set(options) != {"combat", "ooc", "boss_specialist"}:
+            raise ValueError("Act 3 boss config requires three explicit phase heads")
+        heads = [policy_from_config(options[name]) for name in ("combat", "ooc", "boss_specialist")]
+        if not all(isinstance(head, CandidateActorCritic) for head in heads):
+            raise ValueError("Act 3 boss config requires candidate heads")
+        return Act3BossActorCritic(*heads)
     if kind == "composite":
         if set(options) != {"combat", "ooc"}:
             raise ValueError("composite config requires exactly combat and ooc heads")

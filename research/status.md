@@ -1,8 +1,8 @@
 # Status
 
-Nothing running. The paired learning-rate study finished on 18 November 2026. The 0.0001 challenger is the current champion after independent confirmation. The [experiment page](experiments/2026-11-18-paired-ppo-rates.md) contains both comparisons and the proposed next study.
+The [Act 3 boss study](experiments/2026-11-18-act3-boss-refits.md) is running locally from champion `0f527a0fbf93`. Both arms share the control trajectory until a boss refit is admitted. The power-aware queue handles all training, search and evaluation jobs.
 
-- Champion: `data/rl_runs/champions/champion_0f527a0fbf93.pt`, with its promotion record beside it.
-- Data: run `ppo_fresh_worlds_from_4058`, including both complete evaluation rosters and the frozen selection.
-- [Training dashboard](http://127.0.0.1:8795/) and [progress log](log.md).
-- The next joint run is a proposal awaiting a decision.
+- [Training dashboard](http://127.0.0.1:8795/) and [live progress](http://127.0.0.1:8795/progress).
+- Run directory: `data/rl_runs/joint_a3_from_0f52`. Check `monitor-status.json` for the current stage and `progress.jsonl` for the timeline.
+- Create `STOP` in the run directory to stop further submissions. Use the queue runner to cancel an already submitted job.
+- The next decisions are the iteration-8 and iteration-16 boss refits, followed by separate endpoint selection and confirmation panels.

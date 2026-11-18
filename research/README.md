@@ -23,11 +23,11 @@ On the confirmation panel about 43% of the champion's losses came at the Act 3 b
 
 ## Now
 
-Nothing running. The [progress log](log.md) records the finished study.
+[Act 3 boss refits](experiments/2026-11-18-act3-boss-refits.md) is running from the November champion. The control and joint arm share strategy PPO at 0.0001. After updates 8 and 16 a proposed boss specialist must pass both a saved-fight gate and a full-game gate. The [dashboard](http://127.0.0.1:8795/) and [progress log](log.md) follow the run.
 
 ## Next
 
-Consider a matched joint run at learning rate 0.0001 from the new champion, with teacher-refitted combat used only at the Act 3 boss. Keep a frozen-combat control and gate each proposed refit on full-game wins. See the [proposed design](experiments/2026-11-18-paired-ppo-rates.md#next).
+Compare the iteration-24 endpoints on 16,384 fresh worlds. Confirm the frozen winner against the starting champion on another 16,384.
 
 ## Open questions
 

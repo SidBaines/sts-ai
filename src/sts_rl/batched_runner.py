@@ -53,7 +53,7 @@ class BatchedPolicy:
     def choose_actions(self, observations, *, details=None):
         import torch
         from sts_policy.entity_model import EntityActorCritic
-        from sts_policy.model_agent import collate_public
+        from sts_policy.model_agent import collate_public, route_batch
 
         filtered = [self._menu(obs) for obs in observations]
         actions, groups = [None] * len(filtered), {}
@@ -76,7 +76,7 @@ class BatchedPolicy:
             for (model, kind), indices in groups.items():
                 values = [filtered[i] for i in indices]
                 if kind == "legacy":
-                    batch = collate_public(values, "cpu")
+                    batch = route_batch(model, collate_public(values, "cpu"), values)
                     logits = model.actor_logits(*batch)
                 else:
                     if kind == "controlled":
