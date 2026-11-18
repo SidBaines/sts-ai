@@ -64,9 +64,11 @@ def finish(monitor, early, endpoints, confirmation, selection):
 
     table = ["| Update | Original boss entries | Resalted entries | Full-game gate | Decision |", "|---|---|---|---|---|"]
     adopted = []
+    plotted_gates = []
     for i in range(2,24,2):
         decision = read(EVERY_TWO / f"refit{i}/decision.json")
         groups = read(Path(decision["fight_panel"]) / "summary.json")["groups"]
+        plotted_gates.append((i, groups, decision["adopted"]))
         cells = []
         for group, label in (("BOSS3:unsalted","original entries"), ("BOSS3:resampled","resalted entries")):
             text, rating = fight_comparison(groups[group]["win"])
@@ -80,6 +82,9 @@ def finish(monitor, early, endpoints, confirmation, selection):
         if decision["adopted"]:
             adopted.append(str(i))
         table.append(f"| {i} | {cells[0]} | {cells[1]} | {full} | {'Adopted' if decision['adopted'] else 'Kept active head'} |")
+
+    from cadence_figure import draw
+    draw(RESEARCH / "figures/act3-boss-refits", plotted_gates, early, endpoints, confirmation)
 
     ck = Path(selection["checkpoint"])
     if selection["promotion_qualified"]:
@@ -119,6 +124,8 @@ def finish(monitor, early, endpoints, confirmation, selection):
         sparse_events = lines(RUN / "progress.jsonl")
         sparse_hours = (max(x["t"] for x in sparse_events) - min(x["t"] for x in sparse_events)) / 3600
         dense_hours = ((EVERY_TWO / "verdict.json").stat().st_mtime - read(EVERY_TWO / "started.json")["t"]) / 3600
+        content += "\n\n![Paired results for the refit opportunities and full-game comparisons](../figures/act3-boss-refits/cadence-effects.png)"
+        content += "\n\nIntervals are paired 95% intervals. Full-game points use complete pairs when outcomes are unresolved. The table reports bounds for all assigned worlds."
         content += (f"\n\nEleven opportunities used 5,632 scheduled teacher worlds, compared with 1,024 for two opportunities. "
                     f"Elapsed wall time including evaluations and any power pauses was {dense_hours:.2f} hours for every two "
                     f"and {sparse_hours:.2f} hours for the original study including its frozen control. This is one matched training seed.\n\n")
