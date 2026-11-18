@@ -11,7 +11,7 @@ from monitor import digest, lines, read
 from study import CHAMPION, RUN
 
 LINK = f"[Act 3 refit cadence](experiments/{PAGE}#every-two-updates)"
-TITLE = "Every two updates"
+NAMES = {"every8": "every eight", "every2": "every two", "control": "frozen combat", "incumbent": "incumbent"}
 
 
 def current_activity(now, next_action):
@@ -56,11 +56,11 @@ def finish(monitor, early, endpoints, confirmation, selection):
         interval = item.get("ci95_pp", item.get("complete_pair_ci95_pp"))
         records.append((name, describe(item), evidence, statistical_verdict(*interval) if interval else "Inconclusive"))
     for key,item in endpoints.items():
-        game(f"Update 24, {item['b']} vs {item['a']}", item, "Planned")
+        game(f"Update 24, {NAMES[item['b']]} vs {NAMES[item['a']]}", item, "Planned")
     for item in early.values():
         game("Update 8, every two vs every eight", item, "Planned")
     for item in (confirmation or {}).values():
-        game(f"Independent confirmation, {item['b']} vs {item['a']}", item, "Confirmed")
+        game(f"Independent confirmation, {NAMES[item['b']]} vs {NAMES[item['a']]}", item, "Confirmed")
 
     table = ["| Update | Original boss entries | Resalted entries | Full-game gate | Decision |", "|---|---|---|---|---|"]
     adopted = []
@@ -124,12 +124,18 @@ def finish(monitor, early, endpoints, confirmation, selection):
         sparse_events = lines(RUN / "progress.jsonl")
         sparse_hours = (max(x["t"] for x in sparse_events) - min(x["t"] for x in sparse_events)) / 3600
         dense_hours = ((EVERY_TWO / "verdict.json").stat().st_mtime - read(EVERY_TWO / "started.json")["t"]) / 3600
+        if r["checkpoint_sha256"]["every8"] == endpoints["every2_vs_control"]["checkpoint_sha256"]["control"]:
+            content += "\n\nEvery eight and frozen combat produced the same checkpoint. Both endpoint comparisons use its single evaluation."
+        if confirmation and confirmation["every2_vs_every8"]["checkpoint_sha256"]["every8"] == confirmation["every2_vs_incumbent"]["checkpoint_sha256"]["incumbent"]:
+            content += "\n\nThe incumbent and every-eight confirmation comparators are the same policy."
         content += "\n\n![Paired results for the refit opportunities and full-game comparisons](../figures/act3-boss-refits/cadence-effects.png)"
         content += "\n\nIntervals are paired 95% intervals. Full-game points use complete pairs when outcomes are unresolved. The table reports bounds for all assigned worlds."
         content += (f"\n\nEleven opportunities used 5,632 scheduled teacher worlds, compared with 1,024 for two opportunities. "
                     f"Elapsed wall time including evaluations and any power pauses was {dense_hours:.2f} hours for every two "
                     f"and {sparse_hours:.2f} hours for the original study including its frozen control. This is one matched training seed.\n\n")
-        doc = doc.replace("## Conclusion", content+"## Conclusion", 1)
+        marker = next((heading for heading in ("## Conclusion", "## Log") if heading in doc), None)
+        doc = doc.replace(marker, content+marker, 1) if marker else doc.rstrip()+"\n\n"+content
+
         text = doc.splitlines()
         text[2] = f"**Status:** finished {date}. **Verdict:** {headline}"
         save(page, "\n".join(text)+"\n")
