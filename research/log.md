@@ -1,5 +1,10 @@
 # Learning-rate study progress
 
+- 2026-11-18 14:43 GMT — The challenger remained suspended during iteration 3 collection for over 40 minutes. Preserved the verified iteration-2 model, optimizer, RNG and return scale; queued the same iteration-3 worlds from that checkpoint on AC so the one-hour collection budget excludes the power pause.
+- 2026-11-18 14:00 GMT — ppo-rates24-challenger is paused on battery.
+- 2026-11-18 13:59 GMT — Challenger finished iteration 2/24 on 3,072 scheduled worlds. Sampled wins 807/3,072, faults 0, iteration 4.6 min.
+- 2026-11-18 13:54 GMT — Verified identical first-iteration trajectories for both arms on all 3,072 assigned worlds.
+- 2026-11-18 13:54 GMT — Challenger finished iteration 1/24 on 3,072 scheduled worlds. Sampled wins 850/3,072, faults 0, iteration 4.6 min.
 - 2026-11-18 13:49 GMT — Challenger development evaluation at iteration 0: 292/1,024 wins, 0 faults.
 - 2026-11-18 13:49 GMT — Sid identified a joint run with gated combat refits as the next study to consider after independent confirmation, starting from the resulting champion.
 - 2026-11-18 13:48 GMT — Challenger started from the incumbent at learning rate 0.0001.

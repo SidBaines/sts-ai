@@ -4,7 +4,7 @@ Active study: [paired PPO learning rates](experiments/2026-11-18-paired-ppo-rate
 
 The [live training dashboard](http://127.0.0.1:8795/) shows both arms and their development evaluations.
 
-The control has completed all 24 iterations. The challenger is running on the same verified configuration and training-world schedule. The power-aware queue pauses on battery. Each trainer saves `latest.pt` after every training iteration and a frozen checkpoint every four iterations. The starting champion is `champion_4058cbf0e271.pt`.
+The control has completed all 24 iterations. The challenger completed two before the 14:00 GMT battery pause. Its resume from iteration 2 is queued on the same worlds. The live log records the actual restart when AC returns. The power-aware queue pauses on battery. Each trainer saves `latest.pt` after every training iteration and a frozen checkpoint every four iterations. The starting champion is `champion_4058cbf0e271.pt`.
 
 - Checkout: `~/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch`.
 - Check jobs with `python3 scripts/rl/queue_runner.py status` from this checkout. The run is `data/rl_runs/ppo_fresh_worlds_from_4058`; each arm writes `log.jsonl` there.

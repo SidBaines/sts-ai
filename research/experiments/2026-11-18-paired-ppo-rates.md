@@ -14,7 +14,9 @@ Freeze the iteration-24 checkpoint from each arm. The 1,024-world checks during 
 
 ## Results
 
-Pending the two frozen endpoints.
+The control completed all 24 iterations on 73,728 scheduled worlds, with zero simulator faults. Two training episodes reached their task horizon. Development wins out of 1,024 were 292, 293, 281, 294, 303, 287 and 296 at iterations 0, 4, 8, 12, 16, 20 and 24. These checks do not select the endpoint.
+
+The two policies produced identical action traces on their first 3,072 training worlds. The paired endpoint and confirmation comparisons remain pending.
 
 ## Next
 
@@ -22,6 +24,7 @@ After independent confirmation, consider a joint training run from the resulting
 
 ## Log
 
+- 18 November, 14:00 GMT: the Mac switched to battery during challenger iteration 3. Preserved the iteration-2 checkpoint and queued recovery of the same complete training batch on AC.
 - 18 November: selected one GPU training lane to preserve the benchmarked 12-collector, 384-slot configuration and fit the 48 GiB Mac. Independent policies in each evaluation panel can run concurrently.
 
 Code: `experiments/2026-11-18-paired-ppo-rates/`. Local data: run `ppo_fresh_worlds_from_4058`.
