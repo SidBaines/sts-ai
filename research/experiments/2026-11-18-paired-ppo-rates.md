@@ -16,6 +16,10 @@ Freeze the iteration-24 checkpoint from each arm. The 1,024-world checks during 
 
 Pending the two frozen endpoints.
 
+## Next
+
+After independent confirmation, consider a joint training run from the resulting champion. Sid raised this as a possible next test on 18 November.
+
 ## Log
 
 - 18 November: selected one GPU training lane to preserve the benchmarked 12-collector, 384-slot configuration and fit the 48 GiB Mac. Independent policies in each evaluation panel can run concurrently.

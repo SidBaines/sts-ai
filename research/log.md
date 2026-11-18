@@ -1,5 +1,32 @@
 # Learning-rate study progress
 
+- 2026-11-18 13:49 GMT — Challenger development evaluation at iteration 0: 292/1,024 wins, 0 faults.
+- 2026-11-18 13:49 GMT — Sid identified a joint run with gated combat refits as the next study to consider after independent confirmation, starting from the resulting champion.
+- 2026-11-18 13:48 GMT — Challenger started from the incumbent at learning rate 0.0001.
+- 2026-11-18 13:48 GMT — ppo-rates24-challenger is running.
+- 2026-11-18 13:48 GMT — Control training completed.
+- 2026-11-18 13:48 GMT — Control development evaluation at iteration 24: 296/1,024 wins, 0 faults.
+- 2026-11-18 13:47 GMT — Control finished iteration 24/24 on 3,072 scheduled worlds. Sampled wins 896/3,072, faults 0, iteration 3.9 min.
+- 2026-11-18 13:44 GMT — Control finished iteration 23/24 on 3,072 scheduled worlds. Sampled wins 892/3,072, faults 0, iteration 5.8 min.
+- 2026-11-18 13:38 GMT — Control finished iteration 22/24 on 3,072 scheduled worlds. Sampled wins 895/3,072, faults 0, iteration 4.5 min.
+- 2026-11-18 13:33 GMT — Control finished iteration 21/24 on 3,072 scheduled worlds. Sampled wins 908/3,072, faults 0, iteration 5.3 min.
+- 2026-11-18 13:28 GMT — Control development evaluation at iteration 20: 287/1,024 wins, 0 faults.
+- 2026-11-18 13:27 GMT — Control finished iteration 20/24 on 3,072 scheduled worlds. Sampled wins 902/3,072, faults 0, iteration 5.3 min.
+- 2026-11-18 13:22 GMT — Control finished iteration 19/24 on 3,072 scheduled worlds. Sampled wins 915/3,072, faults 0, iteration 5.4 min.
+- 2026-11-18 13:16 GMT — Control finished iteration 18/24 on 3,072 scheduled worlds. Sampled wins 889/3,072, faults 0, iteration 4.8 min.
+- 2026-11-18 13:11 GMT — Control finished iteration 17/24 on 3,072 scheduled worlds. Sampled wins 911/3,072, faults 0, iteration 4.5 min.
+- 2026-11-18 13:07 GMT — Control development evaluation at iteration 16: 303/1,024 wins, 0 faults.
+- 2026-11-18 13:06 GMT — Control finished iteration 16/24 on 3,072 scheduled worlds. Sampled wins 898/3,072, faults 0, iteration 5.4 min.
+- 2026-11-18 13:01 GMT — Control finished iteration 15/24 on 3,072 scheduled worlds. Sampled wins 896/3,072, faults 0, iteration 4.9 min.
+- 2026-11-18 12:56 GMT — Control finished iteration 14/24 on 3,072 scheduled worlds. Sampled wins 899/3,072, faults 0, iteration 3.8 min.
+- 2026-11-18 12:52 GMT — Control finished iteration 13/24 on 3,072 scheduled worlds. Sampled wins 911/3,072, faults 0, iteration 4.5 min.
+- 2026-11-18 12:51 GMT — ppo-rates24-control is running.
+- 2026-11-18 12:51 GMT — ppo-rates24-control is paused on battery.
+- 2026-11-18 12:47 GMT — Control development evaluation at iteration 12: 294/1,024 wins, 0 faults.
+- 2026-11-18 12:47 GMT — Control finished iteration 12/24 on 3,072 scheduled worlds. Sampled wins 891/3,072, faults 0, iteration 4.7 min.
+- 2026-11-18 12:42 GMT — Control finished iteration 11/24 on 3,072 scheduled worlds. Sampled wins 851/3,072, faults 0, iteration 4.8 min.
+- 2026-11-18 12:37 GMT — Control finished iteration 10/24 on 3,072 scheduled worlds. Sampled wins 852/3,072, faults 0, iteration 4.4 min.
+- 2026-11-18 12:33 GMT — Control finished iteration 9/24 on 3,072 scheduled worlds. Sampled wins 847/3,072, faults 0, iteration 5.0 min.
 - 2026-11-18 12:28 GMT — Control development evaluation at iteration 8: 281/1,024 wins, 0 faults.
 - 2026-11-18 12:27 GMT — Control finished iteration 8/24 on 3,072 scheduled worlds. Sampled wins 840/3,072, faults 0, iteration 4.4 min.
 - 2026-11-18 12:22 GMT — Control finished iteration 7/24 on 3,072 scheduled worlds. Sampled wins 817/3,072, faults 0, iteration 4.4 min.
