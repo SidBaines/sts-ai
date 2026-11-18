@@ -9,7 +9,7 @@ workstream that predates that convention names its entry document below.
 
 | Workstream | Branch and research front page | Environment used in the latest study |
 |---|---|---|
-| Neural policies for combat and out-of-combat decisions | [ws/nonllm](https://github.com/SidBaines/sts-ai/blob/ws/nonllm/research/README.md) | Environment 0.1.5.1 with a research overlay for battle copying and reseeding |
+| Neural policies for combat and out-of-combat decisions | [ws/nonllm](https://github.com/SidBaines/sts-ai/blob/ws/nonllm/research/README.md) | [Environment 0.1.5.2](docs/release_v0.1.5.2.md) with the research overlay for battle copying and reseeding |
 | Reasoning language models for Ironclad | [ws/llm](https://github.com/SidBaines/sts-ai/blob/ws/llm/research/README.md) | Public observations collected with the released environment and scored by a frozen non-LLM policy |
 
 ## Working conventions
