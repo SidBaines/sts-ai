@@ -372,6 +372,13 @@ class LightspeedHybridEnv:
             self._combat_history_turn = turn
             self._combat_recent_actions.clear()
 
+    def combat_history_context(self) -> tuple[int, list[str]]:
+        """The public ascension and owned recent-action list used in v5 text."""
+        if self.bc is None:
+            return self.ascension, []
+        self._sync_combat_history()
+        return self.ascension, list(self._combat_recent_actions)
+
     def public_combat_cards(self) -> dict[str, Any]:
         """Return the structured public card view for the pending combat choice.
 
