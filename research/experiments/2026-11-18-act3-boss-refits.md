@@ -17,6 +17,16 @@ Sid approved the champion, 24 updates at 0.0001, a frozen-combat control, and re
 - Evaluate both iteration-24 endpoints on 16,384 fresh matched worlds. Use greedy evaluation with seven processes and eight games per process for every full-game comparison. Choose the joint arm if its worst-case paired gain is positive, otherwise the control. Freeze the selection before running it and the starting champion on another 16,384 matched worlds. Promote only on a positive lower bound of the paired 95% interval on confirmation, robust to unresolved outcomes.
 - Development evaluations on the usual 1,024 worlds every four updates are descriptive. Report faults, cuts and missing outcomes separately. Operational failures require recovery and verification before moving on.
 
+### Every two updates
+
+Sid requested a second schedule on 18 November after the first update-8 result and before the first study's final evaluation. It begins only after that study finishes confirmation. Both schedules start from the identical November champion and use the same 24 PPO updates and assigned worlds.
+
+- At updates 2, 4, …, 22, repeat the same fit and the same two gates. Each fit gets 512 on-policy teacher worlds. The total is 5,632 planned teacher worlds versus 1,024 for the first schedule. Both schedules use identical label, boss-entry and full-game gate rosters at their common milestones of 8 and 16. Other milestones have disjoint rosters.
+- Resume the strategy optimizer, RNG and return normalization across each two-update segment. Verify the trajectories against frozen combat while the two arms still share a policy. A denied gate keeps the previous combat policy. Report every gate and each run's elapsed time.
+- On independent paired worlds compare the post-gate update-8 policies (4,096 games). At update 24 compare every two with every eight and with frozen combat (16,384 fresh worlds). Use the same evaluation batching and fault accounting as the first study.
+- If the every-two endpoint beats both comparators under the least favourable assignment of unresolved wins, freeze it for independent confirmation on 16,384 further worlds against every eight and the incumbent resulting from the first study. Promote only if both paired 95% lower bounds exceed zero under that assignment. The update-8 result cannot select an endpoint.
+- Follow the run on the [live progress page](http://127.0.0.1:8795/progress). The local heartbeat verifies processes, progress and power every 15 minutes. The follow-up run is `joint_a3_every2_from_0f52`.
+
 ## Results
 
 Training is underway. The [progress log](../log.md) follows training, gate decisions and final evaluation.

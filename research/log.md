@@ -1,5 +1,69 @@
 # Act 3 boss refit progress
 
+- 18 Nov 23:42 GMT — fit-16 reached 2,430 optimizer updates.
+- 18 Nov 23:41 GMT — fit-16 reached 1,082 optimizer updates.
+- 18 Nov 23:41 GMT — fit-16 reached 6 optimizer updates.
+- 18 Nov 23:40 GMT — control finished update 18/24 on 3,072 matched worlds. Sampled wins 1,003, faults 0, elapsed 5.3 min.
+- 18 Nov 23:40 GMT — joint-a3-fit-16 is running.
+- 18 Nov 23:40 GMT — Queued fit-16.
+- 18 Nov 23:40 GMT — Update 16 collected 9,938 boss labels from 512/512 completed games.
+- 18 Nov 23:40 GMT — Update 16 froze 192 independent Act 3 boss starts.
+- 18 Nov 23:37 GMT — labels-16 returned 392 of 512 worlds.
+- 18 Nov 23:35 GMT — joint-a3-grid-16 is running.
+- 18 Nov 23:35 GMT — control finished update 17/24 on 3,072 matched worlds. Sampled wins 949, faults 0, elapsed 6.1 min.
+- 18 Nov 23:34 GMT — Queued grid-16.
+- 18 Nov 23:34 GMT — labels-16 returned 264 of 512 worlds.
+- 18 Nov 23:33 GMT — bank-16 returned 389 of 512 worlds.
+- 18 Nov 23:31 GMT — bank-16 returned 261 of 512 worlds.
+- 18 Nov 23:31 GMT — labels-16 returned 132 of 512 worlds.
+- 18 Nov 23:29 GMT — bank-16 returned 139 of 512 worlds.
+- 18 Nov 23:29 GMT — control development evaluation at update 16: 315/1,024 wins, 0 faults.
+- 18 Nov 23:28 GMT — joint-a3-bank-16 is running.
+- 18 Nov 23:28 GMT — joint-a3-labels-16 is running.
+- 18 Nov 23:28 GMT — Queued bank-16.
+- 18 Nov 23:28 GMT — Queued labels-16.
+- 18 Nov 23:28 GMT — control finished update 16/24 on 3,072 matched worlds. Sampled wins 983, faults 0, elapsed 4.6 min.
+- 18 Nov 23:24 GMT — joint-a3-control is running.
+- 18 Nov 23:24 GMT — joint-a3-control is paused on battery.
+- 18 Nov 23:23 GMT — control finished update 15/24 on 3,072 matched worlds. Sampled wins 1,007, faults 0, elapsed 4.2 min.
+- 18 Nov 23:19 GMT — control finished update 14/24 on 3,072 matched worlds. Sampled wins 980, faults 0, elapsed 4.1 min.
+- 18 Nov 23:15 GMT — control finished update 13/24 on 3,072 matched worlds. Sampled wins 941, faults 0, elapsed 4.1 min.
+- 18 Nov 23:11 GMT — control development evaluation at update 12: 312/1,024 wins, 0 faults.
+- 18 Nov 23:10 GMT — control finished update 12/24 on 3,072 matched worlds. Sampled wins 940, faults 0, elapsed 4.0 min.
+- 18 Nov 23:06 GMT — control finished update 11/24 on 3,072 matched worlds. Sampled wins 965, faults 0, elapsed 4.2 min.
+- 18 Nov 23:04 GMT — Update 8: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 18 Nov 23:04 GMT — Update 8 BOSS3:unsalted fight gate: active 56.8%, specialist 52.1% on 192 identical entries.
+- 18 Nov 23:04 GMT — Update 8 BOSS3:resampled fight gate: active 48.4%, specialist 55.2% on 192 identical entries.
+- 18 Nov 23:03 GMT — joint-a3-fights-8 is running.
+- 18 Nov 23:03 GMT — Queued fights-8.
+- 18 Nov 23:03 GMT — Update 8 specialist fit on 6,534 training choices. Selected step 100 on 1,461 validation choices.
+- 18 Nov 23:02 GMT — fit-8 reached 2,500 optimizer updates.
+- 18 Nov 23:02 GMT — fit-8 reached 1,064 optimizer updates.
+- 18 Nov 23:02 GMT — control finished update 10/24 on 3,072 matched worlds. Sampled wins 955, faults 0, elapsed 5.2 min.
+- 18 Nov 23:01 GMT — joint-a3-fit-8 is running.
+- 18 Nov 23:01 GMT — Queued fit-8.
+- 18 Nov 23:01 GMT — Update 8 collected 9,892 boss labels from 512/512 completed games.
+- 18 Nov 23:01 GMT — Update 8 froze 192 independent Act 3 boss starts.
+- 18 Nov 22:58 GMT — labels-8 returned 390 of 512 worlds.
+- 18 Nov 22:56 GMT — Queued grid-8.
+- 18 Nov 22:56 GMT — control finished update 9/24 on 3,072 matched worlds. Sampled wins 958, faults 0, elapsed 5.7 min.
+- 18 Nov 22:56 GMT — bank-8 returned 512 of 512 worlds.
+- 18 Nov 22:56 GMT — labels-8 returned 268 of 512 worlds.
+- 18 Nov 22:55 GMT — bank-8 returned 393 of 512 worlds.
+- 18 Nov 22:53 GMT — bank-8 returned 272 of 512 worlds.
+- 18 Nov 22:53 GMT — labels-8 returned 138 of 512 worlds.
+- 18 Nov 22:51 GMT — bank-8 returned 147 of 512 worlds.
+- 18 Nov 22:51 GMT — control development evaluation at update 8: 327/1,024 wins, 0 faults.
+- 18 Nov 22:50 GMT — joint-a3-bank-8 is running.
+- 18 Nov 22:50 GMT — joint-a3-labels-8 is running.
+- 18 Nov 22:50 GMT — Queued bank-8.
+- 18 Nov 22:50 GMT — Queued labels-8.
+- 18 Nov 22:50 GMT — control finished update 8/24 on 3,072 matched worlds. Sampled wins 971, faults 0, elapsed 4.2 min.
+- 18 Nov 22:45 GMT — control finished update 7/24 on 3,072 matched worlds. Sampled wins 919, faults 0, elapsed 4.2 min.
+- 18 Nov 22:41 GMT — control finished update 6/24 on 3,072 matched worlds. Sampled wins 1,018, faults 0, elapsed 4.3 min.
+- 18 Nov 22:37 GMT — control finished update 5/24 on 3,072 matched worlds. Sampled wins 934, faults 0, elapsed 4.2 min.
+- 18 Nov 22:33 GMT — control development evaluation at update 4: 302/1,024 wins, 0 faults.
+- 18 Nov 22:32 GMT — control finished update 4/24 on 3,072 matched worlds. Sampled wins 894, faults 0, elapsed 4.7 min.
 - 18 Nov 22:28 GMT — joint-a3-control is running.
 - 18 Nov 22:27 GMT — control finished update 3/24 on 3,072 matched worlds. Sampled wins 950, faults 0, elapsed 4.4 min.
 - 18 Nov 22:23 GMT — control finished update 2/24 on 3,072 matched worlds. Sampled wins 951, faults 0, elapsed 4.3 min.

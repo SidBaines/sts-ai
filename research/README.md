@@ -27,7 +27,7 @@ On the confirmation panel about 43% of the champion's losses came at the Act 3 b
 
 ## Next
 
-Compare the iteration-24 endpoints on 16,384 fresh worlds. Confirm the frozen winner against the starting champion on another 16,384.
+Compare the iteration-24 endpoints on 16,384 fresh worlds. Confirm the frozen winner against the starting champion on another 16,384. Then run the [every-two schedule](experiments/2026-11-18-act3-boss-refits.md#every-two-updates) from the same original champion.
 
 ## Open questions
 

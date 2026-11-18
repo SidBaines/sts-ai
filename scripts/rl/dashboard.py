@@ -60,6 +60,7 @@ PORT = 8791
 
 # Descriptions do not affect the default selection.
 LABELS = {
+    "joint_a3_every2_from_0f52/train": "Joint · Act 3 boss refit every two updates",
     "joint_a3_from_0f52/control": "Frozen combat · shares early updates with joint arm",
     "joint_a3_from_0f52/joint_after_8_control": "Joint · Act 3 boss refit at 8",
     "joint_a3_from_0f52/joint_after_16_control": "Joint · first Act 3 boss refit at 16",
@@ -84,7 +85,7 @@ LABELS = {
     "ooc_rep_s2": "E8 replicate, seed 2",
 }
 # Key runs, shown by default (in this order). Everything else is archived unless active.
-KEY_RUNS = ("joint_a3_from_0f52/control",
+KEY_RUNS = ("joint_a3_every2_from_0f52/train", "joint_a3_from_0f52/control",
             "joint_a3_from_0f52/joint_after_8_control",
             "joint_a3_from_0f52/joint_after_16_control",
             "joint_a3_from_0f52/joint_after_16_joint",
@@ -595,11 +596,17 @@ class Handler(BaseHTTPRequestHandler):
             log = (ROOT / "research/log.md").read_text()
             entries = "".join(f"<li>{html.escape(line[2:])}</li>" for line in log.splitlines() if line.startswith("- "))
             title = html.escape(log.splitlines()[0].lstrip("# ")) if log else "Study progress"
+            heartbeat = ""
+            latest = RUNS / "study_heartbeat.json"
+            if latest.is_file():
+                report = json.loads(latest.read_bytes())
+                when, message = html.escape(report["stamp"]), html.escape(report["message"])
+                heartbeat = f"<p><strong>15-minute heartbeat · {when}</strong><br>{message}</p>"
             body = (f'<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="30">'
                     f'<meta name="viewport" content="width=device-width, initial-scale=1"><title>{title}</title>'
                     '<style>body{font:16px/1.5 system-ui;max-width:62rem;margin:2rem auto;padding:0 1rem}'
                     'li{margin:.55rem 0}h1{font-size:1.5rem}html{color-scheme:light dark}</style></head>'
-                    f'<body><a href="/">Training dashboard</a><h1>{title}</h1><ul>{entries}</ul></body></html>').encode()
+                    f'<body><a href="/">Training dashboard</a><h1>{title}</h1>{heartbeat}<ul>{entries}</ul></body></html>').encode()
             kind = "text/html; charset=utf-8"
         else:
             self.send_error(404)

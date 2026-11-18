@@ -67,21 +67,27 @@ def package(active, specialist, destination):
 
 
 class Monitor:
-    def __init__(self):
-        self.events = {r["key"]: r for r in lines(RUN / "progress.jsonl")}
+    def __init__(self, run=RUN, prefix=PREFIX, *, label_worlds=LABEL_WORLDS, bank_worlds=BANK_WORLDS,
+                 gate_worlds=GATE_WORLDS, probe=RUN / "probe"):
+        self.run, self.prefix, self.probe = run, prefix, probe
+        self.label_worlds, self.bank_worlds, self.gate_worlds = label_worlds, bank_worlds, gate_worlds
+        self.events = {r["key"]: r for r in lines(run / "progress.jsonl")}
         self.result_cache = {}
 
     def note(self, key, message, t=None, **details):
         if key in self.events:
             return
         event = dict(key=key, t=t if t is not None else time.time(), message=message, **details)
-        with (RUN / "progress.jsonl").open("a") as f:
+        with (self.run / "progress.jsonl").open("a") as f:
             f.write(json.dumps(event) + "\n")
         self.events[key] = event
+        self.render_progress()
+        print(message, flush=True)
+
+    def render_progress(self):
         entries = sorted(self.events.values(), key=lambda e: e["t"], reverse=True)
         write(ROOT / "research/log.md", "# Act 3 boss refit progress\n\n" +
               "\n".join(f"- {stamp(e['t'])} — {e['message']}" for e in entries if not e["key"].startswith(PREFIX + "smoke")) + "\n")
-        print(message, flush=True)
 
     def training_progress(self, folder):
         from sts_rl.common import train_tasks
@@ -112,11 +118,11 @@ class Monitor:
             suffix = "" if attempt == 1 else f"-retry{attempt-1}"
             key = name + suffix
             folder = directory.with_name(directory.name + suffix)
-            job = self.jobs.get(PREFIX + key)
+            job = self.jobs.get(self.prefix + key)
             if not job:
                 if self.on_battery:
                     return None
-                submit(key, lane, tool, [*args, "--out", folder])
+                submit(key, lane, tool, [*args, "--out", folder], prefix=self.prefix)
                 self.note(key + "-submit", f"Queued {key}.")
                 return None
             state = job["status"]
@@ -161,11 +167,11 @@ class Monitor:
     def evaluate_one(self, name, label, checkpoint, start, count, lane):
         args = ["--checkpoint", checkpoint, "--world-start", start, "--n", count,
                 "--processes", 7, "--games-per-process", 8, "--progress-every", 256]
-        return self.job(name + "-" + label, RUN / name / label, "scripts/rl/fast_eval.py",
+        return self.job(name + "-" + label, self.run / name / label, "scripts/rl/fast_eval.py",
                         args, f"joint-a3-eval-{lane}")
 
     def paired(self, name, labels, checkpoints, start, count):
-        result = RUN / (name + ".json")
+        result = self.run / (name + ".json")
         if result.exists():
             return read(result)
         folders = []
@@ -185,7 +191,7 @@ class Monitor:
         return stats
 
     def gate(self, i, active):
-        folder = RUN / f"refit{i}"
+        folder = self.run / f"refit{i}"
         folder.mkdir(exist_ok=True)
         decision = folder / "decision.json"
         if decision.exists():
@@ -195,16 +201,16 @@ class Monitor:
             return saved
         common = ["--checkpoint", active, "--n", 512, "--workers", 6]
         labels = self.job(f"labels-{i}", folder / "labels", "scripts/rl/fresh_collect.py",
-                          [*common, "--mode", "collect", "--world-start", LABEL_WORLDS[i],
+                          [*common, "--mode", "collect", "--world-start", self.label_worlds[i],
                            "--teacher-probabilities", '{"BOSS3":1}', "--record-search", "--vote-rule",
                            "pooled_mean", "--samples", 24, "--simulations", 1000, "--self-consistency-every", 0],
                           "joint-a3-search", summary="completion.json")
         bank = self.job(f"bank-{i}", folder / "bank", "scripts/rl/fresh_collect.py",
-                        [*common, "--mode", "eval", "--bank", "--world-start", BANK_WORLDS[i]],
+                        [*common, "--mode", "eval", "--bank", "--world-start", self.bank_worlds[i]],
                         "joint-a3-bank", summary="completion.json")
         if bank is None:
             return None
-        panel_args = ["--bank", bank, "--bank-world-start", BANK_WORLDS[i], "--bank-n", 512,
+        panel_args = ["--bank", bank, "--bank-world-start", self.bank_worlds[i], "--bank-n", 512,
                       "--starts-per-group", '{"BOSS3":192}', "--resamples", 1]
         grid = self.job(f"grid-{i}", folder / "grid.json", "scripts/rl/fresh_panel.py",
                         [*panel_args, "--freeze-grid-only"], "joint-a3-bank", summary=None)
@@ -217,7 +223,7 @@ class Monitor:
             summary = read(labels / "summary.json")
             self.note(f"labels-{i}-complete", f"Update {i} collected {summary['combat_labels']:,} boss labels "
                       f"from {summary['completed']}/512 completed games.")
-        probe = RUN / "probe"
+        probe = self.probe
         if read(probe / "completion.json")["status"] != "completed":
             raise ValueError("Unlabelled movement probes are incomplete")
         deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
@@ -256,7 +262,7 @@ class Monitor:
         if fight_gain > 0:
             if not candidate.exists():
                 package(active, fitted, candidate)
-            full = self.paired(f"gate{i}", ("active", "specialist"), (active, candidate), GATE_WORLDS[i], 4096)
+            full = self.paired(f"gate{i}", ("active", "specialist"), (active, candidate), self.gate_worlds[i], 4096)
             if full is None:
                 return None
             adopt = full["full_cohort_gain_bounds_pp"][0] > 0
@@ -286,7 +292,7 @@ class Monitor:
     def check_trainer(self, name, folder, template, target):
         for attempt in range(3):
             key = name if attempt == 0 else f"{name}-resume{attempt}"
-            job = self.jobs.get(PREFIX + key)
+            job = self.jobs.get(self.prefix + key)
             if job is None:
                 if self.on_battery:
                     return
@@ -295,7 +301,7 @@ class Monitor:
                 if (not 0 < saved["iteration"] < target or not saved["optimizer_state"] or
                         not saved["rng_state"] or "trainer_state" not in saved):
                     raise RuntimeError(f"Cannot safely resume {name} from its latest checkpoint")
-                train(key, folder, template, target, True)
+                train(key, folder, template, target, True, prefix=self.prefix)
                 self.note(key + "-submit", f"Resuming {name} from saved update {saved['iteration']} after interruption.")
                 return
             state = job["status"]

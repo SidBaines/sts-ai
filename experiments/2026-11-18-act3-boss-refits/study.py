@@ -15,14 +15,14 @@ PREFIX = "joint-a3-"
 NATIVE = (ROOT / "external/sts_lightspeed_rl/build013_clean").resolve(strict=True)
 
 
-def submit(name, lane, tool, args):
-    cmd = [sys.executable, "scripts/rl/queue_runner.py", "add", PREFIX + name,
+def submit(name, lane, tool, args, *, prefix=PREFIX):
+    cmd = [sys.executable, "scripts/rl/queue_runner.py", "add", prefix + name,
            "--lane", lane, "--", "env", "PYTHONDONTWRITEBYTECODE=1",
            "STS_LIGHTSPEED_BUILD=" + str(NATIVE), sys.executable, "-u", tool, *args]
     subprocess.run(list(map(str, cmd)), cwd=ROOT, check=True)
 
 
-def train(name, folder, parent, end, resume):
+def train(name, folder, parent, end, resume, *, prefix=PREFIX):
     cfg = dict(CONFIG, checkpoint=str(parent), out=str(folder), iterations=end)
     args = []
     for key, value in cfg.items():
@@ -33,7 +33,7 @@ def train(name, folder, parent, end, resume):
             args.extend(("--" + flag, str(value)))
     if resume:
         args.append("--resume")
-    submit(name, "joint-a3-gpu", "scripts/rl/train_ooc.py", args)
+    submit(name, "joint-a3-gpu", "scripts/rl/train_ooc.py", args, prefix=prefix)
 
 
 if __name__ == "__main__":

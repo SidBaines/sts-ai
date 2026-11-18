@@ -6,3 +6,5 @@ The [Act 3 boss study](experiments/2026-11-18-act3-boss-refits.md) is running lo
 - Run directory: `data/rl_runs/joint_a3_from_0f52`. Check `monitor-status.json` for the current stage and `progress.jsonl` for the timeline.
 - Create `STOP` in the run directory to stop further submissions. Use the queue runner to cancel an already submitted job.
 - The next decisions are the iteration-8 and iteration-16 boss refits, followed by separate endpoint selection and confirmation panels.
+
+The every-two arm starts after the current confirmation finishes. Its process-checked heartbeat is recorded every 15 minutes in `data/rl_runs/joint_a3_every2_from_0f52/heartbeats.jsonl` and displayed on the live progress page.
