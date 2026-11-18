@@ -147,6 +147,15 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(run["n_train"], 4)
         self.assertEqual(len(run["train"]), 2)
 
+    def test_closed_segment_keeps_planned_total_and_active_study(self):
+        log = self.log(self.root, "staged", [{"event": "start", "config": {"iterations": 2}},
+                       {"event": "train", "iteration": 2, "iteration_seconds": 30}, {"event": "done"}])
+        log.with_name("training-plan.json").write_text(json.dumps({"iterations": 24}))
+        run = dashboard.state()["runs"]["staged"]
+        self.assertEqual((run["iterations_done"], run["iterations"], run["status"]), (2, 24, "between stages"))
+        self.assertFalse(run["done"])
+        self.assertIsNone(run["remaining_seconds"])
+
     def test_progress_handles_missing_times_and_completed_or_extended_runs(self):
         run = {"config": {"iterations": 4}, "train": [], "evals": [], "done": False}
         progress = dashboard._progress(run, 1000)

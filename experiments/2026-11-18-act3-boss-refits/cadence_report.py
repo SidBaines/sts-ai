@@ -25,6 +25,13 @@ def current_activity(now, next_action):
 
 
 def starting():
+    plan = EVERY_TWO / "train/training-plan.json"
+    plan.parent.mkdir(exist_ok=True)
+    save(plan, json.dumps(dict(iterations=24))+"\n")
+    page = RESEARCH / "experiments" / PAGE
+    text = page.read_text().splitlines()
+    text[2] = "**Status:** running. The eight-update comparison has finished and the every-two arm is active."
+    save(page, "\n".join(text)+"\n")
     current_activity(f"{LINK} is running from the original November champion. Strategy trains for 24 updates at "
                      "0.0001. Each even update through 22 can admit a boss specialist after the two gates.",
                      "Compare the two schedules at updates 8 and 24, and compare both endpoints with frozen combat. "
@@ -116,7 +123,9 @@ def finish(monitor, early, endpoints, confirmation, selection):
                     f"Elapsed wall time including evaluations and any power pauses was {dense_hours:.2f} hours for every two "
                     f"and {sparse_hours:.2f} hours for the original study including its frozen control. This is one matched training seed.\n\n")
         doc = doc.replace("## Conclusion", content+"## Conclusion", 1)
-        save(page, doc)
+        text = doc.splitlines()
+        text[2] = f"**Status:** finished {date}. **Verdict:** {headline}"
+        save(page, "\n".join(text)+"\n")
     ledger = RESEARCH / "results.md"
     doc = ledger.read_text()
     if LINK not in doc:

@@ -293,6 +293,9 @@ def _progress(run: dict, now: float) -> dict:
              and math.isfinite(r["iteration_seconds"]) and r["iteration_seconds"] > 0]
     mean = sum(times) / len(times) if times else None
     remaining = max(0, total - done) * mean if total is not None and mean is not None else None
+    if run.get("staged"):
+        # Refit gates consume variable time between PPO segments.
+        remaining = None
     return {"iterations_done": done, "mean_iteration_seconds": mean, "remaining_seconds": remaining,
             "eta": now + remaining if remaining and not run["done"] else None,
             "last_train": train[-1] if train else None, "last_eval": run["evals"][-1] if run["evals"] else None}
@@ -321,6 +324,11 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
             except FileNotFoundError:
                 continue
             sig.append(f"{log}:{key[0]}:{key[1]}")
+            planned = _read_json(log.parent / "training-plan.json", {}).get("iterations")
+            if type(planned) is int and planned > run["config"].get("iterations", planned):
+                sig.append(f"{name}:plan:{planned}")
+                run = {**run, "staged": True, "between_stages": run["done"], "done": False,
+                       "config": {**run["config"], "iterations": planned}}
             ancestry = (mapping or {}).get(str(log.parent.resolve()), {})
             lineage_fields = {"x0": ancestry.get("x0"), "base_iter": ancestry.get("base_iter", 0), "lineage_parent": ancestry.get("parent")}
             sig.append(json.dumps(lineage_fields, sort_keys=True))
@@ -363,7 +371,7 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
                  "x0": run["x0"], "base_iter": run["base_iter"], "lineage_parent": run["lineage_parent"],
                  "label": LABELS.get(run["name"]) or (run["config"].get("notes") or "")[:90],
                  "key": run["name"] in KEY_RUNS, "active": name in active_runs, "done": run["done"],
-                 "status": statuses.get(name, "done" if run["done"] else "stopped"), "config": run["config"],
+                 "status": statuses.get(name, "between stages" if run.get("between_stages") else "done" if run["done"] else "stopped"), "config": run["config"],
                  "iterations": run["config"].get("iterations"), "n_train": len(run["train"]),
                  "train": run["train"], "evals": run["evals"], **_progress(run, now)}
         if max_points is not None:
