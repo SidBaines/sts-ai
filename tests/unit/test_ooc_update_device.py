@@ -178,6 +178,19 @@ class OOCUpdateDeviceTests(unittest.TestCase):
         self.assert_exact(resumed["optimizer_state"], actual["optimizer_state"])
 
     @unittest.skipUnless(torch.backends.mps.is_available(), "MPS is unavailable")
+    def test_diagnostic_device_leaves_optimizer_and_actor_unchanged(self):
+        start = self.model()
+        results = []
+        for enabled in (False, True):
+            cfg = replace(self.cfg, out=str(self.root / f"diagnostics_{enabled}"),
+                          update_device="mps", diagnostics_on_update_device=enabled,
+                          health_every=1, exploration_stats=True)
+            saved, _ = self.run_trainer(cfg, deepcopy(start))
+            results.append(saved)
+        for key in ("model_state", "optimizer_state"):
+            self.assert_exact(results[0][key], results[1][key])
+
+    @unittest.skipUnless(torch.backends.mps.is_available(), "MPS is unavailable")
     def test_mps_updates_restore_cpu_checkpoints_and_resume_on_either_device(self):
         for micro_batch, collectors in ((1, 1), (4, 2)):
             with self.subTest(micro_batch=micro_batch, collectors=collectors):

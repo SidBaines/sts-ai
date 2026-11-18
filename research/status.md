@@ -1,6 +1,6 @@
 # Status
 
-Nothing running or queued as of 18 November 2026. The champion won 4,822 of
+Nothing training or queued. The [Mac performance study](experiments/2026-11-18-mac-performance.md) finished on 18 November 2026. The champion won 4,822 of
 16,384 evaluation worlds (29.4%). [Results and next studies](README.md).
 
 - The active `ws/nonllm` checkout on Sid's Mac is

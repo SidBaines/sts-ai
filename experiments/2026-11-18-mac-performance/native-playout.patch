@@ -1,0 +1,32 @@
+--- a/src/sim/search/BattleScumSearcher2.cpp
++++ b/src/sim/search/BattleScumSearcher2.cpp
+@@ -45,8 +45,7 @@
+ void search::BattleScumSearcher2::step() {
+     searchStack = {&root};
+     actionStack.clear();
+-    BattleContext curState;
+-    curState = *rootState;
++    BattleContext curState(*rootState);
+
+     while (true) {
+         auto &curNode = *searchStack.back();
+@@ -180,7 +179,8 @@
+ }
+
+ void search::BattleScumSearcher2::playoutRandom(BattleContext &state, std::vector<Action> &actionStack) {
+-    Node tempNode; // temp
++    auto &tempNode = playoutScratch;
++    tempNode.edges.clear();
+     // Hard cap on playout length. A real Act-1 battle resolves under a few hundred
+     // random actions; this bound is generous for legitimate battles but abandons a
+     // playout that cannot reach a terminal outcome (e.g. a state corrupted by
+--- a/include/sim/search/BattleScumSearcher2.h
++++ b/include/sim/search/BattleScumSearcher2.h
+@@ -43,6 +43,7 @@
+
+         std::unique_ptr<const BattleContext> rootState;
+         Node root;
++        Node playoutScratch;  // Reuse edge storage across simulations of this search.
+
+         EvalFnc evalFnc;
+         const SearchOptions options;

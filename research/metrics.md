@@ -250,3 +250,7 @@ release changed game behaviour.
 - **Boss card reward:** the card reward after a boss fight, where every
   option is a rare card. Measured as the screens whose offered cards are all
   rare, which includes a few rare rewards elsewhere.
+
+## Mac performance study
+
+Wall time is elapsed time on the M5 Pro. Whole-job time includes startup, both evaluations, data writes and checkpoints. Trainer iteration time ends before checkpointing and evaluation. PPO update time includes the gradient-cosine diagnostic. RSS is the process's peak resident memory; MLX peak memory comes from the Metal allocator. ABBA and BAAB describe the time order of baseline (A) and candidate (B) runs.

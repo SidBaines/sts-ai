@@ -52,6 +52,13 @@ export PYTHONPATH=src
 .venv/bin/python scripts/rl/queue_runner.py status
 ```
 
+On Apple silicon, `--update-device mps --diagnostics-on-update-device` also
+runs the exploration statistics and gradient-cosine diagnostic on Metal. Their
+reported values can differ slightly from CPU arithmetic. Collection, deployment
+and saved checkpoints use the CPU. Keep the PPO update device fixed when
+comparing learning runs. The [Mac timing study](../../research/experiments/2026-11-18-mac-performance.md)
+compares the option with CPU diagnostics at the same update device.
+
 `cancel NAME` cancels a pending job or kills its running process group. Queue
 logs live under `data/rl_runs/<queue name>/`; trainer artifacts follow
 `--out`. Use the same queue wrapper and explicit build selection for all heavy

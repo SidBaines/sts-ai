@@ -47,6 +47,18 @@ class Model:
 
 
 class StudyTests(unittest.TestCase):
+    def test_streamed_json_matches_existing_bytes_and_preserves_destination_on_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "summary.json"
+            record = {"status": "café", "worlds": [{"seed": i, "win": False} for i in range(5000)]}
+            expected = (json.dumps(record, sort_keys=True, allow_nan=False, indent=2) + "\n").encode()
+            atomic_json(path, record)
+            self.assertEqual(path.read_bytes(), expected)
+            with self.assertRaises(ValueError):
+                atomic_json(path, {**record, "z_invalid": float("nan")})
+            self.assertEqual(path.read_bytes(), expected)
+            self.assertEqual(list(path.parent.iterdir()), [path])
+
     def test_fit_manifest_plain_gzip_and_ambiguity(self):
         from sts_rl.fresh_panel_comparison import _Inputs
         from sts_rl.representation_controls import read_json as strict_read

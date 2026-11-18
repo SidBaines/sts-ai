@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import datetime, timezone
+from itertools import islice
 import json
 import os
 from pathlib import Path
@@ -220,7 +221,12 @@ def atomic_json(path, value, *, compressed=False):
                 with gzip.GzipFile(fileobj=binary, mode="wb", compresslevel=1, mtime=0) as output:
                     output.write((json.dumps(value, sort_keys=True, allow_nan=False) + "\n").encode())
             else:
-                binary.write((json.dumps(value, sort_keys=True, allow_nan=False, indent=2) + "\n").encode())
+                # Keep the existing on-disk bytes without materializing a whole
+                # pretty-printed cohort (and its encoded copy) at once.
+                chunks = json.JSONEncoder(sort_keys=True, allow_nan=False, indent=2).iterencode(value)
+                while batch := list(islice(chunks, 8192)):
+                    binary.write("".join(batch).encode())
+                binary.write(b"\n")
             binary.flush()
             os.fsync(binary.fileno())
         os.replace(temporary, path)

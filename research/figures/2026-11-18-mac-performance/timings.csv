@@ -1,0 +1,531 @@
+suite,arm,trial,measure,value
+env_abba,a,0,process wall seconds,2.8961087499992573
+env_abba,a,0,microseconds per decision,281.9
+env_abba,b,1,process wall seconds,2.0205879999994067
+env_abba,b,1,microseconds per decision,189.4
+env_abba,b,2,process wall seconds,1.9888052500027698
+env_abba,b,2,microseconds per decision,185.2
+env_abba,a,3,process wall seconds,2.9084753330025706
+env_abba,a,3,microseconds per decision,284.3
+eval_abba,a,0,process wall seconds,10.933551624999382
+eval_abba,a,0,workload seconds,9.98349537499962
+eval_abba,b,1,process wall seconds,8.634006541997223
+eval_abba,b,1,workload seconds,7.932780207996984
+eval_abba,b,2,process wall seconds,8.700541416998021
+eval_abba,b,2,workload seconds,7.982145207999565
+eval_abba,a,3,process wall seconds,10.97366837500158
+eval_abba,a,3,workload seconds,10.251238374999957
+collect_baab,b,0,process wall seconds,10.42618824999954
+collect_baab,b,0,workload seconds,9.595379582999158
+collect_baab,a,1,process wall seconds,12.433512208001048
+collect_baab,a,1,workload seconds,11.570596416000626
+collect_baab,a,2,process wall seconds,12.395037165999383
+collect_baab,a,2,workload seconds,11.56086966699877
+collect_baab,b,3,process wall seconds,10.316390791998856
+collect_baab,b,3,workload seconds,9.52488162499867
+train_cpu,a,0,process wall seconds,37.86774950000108
+train_cpu,a,0,iteration_seconds,26.808446884155273
+train_cpu,a,0,collect_seconds,19.259298086166382
+train_cpu,a,0,explore_seconds,0.7079710960388184
+train_cpu,a,0,update_seconds,6.832324981689453
+train_cpu,b,1,process wall seconds,32.371749541998724
+train_cpu,b,1,iteration_seconds,23.00051712989807
+train_cpu,b,1,collect_seconds,15.84846305847168
+train_cpu,b,1,explore_seconds,0.628960132598877
+train_cpu,b,1,update_seconds,6.518464088439941
+train_cpu,b,2,process wall seconds,33.198215999997046
+train_cpu,b,2,iteration_seconds,23.33891201019287
+train_cpu,b,2,collect_seconds,15.979451894760132
+train_cpu,b,2,explore_seconds,0.6296758651733398
+train_cpu,b,2,update_seconds,6.725104093551636
+train_cpu,a,3,process wall seconds,38.55278120799994
+train_cpu,a,3,iteration_seconds,27.22175693511963
+train_cpu,a,3,collect_seconds,19.76980209350586
+train_cpu,a,3,explore_seconds,0.6794962882995605
+train_cpu,a,3,update_seconds,6.7675371170043945
+mps_diagnostics,a,0,process wall seconds,53.67850437499874
+mps_diagnostics,a,0,iteration_seconds,46.56894373893738
+mps_diagnostics,a,0,collect_seconds,28.167228937149048
+mps_diagnostics,a,0,explore_seconds,2.79864501953125
+mps_diagnostics,a,0,update_seconds,15.578632116317749
+mps_diagnostics,b,1,process wall seconds,45.64084975000151
+mps_diagnostics,b,1,iteration_seconds,39.137972831726074
+mps_diagnostics,b,1,collect_seconds,28.589521884918213
+mps_diagnostics,b,1,explore_seconds,1.035837173461914
+mps_diagnostics,b,1,update_seconds,9.477240800857544
+mps_diagnostics,b,2,process wall seconds,47.99020995799947
+mps_diagnostics,b,2,iteration_seconds,41.145639181137085
+mps_diagnostics,b,2,collect_seconds,30.71473002433777
+mps_diagnostics,b,2,explore_seconds,1.0223171710968018
+mps_diagnostics,b,2,update_seconds,9.3698890209198
+mps_diagnostics,a,3,process wall seconds,53.61859708300108
+mps_diagnostics,a,3,iteration_seconds,46.26842498779297
+mps_diagnostics,a,3,collect_seconds,28.513747930526733
+mps_diagnostics,a,3,explore_seconds,2.78122878074646
+mps_diagnostics,a,3,update_seconds,14.954705953598022
+full_mps,b,0,process wall seconds,367.2322495420012
+full_mps,b,0,iteration_seconds,260.54920506477356
+full_mps,b,0,collect_seconds,171.7523591518402
+full_mps,b,0,explore_seconds,7.664056777954102
+full_mps,b,0,update_seconds,80.91132116317749
+full_mps,a,1,process wall seconds,511.71192999999766
+full_mps,a,1,iteration_seconds,366.7178020477295
+full_mps,a,1,collect_seconds,219.4806079864502
+full_mps,a,1,explore_seconds,20.59492588043213
+full_mps,a,1,update_seconds,126.43883275985718
+encoder,original,0,seconds,0.5108809580015077
+encoder,skip_zero,1,seconds,0.5365446249998058
+encoder,regex,2,seconds,0.5114854999992531
+encoder,both,3,seconds,0.4706120409973664
+encoder,both,4,seconds,0.4672595000010915
+encoder,regex,5,seconds,0.4742502919980325
+encoder,skip_zero,6,seconds,0.4493308330020227
+encoder,original,7,seconds,0.4614395000025979
+receipts,original,0,seconds,0.5098371659987606
+receipts,bounded,1,seconds,0.09582345800299663
+receipts,whole,2,seconds,0.08549908399800188
+receipts,whole,3,seconds,0.08421229200030211
+receipts,bounded,4,seconds,0.0923039159970358
+receipts,original,5,seconds,0.5059504589989956
+native_search,votes original,0,seconds,0.08899224999913713
+native_search,votes cached,1,seconds,0.08498074999806704
+native_search,votes cached,2,seconds,0.08514562499840395
+native_search,votes original,3,seconds,0.08928404099788168
+native_search,details original,4,seconds,0.09201749999920139
+native_search,details cached,5,seconds,0.08533270800035098
+native_search,details cached,6,seconds,0.08522245800122619
+native_search,details original,7,seconds,0.08740895800292492
+native_search,votes original,8,seconds,0.18238012499932665
+native_search,votes cached,9,seconds,0.18095387499852222
+native_search,votes cached,10,seconds,0.1814359579984739
+native_search,votes original,11,seconds,0.18275595800150768
+native_search,details original,12,seconds,0.18338550000044052
+native_search,details cached,13,seconds,0.18178579199957312
+native_search,details cached,14,seconds,0.18169925000256626
+native_search,details original,15,seconds,0.18347625000023982
+native_search,votes original,16,seconds,0.20680558399908477
+native_search,votes cached,17,seconds,0.2052520840006764
+native_search,votes cached,18,seconds,0.21050783300233888
+native_search,votes original,19,seconds,0.20632516599653172
+native_search,details original,20,seconds,0.20885445800013258
+native_search,details cached,21,seconds,0.20364383299965994
+native_search,details cached,22,seconds,0.20324787500067032
+native_search,details original,23,seconds,0.20790849999684724
+native_search,votes original,24,seconds,0.12929854100002558
+native_search,votes cached,25,seconds,0.12817016699773376
+native_search,votes cached,26,seconds,0.12876283299920033
+native_search,votes original,27,seconds,0.12862533299994539
+native_search,details original,28,seconds,0.1321905839977262
+native_search,details cached,29,seconds,0.12834933300109697
+native_search,details cached,30,seconds,0.12875383299979148
+native_search,details original,31,seconds,0.13198979099979624
+mlx_prefix,original,0,seconds,17.186598332998983
+mlx_prefix,shared,1,seconds,17.19473866699991
+mlx_prefix,shared,2,seconds,17.303471541999897
+mlx_prefix,original,3,seconds,18.075409125001897
+mlx_generation,original,0,seconds,34.9669477919997
+mlx_generation,sorted,1,seconds,27.400870999998006
+mlx_generation,sorted,2,seconds,28.989538167003047
+mlx_generation,original,3,seconds,37.11869100000331
+mlx_scoring,original,0,seconds,1.5076217919995543
+mlx_scoring,gather_first,1,seconds,1.460519332998956
+mlx_scoring,gather_first,2,seconds,1.457354458001646
+mlx_scoring,original,3,seconds,1.4544201669996255
+mlx_gradients,original,0,seconds,1.0744239169980574
+mlx_gradients,gather_first,1,seconds,1.0426834169993526
+mlx_gradients,gather_first,2,seconds,1.043036208000558
+mlx_gradients,original,3,seconds,1.0377267500007292
+summary,original,0,seconds,0.9046186660016247
+summary,streamed,1,seconds,0.8650287079981354
+summary,streamed,2,seconds,0.8736497909994796
+summary,original,3,seconds,0.8779690420014958
+parallel_eval,baseline7,0,seconds,20.26157945799787
+parallel_eval,baseline7repeat,0,seconds,23.20410983400143
+parallel_eval,candidate1,0,seconds,65.83580695799901
+parallel_eval,candidate4,0,seconds,22.178412249999383
+parallel_eval,candidate7,0,seconds,15.963499790999776
+parallel_eval,candidate7repeat,0,seconds,18.41181237500132
+timed-0-original,votes original,0,seconds,0.08971904200006975
+timed-0-original,votes cached,1,seconds,0.08791062499949476
+timed-0-original,votes cached,2,seconds,0.08827204100089148
+timed-0-original,votes original,3,seconds,0.08884116599801928
+timed-0-original,details original,4,seconds,0.09076412500144215
+timed-0-original,details cached,5,seconds,0.08635120799954166
+timed-0-original,details cached,6,seconds,0.08848433399907663
+timed-0-original,details original,7,seconds,0.08913625000059255
+timed-0-original,votes original,8,seconds,0.18931654100015294
+timed-0-original,votes cached,9,seconds,0.18656479199853493
+timed-0-original,votes cached,10,seconds,0.18794208399776835
+timed-0-original,votes original,11,seconds,0.18620175000251038
+timed-0-original,details original,12,seconds,0.18990149999808636
+timed-0-original,details cached,13,seconds,0.198412207999354
+timed-0-original,details cached,14,seconds,0.2006263340008445
+timed-0-original,details original,15,seconds,0.19639358300264576
+timed-0-original,votes original,16,seconds,0.2174935410002945
+timed-0-original,votes cached,17,seconds,0.21634774999984074
+timed-0-original,votes cached,18,seconds,0.21061570899837534
+timed-0-original,votes original,19,seconds,0.2138421659983578
+timed-0-original,details original,20,seconds,0.22381108300032793
+timed-0-original,details cached,21,seconds,0.23975216699909652
+timed-0-original,details cached,22,seconds,0.24249799999961397
+timed-0-original,details original,23,seconds,0.22807012500197743
+timed-0-original,votes original,24,seconds,0.1337165000004461
+timed-0-original,votes cached,25,seconds,0.1314200829983747
+timed-0-original,votes cached,26,seconds,0.13191024999832734
+timed-0-original,votes original,27,seconds,0.1387604579977051
+timed-0-original,details original,28,seconds,0.13475737500266405
+timed-0-original,details cached,29,seconds,0.13122870900042471
+timed-0-original,details cached,30,seconds,0.13205987499895855
+timed-0-original,details original,31,seconds,0.13677483400169876
+timed-0-original,votes original,32,seconds,0.1239027920018998
+timed-0-original,votes cached,33,seconds,0.12887770799716236
+timed-0-original,votes cached,34,seconds,0.1300689159979811
+timed-0-original,votes original,35,seconds,0.12606800000139629
+timed-0-original,details original,36,seconds,0.13387404199966113
+timed-0-original,details cached,37,seconds,0.12639204099832568
+timed-0-original,details cached,38,seconds,0.1249529579981754
+timed-0-original,details original,39,seconds,0.12665287500203704
+timed-0-original,votes original,40,seconds,0.2644893750002666
+timed-0-original,votes cached,41,seconds,0.26073783399988315
+timed-0-original,votes cached,42,seconds,0.2628876250018948
+timed-0-original,votes original,43,seconds,0.2590882500007865
+timed-0-original,details original,44,seconds,0.2610480000003008
+timed-0-original,details cached,45,seconds,0.26190779199896497
+timed-0-original,details cached,46,seconds,0.26782837499922607
+timed-0-original,details original,47,seconds,0.2663265000010142
+timed-0-original,votes original,48,seconds,0.2222587910000584
+timed-0-original,votes cached,49,seconds,0.21853187500164495
+timed-0-original,votes cached,50,seconds,0.2220600420005212
+timed-0-original,votes original,51,seconds,0.21874504200241063
+timed-0-original,details original,52,seconds,0.21896545900017372
+timed-0-original,details cached,53,seconds,0.2326710829984222
+timed-0-original,details cached,54,seconds,0.227230790998874
+timed-0-original,details original,55,seconds,0.2229930419998709
+timed-0-original,votes original,56,seconds,0.23753333399872645
+timed-0-original,votes cached,57,seconds,0.2389696250029374
+timed-0-original,votes cached,58,seconds,0.23759133400017163
+timed-0-original,votes original,59,seconds,0.2330822919975617
+timed-0-original,details original,60,seconds,0.23505787500107544
+timed-0-original,details cached,61,seconds,0.23480225000093924
+timed-0-original,details cached,62,seconds,0.2613444159978826
+timed-0-original,details original,63,seconds,0.2421575419975852
+timed-0-original,votes original,64,seconds,0.09090983299756772
+timed-0-original,votes cached,65,seconds,0.08744325000225217
+timed-0-original,votes cached,66,seconds,0.09428062500228407
+timed-0-original,votes original,67,seconds,0.08307362499908777
+timed-0-original,details original,68,seconds,0.08578737500283751
+timed-0-original,details cached,69,seconds,0.08426829100062605
+timed-0-original,details cached,70,seconds,0.08408070799850975
+timed-0-original,details original,71,seconds,0.0865267919980397
+timed-0-original,votes original,72,seconds,0.2014273749991844
+timed-0-original,votes cached,73,seconds,0.20170229200084577
+timed-0-original,votes cached,74,seconds,0.20061291599995457
+timed-0-original,votes original,75,seconds,0.19872112499797367
+timed-0-original,details original,76,seconds,0.2037731669988716
+timed-0-original,details cached,77,seconds,0.1989306250034133
+timed-0-original,details cached,78,seconds,0.19948641700102598
+timed-0-original,details original,79,seconds,0.2050079580003512
+timed-0-original,votes original,80,seconds,0.2826897500017367
+timed-0-original,votes cached,81,seconds,0.2788944999992964
+timed-0-original,votes cached,82,seconds,0.27985241699934704
+timed-0-original,votes original,83,seconds,0.28288195799905225
+timed-0-original,details original,84,seconds,0.28007412499937345
+timed-0-original,details cached,85,seconds,0.2786222920003638
+timed-0-original,details cached,86,seconds,0.2755805830020108
+timed-0-original,details original,87,seconds,0.28193116600232315
+timed-0-original,votes original,88,seconds,0.1847955829980492
+timed-0-original,votes cached,89,seconds,0.18326762500146287
+timed-0-original,votes cached,90,seconds,0.18331374999979744
+timed-0-original,votes original,91,seconds,0.1844870839995565
+timed-0-original,details original,92,seconds,0.18625158299983013
+timed-0-original,details cached,93,seconds,0.18829824999920675
+timed-0-original,details cached,94,seconds,0.18667191699933028
+timed-0-original,details original,95,seconds,0.1857567500010191
+timed-1-candidate,votes original,0,seconds,0.09471187500093947
+timed-1-candidate,votes cached,1,seconds,0.08295033299873467
+timed-1-candidate,votes cached,2,seconds,0.08732716699887533
+timed-1-candidate,votes original,3,seconds,0.1034359580007731
+timed-1-candidate,details original,4,seconds,0.08969670800070162
+timed-1-candidate,details cached,5,seconds,0.08284641600039322
+timed-1-candidate,details cached,6,seconds,0.0827595000009751
+timed-1-candidate,details original,7,seconds,0.08575266700063366
+timed-1-candidate,votes original,8,seconds,0.1835405419988092
+timed-1-candidate,votes cached,9,seconds,0.20620108300136053
+timed-1-candidate,votes cached,10,seconds,0.18429033299980802
+timed-1-candidate,votes original,11,seconds,0.18318100000033155
+timed-1-candidate,details original,12,seconds,0.18454016699979547
+timed-1-candidate,details cached,13,seconds,0.18423395799982245
+timed-1-candidate,details cached,14,seconds,0.18432537500120816
+timed-1-candidate,details original,15,seconds,0.19654420799997752
+timed-1-candidate,votes original,16,seconds,0.2085882909996144
+timed-1-candidate,votes cached,17,seconds,0.20611116699728882
+timed-1-candidate,votes cached,18,seconds,0.2054482919993461
+timed-1-candidate,votes original,19,seconds,0.20833979100279976
+timed-1-candidate,details original,20,seconds,0.20842075000109617
+timed-1-candidate,details cached,21,seconds,0.2042612500008545
+timed-1-candidate,details cached,22,seconds,0.22854795799867134
+timed-1-candidate,details original,23,seconds,0.21199191699997755
+timed-1-candidate,votes original,24,seconds,0.12863245799962897
+timed-1-candidate,votes cached,25,seconds,0.12694091699813725
+timed-1-candidate,votes cached,26,seconds,0.12638033400071436
+timed-1-candidate,votes original,27,seconds,0.12725633300215122
+timed-1-candidate,details original,28,seconds,0.1303394999995362
+timed-1-candidate,details cached,29,seconds,0.12805554199803737
+timed-1-candidate,details cached,30,seconds,0.1276882080019277
+timed-1-candidate,details original,31,seconds,0.13010366600065026
+timed-1-candidate,votes original,32,seconds,0.1198238750002929
+timed-1-candidate,votes cached,33,seconds,0.11916687499979162
+timed-1-candidate,votes cached,34,seconds,0.11876704199676169
+timed-1-candidate,votes original,35,seconds,0.11912554199807346
+timed-1-candidate,details original,36,seconds,0.12119616600102745
+timed-1-candidate,details cached,37,seconds,0.11781579099988448
+timed-1-candidate,details cached,38,seconds,0.11788804199750302
+timed-1-candidate,details original,39,seconds,0.12119908300155657
+timed-1-candidate,votes original,40,seconds,0.2562100420000206
+timed-1-candidate,votes cached,41,seconds,0.25436275000174646
+timed-1-candidate,votes cached,42,seconds,0.25521925000066403
+timed-1-candidate,votes original,43,seconds,0.2539957080007298
+timed-1-candidate,details original,44,seconds,0.2596414999970875
+timed-1-candidate,details cached,45,seconds,0.25466058399979374
+timed-1-candidate,details cached,46,seconds,0.2547766660027264
+timed-1-candidate,details original,47,seconds,0.25831429100071546
+timed-1-candidate,votes original,48,seconds,0.21159745900149574
+timed-1-candidate,votes cached,49,seconds,0.21020216699980665
+timed-1-candidate,votes cached,50,seconds,0.20956337499956135
+timed-1-candidate,votes original,51,seconds,0.2126195419987198
+timed-1-candidate,details original,52,seconds,0.21697766699799104
+timed-1-candidate,details cached,53,seconds,0.209942042001785
+timed-1-candidate,details cached,54,seconds,0.21168795800258522
+timed-1-candidate,details original,55,seconds,0.2153171249992738
+timed-1-candidate,votes original,56,seconds,0.22880850000001374
+timed-1-candidate,votes cached,57,seconds,0.2268044580014248
+timed-1-candidate,votes cached,58,seconds,0.22542199999952572
+timed-1-candidate,votes original,59,seconds,0.22678629200163414
+timed-1-candidate,details original,60,seconds,0.23139124999943306
+timed-1-candidate,details cached,61,seconds,0.22640241699991748
+timed-1-candidate,details cached,62,seconds,0.2605528750027588
+timed-1-candidate,details original,63,seconds,0.26272708399847033
+timed-1-candidate,votes original,64,seconds,0.08335649999935413
+timed-1-candidate,votes cached,65,seconds,0.08224354200137896
+timed-1-candidate,votes cached,66,seconds,0.08162091600024723
+timed-1-candidate,votes original,67,seconds,0.08013366699742619
+timed-1-candidate,details original,68,seconds,0.08227462500144611
+timed-1-candidate,details cached,69,seconds,0.08042329100135248
+timed-1-candidate,details cached,70,seconds,0.08092816600037622
+timed-1-candidate,details original,71,seconds,0.08611216700228397
+timed-1-candidate,votes original,72,seconds,0.20323187499889173
+timed-1-candidate,votes cached,73,seconds,0.19604537499981234
+timed-1-candidate,votes cached,74,seconds,0.19657583400112344
+timed-1-candidate,votes original,75,seconds,0.1983884589972149
+timed-1-candidate,details original,76,seconds,0.19889887499812176
+timed-1-candidate,details cached,77,seconds,0.19624587500220514
+timed-1-candidate,details cached,78,seconds,0.19504637499994715
+timed-1-candidate,details original,79,seconds,0.19784283400076674
+timed-1-candidate,votes original,80,seconds,0.27872137499798555
+timed-1-candidate,votes cached,81,seconds,0.2872737090001465
+timed-1-candidate,votes cached,82,seconds,0.27512983300039195
+timed-1-candidate,votes original,83,seconds,0.2774496249985532
+timed-1-candidate,details original,84,seconds,0.2885435839998536
+timed-1-candidate,details cached,85,seconds,0.28178645899970434
+timed-1-candidate,details cached,86,seconds,0.2718190000014147
+timed-1-candidate,details original,87,seconds,0.2756109580004704
+timed-1-candidate,votes original,88,seconds,0.17828512500273064
+timed-1-candidate,votes cached,89,seconds,0.17627908299982664
+timed-1-candidate,votes cached,90,seconds,0.1812096659996314
+timed-1-candidate,votes original,91,seconds,0.1785352500010049
+timed-1-candidate,details original,92,seconds,0.18762741699902108
+timed-1-candidate,details cached,93,seconds,0.18077387499943143
+timed-1-candidate,details cached,94,seconds,0.1763592499992228
+timed-1-candidate,details original,95,seconds,0.1777888750002603
+timed-2-candidate,votes original,0,seconds,0.084112250002363
+timed-2-candidate,votes cached,1,seconds,0.08182537500033504
+timed-2-candidate,votes cached,2,seconds,0.08592737499930081
+timed-2-candidate,votes original,3,seconds,0.08484250000037719
+timed-2-candidate,details original,4,seconds,0.08671216600123444
+timed-2-candidate,details cached,5,seconds,0.08245650000026217
+timed-2-candidate,details cached,6,seconds,0.08232254199901945
+timed-2-candidate,details original,7,seconds,0.0861931250001362
+timed-2-candidate,votes original,8,seconds,0.19325291700079106
+timed-2-candidate,votes cached,9,seconds,0.17818904099840438
+timed-2-candidate,votes cached,10,seconds,0.18428708300052676
+timed-2-candidate,votes original,11,seconds,0.18634575000032783
+timed-2-candidate,details original,12,seconds,0.1804648340003041
+timed-2-candidate,details cached,13,seconds,0.17850108299899148
+timed-2-candidate,details cached,14,seconds,0.17746037499819067
+timed-2-candidate,details original,15,seconds,0.17847879200053285
+timed-2-candidate,votes original,16,seconds,0.20133708299908903
+timed-2-candidate,votes cached,17,seconds,0.1992869999994582
+timed-2-candidate,votes cached,18,seconds,0.2021161669981666
+timed-2-candidate,votes original,19,seconds,0.2056764579974697
+timed-2-candidate,details original,20,seconds,0.20485008399919025
+timed-2-candidate,details cached,21,seconds,0.20228429200142273
+timed-2-candidate,details cached,22,seconds,0.23430762499992852
+timed-2-candidate,details original,23,seconds,0.20680149999679998
+timed-2-candidate,votes original,24,seconds,0.12704375000248547
+timed-2-candidate,votes cached,25,seconds,0.12747474999923725
+timed-2-candidate,votes cached,26,seconds,0.12504237499888404
+timed-2-candidate,votes original,27,seconds,0.12476704100117786
+timed-2-candidate,details original,28,seconds,0.12932774999717367
+timed-2-candidate,details cached,29,seconds,0.12486408400218352
+timed-2-candidate,details cached,30,seconds,0.12991812500331434
+timed-2-candidate,details original,31,seconds,0.1289772499985702
+timed-2-candidate,votes original,32,seconds,0.11825866700019105
+timed-2-candidate,votes cached,33,seconds,0.11701420799727202
+timed-2-candidate,votes cached,34,seconds,0.11763712500032852
+timed-2-candidate,votes original,35,seconds,0.11780854199969326
+timed-2-candidate,details original,36,seconds,0.11989066699970863
+timed-2-candidate,details cached,37,seconds,0.11665483299657353
+timed-2-candidate,details cached,38,seconds,0.14214725000056205
+timed-2-candidate,details original,39,seconds,0.13530216700019082
+timed-2-candidate,votes original,40,seconds,0.2625140830023156
+timed-2-candidate,votes cached,41,seconds,0.25540579100197647
+timed-2-candidate,votes cached,42,seconds,0.2592607499973383
+timed-2-candidate,votes original,43,seconds,0.25894858299943735
+timed-2-candidate,details original,44,seconds,0.28762737499710056
+timed-2-candidate,details cached,45,seconds,0.29111595900030807
+timed-2-candidate,details cached,46,seconds,0.2814570000009553
+timed-2-candidate,details original,47,seconds,0.28894108299937216
+timed-2-candidate,votes original,48,seconds,0.23412095800085808
+timed-2-candidate,votes cached,49,seconds,0.22547633399881306
+timed-2-candidate,votes cached,50,seconds,0.25440833299944643
+timed-2-candidate,votes original,51,seconds,0.23399041700031376
+timed-2-candidate,details original,52,seconds,0.2290943750012957
+timed-2-candidate,details cached,53,seconds,0.21547012500013807
+timed-2-candidate,details cached,54,seconds,0.21646962500017253
+timed-2-candidate,details original,55,seconds,0.21797300000253017
+timed-2-candidate,votes original,56,seconds,0.23228283299977193
+timed-2-candidate,votes cached,57,seconds,0.23538183299751836
+timed-2-candidate,votes cached,58,seconds,0.22595970900147222
+timed-2-candidate,votes original,59,seconds,0.22857137500250246
+timed-2-candidate,details original,60,seconds,0.2313577080021787
+timed-2-candidate,details cached,61,seconds,0.23702904200035846
+timed-2-candidate,details cached,62,seconds,0.22680420899996534
+timed-2-candidate,details original,63,seconds,0.23355487500157324
+timed-2-candidate,votes original,64,seconds,0.08323729199764784
+timed-2-candidate,votes cached,65,seconds,0.08247874999869964
+timed-2-candidate,votes cached,66,seconds,0.08175370900062262
+timed-2-candidate,votes original,67,seconds,0.0815792080029496
+timed-2-candidate,details original,68,seconds,0.08326662499894155
+timed-2-candidate,details cached,69,seconds,0.08105887499914388
+timed-2-candidate,details cached,70,seconds,0.08146074999967823
+timed-2-candidate,details original,71,seconds,0.08445783299976029
+timed-2-candidate,votes original,72,seconds,0.20038279100117506
+timed-2-candidate,votes cached,73,seconds,0.1940576669985603
+timed-2-candidate,votes cached,74,seconds,0.19601399999737623
+timed-2-candidate,votes original,75,seconds,0.19426229200325906
+timed-2-candidate,details original,76,seconds,0.1980085830000462
+timed-2-candidate,details cached,77,seconds,0.19368062500143424
+timed-2-candidate,details cached,78,seconds,0.19340166600159137
+timed-2-candidate,details original,79,seconds,0.1969437090010615
+timed-2-candidate,votes original,80,seconds,0.27414937499997905
+timed-2-candidate,votes cached,81,seconds,0.2785648749995744
+timed-2-candidate,votes cached,82,seconds,0.2776529170005233
+timed-2-candidate,votes original,83,seconds,0.276937791997625
+timed-2-candidate,details original,84,seconds,0.27718924999862793
+timed-2-candidate,details cached,85,seconds,0.2774735419989156
+timed-2-candidate,details cached,86,seconds,0.2775142499995127
+timed-2-candidate,details original,87,seconds,0.2766440410014184
+timed-2-candidate,votes original,88,seconds,0.18157770799734863
+timed-2-candidate,votes cached,89,seconds,0.18083599999954458
+timed-2-candidate,votes cached,90,seconds,0.18083124999975553
+timed-2-candidate,votes original,91,seconds,0.1823164170018572
+timed-2-candidate,details original,92,seconds,0.1838603329997568
+timed-2-candidate,details cached,93,seconds,0.18130212500182097
+timed-2-candidate,details cached,94,seconds,0.18122712499825866
+timed-2-candidate,details original,95,seconds,0.18837212499784073
+timed-3-original,votes original,0,seconds,0.0908366660005413
+timed-3-original,votes cached,1,seconds,0.0918327910003427
+timed-3-original,votes cached,2,seconds,0.11361945899989223
+timed-3-original,votes original,3,seconds,0.12143804100196576
+timed-3-original,details original,4,seconds,0.09609662500224658
+timed-3-original,details cached,5,seconds,0.09861350000210223
+timed-3-original,details cached,6,seconds,0.10327462499844842
+timed-3-original,details original,7,seconds,0.09557591700286139
+timed-3-original,votes original,8,seconds,0.20223641600023257
+timed-3-original,votes cached,9,seconds,0.20037820899960934
+timed-3-original,votes cached,10,seconds,0.19225549999828218
+timed-3-original,votes original,11,seconds,0.18611724999936996
+timed-3-original,details original,12,seconds,0.20083325000086916
+timed-3-original,details cached,13,seconds,0.20082179100063513
+timed-3-original,details cached,14,seconds,0.1948889590021281
+timed-3-original,details original,15,seconds,0.19196095900042565
+timed-3-original,votes original,16,seconds,0.21830087499984074
+timed-3-original,votes cached,17,seconds,0.21196020799834514
+timed-3-original,votes cached,18,seconds,0.21375116600029287
+timed-3-original,votes original,19,seconds,0.21190854200176545
+timed-3-original,details original,20,seconds,0.21940916699895752
+timed-3-original,details cached,21,seconds,0.21280833299897495
+timed-3-original,details cached,22,seconds,0.24134550000235322
+timed-3-original,details original,23,seconds,0.22185766599795897
+timed-3-original,votes original,24,seconds,0.1333719159993052
+timed-3-original,votes cached,25,seconds,0.13297566599794663
+timed-3-original,votes cached,26,seconds,0.13162595900212182
+timed-3-original,votes original,27,seconds,0.13162479200036614
+timed-3-original,details original,28,seconds,0.13747512500049197
+timed-3-original,details cached,29,seconds,0.13358066599903395
+timed-3-original,details cached,30,seconds,0.13318837500264635
+timed-3-original,details original,31,seconds,0.1381386670000211
+timed-3-original,votes original,32,seconds,0.12724066600276274
+timed-3-original,votes cached,33,seconds,0.12504204200013191
+timed-3-original,votes cached,34,seconds,0.12392691700006253
+timed-3-original,votes original,35,seconds,0.12438837499939837
+timed-3-original,details original,36,seconds,0.12755954200110864
+timed-3-original,details cached,37,seconds,0.1225068329986243
+timed-3-original,details cached,38,seconds,0.1238136249994568
+timed-3-original,details original,39,seconds,0.12971316699986346
+timed-3-original,votes original,40,seconds,0.26260404200002085
+timed-3-original,votes cached,41,seconds,0.2612135829986073
+timed-3-original,votes cached,42,seconds,0.26082050000331947
+timed-3-original,votes original,43,seconds,0.2698258749987872
+timed-3-original,details original,44,seconds,0.3025989169982495
+timed-3-original,details cached,45,seconds,0.3378536249983881
+timed-3-original,details cached,46,seconds,0.43106729200007976
+timed-3-original,details original,47,seconds,0.33266516699950444
+timed-3-original,votes original,48,seconds,0.2965393340018636
+timed-3-original,votes cached,49,seconds,0.2909843749985157
+timed-3-original,votes cached,50,seconds,0.25359258300159127
+timed-3-original,votes original,51,seconds,0.27723225000227103
+timed-3-original,details original,52,seconds,0.2397331669999403
+timed-3-original,details cached,53,seconds,0.23130749999836553
+timed-3-original,details cached,54,seconds,0.2351759579978534
+timed-3-original,details original,55,seconds,0.2348431669997808
+timed-3-original,votes original,56,seconds,0.25849012499747914
+timed-3-original,votes cached,57,seconds,0.24440574999971432
+timed-3-original,votes cached,58,seconds,0.26262737499928335
+timed-3-original,votes original,59,seconds,0.24426375000257394
+timed-3-original,details original,60,seconds,0.26295733300139545
+timed-3-original,details cached,61,seconds,0.24956675000066753
+timed-3-original,details cached,62,seconds,0.2481837089981127
+timed-3-original,details original,63,seconds,0.25130504200205905
+timed-3-original,votes original,64,seconds,0.0914160409993201
+timed-3-original,votes cached,65,seconds,0.08841858300002059
+timed-3-original,votes cached,66,seconds,0.08873220800160198
+timed-3-original,votes original,67,seconds,0.08929983399866614
+timed-3-original,details original,68,seconds,0.09051279200139106
+timed-3-original,details cached,69,seconds,0.08907441699921037
+timed-3-original,details cached,70,seconds,0.08862012499957928
+timed-3-original,details original,71,seconds,0.0903890829977172
+timed-3-original,votes original,72,seconds,0.21325533299750532
+timed-3-original,votes cached,73,seconds,0.2194504170001892
+timed-3-original,votes cached,74,seconds,0.2168155420004041
+timed-3-original,votes original,75,seconds,0.21327537500110338
+timed-3-original,details original,76,seconds,0.2131398329984222
+timed-3-original,details cached,77,seconds,0.20952454199868953
+timed-3-original,details cached,78,seconds,0.21180625000124564
+timed-3-original,details original,79,seconds,0.20991270800004713
+timed-3-original,votes original,80,seconds,0.2895574169997417
+timed-3-original,votes cached,81,seconds,0.2868802080010937
+timed-3-original,votes cached,82,seconds,0.29778704199998174
+timed-3-original,votes original,83,seconds,0.28809950000140816
+timed-3-original,details original,84,seconds,0.2907665420025296
+timed-3-original,details cached,85,seconds,0.29379550000157906
+timed-3-original,details cached,86,seconds,0.3146529580008064
+timed-3-original,details original,87,seconds,0.2875138329982292
+timed-3-original,votes original,88,seconds,0.1865515419995063
+timed-3-original,votes cached,89,seconds,0.1887170409972896
+timed-3-original,votes cached,90,seconds,0.18785179099722882
+timed-3-original,votes original,91,seconds,0.18657974999950966
+timed-3-original,details original,92,seconds,0.19008745800238103
+timed-3-original,details cached,93,seconds,0.18717358299909392
+timed-3-original,details cached,94,seconds,0.18665991699890583
+timed-3-original,details original,95,seconds,0.19094475000019884

@@ -157,6 +157,10 @@ large batches of whole games.
   ([card rule grid](experiments/2026-10-21-card-rule-grid.md)).
 - [OOC PPO page](experiments/2026-10-13-ooc-macro-credit-ppo.md).
 
+- [Mac code performance](experiments/2026-11-18-mac-performance.md): the same 3,072-game
+  MPS iteration and evaluations took 367 vs 512 s after reducing public-observation work
+  and moving the read-only diagnostics to Metal. All checkpoint weights matched.
+
 ## Expert iteration for combat
 
 **Working.** Let the current player play, label its combat decisions with

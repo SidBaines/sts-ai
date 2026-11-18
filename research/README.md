@@ -29,7 +29,9 @@ training setup, the headroom and the options.
 
 ## Now
 
-Nothing running ([status](status.md)). Latest: [value-target refits](experiments/2026-10-23-value-target-refits.md)
+Nothing running ([status](status.md)). The [Mac performance study](experiments/2026-11-18-mac-performance.md)
+cut a full benchmark job from 512 to 367 seconds with identical learned weights.
+Latest learning results: [value-target refits](experiments/2026-10-23-value-target-refits.md)
 add about 6 points over vote targets on the same data and pass the Act 3
 boss far more often (58 to 61% against 51%), but lose more early fights;
 [mixing them with older vote corpora](experiments/2026-10-25-hybrid-targets.md)

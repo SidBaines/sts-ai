@@ -6,11 +6,13 @@ import unittest
 import numpy as np
 import torch
 
+from sts_env._backend.lightspeed_import import import_lightspeed
 from sts_policy.losses import PPOConfig
 from sts_policy.model_agent import collate_public
 from sts_policy.rollout_training import collect_rollouts
 from sts_rl.common import close_workers, load_policy, make_workers, phase_forward, train_tasks
 from sts_rl.evaluate import evaluate_tasks
+from sts_rl.fresh_native import native_guard_scope
 from tests.support import requires_simulator
 
 CHAMPION = Path("/Users/sidbaines/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-fresh-start/"
@@ -31,6 +33,12 @@ class InProcessExactnessTests(unittest.TestCase):
     def test_collection_and_greedy_evaluation_match_subprocess(self):
         if not CHAMPION.is_file():
             self.skipTest(f"Collection exactness requires local champion: {CHAMPION}")
+        # An in-process collector normally owns its interpreter for the run.
+        # The test interpreter is shared with tests of the raw native API.
+        with native_guard_scope(import_lightspeed()):
+            self._check_parity()
+
+    def _check_parity(self):
         torch.set_num_threads(1)
         model, _ = load_policy(CHAMPION)
         model.eval()

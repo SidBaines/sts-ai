@@ -87,9 +87,10 @@ class OOCTrainConfig:
     micro_batch: int = 1024         # PPO forward/backward chunk (same update, bounded activation memory)
     collectors: int = 1             # >1: data-parallel collector processes (workers split between them)
     update_threads: int = 0         # torch threads for the PPO update (0: same as threads)
-    update_device: str = "cpu"      # cpu or mps; collection and diagnostics stay on CPU
+    update_device: str = "cpu"      # cpu or mps; collection stays on CPU
     threads: int = 2
     notes: str = ""
+    diagnostics_on_update_device: bool = False  # Read-only diagnostics use CPU by default.
 
 
 @dataclass
@@ -340,7 +341,7 @@ def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Seq
 
 @torch.no_grad()
 def exploration_stats(model: torch.nn.Module, forward, transitions: Sequence[Any], *,
-                      chunk: int) -> dict[str, float | int | None]:
+                      chunk: int, device: str = "cpu") -> dict[str, float | int | None]:
     """Measure the sampling policy on kept choices without sampling or updating it."""
     if chunk <= 0:
         raise ValueError("chunk must be positive")
@@ -352,7 +353,7 @@ def exploration_stats(model: torch.nn.Module, forward, transitions: Sequence[Any
     try:
         for start in range(0, len(transitions), chunk):
             part = transitions[start:start + chunk]
-            logits, _, mask = forward(model, collate([t.observation for t in part], "cpu"))
+            logits, _, mask = forward(model, collate([t.observation for t in part], device))
             dist = masked_distribution(logits, mask)
             for t, legal, entropy, maxprob in zip(part, mask.sum(-1).tolist(), dist.entropy().tolist(),
                                                   dist.probs.max(-1).values.tolist()):
@@ -390,7 +391,7 @@ def ooc_parameter_blocks(model: torch.nn.Module) -> dict[str, list[str]]:
 
 
 def gradient_cosine(model: torch.nn.Module, forward, kept: Sequence[Sequence[Any]], *,
-                    rng: random.Random, chunk: int = 4096) -> float:
+                    rng: random.Random, chunk: int = 4096, device: str = "cpu") -> float:
     """Cosine between OOC-actor policy gradients of two disjoint random episode halves."""
     episodes = [ep for ep in kept if ep]
     if len(episodes) < 4:
@@ -412,10 +413,10 @@ def gradient_cosine(model: torch.nn.Module, forward, kept: Sequence[Sequence[Any
         for s in range(0, len(trans), chunk):
             part = trans[s:s + chunk]
             model.zero_grad(set_to_none=True)
-            logits, _, mask = forward(model, collate([t.observation for t in part], "cpu"))
+            logits, _, mask = forward(model, collate([t.observation for t in part], device))
             dist = masked_distribution(logits, mask)
-            adv = torch.tensor([norm[id(t)] for t in part])
-            loss = -(adv * dist.log_prob(torch.tensor([t.action_position for t in part]))).sum() / len(trans)
+            adv = torch.tensor([norm[id(t)] for t in part], device=device)
+            loss = -(adv * dist.log_prob(torch.tensor([t.action_position for t in part], device=device))).sum() / len(trans)
             loss.backward()
             for g, n in zip(total, names):
                 if params[n].grad is not None:
@@ -646,13 +647,17 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             # would be silently re-encoded from an empty state. Fail loudly instead.
             if any(t.encoded_observation is None for t in flat):
                 raise RuntimeError("kept OOC transition lacks its sampling-time encoding")
+            diagnostic_device = cfg.update_device if cfg.diagnostics_on_update_device else "cpu"
+            if diagnostic_device != "cpu":
+                model.to(diagnostic_device)
             exploration: dict[str, float | int | None] = {}
             if cfg.exploration_stats:
                 explore_started = time.time()
                 sampling_forward = ooc_forward(forward, value_scale=normalizer.scale if cfg.normalize_returns else 1.0)
                 if cfg.update_threads:
                     torch.set_num_threads(cfg.update_threads)
-                exploration = exploration_stats(model, sampling_forward, flat, chunk=cfg.micro_batch)
+                exploration = exploration_stats(model, sampling_forward, flat, chunk=cfg.micro_batch,
+                                                device=diagnostic_device)
                 torch.set_num_threads(cfg.threads)
                 exploration["explore_seconds"] = time.time() - explore_started
             if cfg.normalize_returns:
@@ -680,7 +685,8 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             if cfg.update_threads:
                 torch.set_num_threads(cfg.update_threads)
             if cfg.health_every and iteration % cfg.health_every == 0:
-                record["grad_cosine_half"] = gradient_cosine(model, update_forward, kept, rng=rng, chunk=cfg.micro_batch)
+                record["grad_cosine_half"] = gradient_cosine(model, update_forward, kept, rng=rng,
+                                                            chunk=cfg.micro_batch, device=diagnostic_device)
             try:
                 if cfg.update_device != "cpu":
                     _move_optimizer_state(optimizer, cfg.update_device)
