@@ -1,27 +1,18 @@
 # Status
 
-**Updated 25 October 2026, 14:23 GMT.** Nothing running. Champion:
-`champion_4058cbf0e271.pt` (promoted by Sid on 25 October; 29.4% on unused
-worlds), kept with earlier champions in `data/rl_runs/champions/` (worktree
-`nonllm-large-batch`).
+Nothing running or queued as of 18 November 2026. The champion won 4,822 of
+16,384 evaluation worlds (29.4%). [Results and next studies](README.md).
 
-- **Queues:** idle runners in `nonllm-large-batch` and `nonllm-boss-rares`
-  (`scripts/rl/queue_runner.py status`), restarted on 25 October so their
-  stall watchdog also counts `fresh_collect.py`'s progress file.
-- **Dashboard:** http://127.0.0.1:8795 (served from `nonllm-dashboard`).
-- **Disk:** 68 GiB free on 25 October; `scripts/rl/disk_report.py` finds
-  nothing to clean under the approved rules.
-- **Closing the Claude desktop app kills processes this session started.**
-- **Worktrees in use:** `nonllm-large-batch` (data and queue),
-  `nonllm-boss-rares` (notes and queue), `nonllm-fresh-start` (native build
-  `build015`), `nonllm-better-teacher` (teacher build), `nonllm-dashboard`
-  (dashboard), and the frozen code of runs, which must not be edited:
-  `nonllm-continued-frozen`, `nonllm-joint-frozen`, `nonllm-joint2-frozen`,
-  `nonllm-reward-ablation`, `nonllm-value-targets`,
-  `nonllm-mixed-record-search`, `nonllm-hybrid-targets`.
-
-## Next
-
-Sid's choice among the proposals in the README's Next section (the
-value-target head for late bosses, another GPU-updated PPO round, or the
-imitation-gap tests).
+- The active `ws/nonllm` checkout on Sid's Mac is
+  `~/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch`.
+  Its `data/rl_runs/champions/` holds `champion_4058cbf0e271.pt` and the
+  promotion record. The full training checkpoint is also preserved in
+  `data/rl_runs/reward_ablation_20261023/floors/iter_0024.pt`.
+- The runtime used for this champion is
+  `~/.codex/worktrees/nonllm-curriculum/SlayTheSpireAI/.venv/bin/python`.
+  The native build is under
+  `../nonllm-fresh-start/external/sts_lightspeed_rl/build015` relative to
+  the active checkout. Both historical paths resolve through local links.
+- The main checkout's `data/worktree-archive/2026-11-18/inventory.json`
+  records archived datasets, teacher builds, frozen source and original
+  commits. Start new experiment branches from `ws/nonllm`.
