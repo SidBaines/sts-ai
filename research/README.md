@@ -29,20 +29,11 @@ training setup, the headroom and the options.
 
 ## Now
 
-Nothing running. The workstream has adopted `env-v0.1.5.2`. All 224
-champion trajectories in the adoption check matched their historical records.
-The [learning audit](experiments/2026-11-18-ppo-audit.md) covers 48 historical
-iterations, 512 diagnostic games and ten disposable optimizer fits.
+The [paired 24-iteration learning-rate study](experiments/2026-11-18-paired-ppo-rates.md) is running. It compares 0.0003 and 0.0001 on identical fresh worlds. Follow the [progress log](log.md) and [live status](status.md).
 
 ## Next
 
-The recommended control is 24 iterations of out-of-combat PPO on fresh worlds,
-starting from the champion at learning rate 0.0003 with frozen combat. If
-running a second arm, change only the learning rate to 0.0001. The lower rate
-was the strongest challenger on held-out decisions; its full-game effect remains
-unmeasured. The [settings and decision rule](experiments/2026-11-18-ppo-audit.md#next)
-are ready. The [boss combat alternatives](strategies.md#distilling-the-search-teacher)
-remain separate from this comparison.
+Evaluate the two frozen endpoints on the paired panel, then confirm the selected endpoint against the incumbent on independent worlds.
 
 ## Open questions
 
