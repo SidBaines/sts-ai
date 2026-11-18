@@ -295,6 +295,12 @@ def menu_kind(observation: dict[str, Any]) -> str:
     return "other"
 
 
+def card_reward_has_items(observation: dict[str, Any]) -> bool:
+    """Whether a card reward also offers a non-card item on the same menu."""
+    return any(action["description"].startswith(("take gold", "take relic", "take potion", "take key"))
+               for action in observation["legal_actions"])
+
+
 def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequence[Any], *, forward,
                       ppo: PPOConfig, credit: str, gae_lambda: float, chunk: int,
                       value_scale: float = 1.0) -> dict[str, Any]:
@@ -346,6 +352,7 @@ def exploration_stats(model: torch.nn.Module, forward, transitions: Sequence[Any
     if chunk <= 0:
         raise ValueError("chunk must be positive")
     totals = {kind: Counter() for kind in MENU_KINDS}
+    card_contexts = {False: Counter(), True: Counter()}
     collate = cached_public_collator([t.observation for t in transitions],
                                     preencoded=[t.encoded_observation for t in transitions])
     was_training = model.training
@@ -367,6 +374,10 @@ def exploration_stats(model: torch.nn.Module, forward, transitions: Sequence[Any
                 values["saturated"] += int(maxprob > .99)
                 values["rare05"] += int(taken_prob < .05)
                 values["rare01"] += int(taken_prob < .01)
+                if t.menu_kind == "card_reward":
+                    context = card_contexts[card_reward_has_items(t.observation)]
+                    context["n"] += 1
+                    context["saturated"] += int(maxprob > .99)
     finally:
         model.train(was_training)
     result: dict[str, float | int | None] = {}
@@ -375,6 +386,11 @@ def exploration_stats(model: torch.nn.Module, forward, transitions: Sequence[Any
         result[f"explore_n_{kind}"] = n
         for metric in ("entropy", "maxprob", "saturated", "rare05"):
             result[f"explore_{metric}_{kind}"] = values[metric] / n if n else None
+    for has_items, context in card_contexts.items():
+        suffix = "with_items" if has_items else "without_items"
+        count = context["n"]
+        result[f"explore_n_card_reward_{suffix}"] = count
+        result[f"explore_saturated_card_reward_{suffix}"] = context["saturated"] / count if count else None
     n = sum(values["n"] for values in totals.values())
     result["explore_n"] = n
     for metric in ("entropy", "rare05", "rare01"):

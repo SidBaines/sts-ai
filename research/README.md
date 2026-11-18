@@ -29,30 +29,20 @@ training setup, the headroom and the options.
 
 ## Now
 
-Nothing running ([status](status.md)). The [Mac performance study](experiments/2026-11-18-mac-performance.md)
-cut a full benchmark job from 512 to 367 seconds with identical learned weights.
-Latest learning results: [value-target refits](experiments/2026-10-23-value-target-refits.md)
-add about 6 points over vote targets on the same data and pass the Act 3
-boss far more often (58 to 61% against 51%), but lose more early fights;
-[mixing them with older vote corpora](experiments/2026-10-25-hybrid-targets.md)
-was worse. Dropping the floor reward did not help over 24 iterations
-([reward ablation](experiments/2026-10-23-reward-ablation.md)). The PPO
-update can now run on the GPU (twice as fast; see `scripts/rl/CLAUDE.md`).
+Nothing running. The workstream has adopted `env-v0.1.5.2`. All 224
+champion trajectories in the adoption check matched their historical records.
+The [learning audit](experiments/2026-11-18-ppo-audit.md) covers 48 historical
+iterations, 512 diagnostic games and ten disposable optimizer fits.
 
 ## Next
 
-Proposed on 25 October, awaiting Sid's choice:
-1. **Value-target head for late bosses only:** a policy that uses the
-   value-target combat head in Act 2 and Act 3 boss fights and the champion's
-   head elsewhere (Codex work for a routed checkpoint, then play on worlds
-   from 111,000,000,000 and confirm on 112,000,000,000). If it helps, label
-   more late-boss fights with search statistics.
-2. **Another out-of-combat PPO round from the champion**, with the PPO update
-   on the GPU (`--update-device mps`, about 25 to 30% faster per iteration;
-   use one device for every arm of a comparison).
-3. **Close the imitation gap:** test missing information (enemy move
-   history, known top cards).
-4. **Learn deck strength** (a deck-value network trained on oracle scores).
+The recommended control is 24 iterations of out-of-combat PPO on fresh worlds,
+starting from the champion at learning rate 0.0003 with frozen combat. If
+running a second arm, change only the learning rate to 0.0001. The lower rate
+was the strongest challenger on held-out decisions; its full-game effect remains
+unmeasured. The [settings and decision rule](experiments/2026-11-18-ppo-audit.md#next)
+are ready. The [boss combat alternatives](strategies.md#distilling-the-search-teacher)
+remain separate from this comparison.
 
 ## Open questions
 

@@ -64,6 +64,8 @@ class OOCExplorationStatsTests(unittest.TestCase):
         entropies = [-sum(p * math.log(p) for p in probs) for probs in probabilities]
         expected = {"explore_n": 7, "explore_entropy": sum(entropies[:7]) / 7,
                     "explore_rare05": 4 / 7, "explore_rare01": 2 / 7}
+        expected.update(explore_n_card_reward_with_items=0, explore_saturated_card_reward_with_items=None,
+                        explore_n_card_reward_without_items=1, explore_saturated_card_reward_without_items=0.)
         for kind in MENU_KINDS:
             indices = [i for i in range(7) if (kinds[i] or "other") == kind]
             n = len(indices)
@@ -104,6 +106,18 @@ class OOCExplorationStatsTests(unittest.TestCase):
                     else:
                         self.assertAlmostEqual(actual[key], value, places=12, msg=key)
                 json.dumps(actual, allow_nan=False)
+
+    def test_card_reward_context_counts_partition_the_existing_total(self):
+        rows = [self.row(menu("take gold 10g", "skip card reward"), kind="card_reward"),
+                self.row(menu("take card Anger", "skip card reward"), kind="card_reward")]
+        def forward(model, batch):
+            return torch.tensor([[10., 0.], [0., 0.]]), torch.zeros(2), batch[2]
+        result = exploration_stats(self.model(), forward, rows, chunk=2)
+        self.assertEqual(result["explore_n_card_reward"], 2)
+        self.assertEqual(result["explore_saturated_card_reward"], .5)
+        for context, saturated in (("with_items", 1.), ("without_items", 0.)):
+            self.assertEqual(result[f"explore_n_card_reward_{context}"], 1)
+            self.assertEqual(result[f"explore_saturated_card_reward_{context}"], saturated)
 
     def test_empty_and_single_unmasked_action_batches_have_no_decisions(self):
         model = self.model()

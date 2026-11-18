@@ -8,6 +8,12 @@ in `CLAUDE.md`; other terms in [metrics](metrics.md).
 
 | Date | Experiment | Tested | Result | Evidence | Verdict |
 |---|---|---|---|---|---|
+| 2026-11-18 | [PPO learning audit](experiments/2026-11-18-ppo-audit.md) | Environment adoption at seven processes and eight slots | 224/224 action, terminal and behaviour signatures matched; 65 wins in both runs, zero faults | Exploratory | No clear difference |
+| 2026-11-18 | [PPO learning audit](experiments/2026-11-18-ppo-audit.md) | Lower learning rate, 0.0001 vs 0.0003 | 512 diagnostic worlds: +0.00419 held-out surrogate units [+0.00306, +0.00553], still below the starting policy; game effect unknown | Exploratory | Inconclusive |
+| 2026-11-18 | [PPO learning audit](experiments/2026-11-18-ppo-audit.md) | One PPO epoch vs three | Same 512 worlds: +0.00219 surrogate units [+0.00084, +0.00381], game effect unknown | Exploratory | Inconclusive |
+| 2026-11-18 | [PPO learning audit](experiments/2026-11-18-ppo-audit.md) | Strategic entropy 0.03 vs 0.01 | Same 512 worlds: +0.00016 surrogate units [−0.00012, +0.00048] | Exploratory | No clear difference |
+| 2026-11-18 | [PPO learning audit](experiments/2026-11-18-ppo-audit.md) | Carry Adam moments vs fresh Adam | Same 512 worlds: +0.00118 surrogate units [+0.00048, +0.00196], game effect unknown | Exploratory | Inconclusive |
+| 2026-11-18 | [PPO learning audit](experiments/2026-11-18-ppo-audit.md) | Sampling and argmax by phase | 256 matched worlds: training sampling 64 wins, exact combat 70, exact strategy 68, both exact 69; all differences include zero | Exploratory | Inconclusive |
 | 2026-11-18 | [Mac performance](experiments/2026-11-18-mac-performance.md) | Combined observation and diagnostic changes on MPS | 3,072 training games and two 1,024-world evaluations took 367 vs 512 s, identical weights and records | Exploratory | Better |
 | 2026-11-18 | [Mac performance](experiments/2026-11-18-mac-performance.md) | Observation changes in public stepping, champion evaluation and sampled collection | 187 vs 283 µs/step over 40 games; 32-world evaluation 7.96 vs 10.12 s; collection 9.56 vs 11.57 s; 96-game CPU trainer 32.78 vs 38.21 s | Exploratory | Better |
 | 2026-11-18 | [Mac performance](experiments/2026-11-18-mac-performance.md) | MPS vs CPU placement of read-only diagnostics | 384-game MPS jobs 46.82 vs 53.65 s, identical model and optimizer state | Exploratory | Better |

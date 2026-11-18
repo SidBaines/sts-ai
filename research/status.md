@@ -1,7 +1,8 @@
 # Status
 
-Nothing training or queued. The [Mac performance study](experiments/2026-11-18-mac-performance.md) finished on 18 November 2026. The champion won 4,822 of
-16,384 evaluation worlds (29.4%). [Results and next studies](README.md).
+Nothing training or queued. The [ML-focused pass](experiments/2026-11-18-ppo-audit.md)
+finished on 18 November 2026. The proposed next control uses the existing
+29.4% champion and fresh training worlds. The GPU probes created no checkpoints.
 
 - The active `ws/nonllm` checkout on Sid's Mac is
   `~/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch`.

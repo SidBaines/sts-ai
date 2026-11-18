@@ -161,6 +161,11 @@ large batches of whole games.
   MPS iteration and evaluations took 367 vs 512 s after reducing public-observation work
   and moving the read-only diagnostics to Metal. All checkpoint weights matched.
 
+- [Learning audit](experiments/2026-11-18-ppo-audit.md): a maximum action probability
+  over 99% usually means taking a free item on mixed reward menus. Card menus without
+  those items are less saturated. Learning rate 0.0001 is the first online challenger;
+  keep 0.0003 as the established control.
+
 ## Expert iteration for combat
 
 **Working.** Let the current player play, label its combat decisions with

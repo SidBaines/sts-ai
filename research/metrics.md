@@ -256,3 +256,17 @@ release changed game behaviour.
 Wall time is elapsed time on the M5 Pro. Whole-job time includes startup, both evaluations, data writes and checkpoints. Trainer iteration time ends before checkpointing and evaluation. PPO update time includes the gradient-cosine diagnostic. RSS is the process's peak resident memory; MLX peak memory comes from the Metal allocator. ABBA and BAAB describe the time order of baseline (A) and candidate (B) runs.
 
 - `env-v0.1.5.2` is the November performance release. Its gameplay version is 0.1.5, its public schema is v3 and its source and native patch identities differ from 0.1.5.1. The non-LLM adoption uses the workstream panel overlay.
+
+## PPO learning audit
+
+- **Saturated menu:** the frozen policy assigns more than 99% probability to one
+  displayed legal action. The card-reward split distinguishes menus that also offer
+  gold, a relic, a potion or a key. The existing aggregate still includes both groups.
+- **Explained variance:** one minus the variance of return minus critic prediction
+  divided by return variance, measured within the stated act or pooled decisions.
+- **Held-out clipped surrogate change:** minimum of sampled and PPO-clipped
+  importance-ratio times the raw advantage, minus the original advantage, averaged
+  within each held-out world and then across worlds. Its units are reward per decision.
+- **World allocation:** 512 diagnostic training-split worlds from 124 billion on
+  env-v0.1.5.2. Proposed evaluation panels start at 125 and 126 billion. The proposed
+  next training control uses the disjoint namespace detailed in the audit.
