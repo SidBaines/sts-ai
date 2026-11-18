@@ -2,14 +2,12 @@ from collections import deque
 from copy import deepcopy
 import json
 import multiprocessing
-import os
 from pathlib import Path
 import runpy
 import subprocess
 import sys
 import tempfile
 import threading
-import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -23,6 +21,7 @@ from sts_rl.batched_runner import (BatchedPolicy, _Lane, compare_records, evalua
                                    fault_record, run_in_process, run_multiprocess)
 from sts_rl.fresh_study import StudyPolicy
 from tests.integration.test_fresh_policy import observation
+from tests.unit.batched_worker_fixtures import _crash_fixture, _fault_fixture
 
 
 def study_policy():
@@ -244,26 +243,6 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(world.divergence["decision"], 0)
         self.assertAlmostEqual(world.divergence["singleton_logit_gap"], float(scores[best] - scores[other]))
         self.assertAlmostEqual(world.divergence["batched_logit_gap"], 1., places=5)
-
-
-def _crash_fixture(connection, seeds, checkpoint, combat, ooc, games_per_process, reference_records=None, overlays=None):
-    for seed in seeds:
-        connection.send(("start", seed))
-        if seed == 10:
-            os._exit(7)
-        if seed == 11:
-            # Start a second concurrent world, then stop making decisions.
-            connection.send(("start", seeds[1]))
-            time.sleep(30)
-        connection.send(("record", fault_record(seed, "fixture simulator fault")))
-    connection.send(("done", None))
-    connection.close()
-
-
-def _fault_fixture(connection, seeds, checkpoint, combat, ooc, games_per_process, reference_records=None, overlays=None):
-    connection.send(("start", seeds[0]))
-    connection.send(("record", fault_record(seeds[0], "fixture reset fault")))
-    connection.close()  # Retire after the fault; untouched worlds need a new process.
 
 
 class DriverProcessTests(unittest.TestCase):

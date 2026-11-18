@@ -37,6 +37,32 @@ def flags(config):
             yield str(value)
 
 
+def expected_worlds(config):
+    # Use the trainer's own task allocator, including its training-split filter.
+    sys.path.insert(0, str(ROOT / "src"))
+    from sts_rl.common import train_tasks
+
+    rows = []
+    for i in range(1, config["iterations"] + 1):
+        first = (
+            config["train_world_start"] + config["seed"] * 500_000_000 + i * 10_000_000
+        )
+        seeds = [t.seed for t in train_tasks(first, config["games"])]
+        digest = hashlib.sha256(
+            json.dumps(seeds, separators=(",", ":")).encode()
+        ).hexdigest()
+        rows.append(
+            dict(
+                iteration=i,
+                n=len(seeds),
+                first=seeds[0],
+                last=seeds[-1],
+                world_hash=digest,
+            )
+        )
+    return rows
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--resume-arm", choices=ARMS)
@@ -59,6 +85,9 @@ def main():
         p.error(f"New study output already exists: {RUN}")
     else:
         RUN.mkdir(parents=True)
+        (RUN / "expected_worlds.json").write_text(
+            json.dumps(expected_worlds(config), indent=2) + "\n"
+        )
     for arm, lr in ARMS.items():
         if args.resume_arm and arm != args.resume_arm:
             continue

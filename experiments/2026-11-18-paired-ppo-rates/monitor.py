@@ -60,7 +60,7 @@ class Monitor:
         self.note(
             "opened",
             "Study opened. Both iteration-24 endpoints and both 16,384-world panels are fixed.",
-            when=(RUN / "control/config.json").stat().st_mtime,
+            when=(RUN / "expected_worlds.json").stat().st_mtime,
         )
 
     def note(self, key, msg, *, when=None, **details):

@@ -1,5 +1,10 @@
 # Learning-rate study progress
 
+- 2026-11-18 12:28 GMT — Control development evaluation at iteration 8: 281/1,024 wins, 0 faults.
+- 2026-11-18 12:27 GMT — Control finished iteration 8/24 on 3,072 scheduled worlds. Sampled wins 840/3,072, faults 0, iteration 4.4 min.
+- 2026-11-18 12:22 GMT — Control finished iteration 7/24 on 3,072 scheduled worlds. Sampled wins 817/3,072, faults 0, iteration 4.4 min.
+- 2026-11-18 12:18 GMT — Control finished iteration 6/24 on 3,072 scheduled worlds. Sampled wins 831/3,072, faults 0, iteration 4.5 min.
+- 2026-11-18 12:13 GMT — Control finished iteration 5/24 on 3,072 scheduled worlds. Sampled wins 831/3,072, faults 0, iteration 4.2 min.
 - 2026-11-18 12:11 GMT — Verified the live dashboard and cumulative checkpoint axis. The parent finishes at update 236; both new arms begin there.
 - 2026-11-18 12:09 GMT — Control development evaluation at iteration 4: 293/1,024 wins, 0 faults.
 - 2026-11-18 12:08 GMT — Control finished iteration 4/24 on 3,072 scheduled worlds. Sampled wins 799/3,072, faults 0, iteration 4.5 min.
