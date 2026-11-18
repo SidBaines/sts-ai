@@ -163,8 +163,9 @@ large batches of whole games.
 
 - [Learning audit](experiments/2026-11-18-ppo-audit.md): a maximum action probability
   over 99% usually means taking a free item on mixed reward menus. Card menus without
-  those items are less saturated. Learning rate 0.0001 is the first online challenger;
-  keep 0.0003 as the established control.
+  those items are less saturated. The audit nominated learning rate 0.0001 for the subsequent matched test.
+
+- [Matched learning rates](experiments/2026-11-18-paired-ppo-rates.md): the lower rate won selection by at least 286 games on 16,384 assigned worlds. Continued strategy training at 0.0001 produced the new 33.58% champion on independent confirmation. The arm comparison used one training seed.
 
 ## Expert iteration for combat
 

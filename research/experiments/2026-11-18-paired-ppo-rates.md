@@ -1,6 +1,6 @@
 # Does a lower learning rate improve full-game play?
 
-**Status** — running. The frozen 29.4% champion is the starting player.
+**Status** — finished 18 November 2026. **Verdict** — the lower-rate endpoint became champion with 5,502 wins against the incumbent’s 4,959 on 16,384 independent worlds (+3.31 points, 95% interval +2.57 to +4.06).
 
 ## Question
 
@@ -14,15 +14,39 @@ Freeze the iteration-24 checkpoint from each arm. The 1,024-world checks during 
 
 ## Results
 
-The control completed all 24 iterations on 73,728 scheduled worlds, with zero simulator faults. Two training episodes reached their task horizon. Development wins out of 1,024 were 292, 293, 281, 294, 303, 287 and 296 at iterations 0, 4, 8, 12, 16, 20 and 24. These checks do not select the endpoint.
+The 0.0001 challenger won selection and passed the independent confirmation rule.
 
-The two policies produced identical action traces on their first 3,072 training worlds. The paired endpoint and confirmation comparisons remain pending.
+| Panel | Reference wins | Challenger wins | Paired difference in percentage points [95% interval] |
+|---|---:|---:|---:|
+| Selection, 16,384 worlds assigned per arm | Control 5,068 | 5,354, one unresolved | +1.75 [+0.97, +2.52] on 16,383 completed pairs |
+| Confirmation, 16,384 complete pairs | Incumbent 4,959 (30.27%) | 5,502 (33.58%) | **+3.31 [+2.57, +4.06]** |
+
+One challenger game on the selection panel reached its decision limit. Either outcome on that world leaves the full-panel lead at 286–287 wins. Among completed pairs, 2,241 worlds went only to the challenger and 1,955 only to the control. On confirmation there were 2,222 challenger-only and 1,679 incumbent-only wins (exact McNemar p < 0.001). Neither panel had a simulator fault.
+
+![Development checks and frozen endpoint comparisons](../figures/2026-11-18-paired-ppo-rates/learning-rates.png)
+
+The selection marker spans the possible full-cohort differences from the one unresolved game. The confirmation error bar is the paired 95% interval.
+
+| Development wins / 1,024 | Start | Iteration 4 | 8 | 12 | 16 | 20 | 24 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Control | 292 | 293 | 281 | 294 | 303 | 287 | 296 |
+| Challenger | 292 | 293 | 308 | 310 | 312 | 298 | 325 |
+
+Both arms trained on all 73,728 scheduled worlds with identical first-iteration action traces. Each had two training episodes reach the task horizon and zero simulator faults. The control took 4,695 optimizer steps, with the KL guard stopping six iterations early. The challenger took 5,517 steps, with zero early stops. All combat weights matched the incumbent exactly in both endpoints.
+
+On confirmation, the challenger reached the Act 3 boss in 10,216 games versus 9,723 for the incumbent. It lost 4,714 of those fights, including 2,626 entered at full HP. These counts locate opportunities for the next study; the two players reached different sets of fights.
+
+## Conclusion
+
+The smaller learning rate produced the stronger endpoint on this matched training seed. The independent panel confirms the selected player’s improvement over the starting champion. It compares the total effect of continued strategy training at the selected rate against the incumbent. A second training seed would test how reliably the lower rate wins the head-to-head.
 
 ## Next
 
-After independent confirmation, consider a joint training run from the resulting champion. Sid raised this as a possible next test on 18 November.
+Start a proposed joint study from champion `0f527a0fbf93`. Continue strategy PPO at 0.0001 in two matched arms. Freeze combat in the control. At iterations 8 and 16, fit an Act 3 boss specialist from pooled search values on fights reached by the joint arm. Check the specialist on identical saved boss entries, deploy it only for the Act 3 boss if it passes a paired full-game gate, and independently confirm the final endpoint. Sid requested a recommendation; this run has not started.
 
 ## Log
+
+- 18 November, 19:04 GMT: both confirmation evaluators finished. The logger had stopped on a stale queue heartbeat during the power interruption. Restarting it recovered the final comparison from the saved records. The selected endpoint was frozen before either confirmation job started.
 
 - 18 November, 14:00 GMT: the Mac switched to battery during challenger iteration 3. Preserved the iteration-2 checkpoint and queued recovery of the same complete training batch on AC.
 - 18 November: selected one GPU training lane to preserve the benchmarked 12-collector, 384-slot configuration and fit the 48 GiB Mac. Independent policies in each evaluation panel can run concurrently.

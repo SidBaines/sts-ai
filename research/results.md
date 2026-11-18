@@ -8,6 +8,8 @@ in `CLAUDE.md`; other terms in [metrics](metrics.md).
 
 | Date | Experiment | Tested | Result | Evidence | Verdict |
 |---|---|---|---|---|---|
+| 2026-11-18 | [Paired learning rates](experiments/2026-11-18-paired-ppo-rates.md) | Selected 0.0001 endpoint vs incumbent, env 0.1.5.2 | 5,502 vs 4,959 of 16,384 independent worlds; +3.31 points [+2.57, +4.06], zero faults or cutoffs | Confirmed | Better |
+| 2026-11-18 | [Paired learning rates](experiments/2026-11-18-paired-ppo-rates.md) | 0.0001 vs 0.0003 after 24 matched iterations, env 0.1.5.2 | 5,354 vs 5,068 wins on 16,384 assigned worlds; one challenger cutoff. Lead 286–287 wins under either outcome; +1.75 points [+0.97, +2.52] on 16,383 completed pairs | Planned | Better |
 | 2026-11-18 | [PPO learning audit](experiments/2026-11-18-ppo-audit.md) | Environment adoption at seven processes and eight slots | 224/224 action, terminal and behaviour signatures matched; 65 wins in both runs, zero faults | Exploratory | No clear difference |
 | 2026-11-18 | [PPO learning audit](experiments/2026-11-18-ppo-audit.md) | Lower learning rate, 0.0001 vs 0.0003 | 512 diagnostic worlds: +0.00419 held-out surrogate units [+0.00306, +0.00553], still below the starting policy; game effect unknown | Exploratory | Inconclusive |
 | 2026-11-18 | [PPO learning audit](experiments/2026-11-18-ppo-audit.md) | One PPO epoch vs three | Same 512 worlds: +0.00219 surrogate units [+0.00084, +0.00381], game effect unknown | Exploratory | Inconclusive |

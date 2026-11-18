@@ -88,6 +88,9 @@ def main():
                 full_gain_low=r["full_cohort_gain_bounds_pp"][0],
                 full_gain_high=r["full_cohort_gain_bounds_pp"][1],
                 difference_pp=r.get("difference_pp"),
+                complete_pair_difference_pp=r.get("complete_pair_difference_pp", r.get("difference_pp")),
+                complete_pair_ci_low=(r.get("complete_pair_ci95_pp") or r.get("ci95_pp") or [None, None])[0],
+                complete_pair_ci_high=(r.get("complete_pair_ci95_pp") or r.get("ci95_pp") or [None, None])[1],
                 ci_low=(r.get("ci95_pp") or [None, None])[0],
                 ci_high=(r.get("ci95_pp") or [None, None])[1],
                 p_two_sided=r.get("p_two_sided"),
@@ -132,7 +135,7 @@ def main():
             est.text(
                 mean((r["full_gain_low"], r["full_gain_high"])),
                 y + 0.08,
-                "incomplete cohort",
+                "range from one cutoff",
                 ha="center",
                 fontsize=8,
             )

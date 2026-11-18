@@ -1,11 +1,8 @@
 # Status
 
-Active study: [paired PPO learning rates](experiments/2026-11-18-paired-ppo-rates.md). Sid authorized training and both evaluation phases on 18 November. The [progress log](log.md) records milestones.
+Nothing running. The paired learning-rate study finished on 18 November 2026. The 0.0001 challenger is the current champion after independent confirmation. The [experiment page](experiments/2026-11-18-paired-ppo-rates.md) contains both comparisons and the proposed next study.
 
-The [live training dashboard](http://127.0.0.1:8795/) shows both arms and their development evaluations.
-
-The control has completed all 24 iterations. The challenger completed two before the 14:00 GMT battery pause. Its resume from iteration 2 is queued on the same worlds. The live log records the actual restart when AC returns. The power-aware queue pauses on battery. Each trainer saves `latest.pt` after every training iteration and a frozen checkpoint every four iterations. The starting champion is `champion_4058cbf0e271.pt`.
-
-- Checkout: `~/Documents/SlayTheSpireAI/.claude/worktrees/nonllm-large-batch`.
-- Check jobs with `python3 scripts/rl/queue_runner.py status` from this checkout. The run is `data/rl_runs/ppo_fresh_worlds_from_4058`; each arm writes `log.jsonl` there.
-- To stop automatic stage submission, create `STOP` in the run directory. To stop an active job use `python3 scripts/rl/queue_runner.py cancel JOB_NAME`.
+- Champion: `data/rl_runs/champions/champion_0f527a0fbf93.pt`, with its promotion record beside it.
+- Data: run `ppo_fresh_worlds_from_4058`, including both complete evaluation rosters and the frozen selection.
+- [Training dashboard](http://127.0.0.1:8795/) and [progress log](log.md).
+- The next joint run is a proposal awaiting a decision.

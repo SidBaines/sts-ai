@@ -268,5 +268,4 @@ Wall time is elapsed time on the M5 Pro. Whole-job time includes startup, both e
   importance-ratio times the raw advantage, minus the original advantage, averaged
   within each held-out world and then across worlds. Its units are reward per decision.
 - **World allocation:** 512 diagnostic training-split worlds from 124 billion on
-  env-v0.1.5.2. Proposed evaluation panels start at 125 and 126 billion. The proposed
-  next training control uses the disjoint namespace detailed in the audit.
+  env-v0.1.5.2. The completed paired selection and independent confirmation used 16,384 worlds each from 125 and 126 billion respectively. Both arms used the disjoint training namespace detailed in the audit.

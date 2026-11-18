@@ -1,5 +1,65 @@
 # Learning-rate study progress
 
+- 2026-11-18 19:15 GMT — Promoted the 0.0001 challenger as champion under the confirmation rule. It gained 543 wins on 16,384 matched worlds (+3.31 points, 95% CI +2.57 to +4.06).
+- 2026-11-18 19:13 GMT — Confirmation panel finished. incumbent won 4,959, challenger won 5,502; 16,384/16,384 complete pairs.
+- 2026-11-18 19:03 GMT — Confirmation panel, challenger: 16,384/16,384 world records returned.
+- 2026-11-18 19:03 GMT — Confirmation panel, incumbent: 16,384/16,384 world records returned.
+- 2026-11-18 18:57 GMT — Confirmation panel, challenger: 12,288/16,384 world records returned.
+- 2026-11-18 18:57 GMT — Confirmation panel, incumbent: 12,288/16,384 world records returned.
+- 2026-11-18 18:18 GMT — ppo-rates24-confirmation-incumbent is paused on battery.
+- 2026-11-18 18:18 GMT — ppo-rates24-confirmation-challenger is paused on battery.
+- 2026-11-18 18:10 GMT — Confirmation panel, challenger: 8,192/16,384 world records returned.
+- 2026-11-18 18:09 GMT — Confirmation panel, incumbent: 8,192/16,384 world records returned.
+- 2026-11-18 18:03 GMT — Confirmation panel, challenger: 4,096/16,384 world records returned.
+- 2026-11-18 18:03 GMT — Confirmation panel, incumbent: 4,096/16,384 world records returned.
+- 2026-11-18 17:57 GMT — ppo-rates24-confirmation-challenger is running.
+- 2026-11-18 17:57 GMT — ppo-rates24-confirmation-incumbent is running.
+- 2026-11-18 17:56 GMT — Queued challenger on the confirmation panel (16,384 worlds).
+- 2026-11-18 17:56 GMT — Queued incumbent on the confirmation panel (16,384 worlds).
+- 2026-11-18 17:56 GMT — Selected and froze the challenger endpoint before confirmation.
+- 2026-11-18 17:56 GMT — Primary panel finished. control won 5,068, challenger won 5,354; 16,383/16,384 complete pairs.
+- 2026-11-18 17:56 GMT — Primary panel, challenger: 16,384/16,384 world records returned.
+- 2026-11-18 17:56 GMT — Primary panel, control: 16,384/16,384 world records returned.
+- 2026-11-18 17:49 GMT — Primary panel, challenger: 12,288/16,384 world records returned.
+- 2026-11-18 17:49 GMT — Primary panel, control: 12,288/16,384 world records returned.
+- 2026-11-18 17:42 GMT — Primary panel, challenger: 8,192/16,384 world records returned.
+- 2026-11-18 17:42 GMT — Primary panel, control: 8,192/16,384 world records returned.
+- 2026-11-18 17:35 GMT — Primary panel, challenger: 4,096/16,384 world records returned.
+- 2026-11-18 17:35 GMT — Primary panel, control: 4,096/16,384 world records returned.
+- 2026-11-18 17:28 GMT — ppo-rates24-primary-challenger is running.
+- 2026-11-18 17:28 GMT — ppo-rates24-primary-control is running.
+- 2026-11-18 17:28 GMT — Queued challenger on the primary panel (16,384 worlds).
+- 2026-11-18 17:28 GMT — Queued control on the primary panel (16,384 worlds).
+- 2026-11-18 17:28 GMT — Challenger training completed.
+- 2026-11-18 17:28 GMT — Challenger development evaluation at iteration 24: 325/1,024 wins, 0 faults.
+- 2026-11-18 17:27 GMT — Challenger finished iteration 24/24 on 3,072 scheduled worlds. Sampled wins 943/3,072, faults 0, iteration 4.8 min.
+- 2026-11-18 17:22 GMT — Challenger finished iteration 23/24 on 3,072 scheduled worlds. Sampled wins 922/3,072, faults 0, iteration 5.0 min.
+- 2026-11-18 17:17 GMT — Challenger finished iteration 22/24 on 3,072 scheduled worlds. Sampled wins 986/3,072, faults 0, iteration 4.9 min.
+- 2026-11-18 17:12 GMT — Challenger finished iteration 21/24 on 3,072 scheduled worlds. Sampled wins 921/3,072, faults 0, iteration 4.7 min.
+- 2026-11-18 17:08 GMT — Challenger development evaluation at iteration 20: 298/1,024 wins, 0 faults.
+- 2026-11-18 17:07 GMT — Challenger finished iteration 20/24 on 3,072 scheduled worlds. Sampled wins 948/3,072, faults 0, iteration 4.8 min.
+- 2026-11-18 17:02 GMT — Challenger finished iteration 19/24 on 3,072 scheduled worlds. Sampled wins 931/3,072, faults 0, iteration 5.0 min.
+- 2026-11-18 16:57 GMT — Challenger finished iteration 18/24 on 3,072 scheduled worlds. Sampled wins 936/3,072, faults 0, iteration 4.6 min.
+- 2026-11-18 16:52 GMT — Challenger finished iteration 17/24 on 3,072 scheduled worlds. Sampled wins 893/3,072, faults 0, iteration 4.5 min.
+- 2026-11-18 16:48 GMT — Challenger development evaluation at iteration 16: 312/1,024 wins, 0 faults.
+- 2026-11-18 16:47 GMT — Challenger finished iteration 16/24 on 3,072 scheduled worlds. Sampled wins 943/3,072, faults 0, iteration 4.9 min.
+- 2026-11-18 16:42 GMT — Challenger finished iteration 15/24 on 3,072 scheduled worlds. Sampled wins 904/3,072, faults 0, iteration 4.7 min.
+- 2026-11-18 16:37 GMT — Challenger finished iteration 14/24 on 3,072 scheduled worlds. Sampled wins 939/3,072, faults 0, iteration 4.7 min.
+- 2026-11-18 16:33 GMT — Challenger finished iteration 13/24 on 3,072 scheduled worlds. Sampled wins 926/3,072, faults 0, iteration 4.9 min.
+- 2026-11-18 16:28 GMT — Challenger development evaluation at iteration 12: 310/1,024 wins, 0 faults.
+- 2026-11-18 16:27 GMT — Challenger finished iteration 12/24 on 3,072 scheduled worlds. Sampled wins 886/3,072, faults 0, iteration 4.7 min.
+- 2026-11-18 16:22 GMT — Challenger finished iteration 11/24 on 3,072 scheduled worlds. Sampled wins 874/3,072, faults 0, iteration 4.8 min.
+- 2026-11-18 16:17 GMT — Challenger finished iteration 10/24 on 3,072 scheduled worlds. Sampled wins 889/3,072, faults 0, iteration 4.8 min.
+- 2026-11-18 16:12 GMT — Challenger finished iteration 9/24 on 3,072 scheduled worlds. Sampled wins 902/3,072, faults 0, iteration 4.9 min.
+- 2026-11-18 16:07 GMT — Challenger development evaluation at iteration 8: 308/1,024 wins, 0 faults.
+- 2026-11-18 16:06 GMT — Challenger finished iteration 8/24 on 3,072 scheduled worlds. Sampled wins 844/3,072, faults 0, iteration 4.7 min.
+- 2026-11-18 16:02 GMT — Challenger finished iteration 7/24 on 3,072 scheduled worlds. Sampled wins 878/3,072, faults 0, iteration 4.8 min.
+- 2026-11-18 15:57 GMT — Challenger finished iteration 6/24 on 3,072 scheduled worlds. Sampled wins 883/3,072, faults 0, iteration 4.9 min.
+- 2026-11-18 15:52 GMT — Challenger finished iteration 5/24 on 3,072 scheduled worlds. Sampled wins 835/3,072, faults 0, iteration 4.5 min.
+- 2026-11-18 15:48 GMT — Challenger development evaluation at iteration 4: 293/1,024 wins, 0 faults.
+- 2026-11-18 15:47 GMT — Challenger finished iteration 4/24 on 3,072 scheduled worlds. Sampled wins 852/3,072, faults 0, iteration 4.4 min.
+- 2026-11-18 15:42 GMT — Challenger finished iteration 3/24 on 3,072 scheduled worlds. Sampled wins 847/3,072, faults 0, iteration 3.9 min.
+- 2026-11-18 15:38 GMT — ppo-rates24-challenger-resume1 is running.
 - 2026-11-18 14:43 GMT — The challenger remained suspended during iteration 3 collection for over 40 minutes. Preserved the verified iteration-2 model, optimizer, RNG and return scale; queued the same iteration-3 worlds from that checkpoint on AC so the one-hour collection budget excludes the power pause.
 - 2026-11-18 14:00 GMT — ppo-rates24-challenger is paused on battery.
 - 2026-11-18 13:59 GMT — Challenger finished iteration 2/24 on 3,072 scheduled worlds. Sampled wins 807/3,072, faults 0, iteration 4.6 min.

@@ -241,8 +241,15 @@ class Monitor:
             if j["name"].startswith(PREFIX)
         }
         state = read_status(WORKER)
-        if time.time() - state["heartbeat"] > 150:
-            raise RuntimeError("Queue heartbeat is stale")
+        if time.time() - state["heartbeat"] > 150 and any(
+            job["status"] in ("running", "pending", "paused") for job in jobs.values()
+        ):
+            # The logger can wake before the power-aware queue after laptop sleep.
+            self.note(
+                f"stale-heartbeat-{state['heartbeat']}",
+                "Waiting for the queue heartbeat to return before advancing the study.",
+            )
+            return "waiting for queue heartbeat"
         for name, j in jobs.items():
             status = j["status"]
             if status != self.statuses.get(name):

@@ -10,7 +10,8 @@ used to make better teachers, not to play.
 
 | Player | Win rate | Evidence |
 |---|---|---|
-| **Champion from 25 October, 09:42:** 24 more iterations of out-of-combat PPO from the previous champion, current reward (`champions/champion_4058cbf0e271.pt`, from `reward_ablation_20261023/floors/iter_0024.pt`) | 29.4% on 16,384 unused worlds from 109,000,000,000 (4,822 against the previous champion's 4,262, +3.4 points, p < 0.001) | Confirmed; current default |
+| **Champion from 18 November:** 24 iterations of strategy PPO at learning rate 0.0001 from the October champion, with frozen combat (`champions/champion_0f527a0fbf93.pt`) | 5,502 of 16,384 independent worlds (33.58%) vs 4,959 (30.27%), +3.31 points [+2.57, +4.06] | Confirmed; current default |
+| Champion from 25 October: 24 more iterations of out-of-combat PPO from the previous champion, current reward (`champions/champion_4058cbf0e271.pt`, from `reward_ablation_20261023/floors/iter_0024.pt`) | 29.4% on 16,384 unused worlds from 109,000,000,000 (4,822 against the previous champion's 4,262, +3.4 points, p < 0.001) | Confirmed; previous champion |
 | The same run rewarded only for wins (`reward_ablation_20261023/wins/iter_0024.pt`) | 28.9% on the same worlds (4,728; no clear difference from the champion's run, p = 0.15) | Confirmed; not promoted |
 | Champion from 23 October: joint run 2's final checkpoint (`champions/champion_c8553bc33e53.pt`; two gated combat refits) | 26.8% on 4,096 unused worlds from 107,000,000,000 (1,096 against the fourth continued training's 952, p < 0.001) | Confirmed |
 
@@ -18,22 +19,15 @@ Champions are kept with their promotion records in `data/rl_runs/champions/`
 (worktree `nonllm-large-batch`). Earlier players and every comparison are in the [results ledger](results.md).
 Compare numbers only within one environment version and world set.
 
-The agent loses mainly at bosses: of the champion's losses, about 41% are at
-the Act 3 boss and 32% at the Act 2 boss. Out-of-combat PPO still improves
-it every round, and refitting the combat network on the search teacher's
-labels from the current player's own fights adds more. The search teacher
-playing only the boss fights roughly doubles the win rate, but students
-copy it poorly: that imitation gap is the largest known headroom. The
-[23 October discussion](brainstorms/2026-10-23-next-steps.md) sets out the
-training setup, the headroom and the options.
+On the confirmation panel about 43% of the champion's losses came at the Act 3 boss and 31% at the Act 2 boss. See the [completed paired comparison](experiments/2026-11-18-paired-ppo-rates.md) for the learning-rate and confirmation results.
 
 ## Now
 
-The [paired 24-iteration learning-rate study](experiments/2026-11-18-paired-ppo-rates.md) is running. It compares 0.0003 and 0.0001 on identical fresh worlds. Follow the [progress log](log.md) and [live status](status.md).
+Nothing running. The [progress log](log.md) records the finished study.
 
 ## Next
 
-Evaluate the two frozen endpoints on the paired panel, then confirm the selected endpoint against the incumbent on independent worlds.
+Consider a matched joint run at learning rate 0.0001 from the new champion, with teacher-refitted combat used only at the Act 3 boss. Keep a frozen-combat control and gate each proposed refit on full-game wins. See the [proposed design](experiments/2026-11-18-paired-ppo-rates.md#next).
 
 ## Open questions
 
