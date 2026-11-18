@@ -49,3 +49,6 @@ against the real game (the 0.1.4 "phantom powers" were the burning elite's
 buff). It changes menus, observation text and some game logic, so the
 observation label advances to `sts_env_public_v3`; see [the release
 record](release_v0.1.5.md). The immutable release reference is `env-v0.1.5`.
+
+Release 0.1.5.2 reduces the cost of public combat observations. See the
+[release and migration record](release_v0.1.5.2.md).

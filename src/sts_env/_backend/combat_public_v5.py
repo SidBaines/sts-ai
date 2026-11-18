@@ -10,8 +10,11 @@ from sts_env._backend.combat_public_v4 import CombatPublicV4Env
 from sts_env._backend.schemas import LegalAction
 
 
+_SELECTION = re.compile(r"^\{ (EXHAUST_MANY|GAMBLE)\b")
+
+
 def selection_label(action: LegalAction, hand: list[dict[str, Any]]) -> str:
-    match = re.match(r"^\{ (EXHAUST_MANY|GAMBLE)\b", action.description)
+    match = _SELECTION.match(action.description)
     if not match:
         return action.description
     task = match.group(1)
@@ -40,13 +43,23 @@ class CombatPublicV5Env(CombatPublicV4Env):
         actions = self._env.legal_actions()
         if self._env.phase() != "combat":
             return actions
-        hand = self._env.public_combat_cards().get("hand", [])
-        result = []
-        for action in actions:
-            label = selection_label(action, hand)
-            self._selection_labels[action.description] = label
-            result.append(replace(action, description=label))
+        result = list(actions)
+        hand = None
+        for i, action in enumerate(actions):
+            if _SELECTION.match(action.description):
+                if hand is None:
+                    hand = self._env.public_combat_cards().get("hand", [])
+                label = selection_label(action, hand)
+                self._selection_labels[action.description] = label
+                result[i] = replace(action, description=label)
         return result
+
+    def _history_context(self) -> tuple[int | None, list[str]]:
+        if getattr(type(self._env), "combat_history_context", None) is not None:
+            return self._env.combat_history_context()
+        # Older v3 backends expose the same fields through their full summary.
+        state = self._env.summary()
+        return state.get("ascension"), list(state.get("combat", {}).get("recent_actions", []))
 
     def _label(self, text: str) -> str:
         return self._selection_labels.get(text, {
@@ -56,7 +69,7 @@ class CombatPublicV5Env(CombatPublicV4Env):
 
     def step(self, action_index: int) -> LegalAction:
         chosen = self.legal_actions()[action_index]
-        before = list(self._env.summary().get("combat", {}).get("recent_actions", []))
+        _, before = self._history_context()
         public_before = self._history(before)
         executed = self._env.step(action_index)
         if (executed.index, executed.bits) != (chosen.index, chosen.bits):
@@ -67,7 +80,7 @@ class CombatPublicV5Env(CombatPublicV4Env):
         # Store only wrapper-owned history; the underlying frozen v3 view must
         # remain byte-for-byte unchanged. The backend clears its list at turn or
         # battle boundaries, so append only when the old raw prefix survives.
-        after = list(self._env.summary().get("combat", {}).get("recent_actions", []))
+        _, after = self._history_context()
         if after == [*before, executed.description]:
             self._raw_history = list(after)
             self._public_history = [*public_before, chosen.description]
@@ -116,10 +129,9 @@ class CombatPublicV5Env(CombatPublicV4Env):
         for old, new in sorted(self._selection_labels.items(), key=lambda x: -len(x[0])):
             if old != new:
                 text = text.replace(old, new)
-        summary = self._env.summary()
-        history = self._history(summary.get("combat", {}).get("recent_actions", []))
+        ascension, raw_history = self._history_context()
+        history = self._history(raw_history)
         text = re.sub(r"^Recent actions this turn:.*$",
                       lambda _: "Recent actions this turn: " + (" -> ".join(history) or "none"),
                       text, flags=re.MULTILINE)
-        ascension = int(summary["ascension"])
-        return text + f"\nAscension: {ascension}"
+        return text + f"\nAscension: {int(ascension)}"
