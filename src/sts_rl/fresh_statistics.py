@@ -245,6 +245,17 @@ def teacher_consistency(rows, *, resamples=BOOTSTRAPS):
             'groups': {k: clustered_mean(v, resamples=resamples) for k, v in groups.items()}}
 
 
+def paired_win_normal_interval(n, gains, losses):
+    """Large-sample 95% interval for a paired win-rate change, in rate units."""
+    if any(type(v) is not int for v in (n, gains, losses)) or n < 2:
+        raise ValueError("Require integer counts for at least two paired worlds")
+    if min(gains, losses) < 0 or gains + losses > n:
+        raise ValueError("Invalid discordance counts")
+    mean = (gains - losses) / n
+    se = math.sqrt(max(0., (gains + losses) / n - mean * mean) / (n - 1))
+    return [mean - 1.96 * se, mean + 1.96 * se]
+
+
 def exact_discordance(student_only, champion_only):
     """Two-sided exact binomial McNemar p, stable log-sum even at large n."""
     if any(isinstance(x, bool) or int(x) != x or x < 0 for x in (student_only, champion_only)):

@@ -57,8 +57,10 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(runs["batch/recipe"]["name"], "batch/recipe")
 
     def test_current_lineage_is_ordered_and_old_labels_do_not_make_runs_key(self):
-        lineage = ("round4_20261021/round4", "continued2_20261021/train", "continued3_20261022/train",
-                   "continued4_20261022/train", "joint_20261022/train")
+        lineage = ("ppo_fresh_worlds_from_4058/control", "ppo_fresh_worlds_from_4058/challenger",
+                   "round4_20261021/round4", "continued2_20261021/train", "continued3_20261022/train",
+                   "continued4_20261022/train", "joint_20261022/train", "joint2_20261022/train",
+                   "reward_ablation_20261023/floors")
         self.assertEqual(dashboard.KEY_RUNS, lineage)
         present = [n for n in lineage if "continued4" not in n]
         old = ["large_batch_20261020/" + n for n in ("recipe", "recipe_hidden", "hygiene_hidden")]
@@ -68,7 +70,7 @@ class DashboardTests(unittest.TestCase):
         runs = dashboard.state()["runs"]
         self.assertEqual(list(runs)[:len(present)], present)
         self.assertEqual([n for n, r in runs.items() if r["key"]], present)
-        self.assertNotIn(lineage[3], runs)
+        self.assertNotIn("continued4_20261022/train", runs)
         for name in present + old:
             self.assertEqual(runs[name]["label"], dashboard.LABELS[name])
         self.assertTrue(runs["active"]["active"])
@@ -258,8 +260,8 @@ class DashboardTests(unittest.TestCase):
              "parent": {"node": "ppo:continued"}},
         ]
         self.assertEqual(dashboard._lineage_mapping({"nodes": nodes}), {
-            str(self.root / "a"): {"x0": 0, "parent": None},
-            str(self.extra / "b"): {"x0": 24, "parent": "Student splice"}})
+            str(self.root / "a"): {"x0": 0, "base_iter": 0, "parent": None},
+            str(self.extra / "b"): {"x0": 24, "base_iter": 0, "parent": "Student splice"}})
 
     def test_lineage_refresh_reuses_and_saves_hash_cache_without_changing_other_fields(self):
         cache = Path(self.tmp.name) / "cache.json"
@@ -282,7 +284,7 @@ class DashboardTests(unittest.TestCase):
 
         with patch.object(dashboard, "_reconstruct_lineage", side_effect=reconstruct):
             lineage.refresh()
-            self.assertEqual(lineage.snapshot(), {str(self.root / "a"): {"x0": 48, "parent": None}})
+            self.assertEqual(lineage.snapshot(), {str(self.root / "a"): {"x0": 48, "base_iter": 0, "parent": None}})
             lineage.refresh()
         self.assertIs(caches[0], caches[1])
         saved = json.loads(cache.read_text())
@@ -296,7 +298,7 @@ class DashboardTests(unittest.TestCase):
                                   {"event": "train", "iteration": 1, "games": 10}])
         lineage = dashboard.Lineage([self.root])
         lineage.refresh()
-        self.assertEqual(lineage.snapshot(), {str(self.root / "a"): {"x0": 0, "parent": "root.pt"}})
+        self.assertEqual(lineage.snapshot(), {str(self.root / "a"): {"x0": 0, "base_iter": 0, "parent": "root.pt"}})
 
     def test_lineage_worker_retries_after_failure_and_keeps_last_snapshot(self):
         lineage = dashboard.Lineage([self.root])
@@ -557,6 +559,16 @@ for(const [id,c] of Object.entries(charts)){
  assert.equal(JSON.stringify(c.data.datasets),JSON.stringify(before[id]));
 }
 assert(!element('runs').innerHTML.includes('<th>start</th>'));
+""", saved_axis="per-run")
+
+    def test_resumed_child_uses_parent_position_only_once(self):
+        self.run_js(r"""
+state.lineage={enabled:true,ready:true};
+state.runs.key.x0=168;state.runs.key.base_iter=24;
+state.runs.key.train=[{iteration:25,collect_floor:40}];
+await load();
+assert.equal(axisMode,'cumulative');
+assert.equal(charts.c_train.data.datasets[0].data[0].x,169);
 """)
 
     def test_saved_cumulative_axis_waits_for_lineage_then_restores(self):
@@ -574,7 +586,7 @@ await load();assert(Object.values(charts).every(c=>c.resets===1));
 
     def test_axis_mode_handles_unavailable_storage_and_zoom_plugin(self):
         self.run_js(r"""
-assert.equal(axisMode,'per-run');assert(!element('axis-cumulative').disabled);
+assert.equal(axisMode,'cumulative');assert(!element('axis-cumulative').disabled);
 state.runs.key.x0=24;await load();
 element('axis-mode').handlers.change({target:{value:'cumulative'}});
 assert.equal(charts.c_train.data.datasets[0].data[0].x,25);

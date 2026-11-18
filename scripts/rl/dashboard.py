@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import importlib.util
 import json
@@ -59,6 +60,10 @@ PORT = 8791
 
 # Descriptions do not affect the default selection.
 LABELS = {
+    "joint2_20261022/train": "Second joint training run",
+    "reward_ablation_20261023/floors": "Champion parent · wins plus floors",
+    "ppo_fresh_worlds_from_4058/control": "PPO control · learning rate 0.0003",
+    "ppo_fresh_worlds_from_4058/challenger": "PPO challenger · learning rate 0.0001",
     "round4_20261021/round4": "First continued training (from round 3 student champion)",
     "continued2_20261021/train": "Second continued training",
     "continued3_20261022/train": "Third continued training (champion from 22 Oct 16:32)",
@@ -75,8 +80,10 @@ LABELS = {
     "ooc_rep_s2": "E8 replicate, seed 2",
 }
 # Key runs, shown by default (in this order). Everything else is archived unless active.
-KEY_RUNS = ("round4_20261021/round4", "continued2_20261021/train", "continued3_20261022/train",
-            "continued4_20261022/train", "joint_20261022/train")
+KEY_RUNS = ("ppo_fresh_worlds_from_4058/control", "ppo_fresh_worlds_from_4058/challenger",
+            "round4_20261021/round4", "continued2_20261021/train", "continued3_20261022/train",
+            "continued4_20261022/train", "joint_20261022/train", "joint2_20261022/train",
+            "reward_ablation_20261023/floors")
 EVAL_LABELS = {
     "distilled": "Update 36 + smith rule distilled",
     "distilled_elite90": "Update 36 + smith distilled, + elite ≥90% overlay",
@@ -118,7 +125,7 @@ def _lineage_mapping(lineage: dict) -> dict[str, dict]:
             continue
         parent = nodes[node["parent"]["node"]] if node.get("parent") else None
         mapping[str(Path(node["path"]).expanduser().resolve())] = {
-            "x0": node["x0"], "parent": parent["label"] if parent else None}
+            "x0": node["x0"], "base_iter": node.get("base_iter", 0), "parent": parent["label"] if parent else None}
     return mapping
 
 
@@ -306,7 +313,7 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
                 continue
             sig.append(f"{log}:{key[0]}:{key[1]}")
             ancestry = (mapping or {}).get(str(log.parent.resolve()), {})
-            lineage_fields = {"x0": ancestry.get("x0"), "lineage_parent": ancestry.get("parent")}
+            lineage_fields = {"x0": ancestry.get("x0"), "base_iter": ancestry.get("base_iter", 0), "lineage_parent": ancestry.get("parent")}
             sig.append(json.dumps(lineage_fields, sort_keys=True))
             run_key = name if name not in runs else f"{name} [{root}]"
             run_keys[root, name] = run_key
@@ -344,7 +351,7 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
     for name in order:
         run = runs[name]
         entry = {"name": run["name"], "root": run["root"],
-                 "x0": run["x0"], "lineage_parent": run["lineage_parent"],
+                 "x0": run["x0"], "base_iter": run["base_iter"], "lineage_parent": run["lineage_parent"],
                  "label": LABELS.get(run["name"]) or (run["config"].get("notes") or "")[:90],
                  "key": run["name"] in KEY_RUNS, "active": name in active_runs, "done": run["done"],
                  "status": statuses.get(name, "done" if run["done"] else "stopped"), "config": run["config"],
@@ -396,6 +403,7 @@ button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(-
 <h1>Slay the Spire RL</h1>
 <div class="mut small">Objective: complete the game, i.e. an Ascension 0 Act 3 boss win. Write-up: research/README.md · results: research/results.md</div>
 <div class="mut small" id="hdr">loading…</div>
+<!-- study progress link -->
 <div class="card"><h2>Win rate, 4,096-world win set (TRAIN seeds from 6e9), Wilson 95% CI</h2>
 <div class="tw"><table id="win"></table></div>
 <div class="mut small" style="margin-top:6px">Paired comparisons and McNemar p-values: <code>scripts/rl/compare_evals.py A.json B.json</code>. Win counts at 1,024 worlds (training-run evals below) swing by ±7, so use this table for win claims.</div></div>
@@ -432,8 +440,8 @@ const COLORS=['#2f6fdb','#d9480f','#2b8a3e','#ae3ec9','#e67700','#0b7285','#c225
 const charts={}; let runs={}, sig='', showArchived=false, timer=null, inflight=false, lastOk=null;
 const selected=new Map(), STORAGE_KEY='sts-rl-dashboard-runs';
 const AXIS_STORAGE_KEY='sts-rl-dashboard-axis';
-let axisMode='per-run', preferredAxisMode='per-run', lineageReady=false;
-try{if(localStorage.getItem(AXIS_STORAGE_KEY)==='cumulative')preferredAxisMode='cumulative'}catch(e){}
+let axisMode='per-run', preferredAxisMode='cumulative', lineageReady=false;
+try{if(localStorage.getItem(AXIS_STORAGE_KEY)==='per-run')preferredAxisMode='per-run'}catch(e){}
 try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));
  if(saved&&typeof saved==='object'&&!Array.isArray(saved)&&Object.values(saved).every(v=>typeof v==='boolean'))
   Object.entries(saved).forEach(([n,v])=>selected.set(n,v))}catch(e){}
@@ -530,7 +538,7 @@ document.getElementById('reset-all').addEventListener('click',()=>Object.keys(ch
 function draw(){
  const names=Object.keys(runs).filter(n=>selected.get(n));
  // All chart datasets below use update/iteration coordinates, including bounds and rates.
- const ds=f=>names.flatMap(n=>{const r=runs[n],offset=axisMode==='cumulative'?(r.x0??0):0;
+ const ds=f=>names.flatMap(n=>{const r=runs[n],offset=axisMode==='cumulative'?(r.x0??0)-(r.base_iter??0):0;
   return f(n,color(n),r).map(d=>({...d,data:d.data.map(p=>({...p,x:p.x+offset}))}))});
  mk('c_paired',ds((n,c,r)=>{const e=r.evals.filter(x=>x.paired);return[
   {label:n,data:e.map(x=>({x:x.iteration,y:x.paired.diff})),borderColor:c,backgroundColor:c},
@@ -573,7 +581,18 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/api/state"):
             body, kind = state_payload(self.path, self.extra_roots, self.lineage), "application/json"
         elif self.path in ("/", "/index.html"):
-            body, kind = PAGE.encode(), "text/html; charset=utf-8"
+            link = '<p><a href="/progress">Live study progress and evaluation milestones</a></p>' if (ROOT / "research/log.md").is_file() else ""
+            body, kind = PAGE.replace("<!-- study progress link -->", link).encode(), "text/html; charset=utf-8"
+        elif self.path == "/progress" and (ROOT / "research/log.md").is_file():
+            log = (ROOT / "research/log.md").read_text()
+            entries = "".join(f"<li>{html.escape(line[2:])}</li>" for line in log.splitlines() if line.startswith("- "))
+            title = html.escape(log.splitlines()[0].lstrip("# ")) if log else "Study progress"
+            body = (f'<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="30">'
+                    f'<meta name="viewport" content="width=device-width, initial-scale=1"><title>{title}</title>'
+                    '<style>body{font:16px/1.5 system-ui;max-width:62rem;margin:2rem auto;padding:0 1rem}'
+                    'li{margin:.55rem 0}h1{font-size:1.5rem}html{color-scheme:light dark}</style></head>'
+                    f'<body><a href="/">Training dashboard</a><h1>{title}</h1><ul>{entries}</ul></body></html>').encode()
+            kind = "text/html; charset=utf-8"
         else:
             self.send_error(404)
             return

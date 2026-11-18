@@ -302,6 +302,19 @@ class FreshStatisticsTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError,'checkpoint file identity'):
                         module.main(args)
 
+    def test_paired_win_normal_interval_uses_world_differences(self):
+        from sts_rl.fresh_statistics import paired_win_normal_interval
+        from statistics import mean, stdev
+        differences = [1., 1., -1., 0., 0.]
+        margin = 1.96 * stdev(differences) / len(differences)**.5
+        lo, hi = paired_win_normal_interval(5, 2, 1)
+        self.assertAlmostEqual(lo, mean(differences) - margin)
+        self.assertAlmostEqual(hi, mean(differences) + margin)
+        self.assertEqual(paired_win_normal_interval(20, 0, 0), [0, 0])
+        for counts in [(1, 0, 0), (8, 6, 5), (3, -1, 2)]:
+            with self.assertRaises(ValueError):
+                paired_win_normal_interval(*counts)
+
     def test_exact_discordance_and_gate_precedence(self):
         self.assertEqual(exact_discordance(0,0),1)
         self.assertAlmostEqual(exact_discordance(3,0),.25)

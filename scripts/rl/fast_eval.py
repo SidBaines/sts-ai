@@ -34,6 +34,7 @@ def parser():
                    help="overlay: at a card reward whose cards are all rare, take one rather than skipping")
     p.add_argument("--take-card", action="append", default=[], metavar="NAME",
                    help="overlay: always take this card (upgraded copies too) when a reward offers it; repeatable")
+    p.add_argument("--progress-every", type=int, default=0, help="Write a count-only progress row every N world records; zero disables it")
     p.add_argument("--out", required=True)
     return p
 
@@ -72,18 +73,25 @@ def prepare_output(config):
 def main(argv=None):
     p = parser()
     config = vars(p.parse_args(argv))
-    if (config["processes"] < 1 or config["games_per_process"] < 1 or
+    if (config["processes"] < 1 or config["games_per_process"] < 1 or config["progress_every"] < 0 or
             not math.isfinite(config["timeout"]) or config["timeout"] <= 0):
         p.error("Require positive processes, games per process and finite positive timeout")
     validate_world_range(config["world_start"], config["n"])
     configure_cpu()
     out = prepare_output(config)
     start = time.perf_counter()
+    recorded = 0
+    def progress(record):
+        nonlocal recorded
+        recorded += 1
+        if recorded % config["progress_every"] == 0 or recorded == config["n"]:
+            with (out / "progress.jsonl").open("a") as stream:
+                stream.write(json.dumps({"t": time.time(), "recorded": recorded, "total": config["n"]}) + "\n")
     try:
         records = run_multiprocess(range(config["world_start"], config["world_start"] + config["n"]),
             config["checkpoint"], config["combat"], config["ooc"], processes=config["processes"],
             games_per_process=config["games_per_process"], timeout=config["timeout"],
-            overlays=overlays_from(config))
+            overlays=overlays_from(config), on_record=progress if config["progress_every"] else None)
     except Exception as exc:
         summary = evaluation_summary(getattr(exc, "records", []), config["n"])
         summary.update(error=f"{type(exc).__name__}: {exc}", confidence_claims_allowed=False,
