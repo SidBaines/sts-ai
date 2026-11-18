@@ -254,3 +254,5 @@ release changed game behaviour.
 ## Mac performance study
 
 Wall time is elapsed time on the M5 Pro. Whole-job time includes startup, both evaluations, data writes and checkpoints. Trainer iteration time ends before checkpointing and evaluation. PPO update time includes the gradient-cosine diagnostic. RSS is the process's peak resident memory; MLX peak memory comes from the Metal allocator. ABBA and BAAB describe the time order of baseline (A) and candidate (B) runs.
+
+- `env-v0.1.5.2` is the November performance release. Its gameplay version is 0.1.5, its public schema is v3 and its source and native patch identities differ from 0.1.5.1. The non-LLM adoption uses the workstream panel overlay.
