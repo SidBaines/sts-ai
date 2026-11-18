@@ -249,3 +249,12 @@ observation label stays `sts_env_public_v3`. The in-process step costs about a
 third as much (1,119 to 356 µs per decision). Source identity
 (`python_interface_sha256`) changes, as for any source edit, so traces
 recorded under 0.1.5 keep their usual replay boundary.
+
+## Release 0.1.5.2 — public combat observation performance
+
+The combat wrapper reads recent actions directly and fetches the hand only for
+multi-card selection menus. Public gameplay observations, menus and rewards
+retain their 0.1.5 semantics. The distribution version is 0.1.5.2, the gameplay
+version is 0.1.5, and the observation label is `sts_env_public_v3`.
+Eight explicit standard-library includes support GCC 15. The Python interface
+and native patch identities change. See the [release record](release_v0.1.5.2.md).
