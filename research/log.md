@@ -1,5 +1,11 @@
 # Online combat training progress
 
+- 19 Nov 12:13 GMT — Expanded pilot — finishing already queued work at lower concurrency.
+- 19 Nov 12:05 GMT — Scaled back simultaneous pilot jobs after the preceding trainer slowed. New screens use at most three active evaluator processes, subject to reproducing every trajectory on the 768-world reference.
+- 19 Nov 12:04 GMT — Expanded pilot — screened 4 of 27 settings.
+- 19 Nov 12:00 GMT — Expanded pilot — screened 3 of 27 settings.
+- 19 Nov 11:57 GMT — Expanded pilot — screened 2 of 27 settings.
+- 19 Nov 11:55 GMT — Expanded pilot — screened 1 of 27 settings.
 - 19 Nov 11:45 GMT — Opened a 27-setting combat pilot. Exploration, learning rate and passes vary together. The best distinct challenger will replay three joint updates against the original choice on fresh training worlds.
 - 19 Nov 11:02 GMT — Stage — pilot complete; waiting for the current training jobs to release the Mac GPU.
 - 19 Nov 11:00 GMT — Greedy pilot, 2,048 paired games each. Frozen 800 wins. One pass at 0.00001 won 811, one at 0.00003 won 819, one at 0.0001 won 815, and two at 0.00003 won 825. The selected fit gained 1.22 points [−0.18, +2.62].

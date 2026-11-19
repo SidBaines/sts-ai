@@ -49,7 +49,11 @@ The 12% target met both screening thresholds. Its common learning-rate collectio
 
 The selection rule chose 0.00003 and two passes. All four comparisons were inconclusive individually. All 2,048 worlds completed for every player. The 0.0001 setting hit its update-size guard early for the boss fighter. The two-pass setting completed both passes for both fighters.
 
+On the same 3,072 training worlds with the fighter still frozen, 5%, 12% and 22% exploration yielded 1,105, 1,082 and 905 wins. Relative to 12%, the paired differences were +0.75 points [−1.19, +2.68] for 5% and −5.76 [−7.65, −3.87] for 22%. These are the outcomes while gathering experience for the fits. All games finished.
+
 ## Log
+
+- 19 November — one earlier trainer update took 735 seconds during overlapping pilot work, against 282 seconds before it. Reduced supplemental concurrency and added a 768-world trajectory check for the lower-memory evaluator.
 
 - 19 November — chose the starting player, comparison and pilot rules before sampling.
 - 19 November — Sid would prefer one general fighter long term and asked to keep the existing specialist for this comparison. A separate study could distil both fighters into one.

@@ -46,8 +46,8 @@ def note(message):
     os.replace(tmp, p)
 
 
-def ensure(jobs, name, lane, script, args, marker):
-    key = "online-combat-" + name
+def ensure(jobs, name, lane, script, args, marker, *, prefix="online-combat-", nice=0):
+    key = prefix + name
     recovery = BASE / "recovered-jobs.json"
     if recovery.exists():
         key = read(recovery).get(key, key)
@@ -72,6 +72,7 @@ def ensure(jobs, name, lane, script, args, marker):
         "PYTHONUNBUFFERED=1",
         "PYTHONPATH=" + str(ROOT / "src"),
         "STS_LIGHTSPEED_BUILD=" + str(NATIVE),
+        *(["/usr/bin/nice", "-n", str(nice)] if nice else []),
         sys.executable,
         "-u",
         str(Path(__file__)),
@@ -80,7 +81,10 @@ def ensure(jobs, name, lane, script, args, marker):
         *map(str, args),
     ]
     subprocess.run(cmd, cwd=ROOT, check=True)
-    note("Queued " + name + ".")
+    if nice:
+        print("Queued " + key, flush=True)
+    else:
+        note("Queued " + name + ".")
     return False
 
 
@@ -384,18 +388,18 @@ def tick(jobs):
     return "finished"
 
 
-def main():
-    BASE.mkdir(exist_ok=True)
-    with (BASE / "monitor.lock").open("a") as lock:
+def main(run=BASE, advance=tick, prefix="online-combat-", title="Stage"):
+    run.mkdir(parents=True, exist_ok=True)
+    with (run / "monitor.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if digest(PARENT) != PARENT_SHA:
             raise ValueError("unexpected parent checkpoint")
         stage = None
         heartbeat = 0
-        while not (BASE / "STOP").exists() and not (BASE / "verdict.json").exists():
+        while not (run / "STOP").exists() and not (run / "verdict.json").exists():
             jobs = {j["name"]: j for j in read(RUNS / "queue.json")["runs"]}
             for name, j in jobs.items():
-                if name.startswith("online-combat-") and j["status"] in (
+                if name.startswith(prefix) and j["status"] in (
                     "failed",
                     "cancelled",
                 ):
@@ -406,14 +410,14 @@ def main():
                     raise RuntimeError(
                         f"Child {name} {j['status']}. Inspect {RUNS / name / 'stdout.log'}"
                     )
-            current = tick(jobs)
+            current = advance(jobs)
             if current != stage:
                 stage = current
-                note("Stage — " + stage + ".")
+                note(title + " — " + stage + ".")
             now = time.time()
-            atomic_json(BASE / "status.json", dict(stage=stage, t=now, pid=os.getpid()))
+            atomic_json(run / "status.json", dict(stage=stage, t=now, pid=os.getpid()))
             if now - heartbeat >= 600:
-                with (BASE / "progress.jsonl").open("a") as f:
+                with (run / "progress.jsonl").open("a") as f:
                     print(
                         json.dumps(
                             dict(
@@ -422,8 +426,7 @@ def main():
                                 active=[
                                     n
                                     for n, j in jobs.items()
-                                    if n.startswith("online-combat-")
-                                    and j["status"] == "running"
+                                    if n.startswith(prefix) and j["status"] == "running"
                                 ],
                             )
                         ),

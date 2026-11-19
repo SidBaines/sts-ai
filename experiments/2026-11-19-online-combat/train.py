@@ -1,6 +1,8 @@
 """Run one arm using the pilot-frozen settings or a bounded wiring check."""
 
 import argparse
+import fcntl
+import time
 import json
 from pathlib import Path
 
@@ -9,7 +11,27 @@ from sts_rl.ooc_trainer import OOCTrainConfig, train
 from sts_rl.common import load_policy
 
 
-def config(out, role, smoke=False):
+def launch_settings(base=BASE):
+    """Freeze one choice for both production arms at their first actual launch."""
+    lock = base / "launch-settings.lock"
+    with lock.open("a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        path = base / "launch-settings.json"
+        if path.exists():
+            return json.loads(path.read_text())["selected"]
+        original = json.loads((base / "fit-selection.json").read_text())["selected"]
+        source, selected = "first-pilot", original
+        expanded = base / "expanded" / "verdict.json"
+        started = any((base / r / "config.json").exists() for r in ("control", "joint"))
+        if expanded.exists() and not started:
+            verdict = json.loads(expanded.read_text())
+            if verdict["qualified"]:
+                source, selected = "expanded-pilot", verdict["challenger"]
+        atomic_json(path, {"source": source, "selected": selected, "time": time.time()})
+        return selected
+
+
+def config(out, role, smoke=False, *, setting=None):
     raw = json.loads(Path(__file__).with_name("ppo.json").read_text())
     if smoke:
         setting = {"target": 0.12, "rate": 0.00003, "epochs": 1}
@@ -27,8 +49,11 @@ def config(out, role, smoke=False):
             eval_world_start=237_000_000_000,
             health_every=1,
         )
-    else:
-        setting = json.loads((BASE / "fit-selection.json").read_text())["selected"]
+    elif setting is None:
+        path = BASE / "launch-settings.json"
+        setting = json.loads(
+            (path if path.exists() else BASE / "fit-selection.json").read_text()
+        )["selected"]
     temps = temperatures(setting["target"])
     raw.update(
         out=str(out),
@@ -43,7 +68,7 @@ def config(out, role, smoke=False):
 
 
 def run(out, role, smoke=False):
-    cfg = config(out, role, smoke)
+    cfg = config(out, role, smoke, setting=None if smoke else launch_settings())
     out.mkdir(parents=True, exist_ok=True)
     # The dashboard uses the physical parent and iteration count to extend the training line.
     atomic_json(

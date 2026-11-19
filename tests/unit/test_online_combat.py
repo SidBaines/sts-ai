@@ -12,6 +12,8 @@ from sts_rl.online_combat import (
     ROLES,
     action_diagnostics,
     center_combat_returns,
+    confirmed_combat_challenger,
+    nominate_combat_challenger,
     samples_from_game,
     select_exploration,
     update_fighters,
@@ -163,3 +165,48 @@ class OnlineCombatTests(unittest.TestCase):
         self.assertTrue(viable_combat_fit(move))
         move["boss_specialist"]["changed_rate"] = 0
         self.assertFalse(viable_combat_fit(move))
+
+    def test_expanded_nomination_requires_a_distinct_eligible_fit_and_uses_full_cohort(
+        self,
+    ):
+        def row(gain, epochs=2, rate=0.00003, target=0.12, eligible=True):
+            return dict(
+                setting=dict(epochs=epochs, rate=rate, target=target),
+                eligible=eligible,
+                comparison={
+                    "difference_pp": 99,
+                    "full_cohort_gain_bounds_pp": [gain, 99],
+                },
+            )
+
+        results = {
+            "original": row(0),
+            "ineligible": row(9, eligible=False),
+            "small": row(0.1),
+            "four": row(0.2, epochs=4),
+            "high_rate": row(0.2, rate=0.00006),
+            "distant": row(0.2, target=0.22),
+            "chosen": row(0.2, target=0.05),
+        }
+        self.assertEqual(nominate_combat_challenger(results, "original"), "chosen")
+        self.assertIsNone(
+            nominate_combat_challenger(
+                {"original": row(0), "bad": row(50, eligible=False)}, "original"
+            )
+        )
+
+    def test_expanded_confirmation_requires_both_conservative_directions(self):
+        for screen, lower, expected in (
+            (1, 0.1, True),
+            (0, 1, False),
+            (1, 0, False),
+            (-1, 0.1, False),
+            (1, -0.1, False),
+        ):
+            self.assertEqual(
+                confirmed_combat_challenger(
+                    {"full_cohort_gain_bounds_pp": [screen, 3]},
+                    {"ci95_pp": [1, 5], "worst_case_ci95_pp": [lower, 5]},
+                ),
+                expected,
+            )

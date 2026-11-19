@@ -25,7 +25,7 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-The [online combat study](experiments/2026-11-19-online-combat.md) is preparing a matched pilot and 24-update comparison alongside the separate refit timing study.
+The [online combat study](experiments/2026-11-19-online-combat.md) is screening 27 combinations of combat exploration, learning rate and training passes while the refit timing study runs. The paired 24-update comparison is staged and can start as soon as the training slot opens.
 
 ## Next
 

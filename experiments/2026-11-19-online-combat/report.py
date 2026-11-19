@@ -80,6 +80,23 @@ def finish(final):
             f"| {f['rate']:g} | {f['epochs']} | {describe(entry['comparison'])} | {m['combat']['changed_rate']:.1%} / "
             f"{m['boss_specialist']['changed_rate']:.1%} | {'yes' if f['eligible'] else 'no'} |"
         )
+    expanded = BASE / "expanded" / "verdict.json"
+    if expanded.exists():
+        from expanded_report import rows_from_disk, section
+
+        text.extend(["", *section(rows_from_disk(), read(expanded))])
+    binding = BASE / "launch-settings.json"
+    if binding.exists():
+        selected_main = read(binding)
+        cfg = selected_main["selected"]
+        text.extend(
+            [
+                "",
+                f"The actual 24-update comparison used {cfg['target']:.0%} combat exploration, "
+                f"combat learning rate {cfg['rate']:.5f}, and {cfg['epochs']} pass(es). "
+                f"The selection was fixed from the {selected_main['source']} at first launch.",
+            ]
+        )
     nominee = first["nominee"]
     verdict = (
         f"{nominee.title()} won the independent schedule comparison."

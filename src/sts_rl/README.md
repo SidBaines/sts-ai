@@ -443,3 +443,5 @@ episode samples; missing measurements stay unavailable.
 selected and latest snapshots without changing training or selection. Reused
 worlds and snapshots remain repeated monitoring, not independent final
 evidence.
+
+For shared-machine evaluations, `fast_eval.py --processes 7 --games-per-process 8 --max-active-processes 3` retains the seven original seed partitions and their eight-game batches while running at most three child processes at once. The run records both settings.

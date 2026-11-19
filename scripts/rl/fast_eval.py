@@ -28,6 +28,8 @@ def parser():
     p.add_argument("--world-start", type=int, required=True)
     p.add_argument("--n", type=int, required=True)
     p.add_argument("--processes", type=int, default=1)
+    p.add_argument("--max-active-processes", type=int,
+                   help="Run at most this many of the fixed process partitions at a time")
     p.add_argument("--games-per-process", type=int, default=8)
     p.add_argument("--timeout", type=float, default=120., help="Seconds without a completed decision per process")
     p.add_argument("--no-skip-rares", action="store_true", default=False,
@@ -66,6 +68,9 @@ def prepare_output(config):
                            "processes": min(processes, n),
                            "world_seeds_by_process": [list(range(start + i, start + n, processes))
                                                       for i in range(min(processes, n))]}
+        active_cap = config.get("max_active_processes")
+        if active_cap is not None:
+            run["batching"]["max_active_processes"] = min(active_cap, processes, n)
     atomic_json(out / "run.json", run)
     return out
 
@@ -73,8 +78,10 @@ def prepare_output(config):
 def main(argv=None):
     p = parser()
     config = vars(p.parse_args(argv))
-    if (config["processes"] < 1 or config["games_per_process"] < 1 or config["progress_every"] < 0 or
-            not math.isfinite(config["timeout"]) or config["timeout"] <= 0):
+    active_cap = config["max_active_processes"]
+    if (config["processes"] < 1 or config["games_per_process"] < 1 or config["progress_every"] < 0
+            or (active_cap is not None and active_cap < 1)
+            or not math.isfinite(config["timeout"]) or config["timeout"] <= 0):
         p.error("Require positive processes, games per process and finite positive timeout")
     validate_world_range(config["world_start"], config["n"])
     configure_cpu()
@@ -91,6 +98,7 @@ def main(argv=None):
         records = run_multiprocess(range(config["world_start"], config["world_start"] + config["n"]),
             config["checkpoint"], config["combat"], config["ooc"], processes=config["processes"],
             games_per_process=config["games_per_process"], timeout=config["timeout"],
+            max_active_processes=config["max_active_processes"],
             overlays=overlays_from(config), on_record=progress if config["progress_every"] else None)
     except Exception as exc:
         summary = evaluation_summary(getattr(exc, "records", []), config["n"])

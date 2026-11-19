@@ -34,13 +34,15 @@ def sample(directory):
     return result
 
 
-def fit(out, settings):
+def fit(out, settings, data=None):
     torch.set_num_threads(6)
     old, template = load_policy(str(CHAMP))
-    temps = json.loads((BASE / "fit-data" / "summary.json").read_text())["config"][
-        "temperatures"
-    ]
-    rows = sample(BASE / "fit-data")
+    data = BASE / "fit-data" if data is None else data
+    collected = json.loads((data / "summary.json").read_text())
+    if collected["config"]["stage"] != "fit":
+        raise ValueError("combat updates require on-policy fit data")
+    temps = collected["config"]["temperatures"]
+    rows = sample(data)
     held = sample(BASE / "calibration")
     out.mkdir(parents=True, exist_ok=True)
     log = JsonlLog(out / "progress.jsonl")
@@ -49,7 +51,9 @@ def fit(out, settings):
         {
             "temperatures": temps,
             "settings": settings,
-            "train_worlds": 3072,
+            "training_data": str(data.resolve()),
+            "target": collected["config"]["target"],
+            "train_worlds": collected["config"]["games"],
             "eval_worlds": 192,
         },
         CHAMP,
@@ -96,6 +100,7 @@ def fit(out, settings):
             "name": name,
             "rate": rate,
             "epochs": epochs,
+            "target": collected["config"]["target"],
             "steps": stats,
             "movement": movement,
             "eligible": viable_combat_fit(movement),
@@ -116,8 +121,12 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--out", required=True, type=Path)
     p.add_argument("--fallback", action="store_true")
+    p.add_argument("--data", type=Path)
+    p.add_argument("--setting", nargs=2, action="append", metavar=("RATE", "PASSES"))
     a = p.parse_args()
     settings = [(1e-5, 1), (3e-5, 1), (1e-4, 1), (3e-5, 2)]
     if a.fallback:
         settings = [(1e-6, 1), (3e-6, 1), (3e-4, 1)]
-    fit(a.out, settings)
+    if a.setting:
+        settings = [(float(rate), int(passes)) for rate, passes in a.setting]
+    fit(a.out, settings, a.data)

@@ -379,7 +379,7 @@ def _close_lane(lane):
 
 def run_multiprocess(seeds, checkpoint, combat=None, ooc=None, *, processes=1,
                      games_per_process=8, timeout=120.0, reference_records=None, on_record=None,
-                     clock=None, overlays=None):
+                     clock=None, overlays=None, max_active_processes=None):
     """Spawn N runners; retry in-flight peers once after a process failure.
 
     Start/record events share an ordered pipe. Drain it before handling EOF/death,
@@ -387,6 +387,8 @@ def run_multiprocess(seeds, checkpoint, combat=None, ooc=None, *, processes=1,
     No decision round trips or acknowledgements are required.
     """
     configure_cpu()
+    if max_active_processes is not None:
+        _positive_integer(max_active_processes, "max_active_processes")
     clock = clock or time.monotonic
     _positive_integer(processes, "processes")
     _positive_integer(games_per_process, "games_per_process")
@@ -416,9 +418,18 @@ def run_multiprocess(seeds, checkpoint, combat=None, ooc=None, *, processes=1,
         child.close()
         lane.connection, lane.process, lane.last_progress = parent, process, clock()
 
+    # The logical world partitions and per-process batch shapes determine the policy's
+    # trajectory. Limiting how many of those partitions execute at once only changes scheduling.
+    pending = deque(lanes)
+    cap = min(len(lanes), max_active_processes or processes)
+
+    def fill_slots():
+        available = cap - sum(lane.process is not None for lane in lanes)
+        for _ in range(min(available, len(pending))):
+            launch(pending.popleft())
+
     try:
-        for lane in lanes:
-            launch(lane)
+        fill_slots()
         previous_iteration = clock()
         while any(lane.remaining for lane in lanes):
             live = [lane for lane in lanes if lane.process is not None]
@@ -459,6 +470,8 @@ def run_multiprocess(seeds, checkpoint, combat=None, ooc=None, *, processes=1,
                         if lane.startup_failures >= 2:
                             raise RuntimeError("Runner repeatedly died before starting a world: " + reason)
                         launch(lane)
+            if pending:
+                fill_slots()
         if len(records) != len(seeds) or {r["world_seed"] for r in records} != set(seeds):
             raise RuntimeError("Runner lost or duplicated worlds")
         return sorted(records, key=lambda r: r["world_seed"])

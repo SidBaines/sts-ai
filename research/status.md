@@ -10,3 +10,5 @@ The [direct joint-training study](experiments/2026-11-19-online-combat.md) compl
 - The existing refit study can finish training first on the Mac. Its participants have the same starting champion.
 
 The expansion screens 27 fits on 768 fresh worlds, then tests two three-update trajectories on 8,192 further worlds. The original schedule stays available if training can start first.
+
+Both new exploration collections completed. Extra compute is being serialized at lower priority to protect the preceding trainer. The expansion has its own live status under the run's `expanded/` directory.

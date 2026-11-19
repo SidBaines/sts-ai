@@ -262,3 +262,36 @@ def viable_combat_fit(movement, *, min_changed=0.002, max_kl=0.05):
         movement[r]["changed_rate"] >= min_changed and movement[r]["mean_kl"] <= max_kl
         for r in ROLES
     )
+
+
+def nominate_combat_challenger(results, reference):
+    """Choose a distinct eligible fit by worst-case paired gain, with stated tie breaks."""
+    old_target = results[reference]["setting"]["target"]
+    viable = [
+        key
+        for key, result in results.items()
+        if key != reference and result["eligible"]
+    ]
+    if not viable:
+        return None
+
+    def order(key):
+        result = results[key]
+        setting = result["setting"]
+        return (
+            -result["comparison"]["full_cohort_gain_bounds_pp"][0],
+            setting["epochs"],
+            setting["rate"],
+            abs(setting["target"] - old_target),
+            setting["target"],
+        )
+
+    return min(viable, key=order)
+
+
+def confirmed_combat_challenger(screen, independent):
+    """Incomplete games may count against a change in both independent cohorts."""
+    return (
+        screen["full_cohort_gain_bounds_pp"][0] > 0
+        and independent["worst_case_ci95_pp"][0] > 0
+    )

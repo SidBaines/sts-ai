@@ -246,7 +246,7 @@ class RunnerTests(unittest.TestCase):
 
 
 class DriverProcessTests(unittest.TestCase):
-    def run_fake_children(self, scripts, *, gaps=(), seeds=(10, 11), **kwargs):
+    def run_fake_children(self, scripts, *, gaps=(), seeds=(10, 11), expected_cap=None, **kwargs):
         """Inject pipe events and loop times without starting native processes."""
         clock = SimpleNamespace(now=0., iterations=0)
         scripts, gaps, assignments = deque(scripts), iter(gaps), []
@@ -276,6 +276,8 @@ class DriverProcessTests(unittest.TestCase):
             return Mock(is_alive=Mock(return_value=False), exitcode=7)
 
         def wait_for_events(connections, **kwargs):
+            if expected_cap is not None:
+                self.assertLessEqual(len(connections), expected_cap)
             clock.iterations += 1
             self.assertLess(clock.iterations, 100, "Parent loop failed to finish")
             clock.now += next(gaps, .1)
@@ -293,6 +295,20 @@ class DriverProcessTests(unittest.TestCase):
     @staticmethod
     def completed(seed):
         return {**fault_record(seed, "fixture"), "status": "completed", "win": False, "floor": 2}
+
+    def test_process_cap_preserves_strided_partitions_and_bounds_live_children(self):
+        seeds = list(range(10, 24))
+        expected = [seeds[i::7] for i in range(7)]
+        for cap in (1, 3, 7):
+            scripts = [[[event for seed in part for event in
+                         (("start", seed), ("record", self.completed(seed)))] + [("done", None)]]
+                       for part in expected]
+            rows, assignments = self.run_fake_children(scripts, seeds=seeds, processes=7,
+                                                       max_active_processes=cap, expected_cap=cap)
+            self.assertEqual(assignments, expected)
+            self.assertEqual([r["world_seed"] for r in rows], seeds)
+        with self.assertRaises(ValueError):
+            run_multiprocess(seeds, "unused", processes=7, max_active_processes=0)
 
     def test_long_parent_pause_does_not_stall_any_lane(self):
         scripts = [
