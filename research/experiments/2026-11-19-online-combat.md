@@ -51,6 +51,53 @@ The selection rule chose 0.00003 and two passes. All four comparisons were incon
 
 On the same 3,072 training worlds with the fighter still frozen, 5%, 12% and 22% exploration yielded 1,105, 1,082 and 905 wins. Relative to 12%, the paired differences were +0.75 points [−1.19, +2.68] for 5% and −5.76 [−7.65, −3.87] for 22%. These are the outcomes while gathering experience for the fits. All games finished.
 
+### Expanded pilot results
+
+All 27 settings played the same 768 screening worlds. The original recipe won 319. Each cell gives wins and the paired difference in percentage points with a 95% interval against that recipe.
+
+| Combat learning rate | Passes | 5% exploration | 12% exploration | 22% exploration |
+|---:|---:|---|---|---|
+| 0.00001 | 1 | 301, -2.34 [-4.62, -0.07] | 305, -1.82 [-3.80, +0.15] | 305, -1.82 [-4.19, +0.54] |
+| 0.00001 | 2 | 302, -2.21 [-4.59, +0.16] | 302, -2.21 [-4.17, -0.26] | 297, -2.86 [-5.22, -0.51] |
+| 0.00001 | 4 | 309, -1.30 [-3.67, +1.06] | 314, -0.65 [-2.54, +1.24] | 308, -1.43 [-3.81, +0.95] |
+| 0.00003 | 1 | 294, -3.26 [-5.84, -0.67] | 310, -1.17 [-3.32, +0.98] | 308, -1.43 [-3.89, +1.03] |
+| 0.00003 | 2 | 304, -1.95 [-4.46, +0.56] | 319, reference | 315, -0.52 [-3.07, +2.03] |
+| 0.00003 | 4 | 309, -1.30 [-3.75, +1.15] | 322, +0.39 [-1.73, +2.51] | 309, -1.30 [-4.03, +1.42] |
+| 0.00006 | 1 | 306, -1.69 [-4.38, +1.00] | 319, +0.00 [-2.58, +2.58] | 306, -1.69 [-4.40, +1.02] |
+| 0.00006 | 2 | 312, -0.91 [-3.40, +1.58] | 318, -0.13 [-2.34, +2.08] | 305, -1.82 [-4.64, +0.99] |
+| 0.00006 | 4 | 312, -0.91 [-3.40, +1.58] | 321, +0.26 [-2.34, +2.86] | 306, -1.69 [-4.59, +1.21] |
+
+0 fits failed the movement screen. The screen selected among these fits after one combat update with strategy held fixed. [Full screening data](../figures/online-combat-pilot/screen.csv).
+
+The 27 settings produced 26 distinct players. At 5% exploration and learning rate 0.00006, the per-update limit stopped both fighters early, giving the two- and four-pass settings identical weights.
+
+All 768 reference trajectories reproduced with three active evaluator processes and the same seven world partitions.
+
+Averaging over the other two settings gave these exploratory differences. Each interval uses independent worlds as its unit. A single training collection per exploration level leaves training-run variability unmeasured.
+
+| Factor | Compared with the original level | Mean win-rate change in points, 95% interval | Complete worlds / 768 |
+|---|---|---|---:|
+| Exploration | 5% vs 12% | -1.17 [-2.56, +0.22] | 768 |
+| Exploration | 22% vs 12% | -1.03 [-2.43, +0.37] | 768 |
+| Learning rate | 0.00001 vs 0.00003 | -0.68 [-1.55, +0.19] | 768 |
+| Learning rate | 0.00006 vs 0.00003 | +0.22 [-0.64, +1.07] | 768 |
+| Passes | 1 vs 2 | -0.29 [-1.08, +0.50] | 768 |
+| Passes | 4 vs 2 | +0.52 [-0.15, +1.19] | 768 |
+
+![Screening game wins by exploration, learning rate and training passes](../figures/online-combat-pilot/screen.png)
+
+The challenger used 12% exploration, learning rate 0.00003 and 4 pass(es). On 8,192 separate games after three joint updates, challenger against original was 3,242 vs 3,272 on 8,192 assigned worlds, -0.37 points [-1.43, +0.70], 8,192 complete pairs. Unresolved games were 0 faults and 0 cuts for the original, 0 faults and 0 cuts for the challenger.
+
+The original recipe retained its place under the replacement rule.
+
+| Short joint-training update | Original wins / 1,536 training worlds | Challenger wins / 1,536 training worlds |
+|---:|---:|---:|
+| 1 | 525 | 525 |
+| 2 | 550 | 525 |
+| 3 | 522 | 530 |
+
+Descriptive checks on the same 128 worlds at updates 0 and 3 gave 43 and 52 wins for the original, 43 and 54 for the challenger. These checks had no role in selection.
+
 ## Log
 
 - 19 November, 13:32 GMT — At Sid’s suggestion, made the independent verdict a prerequisite for either 24-update arm. The earlier plan would have used the original settings if the GPU became available first. Thirteen of the 27 settings had finished screening, and the independent comparison had yet to begin.

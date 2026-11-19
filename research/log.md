@@ -1,5 +1,23 @@
 # Online combat training progress
 
+- 19 Nov 21:58 GMT — Stage — training and paired update-24 evaluation.
+- 19 Nov 21:58 GMT — Queued train-joint.
+- 19 Nov 21:58 GMT — Queued train-control.
+- 19 Nov 21:57 GMT — Expanded pilot — finished.
+- 19 Nov 21:57 GMT — Expanded pilot independent comparison: challenger 3242, original 3272 wins on 8,192 worlds. Qualified to change settings: False.
+- 19 Nov 16:14 GMT — Expanded pilot — comparing the frozen third updates on 8,192 independent worlds.
+- 19 Nov 15:57 GMT — Expanded pilot — testing the two recipes over three real joint updates.
+- 19 Nov 15:57 GMT — Expanded pilot selected x12-lr3e-05-e4 for three fresh joint updates against the original recipe.
+- 19 Nov 15:54 GMT — Expanded pilot — screened 26 of 27 settings.
+- 19 Nov 15:50 GMT — Expanded pilot — screened 25 of 27 settings.
+- 19 Nov 15:47 GMT — Expanded pilot — screened 24 of 27 settings.
+- 19 Nov 15:44 GMT — Expanded pilot — screened 23 of 27 settings.
+- 19 Nov 13:57 GMT — Expanded pilot — screened 22 of 27 settings.
+- 19 Nov 13:54 GMT — Expanded pilot — screened 21 of 27 settings.
+- 19 Nov 13:50 GMT — Expanded pilot — screened 20 of 27 settings.
+- 19 Nov 13:46 GMT — Expanded pilot — screened 19 of 27 settings.
+- 19 Nov 13:44 GMT — Expanded pilot — screened 18 of 27 settings.
+- 19 Nov 13:41 GMT — Expanded pilot — screened 17 of 27 settings.
 - 19 Nov 13:39 GMT — Stage — waiting for the expanded pilot verdict on 8,192 independent worlds.
 - 19 Nov 13:39 GMT — Expanded pilot — screened 16 of 27 settings.
 - 19 Nov 13:38 GMT — Both 24-update trainers will wait for the independent 8,192-world verdict and the Mac training slot. The expanded pilot and the earlier refit run are active.

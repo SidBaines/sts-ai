@@ -25,7 +25,7 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-The [online combat study](experiments/2026-11-19-online-combat.md) is screening 27 combinations of combat exploration, learning rate and training passes while the refit timing study runs. Both 24-update arms wait for the independent 8,192-world pilot verdict and the Mac training slot.
+The frozen-combat control started on 19 November at 21:58 GMT. The joint arm follows on the same GPU. Independent testing retained 12% combat exploration, a combat learning rate of 0.00003 and two passes for the joint arm. [Pilot evidence and 24-update comparison](experiments/2026-11-19-online-combat.md).
 
 ## Next
 
