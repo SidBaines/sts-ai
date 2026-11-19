@@ -589,8 +589,8 @@ document.getElementById('reset-all').addEventListener('click',()=>Object.keys(ch
 function draw(){
  const names=runOrder.filter(n=>selected.get(n));
  // All chart datasets below use update/iteration coordinates, including bounds and rates.
- const ds=f=>names.flatMap(n=>{const r=runs[n],offset=axisMode==='cumulative'?(r.x0??0)-(r.base_iter??0):0;
-  return f(n,color(n),r).map(d=>({...d,data:d.data.map(p=>({...p,x:p.x+offset}))}))});
+ const ds=f=>names.flatMap(n=>{const r=runs[n],c=color(n),offset=axisMode==='cumulative'?(r.x0??0)-(r.base_iter??0):0;
+  return f(n,c,r).map(d=>({backgroundColor:c,...d,data:d.data.map(p=>({...p,x:p.x+offset}))}))});
  mk('c_paired',ds((n,c,r)=>{const e=r.evals.filter(x=>x.paired);return[
   {label:n,data:e.map(x=>({x:x.iteration,y:x.paired.diff})),borderColor:c,backgroundColor:c},
   {label:n+' hi',data:e.map(x=>({x:x.iteration,y:x.paired.diff+1.96*x.paired.se})),borderColor:c,borderDash:[2,3],pointRadius:0,borderWidth:1},

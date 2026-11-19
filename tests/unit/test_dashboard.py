@@ -515,6 +515,7 @@ names.forEach((n,i)=>{
  const hue=COLORS[i%COLORS.length];
  assert.equal(color(n),hue);
  assert.equal(charts.c_train.data.datasets[i].borderColor,hue);
+ assert.equal(charts.c_train.data.datasets[i].backgroundColor,hue);
  assert(element('runs').innerHTML.includes('background-color:'+hue+'" aria-hidden="true"></span>'+n+'</button>'));
  if(i)assert.notEqual(hue,color(names[i-1]));
 });
