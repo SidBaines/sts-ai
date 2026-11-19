@@ -10,7 +10,8 @@ used to make better teachers, not to play.
 
 | Player | Win rate | Evidence |
 |---|---|---|
-| **Champion from 18 November:** 24 iterations of strategy PPO at learning rate 0.0001 from the October champion, with frozen combat (`champions/champion_0f527a0fbf93.pt`) | 5,502 of 16,384 independent worlds (33.58%) vs 4,959 (30.27%), +3.31 points [+2.57, +4.06] | Confirmed; current default |
+| **Champion from 19 November:** 24 further strategy updates at 0.0001 with frozen combat (`champions/champion_5b06aba8a254.pt`) | 5,521 of 16,384 independent worlds (33.70%) vs 5,344 (32.62%), +1.08 points [+0.33, +1.83] | Confirmed; current default |
+| **Champion from 18 November:** 24 iterations of strategy PPO at learning rate 0.0001 from the October champion, with frozen combat (`champions/champion_0f527a0fbf93.pt`) | 5,502 of 16,384 independent worlds (33.58%) vs 4,959 (30.27%), +3.31 points [+2.57, +4.06] | Confirmed; previous champion |
 | Champion from 25 October: 24 more iterations of out-of-combat PPO from the previous champion, current reward (`champions/champion_4058cbf0e271.pt`, from `reward_ablation_20261023/floors/iter_0024.pt`) | 29.4% on 16,384 unused worlds from 109,000,000,000 (4,822 against the previous champion's 4,262, +3.4 points, p < 0.001) | Confirmed; previous champion |
 | The same run rewarded only for wins (`reward_ablation_20261023/wins/iter_0024.pt`) | 28.9% on the same worlds (4,728; no clear difference from the champion's run, p = 0.15) | Confirmed; not promoted |
 | Champion from 23 October: joint run 2's final checkpoint (`champions/champion_c8553bc33e53.pt`; two gated combat refits) | 26.8% on 4,096 unused worlds from 107,000,000,000 (1,096 against the fourth continued training's 952, p < 0.001) | Confirmed |
@@ -19,15 +20,15 @@ Champions are kept with their promotion records in `data/rl_runs/champions/`
 (worktree `nonllm-large-batch`). Earlier players and every comparison are in the [results ledger](results.md).
 Compare numbers only within one environment version and world set.
 
-On the confirmation panel about 43% of the champion's losses came at the Act 3 boss and 31% at the Act 2 boss. See the [completed paired comparison](experiments/2026-11-18-paired-ppo-rates.md) for the learning-rate and confirmation results.
+On the learning-rate confirmation panel about 43% of the 18 November champion's losses came at the Act 3 boss and 31% at the Act 2 boss. See the [completed paired comparison](experiments/2026-11-18-paired-ppo-rates.md) for the learning-rate and confirmation results.
 
 ## Now
 
-[Act 3 boss refits](experiments/2026-11-18-act3-boss-refits.md) is running from the November champion. The control and joint arm share strategy PPO at 0.0001. After updates 8 and 16 a proposed boss specialist must pass both a saved-fight gate and a full-game gate. The [dashboard](http://127.0.0.1:8795/) and [progress log](log.md) follow the run.
+[Act 3 refit cadence](experiments/2026-11-18-act3-boss-refits.md#every-two-updates) is running from the original November champion. Strategy trains for 24 updates at 0.0001. Each even update through 22 can admit a boss specialist after the two gates.
 
 ## Next
 
-Compare the iteration-24 endpoints on 16,384 fresh worlds. Confirm the frozen winner against the starting champion on another 16,384. Then run the [every-two schedule](experiments/2026-11-18-act3-boss-refits.md#every-two-updates) from the same original champion.
+Compare the two schedules at updates 8 and 24, and compare both endpoints with frozen combat. The 15-minute heartbeat covers both studies. The active run is `joint_a3_every2_from_0f52`.
 
 ## Open questions
 

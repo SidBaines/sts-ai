@@ -1,10 +1,7 @@
 # Status
 
-The [Act 3 boss study](experiments/2026-11-18-act3-boss-refits.md) is running locally from champion `0f527a0fbf93`. Both arms share the control trajectory until a boss refit is admitted. The power-aware queue handles all training, search and evaluation jobs.
+[Act 3 refit cadence](experiments/2026-11-18-act3-boss-refits.md#every-two-updates) is running from the original November champion. Strategy trains for 24 updates at 0.0001. Each even update through 22 can admit a boss specialist after the two gates.
 
-- [Training dashboard](http://127.0.0.1:8795/) and [live progress](http://127.0.0.1:8795/progress).
-- Run directory: `data/rl_runs/joint_a3_from_0f52`. Check `monitor-status.json` for the current stage and `progress.jsonl` for the timeline.
-- Create `STOP` in the run directory to stop further submissions. Use the queue runner to cancel an already submitted job.
-- The next decisions are the iteration-8 and iteration-16 boss refits, followed by separate endpoint selection and confirmation panels.
+Compare the two schedules at updates 8 and 24, and compare both endpoints with frozen combat. The 15-minute heartbeat covers both studies. The active run is `joint_a3_every2_from_0f52`.
 
-The every-two arm starts after the current confirmation finishes. Its process-checked heartbeat is recorded every 15 minutes in `data/rl_runs/joint_a3_every2_from_0f52/heartbeats.jsonl` and displayed on the live progress page.
+[Training dashboard](http://127.0.0.1:8795/) and [live progress and heartbeat](http://127.0.0.1:8795/progress).

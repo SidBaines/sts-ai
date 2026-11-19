@@ -211,7 +211,7 @@ in a student that wins a gate, so the two halves can adapt to each other.
   often, toward the search teacher, yet still at about half the teacher's
   rate. Promoted to champion on 23 October.
 
-- [Act 3 boss refits](experiments/2026-11-18-act3-boss-refits.md) is testing the same gated approach with deployment restricted to the final boss.
+- [Act 3 boss specialists](experiments/2026-11-18-act3-boss-refits.md) produced 5,600 vs 5,600 wins on 16,384 assigned worlds, 16,384 complete pairs. +0.00 points [+0.00, +0.00] against frozen combat. The control endpoint passed independent confirmation and became champion.
 
 ## Distilling strategy rules
 
