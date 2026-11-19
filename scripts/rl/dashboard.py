@@ -18,15 +18,16 @@ What it shows, most important first:
   2. Fresh-world confirmations (data/rl_runs/fresh_eval/*.json).
   3. Jobs that are running, pending or paused now, with trainer health and ETA
      from the last three iteration times (including any pauses).
-  4. Training runs: the key lineage (KEY_RUNS) and anything active by default;
+  4. Training runs in start-time order: the key lineage (KEY_RUNS) and anything active by default;
      every other run is "archived" behind a toggle.
   5. Charts for the selected runs: floors, wins, boss outcomes, behaviour,
      gradient cosine, entropy, KL, value loss, iteration/collect/update time,
      and collection versus evaluation win rates.
 
 Labels for runs and eval files live in LABELS and EVAL_LABELS below. KEY_RUNS
-sets the default selection and order; other inactive runs are archived even
-when labelled. Unlisted eval files show their file name.
+sets the default selection. Run toggles, chart legends and colours follow the
+first recorded time, oldest first. Other inactive runs are archived even when
+labelled. Unlisted eval files show their file name.
 
 /api/state?since=<sig>&max_points=N omits the heavy fields when no log or eval
 file has changed since <sig>, so an idle poll is ~1-2 KB.
@@ -84,7 +85,7 @@ LABELS = {
     "ooc_main_s1": "E8 OOC PPO from original, seed 1 (λ=0.95)",
     "ooc_rep_s2": "E8 replicate, seed 2",
 }
-# Key runs, shown by default (in this order). Everything else is archived unless active.
+# Key runs are shown by default. Everything else is archived unless active.
 KEY_RUNS = ("joint_a3_every2_from_0f52/train", "joint_a3_from_0f52/control",
             "joint_a3_from_0f52/joint_after_8_control",
             "joint_a3_from_0f52/joint_after_16_control",
@@ -210,13 +211,20 @@ def _read_json(path: Path, default):
         return default
 
 
+def _timestamp(value) -> float | None:
+    return value if type(value) in (int, float) and math.isfinite(value) else None
+
+
 def _parse_log(log: Path) -> dict:
     train, evals, config, done = [], [], {}, False
+    started_at = None
     for line in log.read_text().splitlines():
         try:
             r = json.loads(line)
         except json.JSONDecodeError:
             continue
+        if started_at is None:
+            started_at = _timestamp(r.get("t"))
         event = r.get("event")
         if event in ("start", "resume"):
             if r.get("config"):
@@ -228,7 +236,8 @@ def _parse_log(log: Path) -> dict:
             evals.append({k: r.get(k) for k in KEEP_EVAL if k in r})
         elif event == "done":
             done = True
-    return {"config": {k: config[k] for k in ("iterations", "games", "notes", "gae_lambda", "seed", "checkpoint",
+    return {"started_at": started_at,
+            "config": {k: config[k] for k in ("iterations", "games", "notes", "gae_lambda", "seed", "checkpoint",
                                              "hide_ooc_potions") if k in config},
             "train": train, "evals": evals, "done": done, "mtime": log.stat().st_mtime}
 
@@ -342,6 +351,20 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
         win.extend(dict(row, root=str(root)) for row in _eval_table(root / "win_eval", sig))
         fresh.extend(dict(row, root=str(root)) for row in _eval_table(root / "fresh_eval", sig))
 
+    # Older logs may omit timestamps. A resumed job can appear in the queue several times.
+    missing_starts = {name for name, run in runs.items() if run["started_at"] is None}
+    if missing_starts:
+        for root, job in queue:
+            started = _timestamp(job.get("started"))
+            if started is None:
+                continue
+            name = run_keys.get((root, _out_dir(job.get("cmd", []), root)))
+            if name in missing_starts:
+                previous = runs[name]["started_at"]
+                if previous is None or started < previous:
+                    runs[name]["started_at"] = started
+        sig.extend(f"{name}:queued-start:{runs[name]['started_at']}" for name in sorted(missing_starts))
+
     active, history = [], {}
     for root, q in queue:
         if q.get("status") not in ACTIVE:
@@ -366,12 +389,11 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
            "runs": None, "win": None, "fresh": None}
     if since == state_sig:
         return out
-    priority = {name: i for i, name in enumerate(KEY_RUNS)}
-    order = sorted(runs, key=lambda n: (priority.get(runs[n]["name"], len(priority)), n))
+    order = sorted(runs, key=lambda name: (runs[name]["started_at"] is None, runs[name]["started_at"], name))
     shown = {}
-    for name in order:
+    for index, name in enumerate(order):
         run = runs[name]
-        entry = {"name": run["name"], "root": run["root"],
+        entry = {"name": run["name"], "root": run["root"], "started_at": run["started_at"], "order": index,
                  "x0": run["x0"], "base_iter": run["base_iter"], "lineage_parent": run["lineage_parent"],
                  "label": run.get("study_label") or LABELS.get(run["name"]) or (run["config"].get("notes") or "")[:90],
                  "key": run["name"] in KEY_RUNS or bool(run.get("study_label")), "active": name in active_runs, "done": run["done"],
@@ -419,7 +441,8 @@ td.desc{white-space:normal;min-width:200px;max-width:280px}
 .ci .p{position:absolute;top:0;width:2px;height:10px;background:var(--acc)}
 .best td{font-weight:600}label{margin-right:10px;white-space:nowrap}.tw{overflow-x:auto}
 button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;padding:2px 8px;cursor:pointer}
-.run-toggle{border:0;padding:0;background:transparent}.grid h2 button{float:right;margin-left:8px}button:disabled{opacity:.4;cursor:default}
+.run-toggle{border:0;padding:0;background:transparent;color:var(--fg)}.run-swatch{display:inline-block;width:.75em;height:.75em;border-radius:2px;margin-right:.4em}
+.run-start{display:block;margin-left:1.25em}.grid h2 button{float:right;margin-left:8px}button:disabled{opacity:.4;cursor:default}
 </style></head><body>
 <h1>Slay the Spire RL</h1>
 <div class="mut small">Objective: complete the game, i.e. an Ascension 0 Act 3 boss win. Write-up: research/README.md · results: research/results.md</div>
@@ -457,8 +480,9 @@ button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(-
 <div class="mut small">Drag to zoom · ctrl/⌘ + wheel to zoom · shift + drag to pan · double-click or reset to restore</div>
 <script>
 const POLL_MS=30000, MAX_POINTS=400;
-const COLORS=['#2f6fdb','#d9480f','#2b8a3e','#ae3ec9','#e67700','#0b7285','#c2255c','#5c940d','#495057','#1971c2'];
-const charts={}; let runs={}, sig='', showArchived=false, timer=null, inflight=false, lastOk=null;
+const COLORS=['#2674b5','#c65b15','#8260b5','#16805d','#b14d84','#847924','#087d93','#b54b40','#586c9f','#93653b'];
+const startFormat=new Intl.DateTimeFormat(undefined,{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+const charts={}; let runs={}, runOrder=[], sig='', showArchived=false, timer=null, inflight=false, lastOk=null;
 const selected=new Map(), STORAGE_KEY='sts-rl-dashboard-runs';
 const AXIS_STORAGE_KEY='sts-rl-dashboard-axis';
 let axisMode='per-run', preferredAxisMode='cumulative', lineageReady=false;
@@ -483,11 +507,16 @@ function timing(r){if(r.mean_iteration_seconds==null)return'–';let text=`${fmt
 function faults(r){return (r.faults?` · faults ${r.faults}`:'')+(r.collector_restarts?` · collector_restarts ${r.collector_restarts}`:'')}
 function trainText(t){return t?`floor ${fmt(t.collect_floor)} · wins ${t.collect_wins??'–'}/${t.games??'?'}<br>cosine ${fmt(t.grad_cosine_half,3)} · KL ${fmt(t.approx_kl,4)} · entropy ${fmt(t.entropy,3)}${t.early_stop?' · early stop':''}${faults(t)}`:'–'}
 function evalText(e){return e?`u${e.iteration}: ${e.wins??'–'}/${e.n??'?'} wins · floor ${fmt(e.mean_floor)}${faults(e)}`:'–'}
-function visible(){return Object.keys(runs).filter(n=>showArchived||runs[n].key||runs[n].active)}
-function color(n){return COLORS[Object.keys(runs).indexOf(n)%COLORS.length]}
+function startTime(t){
+ if(t==null)return '';
+ const date=new Date(t*1000);
+ if(!Number.isFinite(date.getTime()))return '';
+ return `<time class="run-start mut small" datetime="${date.toISOString()}">${esc(startFormat.format(date))}</time>`}
+function visible(){return runOrder.filter(n=>showArchived||runs[n].key||runs[n].active)}
+function color(n){return COLORS[runs[n].order%COLORS.length]}
 function saveSelection(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(Object.fromEntries(selected)))}catch(e){}}
 function toggleRun(n){selected.set(n,!selected.get(n));saveSelection();renderRuns();draw()}
-function selectRuns(mode){Object.keys(runs).forEach(n=>selected.set(n,mode==='all'||mode==='default'&&(runs[n].key||runs[n].active)));saveSelection();renderRuns();draw()}
+function selectRuns(mode){runOrder.forEach(n=>selected.set(n,mode==='all'||mode==='default'&&(runs[n].key||runs[n].active)));saveSelection();renderRuns();draw()}
 function resetZoom(id){charts[id]?.resetZoom?.('none')}
 function axisTitle(){return axisMode==='cumulative'?'cumulative update':'update'}
 function changeAxis(mode){if(mode===axisMode)return;Object.keys(charts).forEach(resetZoom);axisMode=mode}
@@ -534,17 +563,18 @@ async function load(){
  set('hist','History: '+Object.entries(s.history).map(([k,v])=>`${v} ${k}`).join(', '));
  syncAxis(s.lineage);
  if(s.runs!==null){runs=s.runs;sig=s.sig;
-  Object.keys(runs).forEach(n=>{if(!selected.has(n))selected.set(n,!!(runs[n].key||runs[n].active))});
+  runOrder=Object.keys(runs).sort((a,b)=>runs[a].order-runs[b].order);
+  runOrder.forEach(n=>{if(!selected.has(n))selected.set(n,!!(runs[n].key||runs[n].active))});
   winTable(s.win,'win');winTable(s.fresh,'fresh');draw()}
  s.active.forEach(j=>{if(runs[j.run])runs[j.run].eta=j.eta});renderRuns();
 }
 function renderRuns(){
- const names=visible(), archived=Object.keys(runs).filter(n=>!runs[n].key&&!runs[n].active);
+ const names=visible(), archived=runOrder.filter(n=>!runs[n].key&&!runs[n].active);
  const cumulative=axisMode==='cumulative';
  document.getElementById('arch').textContent=`${showArchived?'hide':'show'} archived (${archived.length}, ${archived.filter(n=>selected.get(n)).length} checked)`;
- let h='<tr><th>show</th><th>run</th><th>root / queue</th><th>description</th>'+(cumulative?'<th>start</th>':'')+'<th>status</th><th>progress</th><th>timing / estimated finish</th><th>latest train</th><th>latest eval</th><th class="num">paired vs orig</th></tr>';
+ let h='<tr><th>show</th><th>run <span class="mut small">(oldest first)</span></th><th>root / queue</th><th>description</th>'+(cumulative?'<th>lineage start</th>':'')+'<th>status</th><th>progress</th><th>timing / estimated finish</th><th>latest train</th><th>latest eval</th><th class="num">paired vs orig</th></tr>';
  names.forEach(nm=>{const r=runs[nm];const p=r.last_eval?.paired;const st=r.status;
-  h+=`<tr><td><input type="checkbox" data-run="${esc(nm)}" aria-label="Show ${esc(r.name)} in all charts"${selected.get(nm)?' checked':''}></td><td><button class="run-toggle" data-run="${esc(nm)}" style="color:${color(nm)}" aria-pressed="${!!selected.get(nm)}">■ ${esc(r.name)}</button></td>${rootCell(r.root)}<td class="mut desc">${esc(r.label)}</td>${cumulative?`<td class="mut desc">${r.x0==null?'(start unknown)':esc(`from ${r.lineage_parent??'root'} at update ${r.x0}`)}</td>`:''}<td><span class="pill ${st}">${st}</span></td><td>${progressText(r)}</td><td>${timing(r)}</td><td>${trainText(r.last_train)}</td><td class="mut">${evalText(r.last_eval)}</td>
+  h+=`<tr><td><input type="checkbox" data-run="${esc(nm)}" aria-label="Show ${esc(r.name)} in all charts"${selected.get(nm)?' checked':''}></td><td><button class="run-toggle" data-run="${esc(nm)}" aria-pressed="${!!selected.get(nm)}"><span class="run-swatch" style="background-color:${color(nm)}" aria-hidden="true"></span>${esc(r.name)}</button>${startTime(r.started_at)}</td>${rootCell(r.root)}<td class="mut desc">${esc(r.label)}</td>${cumulative?`<td class="mut desc">${r.x0==null?'(start unknown)':esc(`from ${r.lineage_parent??'root'} at update ${r.x0}`)}</td>`:''}<td><span class="pill ${st}">${st}</span></td><td>${progressText(r)}</td><td>${timing(r)}</td><td>${trainText(r.last_train)}</td><td class="mut">${evalText(r.last_eval)}</td>
   <td class="num">${p?(p.diff>=0?'+':'')+fmt(p.diff)+' ± '+fmt(p.se):'–'}</td></tr>`});
  set('runs',h);
  const protocols=new Set(Object.values(runs).map(r=>!!r.config.hide_ooc_potions));
@@ -557,7 +587,7 @@ document.querySelectorAll('[data-reset]').forEach(b=>{b.disabled=!zoomPlugin;b.a
 document.getElementById('reset-all').disabled=!zoomPlugin;
 document.getElementById('reset-all').addEventListener('click',()=>Object.keys(charts).forEach(resetZoom));
 function draw(){
- const names=Object.keys(runs).filter(n=>selected.get(n));
+ const names=runOrder.filter(n=>selected.get(n));
  // All chart datasets below use update/iteration coordinates, including bounds and rates.
  const ds=f=>names.flatMap(n=>{const r=runs[n],offset=axisMode==='cumulative'?(r.x0??0)-(r.base_iter??0):0;
   return f(n,color(n),r).map(d=>({...d,data:d.data.map(p=>({...p,x:p.x+offset}))}))});
