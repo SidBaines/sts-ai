@@ -266,11 +266,39 @@ def tick(jobs):
             f"Selected combat learning rate {fit['rate']:g}, {fit['epochs']} pass(es), on the 2,048 pilot worlds."
         )
     players = {r: BASE / r / "iter_0024.pt" for r in ("control", "joint")}
+    planned = BASE / "production-plan.json"
+    if not planned.exists():
+        from dataclasses import asdict
+        from train import config
+
+        selection_record = read(selection)["selected"]
+        atomic_json(
+            planned,
+            {
+                "parent_sha256": PARENT_SHA,
+                "pilot": selection_record,
+                "arms": {
+                    role: asdict(config(path.parent, role))
+                    for role, path in players.items()
+                },
+                "primary": {"start": 252_000_000_000, "worlds": 16384},
+                "confirmation": {"start": 253_000_000_000, "worlds": 16384},
+            },
+        )
     # Use the Mac training lane once the preceding study's training weights are frozen.
     # Its confirmation jobs can keep using the CPU alongside the new training.
     previous = RUNS / "refit_timing_from_9700"
-    if not any((previous / p).exists() for p in ("frozen.json", "verdict.json")):
-        return "pilot complete; waiting for the refit study to freeze its two players"
+    prior_status = previous / "status.json"
+    prior_stage = read(prior_status).get("stage") if prior_status.exists() else None
+    prior_is_evaluating = prior_stage in {
+        "paired endpoint selection",
+        "independent confirmation",
+        "finished",
+    }
+    if not prior_is_evaluating and not any(
+        (previous / p).exists() for p in ("frozen.json", "verdict.json")
+    ):
+        return "pilot complete; waiting for the current training jobs to release the Mac GPU"
     for r, ck in players.items():
         ensure(
             jobs,

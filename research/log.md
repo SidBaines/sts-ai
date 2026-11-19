@@ -1,5 +1,10 @@
 # Online combat training progress
 
+- 19 Nov 11:02 GMT — Stage — pilot complete; waiting for the current training jobs to release the Mac GPU.
+- 19 Nov 11:00 GMT — Greedy pilot, 2,048 paired games each. Frozen 800 wins. One pass at 0.00001 won 811, one at 0.00003 won 819, one at 0.0001 won 815, and two at 0.00003 won 825. The selected fit gained 1.22 points [−0.18, +2.62].
+- 19 Nov 11:00 GMT — Frozen exploration screens, 768 worlds per setting. Near-greedy, 5%, 12% and 22% targets won 285, 276, 254 and 220 games respectively. All four cohorts completed.
+- 19 Nov 10:56 GMT — Stage — pilot complete; waiting for the refit study to freeze its two players.
+- 19 Nov 10:56 GMT — Selected combat learning rate 3e-05, 2 pass(es), on the 2,048 pilot worlds.
 - 19 Nov 10:40 GMT — Queued pilot-eval-lr3e-05-e2.
 - 19 Nov 10:40 GMT — Queued pilot-eval-lr0.0001-e1.
 - 19 Nov 10:39 GMT — Queued pilot-eval-lr3e-05-e1.

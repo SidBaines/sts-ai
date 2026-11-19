@@ -28,7 +28,17 @@ The moderate rule produced measurable exploration in both roles. On 768 matched 
 | 12% | 11.59% / 12.14% | 254 | −4.04 [−7.94, −0.13] | 492 |
 | 22% | 20.88% / 21.47% | 220 | −8.46 [−12.33, −4.59] | 471 |
 
-The 12% target met both screening thresholds. Its common learning-rate collection yielded 1,082 wins in 3,072 training games, with no unresolved outcomes. The 48-game wiring check found identical training trajectories and strategy updates, with both fighters changing only in the joint arm. The pilot compares all combat fits with preferred moves on 2,048 separate worlds.
+The 12% target met both screening thresholds. Its common learning-rate collection yielded 1,082 wins in 3,072 training games, with no unresolved outcomes. The 48-game wiring check found identical training trajectories and strategy updates, with both fighters changing only in the joint arm. The four fits and the unchanged player then chose their preferred moves on 2,048 separate worlds.
+
+
+| Combat learning rate | Passes | Wins / 2,048 (starting player 800) | Paired gain in points, 95% interval | Changed preferred moves, ordinary / boss |
+|---:|---:|---:|---|---|
+| 0.00001 | 1 | 811 | +0.54 [-0.52, +1.59] | 0.62% / 0.73% |
+| 0.00003 | 1 | 819 | +0.93 [-0.37, +2.22] | 0.98% / 0.90% |
+| 0.00003 | 2 | 825 | +1.22 [-0.18, +2.62] | 1.33% / 1.24% |
+| 0.00010 | 1 | 815 | +0.73 [-0.92, +2.38] | 2.36% / 2.42% |
+
+The selection rule chose 0.00003 and two passes. All four comparisons were inconclusive individually. All 2,048 worlds completed for every player. The 0.0001 setting hit its update-size guard early for the boss fighter. The two-pass setting completed both passes for both fighters.
 
 ## Log
 
