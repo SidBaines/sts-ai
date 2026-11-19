@@ -1,6 +1,6 @@
 # When should we refit the current champion’s Act 3 combat?
 
-**Status:** queued on 19 November 2026. The study compares three early refits against three spaced refits from the same confirmed champion.
+**Status:** running. The study compares three early refits against three spaced refits from the same confirmed champion.
 
 ## Question
 
@@ -19,7 +19,7 @@ Sid requested the two schedules on 19 November and suggested the new champion as
 
 ## Results
 
-The [progress log](../log.md) follows the run. The primary comparison is the update-24 head-to-head.
+Both schedules began from the same checkpoint. Before training it reproduced its previous development result of 381 wins on the same 1,024 worlds, with zero faults. The [progress log](../log.md) follows the gates and the update-24 comparison.
 
 ## Log
 

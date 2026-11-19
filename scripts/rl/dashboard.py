@@ -324,7 +324,11 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
             except FileNotFoundError:
                 continue
             sig.append(f"{log}:{key[0]}:{key[1]}")
-            planned = _read_json(log.parent / "training-plan.json", {}).get("iterations")
+            plan = _read_json(log.parent / "training-plan.json", {})
+            planned = plan.get("iterations")
+            if isinstance(plan.get("label"), str) and plan["label"]:
+                run = {**run, "study_label": plan["label"]}
+                sig.append(f"{name}:label:{plan['label']}")
             if type(planned) is int and planned > run["config"].get("iterations", planned):
                 sig.append(f"{name}:plan:{planned}")
                 run = {**run, "staged": True, "between_stages": run["done"], "done": False,
@@ -369,8 +373,8 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
         run = runs[name]
         entry = {"name": run["name"], "root": run["root"],
                  "x0": run["x0"], "base_iter": run["base_iter"], "lineage_parent": run["lineage_parent"],
-                 "label": LABELS.get(run["name"]) or (run["config"].get("notes") or "")[:90],
-                 "key": run["name"] in KEY_RUNS, "active": name in active_runs, "done": run["done"],
+                 "label": run.get("study_label") or LABELS.get(run["name"]) or (run["config"].get("notes") or "")[:90],
+                 "key": run["name"] in KEY_RUNS or bool(run.get("study_label")), "active": name in active_runs, "done": run["done"],
                  "status": statuses.get(name, "between stages" if run.get("between_stages") else "done" if run["done"] else "stopped"), "config": run["config"],
                  "iterations": run["config"].get("iterations"), "n_train": len(run["train"]),
                  "train": run["train"], "evals": run["evals"], **_progress(run, now)}

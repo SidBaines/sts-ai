@@ -150,9 +150,11 @@ class DashboardTests(unittest.TestCase):
     def test_closed_segment_keeps_planned_total_and_active_study(self):
         log = self.log(self.root, "staged", [{"event": "start", "config": {"iterations": 2}},
                        {"event": "train", "iteration": 2, "iteration_seconds": 30}, {"event": "done"}])
-        log.with_name("training-plan.json").write_text(json.dumps({"iterations": 24}))
+        log.with_name("training-plan.json").write_text(json.dumps({"iterations": 24, "label":"Early refits"}))
         run = dashboard.state()["runs"]["staged"]
         self.assertEqual((run["iterations_done"], run["iterations"], run["status"]), (2, 24, "between stages"))
+        self.assertTrue(run["key"])
+        self.assertEqual(run["label"], "Early refits")
         self.assertFalse(run["done"])
         self.assertIsNone(run["remaining_seconds"])
 

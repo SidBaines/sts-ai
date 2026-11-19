@@ -25,7 +25,7 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-[Early versus spaced refits](experiments/2026-11-19-refit-timing.md) is queued from the 39.42% champion. Both arms get three specialist fits and the same 24 strategy updates.
+[Early versus spaced refits](experiments/2026-11-19-refit-timing.md) is running from the 39.42% champion. Both arms get three specialist fits and the same 24 strategy updates.
 
 ## Next
 

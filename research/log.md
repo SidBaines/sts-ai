@@ -1,5 +1,11 @@
 # Early versus spaced refit progress
 
+- 19 Nov 08:56 GMT — shared development at update 2: 351/1024 wins, 0 faults.
+- 19 Nov 08:55 GMT — Early — Queued bank-2.
+- 19 Nov 08:55 GMT — Early — Queued labels-2.
+- 19 Nov 08:55 GMT — shared finished update 2/24 on 3,072 matched worlds, 1,133 sampled wins and 0 faults.
+- 19 Nov 08:50 GMT — shared finished update 1/24 on 3,072 matched worlds, 1,115 sampled wins and 0 faults.
+- 19 Nov 08:46 GMT — shared development at update 0: 381/1024 wins, 0 faults.
 - 19 Nov 08:45 GMT — Set up the two schedules from the 39.42% champion, with three 512-world teacher collections per arm.
 
 # Act 3 boss refit progress
