@@ -130,6 +130,16 @@ def finish(monitor, early, endpoints, confirmation, selection):
             content += "\n\nThe incumbent and every-eight confirmation comparators are the same policy."
         content += "\n\n![Paired results for the refit opportunities and full-game comparisons](../figures/act3-boss-refits/cadence-effects.png)"
         content += "\n\nIntervals are paired 95% intervals. Full-game points use complete pairs when outcomes are unresolved. The table reports bounds for all assigned worlds."
+        # Post-gate time matters: more frequent refits can raise performance per PPO update and take longer.
+        timings = []
+        for title, directory, training, final_ck, last_gate in (
+                ("Every eight", RUN, RUN / "control", monitor.reference["every8"], 16),
+                ("Every two", EVERY_TWO, EVERY_TWO / "train", ck, 22)):
+            start = next(row["t"] for row in lines(training / "log.jsonl") if row["event"] == "start")
+            ready8 = (directory / "refit8/decision.json").stat().st_mtime
+            ready24 = max(final_ck.stat().st_mtime, (directory / f"refit{last_gate}/decision.json").stat().st_mtime)
+            timings.append(f"| {title} | {(ready8-start)/3600:.2f} | {(ready24-start)/3600:.2f} |")
+        content += "\n\n| Schedule | Hours to post-gate update 8 | Hours to final policy |\n|---|---:|---:|\n"+"\n".join(timings)
         content += (f"\n\nEleven opportunities used 5,632 scheduled teacher worlds, compared with 1,024 for two opportunities. "
                     f"Elapsed wall time including evaluations and any power pauses was {dense_hours:.2f} hours for every two "
                     f"and {sparse_hours:.2f} hours for the original study including its frozen control. This is one matched training seed.\n\n")
