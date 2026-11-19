@@ -1,3 +1,7 @@
+# Online combat training progress
+
+- 19 Nov — Fixed the common starting champion, pilot selection rules, and matched full-game comparison before collecting pilot outcomes.
+
 # Act 3 boss refit progress
 
 - 19 Nov 05:47 GMT — Every two: All eleven refit decisions and paired schedule comparisons are filed.

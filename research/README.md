@@ -25,7 +25,7 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-Nothing running. The [cadence study](experiments/2026-11-18-act3-boss-refits.md#results) finished. Its three accepted boss refits all arrived by strategy update 6.
+The [online combat study](experiments/2026-11-19-online-combat.md) is preparing a matched pilot and 24-update comparison alongside the separate refit timing study.
 
 ## Next
 
