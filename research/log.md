@@ -1,3 +1,7 @@
+# Early versus spaced refit progress
+
+- 19 Nov 08:45 GMT — Set up the two schedules from the 39.42% champion, with three 512-world teacher collections per arm.
+
 # Act 3 boss refit progress
 
 - 19 Nov 05:47 GMT — Every two: All eleven refit decisions and paired schedule comparisons are filed.

@@ -25,11 +25,11 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-Nothing running. The [cadence study](experiments/2026-11-18-act3-boss-refits.md#results) finished. Its three accepted boss refits all arrived by strategy update 6.
+[Early versus spaced refits](experiments/2026-11-19-refit-timing.md) is queued from the 39.42% champion. Both arms get three specialist fits and the same 24 strategy updates.
 
 ## Next
 
-Test three early refits against three later refits on a second matched training seed. This would separate the effect of timing from the larger teacher budget used by the every-two arm.
+Compare the frozen endpoints on matched full games, then confirm against each other and the starting champion on fresh worlds.
 
 ## Open questions
 

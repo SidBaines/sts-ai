@@ -1,5 +1,6 @@
 # Status
 
-Nothing running. The every-two endpoint is the current champion after winning 6,459 of 16,384 independent worlds against the frozen-combat incumbent’s 5,575, a paired gain of 5.40 points [4.56, 6.23].
+The [equal-budget timing study](experiments/2026-11-19-refit-timing.md) starts from the confirmed every-two champion. The shared queue runs on AC power. Early attempts refits at 2, 4 and 6. Spaced attempts them at 8, 16 and 22.
 
-The [experiment](experiments/2026-11-18-act3-boss-refits.md#results) records both schedules, all thirteen refit decisions and both studies’ confirmation results. The final [heartbeat and progress log](http://127.0.0.1:8795/progress) closed at 05:47 GMT on 19 November.
+- [Dashboard](http://127.0.0.1:8795/) and [progress](http://127.0.0.1:8795/progress).
+- Run `refit_timing_from_9700` holds the active stage, gate outcomes and final comparisons. A `STOP` file there prevents new stage submissions.
