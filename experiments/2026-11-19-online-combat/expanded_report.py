@@ -5,6 +5,9 @@ from datetime import datetime, timezone
 import re
 import math
 import statistics
+import shutil
+import subprocess
+import sys
 
 from report import ROOT, BASE, describe, read, replace_note
 from sts_rl.fresh_study import atomic_json
@@ -129,6 +132,16 @@ def section(results, verdict=None):
         + " The screen selected among these fits after one combat update with strategy held fixed. "
         "[Full screening data](../figures/online-combat-pilot/screen.csv).",
     ]
+    identities = BASE / "expanded" / "weight-identities.json"
+    if identities.exists():
+        weights = read(identities)
+        if weights["unique"] < weights["settings"]:
+            text += [
+                "",
+                f"The {weights['settings']} settings produced {weights['unique']} distinct players. "
+                "At 5% exploration and learning rate 0.00006, the per-update limit stopped both fighters early, "
+                "giving the two- and four-pass settings identical weights.",
+            ]
     parity = BASE / "expanded" / "cpu-parity.json"
     if parity.exists():
         text += [
@@ -263,6 +276,27 @@ def ledger(results, verdict):
 def write_results(results, verdict=None):
     # A presentation or plotting failure must never postpone a verified scientific decision.
     folder = BASE / "expanded"
+    identities = folder / "weight-identities.json"
+    if identities.exists():
+        for labels in read(identities)["identical"]:
+            saved = []
+            for label in labels:
+                rows = read(folder / "screen" / label / "summary.json")["records"]
+                saved.append(
+                    {
+                        r["world_seed"]: (
+                            r["action_hash"],
+                            r["terminal_hash"],
+                            r["status"],
+                            r["win"],
+                        )
+                        for r in rows
+                    }
+                )
+            if any(scores != saved[0] for scores in saved[1:]):
+                raise ValueError(
+                    "identical trained players produced different screening trajectories"
+                )
     if verdict is not None:
         record = folder / "verdict.json"
         if record.exists() and read(record) != verdict:
@@ -311,6 +345,32 @@ def write_results(results, verdict=None):
                 key=lambda x: (x["exploration_target"], x["combat_lr"], x["passes"]),
             )
         )
+    if verdict is not None and not (FIGURE / "screen.png").exists():
+        uv = shutil.which("uv")
+        if uv is not None:
+            with (folder / "plot.log").open("w") as log:
+                plot = subprocess.run(
+                    [
+                        uv,
+                        "run",
+                        "--offline",
+                        "--no-project",
+                        "--with",
+                        "matplotlib==3.11.2",
+                        "--python",
+                        sys.executable,
+                        "python",
+                        str(ROOT / "experiments/2026-11-19-online-combat/plot_grid.py"),
+                        str(FIGURE),
+                        str(FIGURE / "screen.png"),
+                    ],
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                )
+            atomic_json(
+                folder / "plot-status.json",
+                {"exit": plot.returncode, "image": (FIGURE / "screen.png").is_file()},
+            )
     p = ROOT / "research/experiments/2026-11-19-online-combat.md"
     old = p.read_text()
     if TITLE in old:
