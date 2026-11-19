@@ -9,25 +9,56 @@ from pathlib import Path
 from pilot import BASE, CHAMP, atomic_json, temperatures, torch
 from sts_rl.ooc_trainer import OOCTrainConfig, train
 from sts_rl.common import load_policy
+from sts_rl.online_combat import confirmed_combat_challenger
+
+
+def independent_pilot_verdict(base):
+    """The expanded pilot publishes this file atomically after the paired comparison."""
+    path = base / "expanded" / "verdict.json"
+    if not path.is_file():
+        return None
+    verdict = json.loads(path.read_text())
+    check = verdict["comparison"]
+    if (
+        check["n"] != 8192
+        or (check["a"], check["b"]) != ("reference", "challenger")
+        or type(verdict["qualified"]) is not bool
+        or verdict["qualified"] != confirmed_combat_challenger(verdict["screen"], check)
+    ):
+        raise ValueError("Invalid independent combat pilot verdict")
+    return verdict
 
 
 def launch_settings(base=BASE):
-    """Freeze one choice for both production arms at their first actual launch."""
+    """Both production arms wait for the independent verdict and share one choice."""
     lock = base / "launch-settings.lock"
     with lock.open("a") as f:
         fcntl.flock(f, fcntl.LOCK_EX)
+        verdict = independent_pilot_verdict(base)
+        if verdict is None:
+            raise RuntimeError(
+                "Production training is waiting for the 8,192-world pilot verdict"
+            )
         path = base / "launch-settings.json"
+        started = any((base / r / "config.json").exists() for r in ("control", "joint"))
         if path.exists():
-            return json.loads(path.read_text())["selected"]
+            bound = json.loads(path.read_text())
+            if started or "independent_worlds" in bound:
+                return bound["selected"]
         original = json.loads((base / "fit-selection.json").read_text())["selected"]
         source, selected = "first-pilot", original
-        expanded = base / "expanded" / "verdict.json"
-        started = any((base / r / "config.json").exists() for r in ("control", "joint"))
-        if expanded.exists() and not started:
-            verdict = json.loads(expanded.read_text())
-            if verdict["qualified"]:
-                source, selected = "expanded-pilot", verdict["challenger"]
-        atomic_json(path, {"source": source, "selected": selected, "time": time.time()})
+        if verdict["qualified"] and not started:
+            source, selected = "expanded-pilot", verdict["challenger"]
+        atomic_json(
+            path,
+            {
+                "source": source,
+                "selected": selected,
+                "time": time.time(),
+                "independent_worlds": verdict["comparison"]["n"],
+                "challenger_qualified": verdict["qualified"],
+            },
+        )
         return selected
 
 

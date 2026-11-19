@@ -269,11 +269,12 @@ def tick(jobs):
         note(
             f"Selected combat learning rate {fit['rate']:g}, {fit['epochs']} pass(es), on the 2,048 pilot worlds."
         )
+    from train import config, independent_pilot_verdict
+
     players = {r: BASE / r / "iter_0024.pt" for r in ("control", "joint")}
     planned = BASE / "production-plan.json"
     if not planned.exists():
         from dataclasses import asdict
-        from train import config
 
         selection_record = read(selection)["selected"]
         atomic_json(
@@ -289,6 +290,8 @@ def tick(jobs):
                 "confirmation": {"start": 253_000_000_000, "worlds": 16384},
             },
         )
+    if independent_pilot_verdict(BASE) is None:
+        return "waiting for the expanded pilot verdict on 8,192 independent worlds"
     # Use the Mac training lane once the preceding study's training weights are frozen.
     # Its confirmation jobs can keep using the CPU alongside the new training.
     previous = RUNS / "refit_timing_from_9700"
@@ -302,7 +305,7 @@ def tick(jobs):
     if not prior_is_evaluating and not any(
         (previous / p).exists() for p in ("frozen.json", "verdict.json")
     ):
-        return "pilot complete; waiting for the current training jobs to release the Mac GPU"
+        return "independent pilot complete; waiting for the current training jobs to release the Mac GPU"
     for r, ck in players.items():
         ensure(
             jobs,

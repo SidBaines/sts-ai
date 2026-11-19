@@ -1,6 +1,6 @@
 # Status
 
-The [direct joint-training study](experiments/2026-11-19-online-combat.md) completed the first pilot and is expanding it to 27 combat settings. The 24-update arms are staged behind the existing trainers. Both eventual arms start from the original 39.42% champion.
+The [direct joint-training study](experiments/2026-11-19-online-combat.md) completed the first pilot and is expanding it to 27 combat settings. Both 24-update arms are on hold until the expanded pilot records its independent verdict and the training slot is available. Both eventual arms start from the original 39.42% champion.
 
 - The moderate setting tried a lower-ranked move on about 12% of meaningful choices. Its frozen player won 254 of 768 pilot games. The near-greedy player won 285 on the same worlds.
 - A 48-game paired training check reproduced every trajectory and the strategy update. Both fighters moved only in the joint arm.
@@ -9,6 +9,6 @@ The [direct joint-training study](experiments/2026-11-19-online-combat.md) compl
 - In `data/rl_runs/online_combat_from_9700`, `status.json` names the current stage and `progress.jsonl` records heartbeats. A `STOP` file prevents further submissions. Queued jobs remain controllable through the queue.
 - The existing refit study can finish training first on the Mac. Its participants have the same starting champion.
 
-The expansion screens 27 fits on 768 fresh worlds, then tests two three-update trajectories on 8,192 further worlds. The original schedule stays available if training can start first.
+The expansion screens 27 fits on 768 fresh worlds, then tests two three-update trajectories on 8,192 further worlds. The coordinator automatically uses the confirmed challenger if it qualifies, and otherwise uses the original settings. Both arms share the same choice.
 
 Both new exploration collections completed. Extra compute is being serialized at lower priority to protect the preceding trainer. The expansion has its own live status under the run's `expanded/` directory.

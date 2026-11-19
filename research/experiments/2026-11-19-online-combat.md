@@ -19,12 +19,12 @@ Sid requested 24 matched updates and a pilot on 19 November, from the confirmed 
 
 ### Expanded pilot
 
-On 19 November Sid requested a broader search while the preceding study was still training. The first pilot results above informed this extension. The following rules were set before its new games or fits.
+On 19 November Sid requested a broader search while the preceding study was still training. The first pilot results above informed this extension. The screening and confirmation rules below were set before its new games or fits. The launch timing was amended during screening as recorded in the log.
 
 - Cross exploration targets of 5%, 12% and 22% with combat learning rates 0.00001, 0.00003 and 0.00006 and one, two or four passes. These 27 combinations test whether the best update size depends on the alternatives the fighter actually tries. Collect under each exploration rule on the same 3,072 assigned training worlds. Reuse identical first-pilot fits and data where available. All other settings are shared. The original reference is the 12%, 0.00003, two-pass fit.
 - Compare all 27 fitted players on the same 768 unused worlds with exact preferred moves. Report each result and the original movement checks. A challenger must change at least 0.2% of meaningful favourite moves and have mean KL of at most 0.05 in each fighter. Pick the distinct eligible setting with the largest worst-case paired win gain over the original choice. Ties favour fewer passes, then a lower learning rate, then an exploration level closer to 12%, then the lower target. This panel is for selection only.
 - Restart both finalists at the common starting champion. Give each three real joint updates on the same 1,536 fresh worlds per update, with a new matched training seed and the finalist's own exploration rule. Strategy learns alongside combat. Use the same collector layout and Mac accelerator in both arms. After the third update, freeze both players and compare them on 8,192 further unused full games. This measures a short trajectory at half the production batch size.
-- Adopt the challenger for the 24-update run only if it gained wins in the screen, its worst-case paired 95% lower bound in the independent comparison is positive, and that result is available before the first production arm starts. Otherwise use the original setting for both arms. The 24-update comparison can start when the Mac becomes available. Late results inform future training. The primary and confirmation worlds reserved for the 24-update comparison stay separate.
+- Both 24-update arms wait for the independent comparison on 8,192 worlds. Adopt the challenger if it gained wins in the screen and its worst-case paired 95% lower bound on the independent comparison is positive. Otherwise retain the original setting. Once the verdict is recorded and the earlier study releases the GPU, the coordinator starts the control and then the joint arm. Both use the same selected exploration rule. The production evaluations use separate worlds.
 
 ## Results
 
@@ -52,6 +52,8 @@ The selection rule chose 0.00003 and two passes. All four comparisons were incon
 On the same 3,072 training worlds with the fighter still frozen, 5%, 12% and 22% exploration yielded 1,105, 1,082 and 905 wins. Relative to 12%, the paired differences were +0.75 points [−1.19, +2.68] for 5% and −5.76 [−7.65, −3.87] for 22%. These are the outcomes while gathering experience for the fits. All games finished.
 
 ## Log
+
+- 19 November, 13:32 GMT — At Sid’s suggestion, made the independent verdict a prerequisite for either 24-update arm. The earlier plan would have used the original settings if the GPU became available first. Thirteen of the 27 settings had finished screening, and the independent comparison had yet to begin.
 
 - 19 November — after screening began, added descriptive averages across each factor. These compare all 27 settings within each world and do not affect selection.
 

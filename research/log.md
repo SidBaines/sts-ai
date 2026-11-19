@@ -1,5 +1,17 @@
 # Online combat training progress
 
+- 19 Nov 13:39 GMT — Stage — waiting for the expanded pilot verdict on 8,192 independent worlds.
+- 19 Nov 13:39 GMT — Expanded pilot — screened 16 of 27 settings.
+- 19 Nov 13:38 GMT — Both 24-update trainers will wait for the independent 8,192-world verdict and the Mac training slot. The expanded pilot and the earlier refit run are active.
+- 19 Nov 13:35 GMT — Expanded pilot — screened 15 of 27 settings.
+- 19 Nov 13:32 GMT — Expanded pilot — screened 14 of 27 settings.
+- 19 Nov 13:28 GMT — Expanded pilot — screened 13 of 27 settings.
+- 19 Nov 13:24 GMT — Expanded pilot — screened 12 of 27 settings.
+- 19 Nov 13:17 GMT — Expanded pilot — screened 11 of 27 settings.
+- 19 Nov 13:13 GMT — Expanded pilot — screened 10 of 27 settings.
+- 19 Nov 13:09 GMT — Expanded pilot — screened 9 of 27 settings.
+- 19 Nov 13:06 GMT — Expanded pilot — screened 8 of 27 settings.
+- 19 Nov 13:02 GMT — Expanded pilot — screened 7 of 27 settings.
 - 19 Nov 12:55 GMT — Expanded pilot — screened 6 of 27 settings.
 - 19 Nov 12:47 GMT — The lower-load evaluator reproduced all 768 screening trajectories, including all 319 reference wins. The seven logical world groups now run at most three at once.
 - 19 Nov 12:45 GMT — Expanded pilot — screened 5 of 27 settings.
