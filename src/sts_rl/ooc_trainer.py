@@ -32,6 +32,7 @@ from sts_policy.training import load_checkpoint
 
 from .common import (save_atomic, EVAL_WORLD_START, ORIGINAL_CHECKPOINT, TRAIN_WORLD_START, JsonlLog, close_workers,
                      load_policy, make_workers, phase_forward, save_policy, strategic_rows, train_tasks)
+from .online_combat import ROLES, combat_optimizers, samples_from_game, update_fighters
 from .evaluate import evaluate, paired
 from .recording import begin_run, resume_payload, restore_rng, write_collection, require_fresh_or_resume
 
@@ -72,7 +73,11 @@ class OOCTrainConfig:
     smith_above: float | None = None  # rule overlay: no 'rest' at HP fraction >= this (train + eval)
     prefer_remove: bool = False     # rule overlay: no potion buys while a removal is affordable
     elite_above: float | None = None  # rule overlay: take an offered elite path at HP fraction >= this
-    train_combat: bool = False     # keep False: combat head frozen
+    train_combat: bool = False
+    combat_temperature: float | None = None
+    boss_temperature: float | None = None
+    combat_lr: float = 0.00003
+    combat_epochs: int = 1
     eval_every: int = 4
     eval_n: int = 1024
     eval_world_start: int = EVAL_WORLD_START
@@ -303,7 +308,7 @@ def card_reward_has_items(observation: dict[str, Any]) -> bool:
 
 def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequence[Any], *, forward,
                       ppo: PPOConfig, credit: str, gae_lambda: float, chunk: int,
-                      value_scale: float = 1.0) -> dict[str, Any]:
+                      value_scale: float = 1.0, combat_samples: bool = False) -> dict[str, Any]:
     """Sample ``tasks`` and keep only OOC choice transitions with PPO targets.
 
     Chunked: keep only OOC choice transitions (with their encodings) and small
@@ -312,6 +317,7 @@ def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Seq
     pushed the process past 20 GB.
     """
     kept: list[list[Any]] = []
+    combat_rows = {role: [] for role in ROLES}
     game_episodes: list[dict[str, Any]] = []
     faults = 0
     fault_records = []
@@ -322,6 +328,11 @@ def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Seq
                                   collate=collate_public, forward=forward, config=ppo, max_seconds=3600,
                                   deterministic=False, deferred_bootstrap=True)
         episodes = split_episodes(result["transitions"])
+        if combat_samples:
+            episodes = [ep for ep in episodes if ep[-1].terminated and not ep[-1].truncated]
+            for ep in episodes:
+                for role, sample in samples_from_game(ep, specialist=hasattr(model, "boss_specialist")).items():
+                    combat_rows[role].extend(sample)
         new = macro_ooc_transitions(episodes, gae_lambda) if credit == "macro" else micro_ooc_transitions(episodes)
         # Kept transitions already carry their encodings; PPO only needs the
         # menu and phase from the observation. Slim the dict in place (its
@@ -342,7 +353,7 @@ def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Seq
         faults += len(result["faults"])
         del result, episodes
         gc.collect()
-    return {"kept": kept, "game_episodes": game_episodes, "faults": faults, 'fault_records': fault_records, "stats": stats_acc}
+    return {"kept": kept, "combat_rows": combat_rows, "game_episodes": game_episodes, "faults": faults, 'fault_records': fault_records, "stats": stats_acc}
 
 
 @torch.no_grad()
@@ -514,6 +525,11 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                          "(torch.backends.mps.is_available() is False)")
     if cfg.train_combat and cfg.combat_follow is not None:
         raise ValueError("train_combat and combat_follow cannot be used together")
+    if cfg.train_combat and (cfg.combat_temperature is None or cfg.combat != "sample" or cfg.combat_epochs < 1
+                             or not math.isfinite(cfg.combat_lr) or cfg.combat_lr <= 0):
+        raise ValueError("online combat PPO requires sampled combat, a positive temperature, rate and epoch count")
+    if cfg.boss_temperature is not None and cfg.combat_temperature is None:
+        raise ValueError("the boss temperature requires an ordinary combat temperature")
     if cfg.critic_gradient not in {"shared", "detached"}:
         raise ValueError("critic_gradient must be shared or detached")
     out = Path(cfg.out)
@@ -529,9 +545,11 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
     start_state = {k: v.clone() for k, v in model.state_dict().items()}
     combat_keys = [k for k in start_state if k.startswith(("combat.", "boss_specialist."))]
     for name, p in model.named_parameters():
-        p.requires_grad_(name.startswith("ooc.") or (cfg.train_combat and name.startswith("combat.")))
+        p.requires_grad_(name.startswith("ooc."))
     trainable = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.AdamW(trainable, lr=cfg.lr, weight_decay=cfg.weight_decay)
+    fighter_opts = combat_optimizers(model, cfg.combat_lr) if cfg.train_combat else {}
+    temperatures = {"combat": cfg.combat_temperature, "boss_specialist": cfg.boss_temperature or cfg.combat_temperature}
     start_iteration, steps_total = 1, 0
     latest = out / "latest.pt"
     run_record = begin_run(out, {**asdict(cfg), 'resume': resume},
@@ -546,6 +564,18 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
         start_state.update({k: model.state_dict()[k].clone() for k in combat_keys})
         saved_combat = state.get("trainer_state", {})
         optimizer.load_state_dict(state["optimizer_state"])
+        restored_fighters = saved_combat.get("combat_optimizers", {})
+        if set(restored_fighters) != set(fighter_opts):
+            raise ValueError("resume requires the same frozen/trainable combat roles")
+        if cfg.combat_temperature is not None:
+            previous = state.get("config", {})
+            for key in ("combat_temperature", "boss_temperature", "combat_epochs", "combat_lr", "train_combat"):
+                if key in previous and previous[key] != getattr(cfg,key):
+                    raise ValueError(f"refusing to change {key} during an online-combat resume")
+        for role, opt in fighter_opts.items():
+            opt.load_state_dict(restored_fighters[role])
+            for group in opt.param_groups:
+                group["lr"] = cfg.combat_lr
         # load_state_dict restores the saved lr; the config is authoritative (branches change it).
         saved_lr = optimizer.param_groups[0]["lr"]
         for group in optimizer.param_groups:
@@ -567,7 +597,8 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
         log.emit(start_event)
     forward = phase_forward(combat=cfg.combat, temperature=cfg.ooc_temperature,
                             strategic_temperature=cfg.strategic_temperature, strategic_cards=cfg.strategic_cards,
-                            card_temperature=cfg.card_temperature)
+                            card_temperature=cfg.card_temperature, combat_temperature=cfg.combat_temperature,
+                            boss_temperature=cfg.boss_temperature)
     update_forward = ooc_forward(forward, critic_gradient=cfg.critic_gradient)
     ppo = PPOConfig(gamma=1.0, gae_lambda=cfg.gae_lambda, clip_ratio=cfg.clip, entropy_weight=cfg.entropy,
                     value_weight=cfg.value_weight,
@@ -642,15 +673,18 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                 batch = pool.collect_ooc(model, tasks, combat=cfg.combat, temperature=cfg.ooc_temperature,
                                          strategic_temperature=cfg.strategic_temperature,
                                          strategic_cards=cfg.strategic_cards,
-                                         card_temperature=cfg.card_temperature,
+                                         card_temperature=cfg.card_temperature, combat_temperature=cfg.combat_temperature,
+                                         boss_temperature=cfg.boss_temperature, combat_samples=cfg.combat_temperature is not None,
                                          ppo=ppo, credit=cfg.credit, gae_lambda=cfg.gae_lambda,
                                          chunk=cfg.collect_chunk, seed=cfg.seed * 100_000 + iteration,
                                          value_scale=normalizer.scale if cfg.normalize_returns else 1.0)
             else:
                 batch = collect_ooc_batch(model, workers, tasks, forward=forward, ppo=ppo, credit=cfg.credit,
                                           gae_lambda=cfg.gae_lambda, chunk=cfg.collect_chunk,
-                                          value_scale=normalizer.scale if cfg.normalize_returns else 1.0)
+                                          value_scale=normalizer.scale if cfg.normalize_returns else 1.0,
+                                          combat_samples=cfg.combat_temperature is not None)
             kept, game_episodes, faults, stats_acc = batch["kept"], batch["game_episodes"], batch["faults"], batch["stats"]
+            combat_rows = batch.get("combat_rows", {})
             collector_restarts = batch["collector_restarts"] if pool is not None else 0
             collection = out / f'collection_{iteration:04d}.json.gz'
             write_collection(collection, {'schema':'sts_training_collection_v1', 'run_record':run_record,
@@ -697,6 +731,17 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             if cfg.combat_follow is not None:
                 record.update(combat_sha256=combat_sha256, combat_hash_kind=combat_hash_kind,
                               combat_swapped=combat_swapped)
+            if cfg.combat_temperature is not None:
+                record["cuts"] = sum(bool(e.get("truncated")) for e in game_episodes)
+                record["combat_samples"] = {role: len(v) for role, v in combat_rows.items()}
+                from .online_combat import action_diagnostics
+                for role, rows in combat_rows.items():
+                    if rows:
+                        # A separate reproducible sample measures behaviour without changing training RNGs.
+                        sample = random.Random(iteration).sample(rows, min(2048, len(rows)))
+                        record[role+"_exploration"] = action_diagnostics(getattr(model, role).cpu(), sample, [temperatures[role]])
+                model.to(diagnostic_device)
+                model.zero_grad(set_to_none=True)
             update_started = time.time()
             if cfg.update_threads:
                 torch.set_num_threads(cfg.update_threads)
@@ -718,6 +763,10 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             torch.set_num_threads(cfg.threads)
             record["update_seconds"] = time.time() - update_started
             optimizer = update.pop("optimizer")
+            if fighter_opts:
+                record["combat_updates"] = update_fighters(model, combat_rows, fighter_opts, temperatures,
+                    rate=cfg.combat_lr, epochs=cfg.combat_epochs, device=cfg.update_device, seed=cfg.seed*1000+iteration)
+            del combat_rows
             steps_total += update["steps"]
             record.update({k: update.get(k) for k in ("steps", "approx_kl", "clip_fraction", "entropy", "value_loss",
                                                        "policy_loss", "early_stop")})
@@ -741,7 +790,9 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                                      combat_weights_sha256=combat_weights_sha256, combat_path=combat_path)
                 combat_metadata.update(combat_sha256=combat_sha256, combat_hash_kind=combat_hash_kind)
             payload = resume_payload(model, optimizer, iteration, steps_total, asdict(cfg), run_record, rng)
-            payload["trainer_state"] = trainer_state
+            payload["trainer_state"] = dict(trainer_state)
+            if fighter_opts:
+                payload["trainer_state"]["combat_optimizers"] = {role: opt.state_dict() for role,opt in fighter_opts.items()}
             save_atomic(payload, latest)
             if cfg.eval_every and (iteration % cfg.eval_every == 0 or iteration == cfg.iterations):
                 save_policy(out / f"iter_{iteration:04d}.pt", model, template,

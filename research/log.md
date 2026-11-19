@@ -1,5 +1,16 @@
 # Online combat training progress
 
+- 19 Nov 10:40 GMT — Queued pilot-eval-lr3e-05-e2.
+- 19 Nov 10:40 GMT — Queued pilot-eval-lr0.0001-e1.
+- 19 Nov 10:39 GMT — Queued pilot-eval-lr3e-05-e1.
+- 19 Nov 10:39 GMT — Queued pilot-eval-lr1e-05-e1.
+- 19 Nov 10:38 GMT — Stage — fitting combat settings and comparing greedy play.
+- 19 Nov 10:38 GMT — Queued pilot-eval-reference.
+- 19 Nov 10:38 GMT — Queued fits.
+- 19 Nov 10:29 GMT — Stage — collecting the combat learning-rate pilot.
+- 19 Nov 10:29 GMT — Queued fit-data.
+- 19 Nov 10:29 GMT — Selected moderate combat exploration after 4 matched 768-world checks.
+- 19 Nov 10:28 GMT — Stage — measuring exploration.
 - 19 Nov — Fixed the common starting champion, pilot selection rules, and matched full-game comparison before collecting pilot outcomes.
 
 # Act 3 boss refit progress

@@ -388,7 +388,8 @@ def strategic_rows(actions: torch.Tensor, mask: torch.Tensor, *, cards: bool = F
 
 def phase_forward(*, combat: str = "sample", ooc: str = "sample", temperature: float = 1.0,
                   strategic_temperature: float = 1.0, strategic_cards: bool = False,
-                  card_temperature: float = 1.0):
+                  card_temperature: float = 1.0, combat_temperature: float | None = None,
+                  boss_temperature: float | None = None):
     """Forward that makes one or both phases greedy (logit scale 1e4).
 
     Scaling preserves masking and keeps log-probs finite, so the same function
@@ -400,6 +401,10 @@ def phase_forward(*, combat: str = "sample", ooc: str = "sample", temperature: f
     -36), so T=1 sampling never explored smith, elites or removal. Argmax, and so
     deployment, is unchanged by any temperature.
     """
+    for temp in (combat_temperature, boss_temperature):
+        if temp is not None and (not math.isfinite(temp) or temp <= 0 or combat != "sample"):
+            raise ValueError("combat temperatures must be finite, positive and use sampled combat")
+
     def forward(model: torch.nn.Module, batch: Any):
         logits, values, mask = forward_policy(model, batch)
         is_combat = batch[0][:, 7] > .5
@@ -410,6 +415,13 @@ def phase_forward(*, combat: str = "sample", ooc: str = "sample", temperature: f
         if card_temperature != 1.0:
             cards=((batch[1][...,_FLAG_SKIP_CARD]>.5)&mask).any(-1)&~is_combat
             scale=torch.where(cards,torch.full_like(values,1.0/card_temperature),scale)
+        if combat_temperature is not None:
+            scale = torch.where(is_combat, torch.full_like(scale, 1. / combat_temperature), scale)
+        if boss_temperature is not None:
+            if len(batch) == 4:
+                scale = torch.where(batch[3], torch.full_like(scale, 1. / boss_temperature), scale)
+            elif is_combat.any():
+                raise ValueError("a boss temperature requires a publicly routed boss policy")
         if combat == "greedy":
             scale = torch.where(is_combat, torch.full_like(values, 1e4), scale)
         if ooc == "greedy":

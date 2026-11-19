@@ -233,12 +233,17 @@ class Act3BossActorCritic(CompositeActorCritic):
         return logits
 
 
+def is_act3_boss_combat(observation):
+    if observation["phase"] != "combat":
+        return False
+    state = observation["state"]
+    return state.get("act") == 3 and str(state.get("room", "")).rsplit(".", 1)[-1] == "BOSS"
+
+
 def route_batch(model, batch, observations):
     if not isinstance(model, Act3BossActorCritic):
         return batch
-    rows = [obs["phase"] == "combat" and obs["state"].get("act") == 3
-            and str(obs["state"].get("room", "")).rsplit(".", 1)[-1] == "BOSS"
-            for obs in observations]
+    rows = [is_act3_boss_combat(obs) for obs in observations]
     return (*batch, torch.tensor(rows, device=batch[0].device, dtype=torch.bool))
 
 

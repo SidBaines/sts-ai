@@ -142,6 +142,13 @@ affordable. Both worker kinds batch one policy forward per tick, and the pool
 splits `ceil(workers / collectors)` slots per collector (at least one).
 For example, `--collectors 12 --workers 384 --in-process-games` runs 32 games
 per collector.
+To learn combat in the same games, use `--combat sample --combat-temperature T
+--train-combat --combat-lr R --combat-epochs E`. A champion with an Act 3 boss
+specialist can set `--boss-temperature T2`. A single-fighter composite learns
+from all fights. Omit `--train-combat` with identical temperatures for the frozen
+control. The trainer logs actual lower-ranked moves, excludes incomplete games,
+and saves independent combat optimizer state in `latest.pt` for resume.
+
 With one collector all slots share the trainer process. The subprocess path
 remains the default; `--no-in-process-games` selects it explicitly.
 

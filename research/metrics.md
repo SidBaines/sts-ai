@@ -273,3 +273,5 @@ Wall time is elapsed time on the M5 Pro. Whole-job time includes startup, both e
   within each held-out world and then across worlds. Its units are reward per decision.
 - **World allocation:** 512 diagnostic training-split worlds from 124 billion on
   env-v0.1.5.2. The completed paired selection and independent confirmation used 16,384 worlds each from 125 and 126 billion respectively. Both arms used the disjoint training namespace detailed in the audit.
+
+- **Combat exploration rate:** fraction of sampled combat decisions on which the player chooses a move scoring more than 0.00001 below its best raw score. The denominator includes only menus with at least one such move. Tied best moves count together.
