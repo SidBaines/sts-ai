@@ -310,6 +310,17 @@ class DriverProcessTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             run_multiprocess(seeds, "unused", processes=7, max_active_processes=0)
 
+    def test_capped_lanes_retry_the_original_partition_before_starting_the_next(self):
+        def complete(seeds):
+            return [[event for seed in seeds for event in
+                     (("start", seed), ("record", self.completed(seed)))] + [("done", None)]]
+        scripts = [[[("start", 10), EOFError()]], complete([10, 12]), complete([11, 13])]
+        rows, assigned = self.run_fake_children(scripts, seeds=[10,11,12,13], processes=2,
+                                                max_active_processes=1, expected_cap=1)
+        self.assertEqual(assigned, [[10,12],[10,12],[11,13]])
+        self.assertEqual([r["world_seed"] for r in rows], [10,11,12,13])
+        self.assertEqual([r["requeues"] for r in rows], [1,0,0,0])
+
     def test_long_parent_pause_does_not_stall_any_lane(self):
         scripts = [
             [[("start", seed)], [], [], [("record", self.completed(seed)), ("done", None)]]

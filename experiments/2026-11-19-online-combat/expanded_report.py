@@ -1,6 +1,7 @@
 """Tabulate every fit and the independent short-trajectory test."""
 
 import csv
+from datetime import datetime, timezone
 import re
 
 from report import ROOT, BASE, describe, read, replace_note
@@ -66,6 +67,19 @@ def section(results, verdict=None):
         + " The screen selected among these fits after one combat update with strategy held fixed. "
         "[Full screening data](../figures/online-combat-pilot/screen.csv).",
     ]
+    parity = BASE / "expanded" / "cpu-parity.json"
+    if parity.exists():
+        text += [
+            "",
+            f"All {read(parity)['identical_worlds']} reference trajectories reproduced with three active evaluator processes and the same seven world partitions.",
+        ]
+    if verdict is None and (BASE / "expanded" / "shortlist.json").exists():
+        candidate = read(BASE / "expanded" / "shortlist.json")["challenger"]
+        text += [
+            "",
+            f"The screen nominated {candidate['target']:.0%} exploration, learning rate "
+            f"{candidate['rate']:.5f} and {candidate['epochs']} passes for independent testing.",
+        ]
     if (FIGURE / "screen.png").is_file():
         text += [
             "",
@@ -106,6 +120,52 @@ def section(results, verdict=None):
             f"{diag['challenger'][0]} and {diag['challenger'][1]} for the challenger. These checks had no role in selection.",
         ]
     return text
+
+
+def ledger(results, verdict):
+    label = "[Expanded combat pilot](experiments/2026-11-19-online-combat.md#expanded-pilot-results)"
+    date = datetime.now(timezone.utc).date().isoformat()
+    comparisons = [
+        (
+            "Three joint updates, selected challenger vs original",
+            verdict["comparison"],
+            "Confirmed",
+        )
+    ]
+    for row in sorted(
+        results.values(),
+        key=lambda x: (
+            x["setting"]["target"],
+            x["setting"]["rate"],
+            x["setting"]["epochs"],
+        ),
+    ):
+        stat, cfg = row["comparison"], row["setting"]
+        if stat["a"] != stat["b"]:
+            comparisons.append(
+                (
+                    f"One fit at {cfg['target']:.0%} exploration, rate {cfg['rate']:.5f}, {cfg['epochs']} passes vs original fit",
+                    stat,
+                    "Exploratory",
+                )
+            )
+    entries = []
+    for test, stat, evidence in comparisons:
+        low, high = stat["worst_case_ci95_pp"]
+        outcome = (
+            "Better"
+            if low > 0
+            else "Worse"
+            if stat["complete"] and high < 0
+            else "Inconclusive"
+        )
+        entries.append(
+            f"| {date} | {label} | {test}, env 0.1.5.2 | {describe(stat)} | {evidence} | {outcome} |\n"
+        )
+    path = ROOT / "research/results.md"
+    lines = [line for line in path.read_text().splitlines(True) if label not in line]
+    start = next(i + 1 for i, line in enumerate(lines) if line.startswith("|---"))
+    replace_note(path, "".join(lines[:start] + entries + lines[start:]))
 
 
 def write_results(results, verdict=None):
@@ -169,3 +229,5 @@ def write_results(results, verdict=None):
         + "\n\n"
         + old[start:],
     )
+    if verdict is not None:
+        ledger(results, verdict)
