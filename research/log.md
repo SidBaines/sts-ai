@@ -1,5 +1,8 @@
 # Online combat training progress
 
+- 19 Nov 12:47 GMT — The lower-load evaluator reproduced all 768 screening trajectories, including all 319 reference wins. The seven logical world groups now run at most three at once.
+- 19 Nov 12:45 GMT — Expanded pilot — screened 5 of 27 settings.
+- 19 Nov 12:42 GMT — The original combat setting completed its three joint pilot updates. It won 525, 550 and 522 of 1,536 training games per update, with zero faults or cuts across all 4,608 games. The 128-world development check was 43 wins before training and 52 afterward.
 - 19 Nov 12:13 GMT — Expanded pilot — finishing already queued work at lower concurrency.
 - 19 Nov 12:05 GMT — Scaled back simultaneous pilot jobs after the preceding trainer slowed. New screens use at most three active evaluator processes, subject to reproducing every trajectory on the 768-world reference.
 - 19 Nov 12:04 GMT — Expanded pilot — screened 4 of 27 settings.

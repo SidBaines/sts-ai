@@ -3,8 +3,11 @@
 import csv
 from datetime import datetime, timezone
 import re
+import math
+import statistics
 
 from report import ROOT, BASE, describe, read, replace_note
+from sts_rl.fresh_study import atomic_json
 
 FIGURE = ROOT / "research/figures/online-combat-pilot"
 TITLE = "### Expanded pilot results"
@@ -19,6 +22,65 @@ def interval(stat):
         stat.get("difference_pp", stat.get("complete_pair_difference_pp")),
         stat.get("ci95_pp", stat.get("complete_pair_ci95_pp")),
     )
+
+
+def marginal_effects(results):
+    """Average across other settings within a world before estimating sampling error."""
+    outcomes = {}
+    for label in results:
+        d = read(BASE / "expanded" / "screen" / label / "summary.json")
+        world_results = {
+            r["world_seed"]: r["win"] if r["status"] == "completed" else None
+            for r in d["records"]
+        }
+        if len(world_results) != 768 or len(d["records"]) != len(world_results):
+            raise ValueError("bad marginal-effect world roster")
+        outcomes[label] = world_results
+    worlds = sorted(next(iter(outcomes.values())))
+    if any(sorted(values) != worlds for values in outcomes.values()):
+        raise ValueError("unpaired marginal-effect world rosters")
+    table = []
+    for factor, reference, levels in (
+        ("target", 0.12, (0.05, 0.22)),
+        ("rate", 0.00003, (0.00001, 0.00006)),
+        ("epochs", 2, (1, 4)),
+    ):
+        control = [k for k, r in results.items() if r["setting"][factor] == reference]
+        for level in levels:
+            test = [k for k, r in results.items() if r["setting"][factor] == level]
+            if len(control) != 9 or len(test) != 9:
+                raise ValueError("incomplete factorial design")
+            paired = []
+            low = high = 0
+            for w in worlds:
+                a = [outcomes[k][w] for k in control]
+                b = [outcomes[k][w] for k in test]
+                low += sum(v is True for v in b) - sum(v is not False for v in a)
+                high += sum(v is not False for v in b) - sum(v is True for v in a)
+                if None not in a and None not in b:
+                    paired.append(100 * (sum(b) - sum(a)) / 9)
+            value = statistics.mean(paired) if paired else None
+            half = (
+                1.96 * statistics.stdev(paired) / math.sqrt(len(paired))
+                if len(paired) > 1
+                else None
+            )
+            table.append(
+                dict(
+                    factor=factor,
+                    level=level,
+                    reference=reference,
+                    worlds=len(worlds),
+                    complete=len(paired),
+                    mean_pp=value,
+                    ci95_pp=[value - half, value + half] if half is not None else None,
+                    bounds_pp=[
+                        100 * low / (9 * len(worlds)),
+                        100 * high / (9 * len(worlds)),
+                    ],
+                )
+            )
+    return table
 
 
 def section(results, verdict=None):
@@ -80,6 +142,36 @@ def section(results, verdict=None):
             f"The screen nominated {candidate['target']:.0%} exploration, learning rate "
             f"{candidate['rate']:.5f} and {candidate['epochs']} passes for independent testing.",
         ]
+    path = BASE / "expanded" / "marginal-effects.json"
+    if path.exists():
+        text += [
+            "",
+            "Averaging over the other two settings gave these exploratory differences. Each interval uses independent worlds as its unit. A single training collection per exploration level leaves training-run variability unmeasured.",
+            "",
+            "| Factor | Compared with the original level | Mean win-rate change in points, 95% interval | Complete worlds / 768 |",
+            "|---|---|---|---:|",
+        ]
+        for m in read(path):
+            factor = m["factor"]
+            if factor == "target":
+                label, levels = (
+                    "Exploration",
+                    f"{m['level']:.0%} vs {m['reference']:.0%}",
+                )
+            elif factor == "rate":
+                label, levels = (
+                    "Learning rate",
+                    f"{m['level']:.5f} vs {m['reference']:.5f}",
+                )
+            else:
+                label, levels = "Passes", f"{m['level']} vs {m['reference']}"
+            ci = m["ci95_pp"]
+            effect = (
+                f"{m['mean_pp']:+.2f} [{ci[0]:+.2f}, {ci[1]:+.2f}]"
+                if ci
+                else "Insufficient complete worlds"
+            )
+            text.append(f"| {label} | {levels} | {effect} | {m['complete']} |")
     if (FIGURE / "screen.png").is_file():
         text += [
             "",
@@ -169,6 +261,17 @@ def ledger(results, verdict):
 
 
 def write_results(results, verdict=None):
+    # A presentation or plotting failure must never postpone a verified scientific decision.
+    folder = BASE / "expanded"
+    if verdict is not None:
+        record = folder / "verdict.json"
+        if record.exists() and read(record) != verdict:
+            raise ValueError("independent verdict has changed")
+        if not record.exists():
+            atomic_json(record, verdict)
+    marginal_path = folder / "marginal-effects.json"
+    if not marginal_path.exists():
+        atomic_json(marginal_path, marginal_effects(results))
     FIGURE.mkdir(parents=True, exist_ok=True)
     records = []
     for row in results.values():

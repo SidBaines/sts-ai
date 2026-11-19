@@ -53,6 +53,8 @@ On the same 3,072 training worlds with the fighter still frozen, 5%, 12% and 22%
 
 ## Log
 
+- 19 November — after screening began, added descriptive averages across each factor. These compare all 27 settings within each world and do not affect selection.
+
 - 19 November — one earlier trainer update took 735 seconds during overlapping pilot work, against 282 seconds before it. Reduced supplemental concurrency and added a 768-world trajectory check for the lower-memory evaluator.
 
 - 19 November — chose the starting player, comparison and pilot rules before sampling.

@@ -384,7 +384,6 @@ def advance(jobs):
     from expanded_report import write_results
 
     write_results(results, result)
-    atomic_json(RUN / "verdict.json", result)
     study.note(
         f"Expanded pilot independent comparison: challenger {comparison['second']['wins']}, original {comparison['first']['wins']} wins on 8,192 worlds. Qualified to change settings: {result['qualified']}."
     )
