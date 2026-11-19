@@ -66,9 +66,8 @@ Scope throughout: Ironclad, Ascension 0, Acts 1 to 3; Act 4 is out of scope.
 
 - Comparisons are **paired**: both policies play the same worlds (or fight
   starts), and the result is the difference.
-- **Intervals** are 95% percentile intervals from a bootstrap over whole
-  worlds (10,000 or 20,000 resamples). **Win tests** are exact paired
-  (McNemar) tests on the worlds only one policy won.
+- Earlier studies use 95% percentile intervals from a bootstrap over whole worlds (10,000 or 20,000 resamples). The November learning-rate and boss-refit studies use the mean paired win difference plus or minus 1.96 sample standard errors across worlds. The exact paired McNemar test uses worlds that only one policy won.
+- For unresolved full games, November's **complete-pair interval** uses worlds with both outcomes observed. **Full-cohort bounds** give the smallest and largest win gain possible over all assigned worlds. Promotion also requires a positive lower confidence bound when unresolved outcomes are assigned against the candidate.
 - **Detectable difference:** about 2.8 times the paired standard error, the
   smallest difference a comparison would detect 80% of the time.
 - **Evidence levels and verdicts** follow the vocabulary in `CLAUDE.md`
@@ -128,7 +127,12 @@ confirmation worlds apart.
 | 0.1.5.1 | Value-target refits and hybrid-target students in the champion, play test | 111,000,000,000 | 8,192 |
 | 0.1.5.1 | Confirmation for a hybrid-target student that beats the champion | 112,000,000,000 | 8,192 |
 | 0.1.5.1 | Probe worlds for the round 2 and round 3 fits (unlabelled, movement monitoring only) | 93,000,000,100; 93,000,000,200 | 8 each |
-| All | Out-of-combat PPO training worlds (`train_ooc.py`): 7,000,000,000 plus 500,000,000 per training seed plus 10,000,000 per iteration | 7,000,000,000 | games per iteration |
+| 0.1.5.2 | Eight-update refit endpoint against frozen combat | 152,000,000,000 | 16,384 |
+| 0.1.5.2 | Selected endpoint against the 18 November champion, independent confirmation | 153,000,000,000 | 16,384 |
+| 0.1.5.2 | Every-two and every-eight policies after their update-8 gates | 158,000,000,000 | 4,096 |
+| 0.1.5.2 | Every-two and every-eight policies at update 24, with frozen combat as a secondary comparison | 160,000,000,000 | 16,384 |
+| 0.1.5.2 | Independent confirmation of the frozen every-two endpoint against every eight and the incumbent | 161,000,000,000 | 16,384 |
+| All | Out-of-combat PPO training worlds start at the configured base plus 500,000,000 per training seed plus 10,000,000 per iteration | Configured per study | games per iteration |
 
 ## Environment versions
 

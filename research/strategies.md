@@ -213,6 +213,8 @@ in a student that wins a gate, so the two halves can adapt to each other.
 
 - [Act 3 boss specialists](experiments/2026-11-18-act3-boss-refits.md) produced 5,600 vs 5,600 wins on 16,384 assigned worlds, 16,384 complete pairs. +0.00 points [+0.00, +0.00] against frozen combat. The control endpoint passed independent confirmation and became champion.
 
+- [Act 3 refit cadence](experiments/2026-11-18-act3-boss-refits.md#results) produced a confirmed 5.40-point gain [4.56, 6.23] on 16,384 worlds at one matched training seed. Three early specialists passed. The eight later candidates all failed the original-entry fight gate. Teacher collection was 5.5 times larger than for the two-opportunity schedule.
+
 ## Distilling strategy rules
 
 **Working, used selectively.** Measure a strategic habit with a menu overlay

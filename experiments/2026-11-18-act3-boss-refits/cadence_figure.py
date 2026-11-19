@@ -26,7 +26,7 @@ def draw(output: Path, gates, early, endpoint, confirmation):
             effect, margin = 100 * m["paired_difference"], 196 * m["se"]
             rows.append(dict(panel="boss", comparison=mode, iteration=iteration, pairs=m["worlds"],
                              estimate=effect, lower=effect-margin, upper=effect+margin, adopted=adopted))
-    full_rows = []
+    full_rows, plotted_rows, seen = [], [], set()
     for phase, comparisons in (("Update 8", early), ("Update 24", endpoint), ("Confirmation", confirmation or {})):
         for item in comparisons.values():
             est = item.get("difference_pp", item.get("complete_pair_difference_pp"))
@@ -35,6 +35,11 @@ def draw(output: Path, gates, early, endpoint, confirmation):
             full_rows.append(dict(panel="games", comparison=label, iteration=8 if phase == "Update 8" else 24,
                                   pairs=item["paired_completed"], estimate=est, lower=ci[0] if ci else None,
                                   upper=ci[1] if ci else None, adopted=""))
+            baseline = item.get("checkpoint_sha256", {}).get(item["a"], item["a"])
+            case = (phase, baseline)
+            if case not in seen:
+                seen.add(case)
+                plotted_rows.append(full_rows[-1])
     with (output / "cadence-effects.csv").open("w", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=rows[0].keys())
         writer.writeheader()
@@ -47,7 +52,7 @@ def draw(output: Path, gates, early, endpoint, confirmation):
         ax.spines[["top","right"]].set_visible(False)
         ax.tick_params(length=3, color="#8a9298")
     for key, label, offset, color in (("unsalted","Original entries",-.18,"#1a5880"),
-                                     ("resampled","Resalted entries",.18,"#bf6828")):
+                                     ("resampled","Reseeded entries",.18,"#bf6828")):
         values = [v for v in rows if v["comparison"] == key]
         fights.errorbar([r["iteration"]+offset for r in values], [r["estimate"] for r in values],
                         yerr=[r["upper"]-r["estimate"] for r in values], fmt="o", ms=4, lw=1.1,
@@ -57,13 +62,13 @@ def draw(output: Path, gates, early, endpoint, confirmation):
                xticks=[g[0] for g in gates])
     fights.legend(frameon=False, fontsize=9, loc="best")
     games.axvline(0, lw=.8, color="#4e555a")
-    for y, row in enumerate(full_rows):
+    for y, row in enumerate(plotted_rows):
         if row["lower"] is not None:
             x = row["estimate"]
             games.errorbar(x,y,xerr=[[max(0,x-row["lower"])],[max(0,row["upper"]-x)]],
                            fmt="o", ms=5, lw=1.4, capsize=3, color="#1a5880")
-    games.set_title("Every-two full-game results")
-    games.set_yticks(range(len(full_rows)),labels=[v["comparison"] for v in full_rows],fontsize=8)
+    games.set_title("Every-two full-game results (95% intervals)")
+    games.set_yticks(range(len(plotted_rows)),labels=[v["comparison"] for v in plotted_rows],fontsize=8)
     games.invert_yaxis()
     games.set_xlabel("Full-game win-rate difference (points)")
     games.margins(x=.18, y=.3)

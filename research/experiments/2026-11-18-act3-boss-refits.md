@@ -1,6 +1,6 @@
 # Can better Act 3 boss combat improve the champion?
 
-**Status:** running. The eight-update comparison has finished and the every-two arm is active.
+**Status:** finished 19 November 2026. **Verdict:** Refitting every two strategy updates produced the new champion. It won 39.42% of 16,384 independent games against 34.03% for every eight, a paired gain of 5.40 points [4.56, 6.23].
 
 ## Question
 
@@ -29,6 +29,40 @@ Sid requested a second schedule on 18 November after the first update-8 result a
 
 ## Results
 
+The every-two arm won 884 more games on independent confirmation. All three cadence panels returned the full set of paired outcomes without faults or cutoffs.
+
+| Comparison | Every two | Every eight | Paired gain in percentage points, 95% interval |
+|---|---:|---:|---:|
+| After the update-8 gate, 4,096 worlds | 1,550 (37.84%) | 1,375 (33.57%) | +4.27 [+2.71, +5.84] |
+| Update 24, 16,384 fresh worlds | 6,468 (39.48%) | 5,564 (33.96%) | +5.52 [+4.70, +6.34] |
+| Independent confirmation, 16,384 more worlds | 6,459 (39.42%) | 5,575 (34.03%) | +5.40 [+4.56, +6.23] |
+
+Every eight and frozen combat finished with identical weights because both proposed refits were rejected. Their endpoint subsequently became the incumbent. Its saved evaluation therefore serves both roles in each final cadence panel.
+
+![Paired boss-fight and full-game win-rate differences with 95% intervals](../figures/act3-boss-refits/cadence-effects.png)
+
+### Every-two gate decisions
+
+The specialists fitted at 2, 4 and 6 all passed both gates. Each later candidate lost on the original saved boss entries. The table gives candidate wins against active-policy wins. For an incomplete full-game panel it gives the interval on completed pairs and the possible gain over all assigned worlds.
+
+| Update | Original boss entries | Reseeded entries | Full-game gate | Decision |
+|---|---|---|---|---|
+| 2 | 114 vs 107 of 192, +3.65 points [-3.35, +10.64] | 122 vs 116 of 192, +3.12 points [-3.00, +9.25] | 1,475 vs 1,427 wins on 4,096 assigned worlds, 4,095 complete pairs. +1.17 points [-0.00, +2.35] on complete pairs, full-cohort bounds [+1.15, +1.20] | Adopted |
+| 4 | 127 vs 126 of 192, +0.52 points [-5.36, +6.40] | 117 vs 115 of 192, +1.04 points [-5.27, +7.35] | 1,484 vs 1,463 wins on 4,096 assigned worlds, 4,095 complete pairs. +0.51 points [-0.58, +1.61] on complete pairs, full-cohort bounds [+0.49, +0.54] | Adopted |
+| 6 | 109 vs 97 of 192, +6.25 points [-0.93, +13.43] | 104 vs 97 of 192, +3.65 points [-2.21, +9.50] | 1,558 vs 1,459 wins on 4,096 assigned worlds, 4,096 complete pairs. +2.42 points [+1.32, +3.52] | Adopted |
+| 8 | 105 vs 109 of 192, -2.08 points [-8.55, +4.38] | 105 vs 115 of 192, -5.21 points [-11.80, +1.38] | Did not advance | Kept active head |
+| 10 | 105 vs 123 of 192, -9.38 points [-16.03, -2.72] | 103 vs 113 of 192, -5.21 points [-11.64, +1.22] | Did not advance | Kept active head |
+| 12 | 110 vs 128 of 192, -9.38 points [-16.49, -2.26] | 113 vs 123 of 192, -5.21 points [-11.64, +1.22] | Did not advance | Kept active head |
+| 14 | 104 vs 119 of 192, -7.81 points [-15.04, -0.59] | 105 vs 124 of 192, -9.90 points [-16.92, -2.87] | Did not advance | Kept active head |
+| 16 | 112 vs 116 of 192, -2.08 points [-8.87, +4.70] | 110 vs 125 of 192, -7.81 points [-13.77, -1.86] | Did not advance | Kept active head |
+| 18 | 97 vs 118 of 192, -10.94 points [-17.63, -4.25] | 101 vs 117 of 192, -8.33 points [-14.53, -2.14] | Did not advance | Kept active head |
+| 20 | 58 vs 111 of 192, -27.60 points [-34.87, -20.34] | 56 vs 116 of 192, -31.25 points [-38.58, -23.92] | Did not advance | Kept active head |
+| 22 | 98 vs 117 of 192, -9.90 points [-15.96, -3.83] | 98 vs 107 of 192, -4.69 points [-10.71, +1.33] | Did not advance | Kept active head |
+
+### Eight-update gates and frozen control
+
+The two rejected refits left strategy PPO as the only policy change from the starting champion. Its 24 updates produced an independently confirmed gain of 1.08 points, after which it became the comparator for the every-two endpoint. All games in the two full-game panels completed.
+
 | Comparison | Result |
 |---|---|
 | Selected endpoint vs starting champion | 5,521 vs 5,344 wins on 16,384 assigned worlds, 16,384 complete pairs. +1.08 points [+0.33, +1.83] |
@@ -38,19 +72,30 @@ Sid requested a second schedule on 18 November after the first update-8 result a
 | Update 16 boss fights, unsalted | 92 vs 93 of 192 identical starts, -0.52 points [-6.58, +5.53] |
 | Update 16 boss fights, resampled | 91 vs 101 of 192 identical starts, -5.21 points [-11.80, +1.38] |
 
-Update 8 retained the active head. The saved-fight result did not trigger the full-game gate. Update 16 retained the active head. The saved-fight result did not trigger the full-game gate. Both refits were rejected, so the two endpoints are the same trained policy.
+### Training time
+
+| Schedule | Hours to post-gate update 8 | Hours to final policy |
+|---|---:|---:|
+| Every eight | 0.82 | 1.88 |
+| Every two | 1.56 | 4.03 |
+
+Eleven opportunities used 5,632 scheduled teacher worlds, compared with 1,024 for two opportunities. Elapsed wall time including evaluations and any power pauses was 4.86 hours for every two and 2.68 hours for the original study including its frozen control. This is one matched training seed.
 
 ## Conclusion
 
-The control endpoint passed independent confirmation and became champion. Both arms used one training seed. Confirmation measures the selected policy's total gain over its parent.
+The early refits changed final-boss performance and the full-game advantage persisted through update 24. On independent confirmation, every two reached the Act 3 boss in 10,374 games and won 6,459 of those fights (62.26%). Every eight reached it in 10,236 games and won 5,575 (54.46%). Those groups contain policy-dependent entries, so the conditional rates describe where the extra wins occurred.
+
+This comparison used one matched PPO seed and the same 73,728 training worlds. Eleven 512-world teacher collections cost 5.5 times as many scheduled worlds as two collections. Timing, compute budget and the number of chances to pass a gate all differed.
 
 ## Next
 
-Review the saved boss-fight outcomes and the paired endpoint result before choosing the next training change.
+Test refits at 2, 4 and 6 against 8, 16 and 22 on a second matched PPO seed from the same starting champion. Three 512-world fits per arm would hold the teacher budget fixed while testing whether earlier refits transfer to a new training trajectory.
 
 ## Log
 
-- 18 November, 22:25 GMT: the routed policy completed a real optimizer resume, full games and identical-start replay checks. A separate small fit completed 2,000 updates. The smoke test caught the replay tool’s required bank namespace before either study gate opened.
-- 18 November: fixed the design and reused the exact control trajectory until the first accepted refit. Each gate and each final panel has its own world roster.
+- 18 November: fixed the original two-gate design before training. Both arms shared the exact frozen-combat trajectory until a gate could admit a new head.
+- 18 November: Sid requested the every-two comparison after the update-8 fight result and before the original endpoint evaluation. Its two final panels and promotion rule were fixed before its training began.
+- 19 November: the frozen-combat endpoint passed its independent confirmation. The every-two arm then began from the original 18 November champion.
+- 19 November: the every-two endpoint passed its independent confirmation and became champion.
 
-Code: `experiments/2026-11-18-act3-boss-refits/`. Local data: run `joint_a3_from_0f52`.
+Code: `experiments/2026-11-18-act3-boss-refits/`. The initial gate workflow was committed at `40a2153` and the follow-up supervisor at `307536a`. Local runs: `joint_a3_from_0f52` and `joint_a3_every2_from_0f52`.

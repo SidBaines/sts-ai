@@ -1,5 +1,179 @@
 # Act 3 boss refit progress
 
+- 19 Nov 05:47 GMT — Every two: All eleven refit decisions and paired schedule comparisons are filed.
+- 19 Nov 05:47 GMT — Every two: confirmation, every2 vs incumbent: 6,459 vs 5,575 wins on 16,384 assigned worlds, 16,384 complete pairs. +5.40 points [+4.56, +6.23].
+- 19 Nov 05:47 GMT — Every two: confirmation, every2 vs every8: 6,459 vs 5,575 wins on 16,384 assigned worlds, 16,384 complete pairs. +5.40 points [+4.56, +6.23].
+- 19 Nov 05:46 GMT — Every two: confirmation-every8 returned 16,384 of 16,384 worlds.
+- 19 Nov 05:41 GMT — Every two: confirmation-every2 returned 12,288 of 16,384 worlds.
+- 19 Nov 05:40 GMT — Every two: confirmation-every8 returned 12,288 of 16,384 worlds.
+- 19 Nov 05:35 GMT — Every two: confirmation-every2 returned 8,192 of 16,384 worlds.
+- 19 Nov 05:35 GMT — Every two: confirmation-every8 returned 8,192 of 16,384 worlds.
+- 19 Nov 05:29 GMT — Every two: confirmation-every2 returned 4,096 of 16,384 worlds.
+- 19 Nov 05:29 GMT — Every two: confirmation-every8 returned 4,096 of 16,384 worlds.
+- 19 Nov 05:23 GMT — Every two: Queued confirmation-every2.
+- 19 Nov 05:23 GMT — Every two: Queued confirmation-every8.
+- 19 Nov 05:23 GMT — Every two: The every-two endpoint beat both comparators on the primary panel and is frozen for confirmation.
+- 19 Nov 05:23 GMT — Every two: endpoint, every2 vs control: 6,468 vs 5,564 wins on 16,384 assigned worlds, 16,384 complete pairs. +5.52 points [+4.70, +6.34].
+- 19 Nov 05:23 GMT — Every two: endpoint, every2 vs every8: 6,468 vs 5,564 wins on 16,384 assigned worlds, 16,384 complete pairs. +5.52 points [+4.70, +6.34].
+- 19 Nov 05:22 GMT — Every two: endpoint-every2 returned 16,384 of 16,384 worlds.
+- 19 Nov 05:22 GMT — Every two: endpoint-every8 returned 16,384 of 16,384 worlds.
+- 19 Nov 05:17 GMT — Every two: endpoint-every2 returned 12,288 of 16,384 worlds.
+- 19 Nov 05:16 GMT — Every two: endpoint-every8 returned 12,288 of 16,384 worlds.
+- 19 Nov 05:11 GMT — Every two: endpoint-every2 returned 8,192 of 16,384 worlds.
+- 19 Nov 05:10 GMT — Every two: endpoint-every8 returned 8,192 of 16,384 worlds.
+- 19 Nov 05:04 GMT — Every two: endpoint-every2 returned 4,096 of 16,384 worlds.
+- 19 Nov 05:04 GMT — Every two: endpoint-every8 returned 4,096 of 16,384 worlds.
+- 19 Nov 04:58 GMT — Every two: Queued endpoint-every2.
+- 19 Nov 04:58 GMT — Every two: Queued endpoint-every8.
+- 19 Nov 04:58 GMT — Every two: train development evaluation at update 24: 381/1,024 wins, 0 faults.
+- 19 Nov 04:57 GMT — Every two: train finished update 24/24 on 3,072 matched worlds. Sampled wins 1,123, faults 0, elapsed 4.3 min.
+- 19 Nov 04:53 GMT — Every two: train finished update 23/24 on 3,072 matched worlds. Sampled wins 1,100, faults 0, elapsed 4.0 min.
+- 19 Nov 04:49 GMT — Every two: train started at update 22 with learning rate 0.0001.
+- 19 Nov 04:49 GMT — Every two: Queued strategy updates 23 and 24 on the matched PPO worlds.
+- 19 Nov 04:49 GMT — Every two: Update 22: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 04:49 GMT — Every two: Update 22 BOSS3:unsalted fight gate: active 60.9%, specialist 51.0% on 192 identical entries.
+- 19 Nov 04:49 GMT — Every two: Update 22 BOSS3:resampled fight gate: active 55.7%, specialist 51.0% on 192 identical entries.
+- 19 Nov 04:48 GMT — Every two: Queued fights-22.
+- 19 Nov 04:48 GMT — Every two: Update 22 specialist fit on 8,554 training choices. Selected step 300 on 1,230 validation choices.
+- 19 Nov 04:48 GMT — Every two: fit-22 reached 2,500 optimizer updates.
+- 19 Nov 04:46 GMT — Every two: Queued fit-22.
+- 19 Nov 04:46 GMT — Every two: Update 22 collected 12,226 boss labels from 512/512 completed games.
+- 19 Nov 04:46 GMT — Every two: Update 22 froze 192 independent Act 3 boss starts.
+- 19 Nov 04:46 GMT — Every two: labels-22 returned 512 of 512 worlds.
+- 19 Nov 04:44 GMT — Every two: labels-22 returned 391 of 512 worlds.
+- 19 Nov 04:43 GMT — Every two: Queued grid-22.
+- 19 Nov 04:43 GMT — Every two: labels-22 returned 260 of 512 worlds.
+- 19 Nov 04:42 GMT — Every two: bank-22 returned 411 of 512 worlds.
+- 19 Nov 04:41 GMT — Every two: bank-22 returned 257 of 512 worlds.
+- 19 Nov 04:41 GMT — Every two: labels-22 returned 143 of 512 worlds.
+- 19 Nov 04:40 GMT — Every two: bank-22 returned 142 of 512 worlds.
+- 19 Nov 04:39 GMT — Every two: Queued bank-22.
+- 19 Nov 04:39 GMT — Every two: Queued labels-22.
+- 19 Nov 04:38 GMT — Every two: train development evaluation at update 22: 346/1,024 wins, 0 faults.
+- 19 Nov 04:38 GMT — Every two: train finished update 22/24 on 3,072 matched worlds. Sampled wins 1,132, faults 0, elapsed 4.3 min.
+- 19 Nov 04:33 GMT — Every two: train finished update 21/24 on 3,072 matched worlds. Sampled wins 1,165, faults 0, elapsed 4.1 min.
+- 19 Nov 04:29 GMT — Every two: train started at update 20 with learning rate 0.0001.
+- 19 Nov 04:29 GMT — Every two: Queued strategy updates 21 and 22 on the matched PPO worlds.
+- 19 Nov 04:29 GMT — Every two: Update 20: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 04:29 GMT — Every two: Update 20 BOSS3:unsalted fight gate: active 57.8%, specialist 30.2% on 192 identical entries.
+- 19 Nov 04:29 GMT — Every two: Update 20 BOSS3:resampled fight gate: active 60.4%, specialist 29.2% on 192 identical entries.
+- 19 Nov 04:29 GMT — Every two: Queued fights-20.
+- 19 Nov 04:29 GMT — Every two: Update 20 specialist fit on 8,003 training choices. Selected step 100 on 1,076 validation choices.
+- 19 Nov 04:28 GMT — Every two: fit-20 reached 2,500 optimizer updates.
+- 19 Nov 04:28 GMT — Every two: fit-20 reached 96 optimizer updates.
+- 19 Nov 04:27 GMT — Every two: Queued fit-20.
+- 19 Nov 04:27 GMT — Every two: Update 20 collected 11,264 boss labels from 512/512 completed games.
+- 19 Nov 04:27 GMT — Every two: Update 20 froze 192 independent Act 3 boss starts.
+- 19 Nov 04:27 GMT — Every two: labels-20 returned 512 of 512 worlds.
+- 19 Nov 04:25 GMT — Every two: labels-20 returned 388 of 512 worlds.
+- 19 Nov 04:24 GMT — Every two: Queued grid-20.
+- 19 Nov 04:24 GMT — Every two: labels-20 returned 281 of 512 worlds.
+- 19 Nov 04:23 GMT — Every two: bank-20 returned 385 of 512 worlds.
+- 19 Nov 04:22 GMT — Every two: bank-20 returned 270 of 512 worlds.
+- 19 Nov 04:22 GMT — Every two: labels-20 returned 137 of 512 worlds.
+- 19 Nov 04:21 GMT — Every two: bank-20 returned 144 of 512 worlds.
+- 19 Nov 04:20 GMT — Every two: Queued bank-20.
+- 19 Nov 04:20 GMT — Every two: Queued labels-20.
+- 19 Nov 04:19 GMT — Every two: train development evaluation at update 20: 357/1,024 wins, 0 faults.
+- 19 Nov 04:18 GMT — Every two: train finished update 20/24 on 3,072 matched worlds. Sampled wins 1,097, faults 0, elapsed 4.3 min.
+- 19 Nov 04:14 GMT — Every two: train finished update 19/24 on 3,072 matched worlds. Sampled wins 1,139, faults 0, elapsed 4.1 min.
+- 19 Nov 04:10 GMT — Every two: train started at update 18 with learning rate 0.0001.
+- 19 Nov 04:10 GMT — Every two: Queued strategy updates 19 and 20 on the matched PPO worlds.
+- 19 Nov 04:10 GMT — Every two: Update 18: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 04:10 GMT — Every two: Update 18 BOSS3:unsalted fight gate: active 61.5%, specialist 50.5% on 192 identical entries.
+- 19 Nov 04:10 GMT — Every two: Update 18 BOSS3:resampled fight gate: active 60.9%, specialist 52.6% on 192 identical entries.
+- 19 Nov 04:09 GMT — Every two: Queued fights-18.
+- 19 Nov 04:09 GMT — Every two: Update 18 specialist fit on 8,097 training choices. Selected step 500 on 1,077 validation choices.
+- 19 Nov 04:09 GMT — Every two: fit-18 reached 2,500 optimizer updates.
+- 19 Nov 04:08 GMT — Every two: fit-18 reached 52 optimizer updates.
+- 19 Nov 04:07 GMT — Every two: Queued fit-18.
+- 19 Nov 04:07 GMT — Every two: Update 18 collected 11,636 boss labels from 512/512 completed games.
+- 19 Nov 04:07 GMT — Every two: Update 18 froze 192 independent Act 3 boss starts.
+- 19 Nov 04:07 GMT — Every two: labels-18 returned 512 of 512 worlds.
+- 19 Nov 04:06 GMT — Every two: labels-18 returned 398 of 512 worlds.
+- 19 Nov 04:05 GMT — Every two: Queued grid-18.
+- 19 Nov 04:04 GMT — Every two: labels-18 returned 267 of 512 worlds.
+- 19 Nov 04:04 GMT — Every two: bank-18 returned 420 of 512 worlds.
+- 19 Nov 04:02 GMT — Every two: bank-18 returned 268 of 512 worlds.
+- 19 Nov 04:02 GMT — Every two: labels-18 returned 134 of 512 worlds.
+- 19 Nov 04:01 GMT — Every two: bank-18 returned 152 of 512 worlds.
+- 19 Nov 04:00 GMT — Every two: Queued bank-18.
+- 19 Nov 04:00 GMT — Every two: Queued labels-18.
+- 19 Nov 04:00 GMT — Every two: train development evaluation at update 18: 368/1,024 wins, 0 faults.
+- 19 Nov 03:59 GMT — Every two: train finished update 18/24 on 3,072 matched worlds. Sampled wins 1,135, faults 0, elapsed 4.4 min.
+- 19 Nov 03:54 GMT — Every two: train finished update 17/24 on 3,072 matched worlds. Sampled wins 1,116, faults 0, elapsed 4.1 min.
+- 19 Nov 03:50 GMT — Every two: train started at update 16 with learning rate 0.0001.
+- 19 Nov 03:50 GMT — Every two: Queued strategy updates 17 and 18 on the matched PPO worlds.
+- 19 Nov 03:50 GMT — Every two: Update 16: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 03:50 GMT — Every two: Update 16 BOSS3:unsalted fight gate: active 60.4%, specialist 58.3% on 192 identical entries.
+- 19 Nov 03:50 GMT — Every two: Update 16 BOSS3:resampled fight gate: active 65.1%, specialist 57.3% on 192 identical entries.
+- 19 Nov 03:50 GMT — Every two: Queued fights-16.
+- 19 Nov 03:50 GMT — Every two: Update 16 specialist fit on 8,044 training choices. Selected step 500 on 1,253 validation choices.
+- 19 Nov 03:49 GMT — Every two: fit-16 reached 1,000 optimizer updates.
+- 19 Nov 03:48 GMT — Every two: Queued fit-16.
+- 19 Nov 03:48 GMT — Every two: Update 16 collected 12,116 boss labels from 512/512 completed games.
+- 19 Nov 03:48 GMT — Every two: Update 16 froze 192 independent Act 3 boss starts.
+- 19 Nov 03:46 GMT — Every two: labels-16 returned 402 of 512 worlds.
+- 19 Nov 03:45 GMT — Every two: Queued grid-16.
+- 19 Nov 03:45 GMT — Every two: bank-16 returned 512 of 512 worlds.
+- 19 Nov 03:44 GMT — Every two: labels-16 returned 263 of 512 worlds.
+- 19 Nov 03:44 GMT — Every two: bank-16 returned 409 of 512 worlds.
+- 19 Nov 03:43 GMT — Every two: bank-16 returned 287 of 512 worlds.
+- 19 Nov 03:43 GMT — Every two: labels-16 returned 139 of 512 worlds.
+- 19 Nov 03:42 GMT — Every two: bank-16 returned 134 of 512 worlds.
+- 19 Nov 03:40 GMT — Every two: Queued bank-16.
+- 19 Nov 03:40 GMT — Every two: Queued labels-16.
+- 19 Nov 03:40 GMT — Every two: train development evaluation at update 16: 365/1,024 wins, 0 faults.
+- 19 Nov 03:39 GMT — Every two: train finished update 16/24 on 3,072 matched worlds. Sampled wins 1,128, faults 0, elapsed 4.4 min.
+- 19 Nov 03:35 GMT — Every two: train finished update 15/24 on 3,072 matched worlds. Sampled wins 1,167, faults 0, elapsed 4.1 min.
+- 19 Nov 03:31 GMT — Every two: train started at update 14 with learning rate 0.0001.
+- 19 Nov 03:31 GMT — Every two: Queued strategy updates 15 and 16 on the matched PPO worlds.
+- 19 Nov 03:31 GMT — Every two: Update 14: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 03:31 GMT — Every two: Update 14 BOSS3:unsalted fight gate: active 62.0%, specialist 54.2% on 192 identical entries.
+- 19 Nov 03:31 GMT — Every two: Update 14 BOSS3:resampled fight gate: active 64.6%, specialist 54.7% on 192 identical entries.
+- 19 Nov 03:30 GMT — Every two: Queued fights-14.
+- 19 Nov 03:30 GMT — Every two: Update 14 specialist fit on 7,982 training choices. Selected step 400 on 1,002 validation choices.
+- 19 Nov 03:30 GMT — Every two: fit-14 reached 2,500 optimizer updates.
+- 19 Nov 03:30 GMT — Every two: fit-14 reached 100 optimizer updates.
+- 19 Nov 03:29 GMT — Every two: Queued fit-14.
+- 19 Nov 03:29 GMT — Every two: Update 14 collected 11,547 boss labels from 512/512 completed games.
+- 19 Nov 03:29 GMT — Every two: Update 14 froze 192 independent Act 3 boss starts.
+- 19 Nov 03:27 GMT — Every two: labels-14 returned 394 of 512 worlds.
+- 19 Nov 03:26 GMT — Every two: Queued grid-14.
+- 19 Nov 03:25 GMT — Every two: labels-14 returned 264 of 512 worlds.
+- 19 Nov 03:25 GMT — Every two: bank-14 returned 399 of 512 worlds.
+- 19 Nov 03:24 GMT — Every two: bank-14 returned 275 of 512 worlds.
+- 19 Nov 03:24 GMT — Every two: labels-14 returned 134 of 512 worlds.
+- 19 Nov 03:23 GMT — Every two: bank-14 returned 157 of 512 worlds.
+- 19 Nov 03:22 GMT — Every two: Queued bank-14.
+- 19 Nov 03:22 GMT — Every two: Queued labels-14.
+- 19 Nov 03:21 GMT — Every two: train development evaluation at update 14: 352/1,024 wins, 0 faults.
+- 19 Nov 03:20 GMT — Every two: train finished update 14/24 on 3,072 matched worlds. Sampled wins 1,128, faults 0, elapsed 4.3 min.
+- 19 Nov 03:16 GMT — Every two: train finished update 13/24 on 3,072 matched worlds. Sampled wins 1,102, faults 0, elapsed 4.0 min.
+- 19 Nov 03:12 GMT — Every two: train started at update 12 with learning rate 0.0001.
+- 19 Nov 03:12 GMT — Every two: Queued strategy updates 13 and 14 on the matched PPO worlds.
+- 19 Nov 03:12 GMT — Every two: Update 12: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 03:12 GMT — Every two: Update 12 BOSS3:unsalted fight gate: active 66.7%, specialist 57.3% on 192 identical entries.
+- 19 Nov 03:12 GMT — Every two: Update 12 BOSS3:resampled fight gate: active 64.1%, specialist 58.9% on 192 identical entries.
+- 19 Nov 03:12 GMT — Every two: Queued fights-12.
+- 19 Nov 03:12 GMT — Every two: Update 12 specialist fit on 7,936 training choices. Selected step 100 on 1,094 validation choices.
+- 19 Nov 03:11 GMT — Every two: fit-12 reached 2,500 optimizer updates.
+- 19 Nov 03:11 GMT — Every two: fit-12 reached 95 optimizer updates.
+- 19 Nov 03:10 GMT — Every two: Queued fit-12.
+- 19 Nov 03:10 GMT — Every two: Update 12 collected 11,489 boss labels from 512/512 completed games.
+- 19 Nov 03:10 GMT — Every two: Update 12 froze 192 independent Act 3 boss starts.
+- 19 Nov 03:08 GMT — Every two: labels-12 returned 396 of 512 worlds.
+- 19 Nov 03:07 GMT — Every two: Queued grid-12.
+- 19 Nov 03:07 GMT — Every two: labels-12 returned 274 of 512 worlds.
+- 19 Nov 03:06 GMT — Every two: bank-12 returned 406 of 512 worlds.
+- 19 Nov 03:05 GMT — Every two: bank-12 returned 283 of 512 worlds.
+- 19 Nov 03:05 GMT — Every two: labels-12 returned 129 of 512 worlds.
+- 19 Nov 03:04 GMT — Every two: bank-12 returned 161 of 512 worlds.
+- 19 Nov 03:03 GMT — Every two: Queued bank-12.
+- 19 Nov 03:03 GMT — Every two: Queued labels-12.
+- 19 Nov 03:02 GMT — Every two: train development evaluation at update 12: 356/1,024 wins, 0 faults.
+- 19 Nov 03:02 GMT — Every two: train finished update 12/24 on 3,072 matched worlds. Sampled wins 1,143, faults 0, elapsed 4.4 min.
+- 19 Nov 02:57 GMT — Every two: train finished update 11/24 on 3,072 matched worlds. Sampled wins 1,117, faults 0, elapsed 3.9 min.
 - 19 Nov 02:53 GMT — Every two: train started at update 10 with learning rate 0.0001.
 - 19 Nov 02:53 GMT — Every two: Queued strategy updates 11 and 12 on the matched PPO worlds.
 - 19 Nov 02:53 GMT — Every two: Update 10: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
