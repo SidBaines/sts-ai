@@ -1,6 +1,6 @@
 # When should we refit the current champion’s Act 3 combat?
 
-**Status:** running. The study compares three early refits against three spaced refits from the same confirmed champion.
+**Status:** finished 19 November 2026. **Verdict:** The early-refit player became champion with 327 extra wins over its starting player on 16,384 independent worlds. The direct comparison with spaced refits was inconclusive.
 
 ## Question
 
@@ -19,7 +19,35 @@ Sid requested the two schedules on 19 November and suggested the new champion as
 
 ## Results
 
-Both schedules began from the same checkpoint. Before training it reproduced its previous development result of 381 wins on the same 1,024 worlds, with zero faults. The [progress log](../log.md) follows the gates and the update-24 comparison.
+The early player won 41.34% of the independent games against 39.34% for the starting player. Both schedules improved on their parent.
+
+| Panel | Candidate vs baseline | Paired full-game result |
+|---|---|---|
+| Endpoint selection | Spaced vs early | 6,612 vs 6,830 wins, 16,383/16,384 complete pairs, -1.33 points [-2.15, -0.51] on complete pairs. Full-cohort gain bounds [-1.34, -1.33] |
+| Independent schedule comparison | Early vs spaced | 6,773 vs 6,639 wins, 16,384/16,384 complete pairs, +0.82 points [-0.01, +1.64] |
+| Early vs starting champion | Early vs champion | 6,773 vs 6,446 wins, 16,384/16,384 complete pairs, +2.00 points [+1.18, +2.81] |
+| Spaced vs starting champion | Spaced vs champion | 6,639 vs 6,446 wins, 16,384/16,384 complete pairs, +1.18 points [+0.38, +1.98] |
+
+![Paired full-game comparisons](../figures/refit-timing/full-games.png)
+
+Each gate compares the proposed specialist with the combat policy active at that update.
+
+| Schedule and update | Original fights | Reseeded fights | Full-game gate | Deployed |
+|---|---|---|---|---|
+| Early 2 | 67 vs 126 of 192, -30.73 points [-38.17, -23.29] | 69 vs 128 of 192, -30.73 points [-37.74, -23.72] | Did not advance | No |
+| Early 4 | 84 vs 122 of 192, -19.79 points [-26.46, -13.12] | 86 vs 126 of 192, -20.83 points [-27.44, -14.23] | Did not advance | No |
+| Early 6 | 123 vs 119 of 192, +2.08 points [-3.13, +7.29] | 119 vs 113 of 192, +3.12 points [-2.08, +8.33] | 1,655 vs 1,628 wins, 4,096/4,096 complete pairs, +0.66 points [-0.39, +1.71] | Yes |
+| Spaced 8 | 119 vs 122 of 192, -1.56 points [-7.26, +4.13] | 123 vs 130 of 192, -3.65 points [-9.68, +2.39] | Did not advance | No |
+| Spaced 16 | 109 vs 123 of 192, -7.29 points [-12.41, -2.18] | 116 vs 131 of 192, -7.81 points [-13.94, -1.69] | Did not advance | No |
+| Spaced 22 | 111 vs 123 of 192, -6.25 points [-13.72, +1.22] | 102 vs 114 of 192, -6.25 points [-12.82, +0.32] | Did not advance | No |
+
+## Conclusion
+
+The early player passed the promotion rule. Its independent lead over the spaced player was 0.82 percentage points, with a paired 95% interval from −0.01 to +1.64. Both schedules received 1,536 teacher worlds and the same 73,728 strategy training worlds. The comparison covers one training seed from this parent.
+
+## Next
+
+Use the confirmed comparisons and the accepted head changes to choose the next training step.
 
 ## Log
 

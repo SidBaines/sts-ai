@@ -8,6 +8,23 @@ in `CLAUDE.md`; other terms in [metrics](metrics.md).
 
 | Date | Experiment | Tested | Result | Evidence | Verdict |
 |---|---|---|---|---|---|
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Endpoint selection, spaced vs early, env 0.1.5.2 | 6,612 vs 6,830 wins, 16,383/16,384 complete pairs, -1.33 points [-2.15, -0.51] on complete pairs. Full-cohort gain bounds [-1.34, -1.33] | Planned | Worse |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Independent schedule comparison, early vs spaced, env 0.1.5.2 | 6,773 vs 6,639 wins, 16,384/16,384 complete pairs, +0.82 points [-0.01, +1.64] | Confirmed | No clear difference |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Early vs starting champion, early vs champion, env 0.1.5.2 | 6,773 vs 6,446 wins, 16,384/16,384 complete pairs, +2.00 points [+1.18, +2.81] | Confirmed | Better |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Spaced vs starting champion, spaced vs champion, env 0.1.5.2 | 6,639 vs 6,446 wins, 16,384/16,384 complete pairs, +1.18 points [+0.38, +1.98] | Confirmed | Better |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Early update 2, original fights, env 0.1.5.2 | 67 vs 126 of 192, -30.73 points [-38.17, -23.29] | Planned | Worse |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Early update 2, reseeded fights, env 0.1.5.2 | 69 vs 128 of 192, -30.73 points [-37.74, -23.72] | Planned | Worse |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Early update 4, original fights, env 0.1.5.2 | 84 vs 122 of 192, -19.79 points [-26.46, -13.12] | Planned | Worse |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Early update 4, reseeded fights, env 0.1.5.2 | 86 vs 126 of 192, -20.83 points [-27.44, -14.23] | Planned | Worse |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Early update 6, original fights, env 0.1.5.2 | 123 vs 119 of 192, +2.08 points [-3.13, +7.29] | Planned | No clear difference |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Early update 6, reseeded fights, env 0.1.5.2 | 119 vs 113 of 192, +3.12 points [-2.08, +8.33] | Planned | No clear difference |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Early update 6, whole games, env 0.1.5.2 | 1,655 vs 1,628 wins, 4,096/4,096 complete pairs, +0.66 points [-0.39, +1.71] | Planned | No clear difference |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Spaced update 8, original fights, env 0.1.5.2 | 119 vs 122 of 192, -1.56 points [-7.26, +4.13] | Planned | No clear difference |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Spaced update 8, reseeded fights, env 0.1.5.2 | 123 vs 130 of 192, -3.65 points [-9.68, +2.39] | Planned | No clear difference |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Spaced update 16, original fights, env 0.1.5.2 | 109 vs 123 of 192, -7.29 points [-12.41, -2.18] | Planned | Worse |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Spaced update 16, reseeded fights, env 0.1.5.2 | 116 vs 131 of 192, -7.81 points [-13.94, -1.69] | Planned | Worse |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Spaced update 22, original fights, env 0.1.5.2 | 111 vs 123 of 192, -6.25 points [-13.72, +1.22] | Planned | No clear difference |
+| 2026-11-19 | [Early versus spaced refits](experiments/2026-11-19-refit-timing.md) | Spaced update 22, reseeded fights, env 0.1.5.2 | 102 vs 114 of 192, -6.25 points [-12.82, +0.32] | Planned | No clear difference |
 | 2026-11-19 | [Act 3 refit cadence](experiments/2026-11-18-act3-boss-refits.md#every-two-updates) | Update 24, every two vs every eight, env 0.1.5.2 | 6,468 vs 5,564 wins on 16,384 assigned worlds, 16,384 complete pairs. +5.52 points [+4.70, +6.34] | Planned | Better |
 | 2026-11-19 | [Act 3 refit cadence](experiments/2026-11-18-act3-boss-refits.md#every-two-updates) | Update 24, every two vs frozen combat, env 0.1.5.2 | 6,468 vs 5,564 wins on 16,384 assigned worlds, 16,384 complete pairs. +5.52 points [+4.70, +6.34] | Planned | Better |
 | 2026-11-19 | [Act 3 refit cadence](experiments/2026-11-18-act3-boss-refits.md#every-two-updates) | Update 8, every two vs every eight, env 0.1.5.2 | 1,550 vs 1,375 wins on 4,096 assigned worlds, 4,096 complete pairs. +4.27 points [+2.71, +5.84] | Planned | Better |

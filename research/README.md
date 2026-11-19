@@ -10,7 +10,8 @@ used to make better teachers, not to play.
 
 | Player | Win rate | Evidence |
 |---|---|---|
-| **Champion from 19 November:** Act 3 specialist refits at updates 2, 4 and 6 (`champions/champion_9700741dca15.pt`) | 6,459 of 16,384 independent worlds (39.42%) vs 5,575 (34.03%), +5.40 points [+4.56, +6.23] | Confirmed; current default |
+| **Champion from 2026-11-19:** early refits (`champions/champion_f3c85d4919b7.pt`) | 6,773 vs 6,446 wins, 16,384/16,384 complete pairs, +2.00 points [+1.18, +2.81] | Confirmed; current default |
+| **Champion from 19 November:** Act 3 specialist refits at updates 2, 4 and 6 (`champions/champion_9700741dca15.pt`) | 6,459 of 16,384 independent worlds (39.42%) vs 5,575 (34.03%), +5.40 points [+4.56, +6.23] | Confirmed; previous champion |
 | **Champion from 19 November:** 24 further strategy updates at 0.0001 with frozen combat (`champions/champion_5b06aba8a254.pt`) | 5,521 of 16,384 independent worlds (33.70%) vs 5,344 (32.62%), +1.08 points [+0.33, +1.83] | Confirmed; previous champion |
 | **Champion from 18 November:** 24 iterations of strategy PPO at learning rate 0.0001 from the October champion, with frozen combat (`champions/champion_0f527a0fbf93.pt`) | 5,502 of 16,384 independent worlds (33.58%) vs 4,959 (30.27%), +3.31 points [+2.57, +4.06] | Confirmed; previous champion |
 | Champion from 25 October: 24 more iterations of out-of-combat PPO from the previous champion, current reward (`champions/champion_4058cbf0e271.pt`, from `reward_ablation_20261023/floors/iter_0024.pt`) | 29.4% on 16,384 unused worlds from 109,000,000,000 (4,822 against the previous champion's 4,262, +3.4 points, p < 0.001) | Confirmed; previous champion |
@@ -25,11 +26,11 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-[Early versus spaced refits](experiments/2026-11-19-refit-timing.md) is running from the 39.42% champion. Both arms get three specialist fits and the same 24 strategy updates.
+The early-refit player is the confirmed champion. The 24-update comparison of strategy-only training with joint combat and strategy training is running from its previously chosen parent. [Online combat study](https://github.com/SidBaines/sts-ai/blob/codex/online-combat-ppo/research/experiments/2026-11-19-online-combat.md).
 
 ## Next
 
-Compare the frozen endpoints on matched full games, then confirm against each other and the starting champion on fresh worlds.
+Evaluate the two online combat players on matched fresh worlds, then compare them with their starting player on the independent confirmation worlds.
 
 ## Open questions
 

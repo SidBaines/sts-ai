@@ -1,5 +1,129 @@
 # Early versus spaced refit progress
 
+- 19 Nov 22:15 GMT — Both timing schedules, all six gates and independent confirmation are complete.
+- 19 Nov 22:15 GMT — Confirmation: spaced won 6,639, champion won 6,446 on 16,384 worlds, 16,384 complete pairs.
+- 19 Nov 22:15 GMT — Confirmation: early won 6,773, champion won 6,446 on 16,384 worlds, 16,384 complete pairs.
+- 19 Nov 22:15 GMT — Confirmation: early won 6,773, spaced won 6,639 on 16,384 worlds, 16,384 complete pairs.
+- 19 Nov 16:54 GMT — Evaluation — Queued confirmation-champion.
+- 19 Nov 16:54 GMT — Evaluation — Queued confirmation-spaced.
+- 19 Nov 16:54 GMT — Evaluation — Queued confirmation-early.
+- 19 Nov 16:54 GMT — Froze both endpoints. The selection rule nominated early.
+- 19 Nov 16:54 GMT — Selection: spaced won 6,612, early won 6,830 on 16,384 worlds, 16,383 complete pairs.
+- 19 Nov 16:26 GMT — shared development at update 24: 402/1024 wins, 0 faults.
+- 19 Nov 16:24 GMT — Evaluation — Queued selection-spaced.
+- 19 Nov 16:24 GMT — Evaluation — Queued selection-early.
+- 19 Nov 16:24 GMT — shared finished update 24/24 on 3,072 matched worlds, 1,148 sampled wins and 0 faults.
+- 19 Nov 16:19 GMT — shared finished update 23/24 on 3,072 matched worlds, 1,183 sampled wins and 0 faults.
+- 19 Nov 16:14 GMT — Queued shared strategy training through update 24.
+- 19 Nov 16:14 GMT — Spaced — Update 22: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 16:14 GMT — Spaced — Update 22 BOSS3:unsalted fight gate: active 64.1%, specialist 57.8% on 192 identical entries.
+- 19 Nov 16:14 GMT — Spaced — Update 22 BOSS3:resampled fight gate: active 59.4%, specialist 53.1% on 192 identical entries.
+- 19 Nov 16:14 GMT — Spaced — Queued fights-22.
+- 19 Nov 16:12 GMT — Spaced — Queued fit-22.
+- 19 Nov 16:08 GMT — Spaced — Queued grid-22.
+- 19 Nov 16:04 GMT — shared development at update 22: 387/1024 wins, 0 faults.
+- 19 Nov 16:02 GMT — Spaced — Queued bank-22.
+- 19 Nov 16:02 GMT — Spaced — Queued labels-22.
+- 19 Nov 16:02 GMT — shared finished update 22/24 on 3,072 matched worlds, 1,170 sampled wins and 0 faults.
+- 19 Nov 15:56 GMT — shared finished update 21/24 on 3,072 matched worlds, 1,157 sampled wins and 0 faults.
+- 19 Nov 15:51 GMT — shared development at update 20: 385/1024 wins, 0 faults.
+- 19 Nov 15:50 GMT — shared finished update 20/24 on 3,072 matched worlds, 1,172 sampled wins and 0 faults.
+- 19 Nov 15:45 GMT — shared finished update 19/24 on 3,072 matched worlds, 1,158 sampled wins and 0 faults.
+- 19 Nov 14:04 GMT — shared development at update 18: 406/1024 wins, 0 faults.
+- 19 Nov 13:56 GMT — shared finished update 18/24 on 3,072 matched worlds, 1,171 sampled wins and 0 faults.
+- 19 Nov 13:51 GMT — shared finished update 17/24 on 3,072 matched worlds, 1,152 sampled wins and 0 faults.
+- 19 Nov 13:46 GMT — Queued shared strategy training through update 22.
+- 19 Nov 13:46 GMT — Spaced — Update 16: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 13:46 GMT — Spaced — Update 16 BOSS3:unsalted fight gate: active 64.1%, specialist 56.8% on 192 identical entries.
+- 19 Nov 13:46 GMT — Spaced — Update 16 BOSS3:resampled fight gate: active 68.2%, specialist 60.4% on 192 identical entries.
+- 19 Nov 13:46 GMT — Spaced — Queued fights-16.
+- 19 Nov 13:44 GMT — Spaced — Queued fit-16.
+- 19 Nov 13:40 GMT — Spaced — Queued grid-16.
+- 19 Nov 13:36 GMT — shared development at update 16: 397/1024 wins, 0 faults.
+- 19 Nov 13:35 GMT — Spaced — Queued bank-16.
+- 19 Nov 13:35 GMT — Spaced — Queued labels-16.
+- 19 Nov 13:35 GMT — shared finished update 16/24 on 3,072 matched worlds, 1,128 sampled wins and 0 faults.
+- 19 Nov 13:29 GMT — shared finished update 15/24 on 3,072 matched worlds, 1,112 sampled wins and 0 faults.
+- 19 Nov 13:24 GMT — shared development at update 14: 373/1024 wins, 0 faults.
+- 19 Nov 13:23 GMT — shared finished update 14/24 on 3,072 matched worlds, 1,164 sampled wins and 0 faults.
+- 19 Nov 13:14 GMT — shared finished update 13/24 on 3,072 matched worlds, 1,116 sampled wins and 0 faults.
+- 19 Nov 13:09 GMT — shared development at update 12: 391/1024 wins, 0 faults.
+- 19 Nov 13:08 GMT — shared finished update 12/24 on 3,072 matched worlds, 1,121 sampled wins and 0 faults.
+- 19 Nov 13:03 GMT — shared finished update 11/24 on 3,072 matched worlds, 1,167 sampled wins and 0 faults.
+- 19 Nov 12:54 GMT — shared development at update 10: 382/1024 wins, 0 faults.
+- 19 Nov 12:53 GMT — shared finished update 10/24 on 3,072 matched worlds, 1,214 sampled wins and 0 faults.
+- 19 Nov 12:47 GMT — shared finished update 9/24 on 3,072 matched worlds, 1,139 sampled wins and 0 faults.
+- 19 Nov 12:42 GMT — early-06 development at update 24: 365/1024 wins, 0 faults.
+- 19 Nov 12:41 GMT — early-06 finished update 24/24 on 3,072 matched worlds, 1,145 sampled wins and 0 faults.
+- 19 Nov 12:32 GMT — early-06 finished update 23/24 on 3,072 matched worlds, 1,190 sampled wins and 0 faults.
+- 19 Nov 12:23 GMT — early-06 development at update 22: 380/1024 wins, 0 faults.
+- 19 Nov 12:22 GMT — early-06 finished update 22/24 on 3,072 matched worlds, 1,191 sampled wins and 0 faults.
+- 19 Nov 12:12 GMT — early-06 finished update 21/24 on 3,072 matched worlds, 1,180 sampled wins and 0 faults.
+- 19 Nov 12:03 GMT — early-06 development at update 20: 394/1024 wins, 0 faults.
+- 19 Nov 12:00 GMT — early-06 finished update 20/24 on 3,072 matched worlds, 1,188 sampled wins and 0 faults.
+- 19 Nov 11:48 GMT — early-06 finished update 19/24 on 3,072 matched worlds, 1,209 sampled wins and 0 faults.
+- 19 Nov 11:42 GMT — early-06 development at update 18: 374/1024 wins, 0 faults.
+- 19 Nov 11:41 GMT — early-06 finished update 18/24 on 3,072 matched worlds, 1,157 sampled wins and 0 faults.
+- 19 Nov 11:37 GMT — early-06 finished update 17/24 on 3,072 matched worlds, 1,184 sampled wins and 0 faults.
+- 19 Nov 11:32 GMT — early-06 development at update 16: 385/1024 wins, 0 faults.
+- 19 Nov 11:11 GMT — early-06 finished update 16/24 on 3,072 matched worlds, 1,163 sampled wins and 0 faults.
+- 19 Nov 11:07 GMT — early-06 finished update 15/24 on 3,072 matched worlds, 1,125 sampled wins and 0 faults.
+- 19 Nov 11:02 GMT — early-06 development at update 14: 377/1024 wins, 0 faults.
+- 19 Nov 11:01 GMT — early-06 finished update 14/24 on 3,072 matched worlds, 1,176 sampled wins and 0 faults.
+- 19 Nov 10:56 GMT — early-06 finished update 13/24 on 3,072 matched worlds, 1,146 sampled wins and 0 faults.
+- 19 Nov 10:49 GMT — early-06 development at update 12: 387/1024 wins, 0 faults.
+- 19 Nov 10:48 GMT — early-06 finished update 12/24 on 3,072 matched worlds, 1,147 sampled wins and 0 faults.
+- 19 Nov 10:38 GMT — early-06 finished update 11/24 on 3,072 matched worlds, 1,201 sampled wins and 0 faults.
+- 19 Nov 10:31 GMT — early-06 development at update 10: 373/1024 wins, 0 faults.
+- 19 Nov 10:29 GMT — early-06 finished update 10/24 on 3,072 matched worlds, 1,184 sampled wins and 0 faults.
+- 19 Nov 10:21 GMT — early-06 finished update 9/24 on 3,072 matched worlds, 1,196 sampled wins and 0 faults.
+- 19 Nov 10:09 GMT — early-06 development at update 8: 367/1024 wins, 0 faults.
+- 19 Nov 10:08 GMT — early-06 finished update 8/24 on 3,072 matched worlds, 1,133 sampled wins and 0 faults.
+- 19 Nov 10:03 GMT — early-06 finished update 7/24 on 3,072 matched worlds, 1,090 sampled wins and 0 faults.
+- 19 Nov 09:59 GMT — Queued shared strategy training through update 16.
+- 19 Nov 09:59 GMT — Spaced — Update 8: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 09:59 GMT — Spaced — Update 8 BOSS3:unsalted fight gate: active 63.5%, specialist 62.0% on 192 identical entries.
+- 19 Nov 09:59 GMT — Spaced — Update 8 BOSS3:resampled fight gate: active 67.7%, specialist 64.1% on 192 identical entries.
+- 19 Nov 09:58 GMT — Queued early-06 strategy training through update 24.
+- 19 Nov 09:58 GMT — Early — Update 6: adopted the specialist for Act 3 boss combat.
+- 19 Nov 09:58 GMT — Early — gate6 finished. active won 1,628, specialist won 1,655. 4,096/4,096 complete pairs. Full-cohort gain bounds [0.6591796875, 0.6591796875].
+- 19 Nov 09:58 GMT — Spaced — Queued fights-8.
+- 19 Nov 09:55 GMT — Spaced — Queued fit-8.
+- 19 Nov 09:50 GMT — Early — Queued gate6-specialist.
+- 19 Nov 09:50 GMT — Early — Queued gate6-active.
+- 19 Nov 09:50 GMT — Early — Update 6 BOSS3:unsalted fight gate: active 62.0%, specialist 64.1% on 192 identical entries.
+- 19 Nov 09:50 GMT — Early — Update 6 BOSS3:resampled fight gate: active 58.9%, specialist 62.0% on 192 identical entries.
+- 19 Nov 09:49 GMT — Early — Queued fights-6.
+- 19 Nov 09:47 GMT — Spaced — Queued grid-8.
+- 19 Nov 09:47 GMT — Early — Queued fit-6.
+- 19 Nov 09:42 GMT — Early — Queued grid-6.
+- 19 Nov 09:41 GMT — shared development at update 8: 384/1024 wins, 0 faults.
+- 19 Nov 09:39 GMT — Spaced — Queued bank-8.
+- 19 Nov 09:39 GMT — Spaced — Queued labels-8.
+- 19 Nov 09:39 GMT — shared finished update 8/24 on 3,072 matched worlds, 1,171 sampled wins and 0 faults.
+- 19 Nov 09:35 GMT — Early — Queued bank-6.
+- 19 Nov 09:35 GMT — Early — Queued labels-6.
+- 19 Nov 09:35 GMT — Early — Update 4: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 09:35 GMT — Early — Update 4 BOSS3:unsalted fight gate: active 63.5%, specialist 43.8% on 192 identical entries.
+- 19 Nov 09:35 GMT — Early — Update 4 BOSS3:resampled fight gate: active 65.6%, specialist 44.8% on 192 identical entries.
+- 19 Nov 09:34 GMT — Early — Queued fights-4.
+- 19 Nov 09:33 GMT — shared finished update 7/24 on 3,072 matched worlds, 1,118 sampled wins and 0 faults.
+- 19 Nov 09:28 GMT — Early — Queued fit-4.
+- 19 Nov 09:23 GMT — shared development at update 6: 367/1024 wins, 0 faults.
+- 19 Nov 09:23 GMT — Early — Queued grid-4.
+- 19 Nov 09:22 GMT — shared finished update 6/24 on 3,072 matched worlds, 1,128 sampled wins and 0 faults.
+- 19 Nov 09:16 GMT — shared finished update 5/24 on 3,072 matched worlds, 1,094 sampled wins and 0 faults.
+- 19 Nov 09:14 GMT — Early — Queued bank-4.
+- 19 Nov 09:14 GMT — Early — Queued labels-4.
+- 19 Nov 09:14 GMT — Early — Update 2: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 09:14 GMT — Early — Update 2 BOSS3:unsalted fight gate: active 65.6%, specialist 34.9% on 192 identical entries.
+- 19 Nov 09:14 GMT — Early — Update 2 BOSS3:resampled fight gate: active 66.7%, specialist 35.9% on 192 identical entries.
+- 19 Nov 09:13 GMT — Early — Queued fights-2.
+- 19 Nov 09:10 GMT — shared development at update 4: 365/1024 wins, 0 faults.
+- 19 Nov 09:10 GMT — Early — Queued fit-2.
+- 19 Nov 09:09 GMT — shared finished update 4/24 on 3,072 matched worlds, 1,130 sampled wins and 0 faults.
+- 19 Nov 09:04 GMT — Early — Queued grid-2.
+- 19 Nov 09:03 GMT — shared finished update 3/24 on 3,072 matched worlds, 1,101 sampled wins and 0 faults.
 - 19 Nov 08:56 GMT — shared development at update 2: 351/1024 wins, 0 faults.
 - 19 Nov 08:55 GMT — Early — Queued bank-2.
 - 19 Nov 08:55 GMT — Early — Queued labels-2.
