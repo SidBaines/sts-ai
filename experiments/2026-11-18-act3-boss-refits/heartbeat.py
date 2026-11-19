@@ -112,30 +112,49 @@ def snapshot():
                 processes=live, issues=issues, message=msg)
 
 
+def checked_snapshot():
+    """Allow the queue one poll to reap a child that just exited."""
+    row = snapshot()
+    if any(issue.startswith("missing process ") for issue in row["issues"]):
+        time.sleep(18)
+        row = snapshot()
+    return row
+
+
+def record(log, event, *, next_due=None):
+    try:
+        row = checked_snapshot()
+    except Exception as error:
+        row = dict(t=time.time(), stamp=datetime.now(ZoneInfo("Europe/London")).strftime("%d %b %H:%M %Z"),
+                   message=f"Heartbeat needs inspection: {error}", issues=[repr(error)], interval_seconds=INTERVAL)
+    row.update(watcher_pid=os.getpid(), event=event)
+    if next_due is not None:
+        row["next_due"] = next_due
+    with log.open("a") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    atomic(RUNS / "study_heartbeat.json", row)
+    print(row["stamp"], row["message"], flush=True)
+    return row
+
+
 def main():
     EVERY_TWO.mkdir(exist_ok=True)
     with (EVERY_TWO / "heartbeat.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         log = EVERY_TWO / "heartbeats.jsonl"
         previous = last_row(log)
-        due = previous.get("t", 0) + INTERVAL
+        due = previous.get("next_due", previous.get("t", 0) + INTERVAL)
+        if previous.get("issues") and time.time() < due:
+            record(log, "recheck", next_due=due)
         while not (EVERY_TWO / "STOP_WATCH").exists():
             finished = read(EVERY_TWO / "monitor-status.json").get("stage") == "complete"
             if time.time() >= due or finished:
-                try:
-                    row = snapshot()
-                except Exception as error:
-                    row = dict(t=time.time(), stamp=datetime.now(ZoneInfo("Europe/London")).strftime("%d %b %H:%M %Z"),
-                               message=f"Heartbeat needs inspection: {error}", issues=[repr(error)],
-                               interval_seconds=INTERVAL)
-                row["watcher_pid"] = os.getpid()
-                with log.open("a") as fh:
-                    fh.write(json.dumps(row, ensure_ascii=False) + "\n")
-                atomic(RUNS / "study_heartbeat.json", row)
-                print(row["stamp"], row["message"], flush=True)
+                next_due = due + INTERVAL if time.time() - due < INTERVAL else time.time() + INTERVAL
+                record(log, "final" if finished else "heartbeat", next_due=next_due)
                 if finished:
                     return
-                due = row["t"] + INTERVAL
+                # Keep the cadence on its original clock after a recheck or sleep.
+                due = next_due
             time.sleep(max(1, min(30, due - time.time())))
 
 
