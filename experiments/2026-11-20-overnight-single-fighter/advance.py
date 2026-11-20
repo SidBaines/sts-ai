@@ -345,6 +345,14 @@ def heartbeat(title, jobs):
 
 
 def main():
+    if "--recover-scheduler" in sys.argv:
+        primary = Jobs().rows.get(PREFIX + "schedule", {})
+        if primary.get("status") == "cancelled" or (OUT / "STOP").exists():
+            return
+        filed = OUT / "status.json"
+        if (OUT / "verdict.json").is_file() and filed.is_file() and read(filed).get("stage") == "finished":
+            return
+        note("scheduler recovery", "Resuming the unfinished overnight sequence from its saved stage and queue records.")
     check_inputs()
     if not (OUT / "world-plan.json").is_file():
         from reserve import reserve

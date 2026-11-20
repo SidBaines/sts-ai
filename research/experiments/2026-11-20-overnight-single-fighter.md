@@ -16,8 +16,8 @@ Sid requested the full overnight sequence on 20 November. The budgets and rules 
 4. Give the selected single fighter and the original two-fighter champion 24 joint strategy and combat updates on the same 73,728 new training worlds, regardless of the retention verdict. Use 3,072 games per update, strategy rate 0.0001 and three passes, combat rate 0.00003 and two passes. Calibrate both architectures to 12% lower-ranked combat moves in each fight category on a common set of public menus. Keep distinct ordinary and boss samples in both arms. Only the two-fighter player has separate combat weights.
 5. Evaluate both update-24 players and both starting parents on 16,384 new matched worlds. Report the direct comparison and each player's change from its own start. Select the one-fighter endpoint only for a positive worst-case gain over the two-fighter endpoint. Confirm the nominee against the incumbent after step 3 on another 16,384 new worlds. Promote only for a positive conservative paired 95% lower bound. This is one matched training seed.
 
-## Next
-
 If a boss-source cohort cannot be validated completely or supplies fewer than 1,024 eligible worlds, the scheduler preserves it and uses the next whole, separately reserved cohort. This recovery rule uses source completeness and coverage only.
+
+## Next
 
 The queue runs the sequence on AC power. The [dashboard](http://127.0.0.1:8795/) and [progress log](http://127.0.0.1:8795/progress) show the live stage. The local run is `overnight_single_fighter_20261120` and the study code is in `experiments/2026-11-20-overnight-single-fighter/`.

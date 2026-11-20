@@ -1,5 +1,7 @@
 # Non-LLM training progress
 
+- 20 Nov 23:00 GMT — The 12,800-update fit finished. After correcting a checkpoint lookup, its replay reproduced the original 3,200-update weights exactly. The two later checkpoints are in the 4,096-world screen. Both joint-training arms and the conditional student-played labelling path passed real-game wiring checks.
+- 20 Nov 22:57 GMT — Longer imitation and 4,096-world selection.
 - 20 Nov 22:51 GMT — Finished the 25% boss mix. Its validation-selected fighter was saved at update 10,200.
 - 20 Nov 22:48 GMT — Both architectures completed a matched 48-game wiring check with the intended networks learning.
 - 20 Nov 19:13 GMT — Single fighter 6,763 wins, champion 6,829 on 16,384 full games (-0.40 points, 95% interval -1.07 to +0.26). On 1,024 original boss entries they won 665 and 667. The early-refit champion retains the title.
