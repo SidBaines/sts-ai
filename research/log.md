@@ -1,5 +1,14 @@
 # Online combat training progress
 
+- 20 Nov 03:09 GMT — Independent confirmation finished. Joint training won 6,857, frozen combat 6,484 and their starting player 6,458 games on 16,384 assigned worlds. Joint vs frozen gained 2.28 points [+1.44, +3.11].
+- 20 Nov 03:09 GMT — Stage — finished.
+- 20 Nov 02:27 GMT — Stage — independent confirmation of both endpoints and the original champion.
+- 20 Nov 02:27 GMT — Queued confirmation-parent.
+- 20 Nov 02:27 GMT — Queued confirmation-joint.
+- 20 Nov 02:27 GMT — Queued confirmation-control.
+- 20 Nov 02:27 GMT — Froze joint as the primary nominee after the 16,384-world comparison.
+- 20 Nov 02:09 GMT — Queued primary-joint.
+- 19 Nov 23:58 GMT — Queued primary-control.
 - 19 Nov 21:58 GMT — Stage — training and paired update-24 evaluation.
 - 19 Nov 21:58 GMT — Queued train-joint.
 - 19 Nov 21:58 GMT — Queued train-control.

@@ -1,6 +1,6 @@
 # Can the fighter and strategist learn together from the same games?
 
-**Status:** running. The experiment compares enabling and freezing combat learning under the same measured exploration rule.
+**Status:** finished 20 November 2026. **Verdict:** Learning combat and strategy together gained 2.28 percentage points of whole-game wins over continued strategy training with frozen combat (95% paired interval +1.44 to +3.11).
 
 ## Question
 
@@ -28,28 +28,56 @@ On 19 November Sid requested a broader search while the preceding study was stil
 
 ## Results
 
-The moderate rule produced measurable exploration in both roles. On 768 matched training-mode games per rule, all worlds completed. The intervals describe paired percentage-point changes in wins relative to near-greedy combat.
+On independent confirmation, joint training won 6,857 games (41.85% of assigned worlds), frozen combat won 6,484 (39.58%), and the common starting player won 6,458 (39.42%). Both arms trained on the same 73,728 worlds. Their first 3,072 trajectories matched move for move. Only the joint arm changed the ordinary and final-boss fighting weights.
 
-| Target | Lower-ranked move, ordinary / boss | Wins / 768 | Paired win change, 95% interval | Reached Act 3 / 768 |
-|---|---|---:|---|---:|
-| Near greedy | 0.01% / 0.10% | 285 | Reference | 514 |
-| 5% | 4.80% / 5.02% | 276 | −1.17 [−4.85, +2.50] | 504 |
-| 12% | 11.59% / 12.14% | 254 | −4.04 [−7.94, −0.13] | 492 |
-| 22% | 20.88% / 21.47% | 220 | −8.46 [−12.33, −4.59] | 471 |
+| Frozen full-game comparison | Paired wins and 95% interval |
+|---|---|
+| Joint against frozen, primary | 6,712 vs 6,502 on 16,384 assigned worlds, +1.28 points [+0.44, +2.12], 16,383 complete pairs |
+| Joint against control, independent confirmation | 6,857 vs 6,484 on 16,384 assigned worlds, +2.28 points [+1.44, +3.11], 16,383 complete pairs |
+| Control against parent, independent confirmation | 6,484 vs 6,458 on 16,384 assigned worlds, +0.16 points [-0.63, +0.95], 16,383 complete pairs |
+| Joint against parent, independent confirmation | 6,857 vs 6,458 on 16,384 assigned worlds, +2.44 points [+1.60, +3.27], 16,384 complete pairs |
 
-The 12% target met both screening thresholds. Its common learning-rate collection yielded 1,082 wins in 3,072 training games, with no unresolved outcomes. The 48-game wiring check found identical training trajectories and strategy updates, with both fighters changing only in the joint arm. The four fits and the unchanged player then chose their preferred moves on 2,048 separate worlds.
+One control game reached its decision limit on each 16,384-world panel. The intervals in the table use complete pairs. Even assigning both unresolved outcomes in favour of the control, the lower 95% bound for joint training was +0.43 points in selection and +1.43 in confirmation. There were zero simulator faults. Training had one separately excluded decision-limit game in the joint arm.
 
+**Where the added wins appeared.** The following exploratory counts use the same 16,383 completed confirmation pairs. Each change is a percentage of all paired worlds.
 
-| Combat learning rate | Passes | Wins / 2,048 (starting player 800) | Paired gain in points, 95% interval | Changed preferred moves, ordinary / boss |
-|---:|---:|---:|---|---|
-| 0.00001 | 1 | 811 | +0.54 [-0.52, +1.59] | 0.62% / 0.73% |
-| 0.00003 | 1 | 819 | +0.93 [-0.37, +2.22] | 0.98% / 0.90% |
-| 0.00003 | 2 | 825 | +1.22 [-0.18, +2.62] | 1.33% / 1.24% |
-| 0.00010 | 1 | 815 | +0.73 [-0.92, +2.38] | 2.36% / 2.42% |
+| Boss | Reached, joint vs frozen | Paired reach change in points [95% interval] | Cleared, joint vs frozen | Paired clear change in points [95% interval] |
+|---|---|---|---|---|
+| Act 1 | 16,000 vs 15,952 | +0.29 [+0.05, +0.54] | 15,338 vs 15,273 | +0.40 [−0.01, +0.80] |
+| Act 2 | 14,649 vs 14,621 | +0.17 [−0.33, +0.67] | 11,675 vs 11,204 | +2.87 [+2.13, +3.62] |
+| Act 3 | 10,838 vs 10,402 | +2.66 [+1.88, +3.44] | 6,857 vs 6,484 | +2.28 [+1.44, +3.11] |
 
-The selection rule chose 0.00003 and two passes. All four comparisons were inconclusive individually. All 2,048 worlds completed for every player. The 0.0001 setting hit its update-size guard early for the boss fighter. The two-pass setting completed both passes for both fighters.
+The two players arrived at the Act 2 boss in similar numbers. The joint player cleared it in 471 more worlds. Changing combat can also change the decks, health and potions the strategist brings to those fights.
 
-On the same 3,072 training worlds with the fighter still frozen, 5%, 12% and 22% exploration yielded 1,105, 1,082 and 905 wins. Relative to 12%, the paired differences were +0.75 points [−1.19, +2.68] for 5% and −5.76 [−7.65, −3.87] for 22%. These are the outcomes while gathering experience for the fits. All games finished.
+**Repeated development checks.** These descriptive measurements use the same 1,024 familiar worlds at every update.
+
+| Update | Joint wins | Frozen wins | Paired win-rate change in points [95% interval] |
+|---:|---:|---:|---|
+| 0 | 381 | 381 | +0.00 [+0.00, +0.00] |
+| 4 | 377 | 363 | +1.37 [-1.70, +4.43] |
+| 8 | 372 | 362 | +0.98 [-2.13, +4.09] |
+| 12 | 373 | 357 | +1.56 [-1.65, +4.78] |
+| 16 | 399 | 360 | +3.81 [+0.61, +7.01] |
+| 20 | 389 | 361 | +2.73 [-0.62, +6.09] |
+| 24 | 419 | 390 | +2.83 [-0.58, +6.25] |
+
+### Exploration pilot
+
+| Target | Wins / 768 | Reached Act 3 / 768 | Lower-ranked move, ordinary / boss | Unknown |
+|---|---:|---:|---|---:|
+| 22.0% | 220 | 471 | 20.9% / 21.5% | 0 |
+| 5.0% | 276 | 504 | 4.8% / 5.0% | 0 |
+| 12.0% | 254 | 492 | 11.6% / 12.1% | 0 |
+| 0.0% | 285 | 514 | 0.0% / 0.1% | 0 |
+
+### Combat fitting pilot
+
+| Rate | Passes | Greedy games against frozen player | Changed choices, ordinary / boss | Passed movement screen |
+|---:|---:|---|---|---|
+| 0.0001 | 1 | 815 vs 800 on 2,048 assigned worlds, +0.73 points [-0.92, +2.38], 2,048 complete pairs | 2.4% / 2.4% | yes |
+| 1e-05 | 1 | 811 vs 800 on 2,048 assigned worlds, +0.54 points [-0.52, +1.59], 2,048 complete pairs | 0.6% / 0.7% | yes |
+| 3e-05 | 1 | 819 vs 800 on 2,048 assigned worlds, +0.93 points [-0.37, +2.22], 2,048 complete pairs | 1.0% / 0.9% | yes |
+| 3e-05 | 2 | 825 vs 800 on 2,048 assigned worlds, +1.22 points [-0.18, +2.62], 2,048 complete pairs | 1.3% / 1.2% | yes |
 
 ### Expanded pilot results
 
@@ -98,6 +126,16 @@ The original recipe retained its place under the replacement rule.
 
 Descriptive checks on the same 128 worlds at updates 0 and 3 gave 43 and 52 wins for the original, 43 and 54 for the challenger. These checks had no role in selection.
 
+The actual 24-update comparison used 12% combat exploration, combat learning rate 0.00003, and 2 pass(es). The selection was fixed from the first-pilot at first launch.
+
+## Conclusion
+
+Joint training beat both the frozen-combat control and the common starting player on fresh worlds. Strategy training alone showed no clear gain over the starting player at this exploration level. This comparison used one matched training seed.
+
+## Next
+
+The [early-refit player](2026-11-19-refit-timing.md) became workstream champion after this study began. A retrospective check on the same 1,024 development worlds gave 419 joint wins vs 365 for early refits, a paired difference of +5.27 points [+1.86, +8.68]. A direct comparison on fresh worlds is still needed to decide the championship.
+
 ## Log
 
 - 19 November, 13:32 GMT — At Sid’s suggestion, made the independent verdict a prerequisite for either 24-update arm. The earlier plan would have used the original settings if the GPU became available first. Thirteen of the 27 settings had finished screening, and the independent comparison had yet to begin.
@@ -109,4 +147,4 @@ Descriptive checks on the same 128 worlds at updates 0 and 3 gave 43 and 52 wins
 - 19 November — chose the starting player, comparison and pilot rules before sampling.
 - 19 November — Sid would prefer one general fighter long term and asked to keep the existing specialist for this comparison. A separate study could distil both fighters into one.
 
-Code: `experiments/2026-11-19-online-combat/`. Data: local run `online_combat_from_9700`.
+Code: `experiments/2026-11-19-online-combat/` at `d70feee` for the control and `bb94cc3` for joint training (same trainer source). Data: local run `online_combat_from_9700`.

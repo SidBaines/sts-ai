@@ -8,6 +8,11 @@ in `CLAUDE.md`; other terms in [metrics](metrics.md).
 
 | Date | Experiment | Tested | Result | Evidence | Verdict |
 |---|---|---|---|---|---|
+| 2026-11-20 | [Online combat](experiments/2026-11-19-online-combat.md) | Joint vs frozen combat, primary, env 0.1.5.2 | 6,712 vs 6,502 on 16,384 assigned worlds, +1.28 points [+0.44, +2.12], 16,383 complete pairs | Planned | Better |
+| 2026-11-20 | [Online combat](experiments/2026-11-19-online-combat.md) | Joint vs frozen combat, independent confirmation, env 0.1.5.2 | 6,857 vs 6,484 on 16,384 assigned worlds, +2.28 points [+1.44, +3.11], 16,383 complete pairs | Confirmed | Better |
+| 2026-11-20 | [Online combat](experiments/2026-11-19-online-combat.md) | Frozen combat vs common starting player, independent confirmation, env 0.1.5.2 | 6,484 vs 6,458 on 16,384 assigned worlds, +0.16 points [-0.63, +0.95], 16,383 complete pairs | Confirmed | No clear difference |
+| 2026-11-20 | [Online combat](experiments/2026-11-19-online-combat.md) | Joint vs common starting player, independent confirmation, env 0.1.5.2 | 6,857 vs 6,458 on 16,384 assigned worlds, +2.44 points [+1.60, +3.27], 16,384 complete pairs | Confirmed | Better |
+| 2026-11-20 | [Online combat](experiments/2026-11-19-online-combat.md) | Joint vs newer early-refit champion, reused development worlds, env 0.1.5.2 | 419 vs 365 on 1,024 matched worlds, +5.27 points [+1.86, +8.68] | Exploratory | Better |
 | 2026-11-19 | [Expanded combat pilot](experiments/2026-11-19-online-combat.md#expanded-pilot-results) | Three joint updates, selected challenger vs original, env 0.1.5.2 | 3,242 vs 3,272 on 8,192 assigned worlds, -0.37 points [-1.43, +0.70], 8,192 complete pairs | Confirmed | Inconclusive |
 | 2026-11-19 | [Expanded combat pilot](experiments/2026-11-19-online-combat.md#expanded-pilot-results) | One fit at 5% exploration, rate 0.00001, 1 passes vs original fit, env 0.1.5.2 | 301 vs 319 on 768 assigned worlds, -2.34 points [-4.62, -0.07], 768 complete pairs | Exploratory | Worse |
 | 2026-11-19 | [Expanded combat pilot](experiments/2026-11-19-online-combat.md#expanded-pilot-results) | One fit at 5% exploration, rate 0.00001, 2 passes vs original fit, env 0.1.5.2 | 302 vs 319 on 768 assigned worlds, -2.21 points [-4.59, +0.16], 768 complete pairs | Exploratory | Inconclusive |

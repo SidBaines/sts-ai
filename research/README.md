@@ -25,11 +25,11 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-The frozen-combat control started on 19 November at 21:58 GMT. The joint arm follows on the same GPU. Independent testing retained 12% combat exploration, a combat learning rate of 0.00003 and two passes for the joint arm. [Pilot evidence and 24-update comparison](experiments/2026-11-19-online-combat.md).
+Nothing running. Joint combat and strategy training beat strategy alone by 2.28 percentage points on 16,384 independent worlds (95% paired interval +1.44 to +3.11). The study began from the 39.42% player. [Full result](experiments/2026-11-19-online-combat.md#results).
 
 ## Next
 
-Test three early refits against three later refits on a second matched training seed. This would separate the effect of timing from the larger teacher budget used by the every-two arm.
+A fresh matched comparison between the joint player and the newer early-refit champion would decide which player to train from next.
 
 ## Open questions
 

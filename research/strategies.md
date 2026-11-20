@@ -252,6 +252,10 @@ starts the learner reached.
   emphasised fights, and representation limits.
 - [Combat PPO page](experiments/2026-10-13-combat-ppo.md).
 
+## Learning combat on each strategy update
+
+**Working.** At the same combat exploration level, updating both fighters with strategy won 6,857 vs 6,484 games on 16,384 independent worlds, +2.28 points [+1.44, +3.11] on 16,383 complete pairs. The joint player cleared the Act 2 boss on 471 more matched worlds. This improvement comes from one matched training seed. [Matched online combat study](experiments/2026-11-19-online-combat.md).
+
 ## Joint sparse-win PPO
 
 **Stalled.** Train both networks together from the champion on the full-game
