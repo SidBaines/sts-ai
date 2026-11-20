@@ -7,9 +7,8 @@ import torch
 from sts_policy.model_agent import CompositeActorCritic
 from sts_rl.boss_refits import primary_nominee
 from sts_rl.common import load_policy
-from sts_rl.fresh_panel_grid import canonical_grid_hash
 from sts_rl.fresh_study import atomic_json
-from sts_rl.paired_endpoints import compare, digest, paired_binary_outcomes
+from sts_rl.paired_endpoints import compare, compare_boss_replays, digest
 from study import CFG, CHAMP, HERE, OUT, RUNS, check_parent, note
 
 
@@ -62,41 +61,8 @@ def verify_player(selection):
 
 
 def boss_scores(selection):
-    grid, panel = read(OUT/"grid.json"), read(OUT/"boss-fights/summary.json")
-    if not (grid["grid_hash"] == canonical_grid_hash(grid) == panel["grid_hash"]
-            and panel["grid_input"]["sha256"] == digest(OUT/"grid.json")
-            and grid["coverage"] == {"BOSS3": CFG["boss_starts"]}):
-        raise ValueError("Final boss position roster mismatch")
-    identity = panel["source"]["policy"]
-    if identity["champion"]["sha256"] != CFG["champion_sha256"] or identity["combat"]["sha256"] != selection["head_sha256"]:
-        raise ValueError("Unexpected panel fighter")
-    result = {}
-    for salt, label in ((-1, "original"), (0, "reseeded")):
-        keys = {(r["world_seed"],r["start_id"]) for r in grid["grid"] if r["salt"] == salt}
-        if len(keys) != CFG["boss_starts"] or len({s for s,_ in keys}) != len(keys):
-            raise ValueError("Boss evaluation requires one starting position per world")
-        outcomes = {p:dict.fromkeys(keys) for p in ("champion","replacement")}
-        hashes, seen = {}, set()
-        for row in panel["records"]:
-            if row["salt"] != salt:
-                continue
-            key, arm = (row["world_seed"],row["start_id"]), row["policy"]
-            if key not in keys or (key,arm) in seen:
-                raise ValueError("Unexpected or duplicate boss position")
-            seen.add((key,arm))
-            if any(row.get(v) for v in ("fault","cut","ub","censored","programming_error")):
-                continue
-            fingerprint = row["first_combat_hash"]
-            if not fingerprint or hashes.setdefault(key,fingerprint) != fingerprint:
-                raise ValueError("The two policies did not receive identical first combat states")
-            if type(row["win"]) is not bool:
-                raise ValueError("Missing boss-fight outcome")
-            outcomes[arm][key] = row["win"]
-        champion, student = outcomes["champion"], outcomes["replacement"]
-        result[label] = dict(champion_wins=sum(x is True for x in champion.values()),
-                             student_wins=sum(x is True for x in student.values()),
-                             **paired_binary_outcomes(champion, student))
-    return result, panel["confidence_claims_allowed"]
+    return compare_boss_replays(OUT/"grid.json", OUT/"boss-fights", CFG["champion_sha256"],
+                                selection["head_sha256"], CFG["boss_starts"])
 
 
 def report():

@@ -137,6 +137,9 @@ confirmation worlds apart.
 | 0.1.5.2 | Frozen joint player against the early-refit champion | 270,000,000,000 | 16,384 |
 | 0.1.5.2 | Single-fighter training, imitation validation and full-game selection | 280, 281 and 282 billion | 4,096, 512 and 2,048 |
 | 0.1.5.2 | Single-fighter boss-entry source games and independent full-game confirmation | 283 and 284 billion | 2,048 and 16,384 |
+| 0.1.5.2 | Overnight longer-fit screen, conditional student-played games and corrective screen | 310, 311 and 312 billion | 4,096, 2,048 training-split, 4,096 |
+| 0.1.5.2 | Overnight boss-source games and independent single-fighter retention | 313 and 314 billion | 2,048 and 49,152 |
+| 0.1.5.2 | Overnight joint-learning development, endpoint comparison and independent promotion test | 315, 334 and 335 billion | 1,024, 16,384 and 16,384 |
 | All | Out-of-combat PPO training worlds start at the configured base plus 500,000,000 per training seed plus 10,000,000 per iteration | Configured per study | games per iteration |
 
 ## Environment versions

@@ -30,6 +30,8 @@ def reserve():
     )
     rosters = {name: range(CFG[name][0], sum(CFG[name])) for name in names}
     rosters["feedback"] = training(*CFG["feedback"])
+    for i, start in enumerate(CFG["backup_bank_starts"], 1):
+        rosters[f"bank-backup-{i}"] = range(start, start + CFG["bank"][1])
     rosters["smoke-train"] = training(CFG["smoke_train_base"] + 10_000_000, 48)
     rosters["smoke-eval"] = range(CFG["smoke_eval"], CFG["smoke_eval"] + 16)
     for i in range(1, CFG["rl_iterations"] + 1):

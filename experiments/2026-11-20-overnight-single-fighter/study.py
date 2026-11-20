@@ -5,6 +5,7 @@ import fcntl
 import json
 from pathlib import Path
 
+from sts_rl.boss_refits import read as read
 from sts_rl.fresh_study import atomic_json
 from sts_rl.paired_endpoints import digest
 
@@ -17,10 +18,6 @@ OLD = RUNS / CFG["previous_run"]
 DEMO = OLD / "demonstrations"
 CHAMP = RUNS / CFG["champion"]
 BASE = OLD / "finalist"
-
-
-def read(path):
-    return json.loads(path.read_bytes())
 
 
 def check_inputs():

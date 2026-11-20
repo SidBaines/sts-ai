@@ -12,6 +12,7 @@
   "feedback_steps": 3200,
   "feedback_screen": [312000000000,4096],
   "bank": [313000000000,2048],
+  "backup_bank_starts": [317000000000,318000000000],
   "boss_starts": 1024, "resamples": 1,
   "retention": [314000000000,49152],
   "development": [315000000000,1024],

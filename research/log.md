@@ -1,5 +1,7 @@
 # Non-LLM training progress
 
+- 20 Nov 22:51 GMT — Finished the 25% boss mix. Its validation-selected fighter was saved at update 10,200.
+- 20 Nov 22:48 GMT — Both architectures completed a matched 48-game wiring check with the intended networks learning.
 - 20 Nov 19:13 GMT — Single fighter 6,763 wins, champion 6,829 on 16,384 full games (-0.40 points, 95% interval -1.07 to +0.26). On 1,024 original boss entries they won 665 and 667. The early-refit champion retains the title.
 - 20 Nov 19:12 GMT — Single-fighter comparison. Champion 16,384 and student 16,384 of 16,384 full games each. Boss replays 4,096 of 4,096.
 - 20 Nov 19:06 GMT — Single-fighter comparison. Champion 12,288 and student 12,544 of 16,384 full games each. Boss replays 4,096 of 4,096.

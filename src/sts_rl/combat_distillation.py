@@ -283,3 +283,18 @@ def fit(
         "fit complete",
         f"Finished the {fraction:.0%} boss mix. Its validation-selected fighter was saved at update {best_step:,}.",
     )
+
+
+def choose_imitation_continuation(measured, losses):
+    """Rank preordered candidates versus their original and identify a flat game screen."""
+    # Insertion order is shortest fit first. The original wins an exact tie with zero.
+    gains={name:r["full_cohort_gain_bounds_pp"][0] for name,r in measured.items()}
+    ranking = {"original": 0., **gains}
+    winner = max(ranking, key=ranking.get)
+    improved=[name for name in measured if losses[name]<losses["original"]]
+    actor=max(improved,key=gains.get) if improved else None
+    r = measured[actor] if actor else {}
+    bounds = r.get("ci95_pp", r.get("complete_pair_ci95_pp"))
+    flat=bool(bounds and bounds[0]<=0<=bounds[1])
+    feedback=flat and not any(measured[name]["worst_case_ci95_pp"][0]>0 for name in improved)
+    return winner,actor,feedback

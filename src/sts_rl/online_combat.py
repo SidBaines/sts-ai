@@ -18,6 +18,14 @@ from .fresh_statistics import paired_win_normal_interval
 ROLES = ("combat", "boss_specialist")
 
 
+def complete_training_batch(tasks, episodes, faults):
+    """Every assigned world must have an outcome or a recorded simulator fault."""
+    expected = sorted(t.seed for t in tasks)
+    observed = sorted(r["world_seed"] for r in (*episodes, *faults))
+    return (expected == observed and len(set(expected)) == len(expected)
+            and not any(r.get("termination_reason") == "collector_budget" for r in episodes))
+
+
 def temperature_for_exploration(logits, mask, target):
     """Calibrate on meaningful menus, counting tied best moves as equally greedy."""
     import math

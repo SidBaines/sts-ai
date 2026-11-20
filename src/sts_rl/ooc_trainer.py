@@ -689,6 +689,13 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
             combat_rows = batch.get("combat_rows", {})
             collector_restarts = batch["collector_restarts"] if pool is not None else 0
             collection = out / f'collection_{iteration:04d}.json.gz'
+            if cfg.train_combat:
+                from .online_combat import complete_training_batch
+                if not complete_training_batch(tasks, game_episodes, batch["fault_records"]):
+                    partial = out / f'collection_{iteration:04d}-interrupted-{time.time_ns()}.json.gz'
+                    write_collection(partial, dict(iteration=iteration, tasks=[t.to_dict() for t in tasks],
+                                                   episodes=game_episodes, faults=batch["fault_records"]))
+                    raise RuntimeError("Incomplete collection saved for diagnosis. Resume from the last completed update.")
             write_collection(collection, {'schema':'sts_training_collection_v1', 'run_record':run_record,
                 'iteration':iteration, 'tasks':[task.to_dict() for task in tasks], 'episodes':game_episodes,
                 'faults':batch['fault_records']})

@@ -20,6 +20,7 @@ from sts_rl.online_combat import (
     combat_optimizers,
     viable_combat_fit,
     temperature_for_exploration,
+    complete_training_batch,
 )
 
 
@@ -50,6 +51,13 @@ def row(seed, act, room, reward, finished=False, truncated=False, phase="combat"
 
 
 class OnlineCombatTests(unittest.TestCase):
+    def test_interrupted_batch_cannot_become_a_matched_training_update(self):
+        tasks=[SimpleNamespace(seed=1),SimpleNamespace(seed=2)]
+        self.assertTrue(complete_training_batch(tasks,[{"world_seed":2}],[{"world_seed":1}]))
+        self.assertFalse(complete_training_batch(tasks,[{"world_seed":2}],[]))
+        self.assertFalse(complete_training_batch(tasks,[{"world_seed":1},{"world_seed":1}],[]))
+        self.assertFalse(complete_training_batch(tasks,[{"world_seed":2,"termination_reason":"collector_budget"}],[{"world_seed":1}]))
+
     def test_matched_temperature_excludes_padding_and_equal_moves(self):
         logits = torch.tensor([[1., 0., 99.], [1., 1., 0.], [2., 2., 2.]])
         mask = torch.tensor([[True, True, False], [True]*3, [True]*3])

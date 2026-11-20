@@ -3,10 +3,31 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sts_rl.paired_endpoints import compare, digest, paired_binary_outcomes
+from sts_rl.paired_endpoints import compare, compare_boss_replays, digest, paired_binary_outcomes
 
 
 class PairedEndpointTests(unittest.TestCase):
+    def test_frozen_boss_comparisons_separate_salts_and_require_identical_initial_states(self):
+        from sts_rl.fresh_panel_grid import canonical_grid_hash
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); gridpath=root/"grid.json"
+            rows=[dict(world_seed=w,start_id=4,salt=s,group="BOSS3") for w in (8,9,10) for s in (-1,0)]
+            grid=dict(coverage={"BOSS3":3},grid=rows);grid["grid_hash"]=canonical_grid_hash(grid)
+            gridpath.write_text(json.dumps(grid))
+            records=[dict(**r,policy=arm,win=(arm=="replacement")==(r["salt"]==0),
+                          first_combat_hash=str((r["world_seed"],r["salt"]))) for r in rows for arm in ("champion","replacement")]
+            summary=dict(grid_hash=grid["grid_hash"],grid_input={"sha256":digest(gridpath)},
+                         source={"policy":{"champion":{"sha256":"A"},"combat":{"sha256":"B"}}},
+                         confidence_claims_allowed=True,records=records)
+            (root/"summary.json").write_text(json.dumps(summary))
+            scores,valid=compare_boss_replays(gridpath,root,"A","B",3)
+            self.assertTrue(valid)
+            self.assertEqual((scores["original"]["difference_pp"],scores["reseeded"]["difference_pp"]),(-100,100))
+            records[1]["first_combat_hash"]="other"
+            (root/"summary.json").write_text(json.dumps(summary))
+            with self.assertRaisesRegex(ValueError,"identical"):
+                compare_boss_replays(gridpath,root,"A","B",3)
+
     def test_binary_outcomes_check_roster_and_keep_discordant_arms_straight(self):
         a = {"A": True, "B": False, "C": False, "D": False}
         b = {"A": False, "B": True, "C": True, "D": False}

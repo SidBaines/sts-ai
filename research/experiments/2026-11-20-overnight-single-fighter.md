@@ -18,4 +18,6 @@ Sid requested the full overnight sequence on 20 November. The budgets and rules 
 
 ## Next
 
+If a boss-source cohort cannot be validated completely or supplies fewer than 1,024 eligible worlds, the scheduler preserves it and uses the next whole, separately reserved cohort. This recovery rule uses source completeness and coverage only.
+
 The queue runs the sequence on AC power. The [dashboard](http://127.0.0.1:8795/) and [progress log](http://127.0.0.1:8795/progress) show the live stage. The local run is `overnight_single_fighter_20261120` and the study code is in `experiments/2026-11-20-overnight-single-fighter/`.

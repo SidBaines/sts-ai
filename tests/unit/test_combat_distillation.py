@@ -5,11 +5,26 @@ from types import SimpleNamespace
 import numpy as np
 import torch
 
-from sts_rl.combat_distillation import Menus, calibrate, losses
+from sts_rl.combat_distillation import Menus, calibrate, choose_imitation_continuation, losses
 from sts_rl.distillation_collection import SampleGame, pack
 
 
 class DistillationTests(unittest.TestCase):
+    def test_feedback_requires_improved_copying_and_an_unresolved_game_screen(self):
+        def metric(gain, lower, upper):
+            return dict(
+                full_cohort_gain_bounds_pp=[gain, gain],
+                ci95_pp=[lower, upper],
+                worst_case_ci95_pp=[lower, upper],
+            )
+
+        loss = {"original": 0.1, "short": 0.08, "long": 0.07}
+        runs = {"short": metric(0, -1, 1), "long": metric(-0.2, -1, 0.6)}
+        self.assertEqual(choose_imitation_continuation(runs, loss), ("original", "short", True))
+        runs["long"] = metric(2, 1, 3)
+        self.assertEqual(choose_imitation_continuation(runs, loss), ("long", "long", False))
+        self.assertFalse(choose_imitation_continuation(runs, dict.fromkeys(loss, 0.1))[2])
+
     def test_extra_worlds_keep_teacher_scores_and_actor_choices_separate(self):
         with tempfile.TemporaryDirectory() as directory:
             folders = [Path(directory) / name for name in ("old", "extra")]
