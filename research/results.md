@@ -8,6 +8,10 @@ in `CLAUDE.md`; other terms in [metrics](metrics.md).
 
 | Date | Experiment | Tested | Result | Evidence | Verdict |
 |---|---|---|---|---|---|
+| 2026-11-20 | [One fighter](experiments/2026-11-20-single-fighter.md) | Single fighter vs champion, full-game retention, env 0.1.5.2 | 6,763 vs 6,829 on 16,384 complete pairs, −0.40 points [−1.07, +0.26]. One-point tolerance unresolved. | Confirmed | Inconclusive |
+| 2026-11-20 | [One fighter](experiments/2026-11-20-single-fighter.md) | Same original Act 3 boss entries, env 0.1.5.2 | 665 vs 667 wins on 1,024 complete pairs, −0.20 points [−2.05, +1.66]. Three-point tolerance met. | Confirmed | No clear difference |
+| 2026-11-20 | [One fighter](experiments/2026-11-20-single-fighter.md) | Same boss entries with matched new randomness, diagnostic, env 0.1.5.2 | 694 vs 687 wins on 1,024 complete pairs, +0.68 points [−1.00, +2.36]. | Planned | No clear difference |
+| 2026-11-20 | [One fighter](experiments/2026-11-20-single-fighter.md) | Student selection, 25% vs 50% boss examples, env 0.1.5.2 | 864 vs 840 on 2,048 complete pairs, +1.17 points [−0.54, +2.88]. Selected 25%. | Planned | Inconclusive |
 | 2026-11-20 | [Joint vs early refits](experiments/2026-11-20-joint-vs-early-refit.md) | Full-game wins, joint vs early refits, env 0.1.5.2 | Joint 6,852 wins, early refits 6,816 on 16,384 worlds. Joint minus early +0.22 percentage points (95% interval -0.62 to +1.06, 16,384 complete pairs). | Confirmed | Inconclusive |
 | 2026-11-20 | [Online combat](experiments/2026-11-19-online-combat.md) | Joint vs frozen combat, primary, env 0.1.5.2 | 6,712 vs 6,502 on 16,384 assigned worlds, +1.28 points [+0.44, +2.12], 16,383 complete pairs | Planned | Better |
 | 2026-11-20 | [Online combat](experiments/2026-11-19-online-combat.md) | Joint vs frozen combat, independent confirmation, env 0.1.5.2 | 6,857 vs 6,484 on 16,384 assigned worlds, +2.28 points [+1.44, +3.11], 16,383 complete pairs | Confirmed | Better |

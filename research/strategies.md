@@ -260,6 +260,10 @@ starts the learner reached.
 
 The early-refit player retains the title. Joint 6,852 wins, early refits 6,816 on 16,384 worlds. Joint minus early +0.22 percentage points (95% interval -0.62 to +1.06, 16,384 complete pairs). [Joint vs early refits](experiments/2026-11-20-joint-vs-early-refit.md).
 
+## Teaching one fighter from two
+
+**Promising.** Starting from the ordinary fighter, a single network can copy most of the ordinary and final-boss teachers' move choices. With 25% boss examples, it retained final-boss strength within three points on 1,024 identical starts (665 vs 667, −0.20 points [−2.05, +1.66]). Full games were close on 16,384 matched worlds (6,763 vs 6,829, −0.40 points [−1.07, +0.26]). The one-point full-game tolerance remains unresolved. [Single-fighter study](experiments/2026-11-20-single-fighter.md).
+
 ## Joint sparse-win PPO
 
 **Stalled.** Train both networks together from the champion on the full-game

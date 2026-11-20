@@ -11,6 +11,7 @@ used to make better teachers, not to play.
 | Player | Win rate | Evidence |
 |---|---|---|
 | **Champion from 2026-11-19:** early refits (`champions/champion_f3c85d4919b7.pt`) | 6,773 vs 6,446 wins, 16,384/16,384 complete pairs, +2.00 points [+1.18, +2.81] | Confirmed; current default |
+| **Single-fighter candidate** (`single_fighter_from_f3c8/finalist/player.pt`) | 6,763 vs 6,829 champion wins on 16,384 fresh worlds, −0.40 points [−1.07, +0.26] | Met the boss tolerance. Full-game retention was inconclusive. |
 | **Champion from 19 November:** Act 3 specialist refits at updates 2, 4 and 6 (`champions/champion_9700741dca15.pt`) | 6,459 of 16,384 independent worlds (39.42%) vs 5,575 (34.03%), +5.40 points [+4.56, +6.23] | Confirmed; previous champion |
 | **Champion from 19 November:** 24 further strategy updates at 0.0001 with frozen combat (`champions/champion_5b06aba8a254.pt`) | 5,521 of 16,384 independent worlds (33.70%) vs 5,344 (32.62%), +1.08 points [+0.33, +1.83] | Confirmed; previous champion |
 | **Champion from 18 November:** 24 iterations of strategy PPO at learning rate 0.0001 from the October champion, with frozen combat (`champions/champion_0f527a0fbf93.pt`) | 5,502 of 16,384 independent worlds (33.58%) vs 4,959 (30.27%), +3.31 points [+2.57, +4.06] | Confirmed; previous champion |
@@ -26,11 +27,11 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-The early-refit champion is teaching one combat network to play every fight. [Single-fighter study](experiments/2026-11-20-single-fighter.md).
+Nothing running. The early-refit player remains champion after the [single-fighter study](experiments/2026-11-20-single-fighter.md).
 
 ## Next
 
-Compare the single fighter with its teacher on fresh full games and identical Act 3 boss starts.
+Consider a longer fit with 25% final-boss examples. Its last training update had the best held-out imitation score.
 
 ## Open questions
 

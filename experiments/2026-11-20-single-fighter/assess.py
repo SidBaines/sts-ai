@@ -111,9 +111,12 @@ def report():
     boss_lower = bosses["original"]["worst_case_ci95_pp"][0]
     retained = valid_panel and full_lower > -1 and boss_lower > -3
     promoted = retained and full_lower > 0
+    nominal = full.get("difference_pp",full.get("complete_pair_difference_pp"))
+    bounds = full.get("ci95_pp",full.get("complete_pair_ci95_pp"))
+    evidence = (f"Single fighter {full['second']['wins']:,} wins, champion {full['first']['wins']:,} "
+                f"on {n:,} full games ({nominal:+.2f} points, 95% interval {bounds[0]:+.2f} to {bounds[1]:+.2f}).")
     outcome = dict(full_games=full, bosses=bosses, boss_panel_valid=valid_panel, strength_retained=retained,
                    promoted=promoted, finalist=selection["chosen"], checkpoint=str(player))
-    atomic_json(OUT/"verdict.json", outcome)
     if promoted:
         dest = CHAMP.with_name("champion_"+selection["player_sha256"][:12]+".pt")
         if not dest.exists():
@@ -124,20 +127,23 @@ def report():
             tmp.replace(dest)
         if digest(dest) != selection["player_sha256"]:
             raise ValueError("Champion archive mismatch")
-        atomic_json(dest.with_suffix(".json"),dict(promoted=datetime.now(timezone.utc).date().isoformat(),
+        finished = max((OUT/"confirmation"/arm/"summary.json").stat().st_mtime for arm in ("champion","student"))
+        day = datetime.fromtimestamp(finished,timezone.utc).date().isoformat()
+        atomic_json(dest.with_suffix(".json"),dict(promoted=day,
                     by="Single-fighter full-game superiority and boss retention",source=str(player.relative_to(RUNS)),
                     sha256=selection["player_sha256"],parent_sha256=CFG["champion_sha256"],environment="env-v0.1.5.2",
                     baseline_games={a:str(OUT/"confirmation"/a) for a in ("champion","student")},
-                    evidence=outcome["full_games"]["worst_case_ci95_pp"]))
+                    evidence=evidence))
     for name, counts in (("champion",full["first"]),("student",full["second"])):
         label = "Early-refit champion" if name=="champion" else "Single fighter"
+        label += " · single-fighter comparison"
+        if counts["completed"] != n:
+            label += f" ({n-counts['completed']} unresolved)"
         atomic_json(RUNS/"fresh_eval"/f"{HERE.name}-{name}.json",
-                    dict(label=f"{label} · single-fighter comparison",assigned=n,
+                    dict(label=label,assigned=n,
                          summary=dict(n=counts["completed"],wins=counts["wins"],mode="greedy",mean_floor=counts["mean_floor"])))
-    nominal = full.get("difference_pp",full.get("complete_pair_difference_pp"))
-    bounds = full.get("ci95_pp",full.get("complete_pair_ci95_pp"))
-    note("finished", f"Single fighter {full['second']['wins']:,} wins, champion {full['first']['wins']:,} on {n:,} full games "
-         f"({nominal:+.2f} points, 95% interval {bounds[0]:+.2f} to {bounds[1]:+.2f}). "
+    note("finished", evidence + " "
          f"On {CFG['boss_starts']:,} original boss entries they won {bosses['original']['student_wins']} and "
          f"{bosses['original']['champion_wins']}. " + ("The one-fighter player is champion." if promoted else "The early-refit champion retains the title."))
+    atomic_json(OUT/"verdict.json", outcome)
     return outcome

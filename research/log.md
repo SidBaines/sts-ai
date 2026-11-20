@@ -1,5 +1,19 @@
 # Non-LLM training progress
 
+- 20 Nov 19:13 GMT — Single fighter 6,763 wins, champion 6,829 on 16,384 full games (-0.40 points, 95% interval -1.07 to +0.26). On 1,024 original boss entries they won 665 and 667. The early-refit champion retains the title.
+- 20 Nov 19:12 GMT — Single-fighter comparison. Champion 16,384 and student 16,384 of 16,384 full games each. Boss replays 4,096 of 4,096.
+- 20 Nov 19:06 GMT — Single-fighter comparison. Champion 12,288 and student 12,544 of 16,384 full games each. Boss replays 4,096 of 4,096.
+- 20 Nov 19:00 GMT — Single-fighter comparison. Champion 8,192 and student 8,192 of 16,384 full games each. Boss replays 4,096 of 4,096.
+- 20 Nov 18:54 GMT — Single-fighter comparison. Champion 4,096 and student 4,096 of 16,384 full games each. Boss replays 4,096 of 4,096.
+- 20 Nov 18:51 GMT — All boss replays finished. The single fighter won 665 vs 667 on 1,024 original starts (−0.20 points, 95% interval −2.05 to +1.66) and 694 vs 687 on the matched reseeds (+0.68, −1.00 to +2.36). The original-start result met the three-point retention criterion.
+- 20 Nov 18:49 GMT — Recovered the boss replays using the declared source-world range. Froze 1,024 distinct entries from 1,264 eligible champion worlds. Both fighters are replaying these starts while the full games run.
+- 20 Nov 18:47 GMT — Single-fighter comparison. Champion 0 and student 0 of 16,384 full games each. Boss replays 0 of 4,096.
+- 20 Nov 18:47 GMT — On 2,048 development worlds the 25% boss mix won 864 and the 50% mix won 840. Froze the 25% mix for both independent tests.
+- 20 Nov 18:45 GMT — Single-fighter study needs attention. freeze-boss-entries ended in state failed. Inspect its queue log.
+- 20 Nov 18:40 GMT — Both one-fighter fits finished. On held-out choices the 25% boss mix matched its teachers on 96.6% of ordinary moves and 94.9% of boss moves. The 50% mix matched 95.4% and 96.4%. The finalists are playing 2,048 shared development worlds.
+- 20 Nov 18:39 GMT — Finished the 50% boss mix. Its validation-selected fighter was saved at update 3,200.
+- 20 Nov 18:39 GMT — Fitting the single fighter with 50% boss examples in each update.
+- 20 Nov 18:38 GMT — Finished the 25% boss mix. Its validation-selected fighter was saved at update 3,200.
 - 20 Nov 18:38 GMT — Fitting the single fighter with 25% boss examples in each update.
 - 20 Nov 18:37 GMT — Collected champion combat choices on 4,608 of 4,608 assigned worlds.
 - 20 Nov 18:31 GMT — Single-fighter study started. The early-refit champion is supplying combat demonstrations and a separate bank of Act 3 boss starts.
