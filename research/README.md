@@ -26,11 +26,11 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-Nothing running. Joint combat and strategy training beat strategy alone by 2.28 percentage points on 16,384 independent worlds (95% paired interval +1.44 to +3.11). The study began from the 39.42% player. [Full result](experiments/2026-11-19-online-combat.md#results).
+The jointly trained challenger and the early-refit champion are scheduled to play the same 16,384 fresh worlds. [Head-to-head comparison](experiments/2026-11-20-joint-vs-early-refit.md).
 
 ## Next
 
-A fresh matched comparison between the joint player and the newer early-refit champion would decide which player to train from next.
+Choose the next training study with Sid after the head-to-head verdict.
 
 ## Open questions
 

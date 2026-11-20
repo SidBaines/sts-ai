@@ -134,7 +134,7 @@ Joint training beat both the frozen-combat control and the common starting playe
 
 ## Next
 
-The [early-refit player](2026-11-19-refit-timing.md) became workstream champion after this study began. A retrospective check on the same 1,024 development worlds gave 419 joint wins vs 365 for early refits, a paired difference of +5.27 points [+1.86, +8.68]. A direct comparison on fresh worlds is still needed to decide the championship.
+The [early-refit player](2026-11-19-refit-timing.md) became workstream champion after this study began. A retrospective check on the same 1,024 development worlds gave 419 joint wins vs 365 for early refits, a paired difference of +5.27 points [+1.86, +8.68]. The [championship comparison](2026-11-20-joint-vs-early-refit.md) uses 16,384 independent worlds.
 
 ## Log
 

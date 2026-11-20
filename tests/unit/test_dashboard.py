@@ -124,6 +124,15 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(state["history"], {"cancelled": 1})
         self.assertEqual(state["runs"]["batch/recipe"]["status"], "running")
 
+    def test_study_updates_refresh_even_when_training_histories_are_cached(self):
+        first = dashboard.state()
+        self.assertIsNone(first["study"])
+        report = {"stamp": "20 Nov 12:00 GMT", "message": "Both players have finished."}
+        (self.root / "study_heartbeat.json").write_text(json.dumps(report))
+        following = dashboard.state(since=first["sig"])
+        self.assertEqual(following["study"], report)
+        self.assertIsNone(following["runs"])
+
     def test_duplicate_roots_and_names_do_not_drop_or_misassign_runs(self):
         self.log(self.root, "same")
         self.log(self.extra, "same")

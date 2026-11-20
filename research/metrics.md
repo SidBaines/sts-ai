@@ -134,6 +134,7 @@ confirmation worlds apart.
 | 0.1.5.2 | Independent confirmation of the frozen every-two endpoint against every eight and the incumbent | 161,000,000,000 | 16,384 |
 | 0.1.5.2 | Equal-budget early and spaced refit schedules at update 24 | 180,000,000,000 | 16,384 |
 | 0.1.5.2 | Independent timing confirmation against the other schedule and the 39.42% starting champion | 181,000,000,000 | 16,384 |
+| 0.1.5.2 | Frozen joint player against the early-refit champion | 270,000,000,000 | 16,384 |
 | All | Out-of-combat PPO training worlds start at the configured base plus 500,000,000 per training seed plus 10,000,000 per iteration | Configured per study | games per iteration |
 
 ## Environment versions

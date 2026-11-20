@@ -1,5 +1,6 @@
 # Non-LLM training progress
 
+- 20 Nov 17:18 GMT — Queued the joint player and early-refit champion on the same 16,384 unused worlds. Both evaluations will start on AC power. The paired result will decide the champion.
 - 20 Nov 03:09 GMT — Independent confirmation finished. Joint training won 6,857, frozen combat 6,484 and their starting player 6,458 games on 16,384 assigned worlds. Joint vs frozen gained 2.28 points [+1.44, +3.11].
 - 20 Nov 03:09 GMT — Stage — finished.
 - 20 Nov 02:27 GMT — Stage — independent confirmation of both endpoints and the original champion.

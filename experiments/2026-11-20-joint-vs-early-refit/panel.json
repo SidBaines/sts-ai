@@ -1,0 +1,18 @@
+{
+  "run": "joint_vs_early_refit_20261120",
+  "world_start": 270000000000,
+  "n": 16384,
+  "processes": 7,
+  "games_per_process": 8,
+  "players": {
+    "early": {
+      "checkpoint": "champions/champion_f3c85d4919b7.pt",
+      "sha256": "f3c85d4919b718e2b4b2a26e60ffaa96883368d8b50a4ca7d1fda8240743049d"
+    },
+    "joint": {
+      "checkpoint": "online_combat_from_9700/joint/iter_0024.pt",
+      "sha256": "efef469d3c0a7b24cf97693e104bcab2f29697d4ca424dd8287e159328cff17f"
+    }
+  },
+  "promotion_rule": "Promote joint only if the lower bound of its two-sided paired 95% interval exceeds zero when incomplete games are assigned against joint. Otherwise retain early."
+}

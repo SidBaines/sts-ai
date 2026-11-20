@@ -252,10 +252,11 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
 
 
 def _parse_eval(path: Path) -> dict:
-    s = _read_json(path, {}).get("summary") or {}
+    record = _read_json(path, {})
+    s = record.get("summary") or {}
     n, wins = int(s.get("n") or 0), int(s.get("wins") or 0)
     lo, hi = wilson(wins, n)
-    return {"name": path.stem, "label": EVAL_LABELS.get(path.stem, path.stem), "n": n, "wins": wins,
+    return {"name": path.stem, "label": record.get("label") or EVAL_LABELS.get(path.stem, path.stem), "n": n, "wins": wins,
             "rate": wins / n if n else None, "lo": lo, "hi": hi, "mean_floor": s.get("mean_floor"),
             "se": s.get("se"), "act2_boss_pass": s.get("act2_boss_pass"), "act3_boss_reach": s.get("act3_boss_reach"),
             "act3_boss_pass": s.get("act3_boss_pass"), "mode": s.get("mode"),
@@ -384,6 +385,7 @@ def state(max_points: int | None = None, since: str | None = None, extra_roots=(
     sig.append("active:" + json.dumps([(a["root"], a["name"], a["run"], a["status"]) for a in active]))
     state_sig = hashlib.sha1("\n".join(sig).encode()).hexdigest()[:16]
     out = {"now": now, "runner": runners[0]["status"], "runners": runners,
+           "study": _read_json(RUNS / "study_heartbeat.json", None),
            "active": active, "history": history, "sig": state_sig,
            "lineage": lineage_status,
            "runs": None, "win": None, "fresh": None}
@@ -453,7 +455,7 @@ button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(-
 <div class="mut small" style="margin-top:6px">Paired comparisons and McNemar p-values: <code>scripts/rl/compare_evals.py A.json B.json</code>. Win counts at 1,024 worlds (training-run evals below) swing by ±7, so use this table for win claims.</div></div>
 <div class="row">
 <div class="card"><h2>Active now</h2><div class="tw"><table id="active"></table></div><div class="mut small" id="hist"></div></div>
-<div class="card"><h2>Fresh-world confirmations (1,024 untouched worlds)</h2><div class="tw"><table id="fresh"></table></div></div>
+<div class="card"><h2>Fresh-world confirmations</h2><div class="tw"><table id="fresh"></table></div></div>
 </div>
 <div class="card"><h2>Training runs</h2>
 <div><button id="all">all</button> <button id="none">none</button> <button id="default">default</button>
@@ -547,7 +549,7 @@ function winTable(rows,id,maxHi){
  const top=rows.length?Math.max(...rows.map(r=>r.hi)):1;const W=180;
  let h='<tr><th>agent</th><th class="num">wins / n</th><th class="num">win rate</th><th>95% CI</th><th class="num">mean floor</th><th class="num">Act 2 boss pass</th><th class="num">Act 3 boss reach</th><th class="num">Act 3 boss pass</th><th class="mut">file</th></tr>';
  rows.forEach((r,i)=>{const sc=v=>Math.round(W*v/top);
-  h+=`<tr class="${i==0?'best':''}"><td>${r.label}</td><td class="num">${r.wins} / ${r.n}</td><td class="num">${pct(r.rate,2)}</td>
+  h+=`<tr class="${id==='win'&&i===0?'best':''}"><td>${esc(r.label)}</td><td class="num">${r.wins} / ${r.n}</td><td class="num">${pct(r.rate,2)}</td>
   <td><div class="ci"><div class="r" style="left:${sc(r.lo)}px;width:${Math.max(2,sc(r.hi)-sc(r.lo))}px"></div><div class="p" style="left:${sc(r.rate)}px"></div></div><span class="mut small">${pct(r.lo)}–${pct(r.hi)}</span></td>
   <td class="num">${fmt(r.mean_floor)}</td><td class="num">${pct(r.act2_boss_pass)}</td><td class="num">${pct(r.act3_boss_reach)}</td><td class="num">${pct(r.act3_boss_pass)}</td><td class="mut small">${r.name}${r.mode&&r.mode!=='greedy'?' · '+r.mode:''}</td></tr>`});
  set(id,rows.length?h:'<tr><td class="mut">no results yet</td></tr>')}
@@ -555,6 +557,8 @@ async function load(){
  const res=await fetch(`/api/state?max_points=${MAX_POINTS}&since=${encodeURIComponent(sig)}`,{cache:'no-store',signal:AbortSignal.timeout(20000)});
  if(!res.ok)throw new Error(`HTTP ${res.status}`);
  const s=await res.json();lastOk=s.now;
+ const study=document.getElementById('study-update');
+ if(study)study.textContent=s.study?.message?`${s.study.stamp} · ${s.study.message}`:'';
  document.getElementById('hdr').textContent=s.runners.map(({root,status:rn})=>`${root}: `+(rn?`heartbeat ${fmt(s.now-rn.heartbeat,0)}s ago · ${rn.on_battery==null?'power unknown':rn.on_battery?'ON BATTERY: jobs paused':'AC power'}`:'queue runner not started')).join(' | ')+` · updated ${new Date(s.now*1000).toLocaleTimeString()}`;
  let a='<tr><th>job</th><th>root / queue</th><th>status</th><th>lane</th><th class="num">elapsed</th><th>progress</th><th>timing / estimated finish</th><th>latest train</th><th>latest eval</th></tr>';
  s.active.forEach(j=>{
@@ -632,18 +636,17 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith("/api/state"):
             body, kind = state_payload(self.path, self.extra_roots, self.lineage), "application/json"
         elif self.path in ("/", "/index.html"):
-            link = '<p><a href="/progress">Live study progress and evaluation milestones</a></p>' if (ROOT / "research/log.md").is_file() else ""
+            link = '<p><a href="/progress">Live study progress and evaluation milestones</a><br><span id="study-update"></span></p>' if (ROOT / "research/log.md").is_file() else ""
             body, kind = PAGE.replace("<!-- study progress link -->", link).encode(), "text/html; charset=utf-8"
         elif self.path == "/progress" and (ROOT / "research/log.md").is_file():
             log = (ROOT / "research/log.md").read_text()
             entries = "".join(f"<li>{html.escape(line[2:])}</li>" for line in log.splitlines() if line.startswith("- "))
             title = html.escape(log.splitlines()[0].lstrip("# ")) if log else "Study progress"
             heartbeat = ""
-            latest = RUNS / "study_heartbeat.json"
-            if latest.is_file():
-                report = json.loads(latest.read_bytes())
+            report = _read_json(RUNS / "study_heartbeat.json", None)
+            if report:
                 when, message = html.escape(report["stamp"]), html.escape(report["message"])
-                heartbeat = f"<p><strong>15-minute heartbeat · {when}</strong><br>{message}</p>"
+                heartbeat = f"<p><strong>Latest study update · {when}</strong><br>{message}</p>"
             body = (f'<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="30">'
                     f'<meta name="viewport" content="width=device-width, initial-scale=1"><title>{title}</title>'
                     '<style>body{font:16px/1.5 system-ui;max-width:62rem;margin:2rem auto;padding:0 1rem}'
