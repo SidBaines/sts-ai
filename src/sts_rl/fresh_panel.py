@@ -246,12 +246,17 @@ def bank_files(paths):
 
 
 def load_bank(paths, *, world_start=None, n=None):
+    return _read_bank(paths, world_start, n)[1]
+
+
+def _read_bank(paths, world_start, n):
     from sts_rl.fresh_cohort import validate_cohorts
     cohort = validate_cohorts(paths, world_start=world_start, n=n)
-    return _bank_rows(cohort)
+    allowed = range(world_start, world_start + n) if world_start is not None else None
+    return cohort, _bank_rows(cohort, allowed_worlds=allowed)
 
 
-def _bank_rows(cohort):
+def _bank_rows(cohort, *, allowed_worlds=None):
     from sts_rl.fresh_cohort import read_shard
     from sts_rl.fresh_collection import task
     rows = []
@@ -271,9 +276,12 @@ def _bank_rows(cohort):
                 raise ValueError("Bank/shard world, source or action-prefix mismatch")
         rows.extend(shard["bank"])
     seen = set()
+    if allowed_worlds is None:
+        # Historical callers that did not declare a roster used this reserved namespace.
+        allowed_worlds = range(92_000_000_000, 93_000_000_000)
     for row in rows:
-        if row.get("protocol") != PROTOCOL or not 92_000_000_000 <= row["world_seed"] < 93_000_000_000:
-            raise ValueError("Fresh bank must use separate 92e9 source worlds")
+        if row.get("protocol") != PROTOCOL or row["world_seed"] not in allowed_worlds:
+            raise ValueError("Fresh bank protocol or source-world range mismatch")
         if row["expected_provenance"]["environment_version"] != "0.1.5":
             raise ValueError("Fresh bank requires environment 0.1.5")
         key = row["world_seed"], row["start_id"]
@@ -358,9 +366,8 @@ def _grid_fields(frozen):
 
 
 def _panel_bank(config):
-    from sts_rl.fresh_cohort import validate_cohorts
-    cohort = validate_cohorts(config["bank"], world_start=config.get("bank_world_start"), n=config.get("bank_n"))
-    return cohort, _bank_rows(cohort), bank_identity(cohort)
+    cohort, rows = _read_bank(config["bank"], config.get("bank_world_start"), config.get("bank_n"))
+    return cohort, rows, bank_identity(cohort)
 
 
 def freeze_panel_grid(config):

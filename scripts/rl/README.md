@@ -3,6 +3,8 @@
 Training, collection and evaluation commands are listed in
 [src/sts_rl/README.md](../../src/sts_rl/README.md).
 
+For a newly allocated fight bank, pass both `--bank-world-start` and `--bank-n` to `fresh_panel.py` when freezing and replaying the grid. These options check the exact source-world roster. The historical default uses the original fight-bank namespace.
+
 Run `python scripts/rl/disk_report.py [DATA_ROOT ...] --out REPORT_DIR` before
 large batches. The default root is this checkout's `data/rl_runs`; the default
 free-space threshold is 30 GiB. Timestamped `disk_report_*.json` and

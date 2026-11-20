@@ -6,7 +6,7 @@ import sys
 import time
 
 from assess import freeze, report
-from study import CFG, CHAMP, OUT, ROOT, RUNS, note
+from study import CFG, CHAMP, HERE, OUT, ROOT, RUNS, note
 
 PREFIX = "one-fighter-"
 
@@ -57,15 +57,32 @@ def latest(folder):
     return 0
 
 
+def preparation(jobs):
+    start,n = CFG["bank"]
+    queue(jobs,"boss-bank","bank","fresh_collect.py",
+          ["--mode","eval","--checkpoint",CHAMP,"--world-start",start,"--n",n,
+           "--workers",6,"--bank","--no-teacher-labels","--out",OUT/"bank"])
+    if finished(jobs,"boss-bank",OUT/"bank/completion.json"):
+        queue(jobs,"freeze-grid","bank","fresh_panel.py",
+              ["--bank",OUT/"bank","--bank-world-start",start,"--bank-n",n,
+               "--starts-per-group",json.dumps({"BOSS3":CFG["boss_starts"]}),"--resamples",CFG["resamples"],
+               "--freeze-grid-only","--out",OUT/"grid.json"])
+    queue(jobs,"demonstrations","collect",HERE/"collect.py",
+          ["--out",OUT/"demonstrations","--processes",6])
+    if finished(jobs,"demonstrations",OUT/"demonstrations/summary.json"):
+        for share in CFG["boss_shares"]:
+            arm = f"mix{round(share*100)}"
+            queue(jobs,"fit-"+arm,"collect",HERE/"fit.py",["--boss-share",share,"--out",OUT/arm])
+
+
 def main():
     previous, last_quarter = None,-1
     while not (OUT/"STOP").exists():
         if (OUT/"verdict.json").exists():
             return
         jobs = {j["name"]:j for j in json.loads((RUNS/"queue.json").read_bytes())["runs"]}
-        finished(jobs,"demonstrations",OUT/"demonstrations/summary.json")
-        finished(jobs,"boss-bank",OUT/"bank/completion.json")
-        grid_ready = finished(jobs,"freeze-boss-entries",OUT/"grid.json")
+        preparation(jobs)
+        grid_ready = finished(jobs,"freeze-grid",OUT/"grid.json")
         ready = []
         for arm in ("mix25","mix50"):
             if finished(jobs,"fit-"+arm,OUT/arm/"summary.json"):

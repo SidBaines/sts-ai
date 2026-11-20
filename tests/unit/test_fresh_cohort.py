@@ -9,7 +9,7 @@ import unittest
 
 from sts_rl.fresh_cohort import SHARD_FIELDS, merge_cohorts, validate_cohorts
 from sts_rl.fresh_collection import play_world
-from sts_rl.fresh_panel import _bank_rows, bank_files, load_bank
+from sts_rl.fresh_panel import _bank_rows, bank_files, freeze_panel_grid, load_bank
 from sts_rl.fresh_study import atomic_json
 from sts_rl.recording import file_identity
 from tests.unit.fresh_cohort_fixture import reseal_summary, write_cohort
@@ -37,6 +37,22 @@ def rewrite_world(directory, change):
 
 
 class CohortTests(unittest.TestCase):
+    def test_declared_bank_range_freezes_a_new_roster_and_keeps_legacy_default(self):
+        seed = 283_000_000_000
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bank = write_cohort(root/"bank", [world(seed)])
+            rows = load_bank(bank, world_start=seed, n=1)
+            self.assertEqual({r["world_seed"] for r in rows}, {seed})
+            frozen = freeze_panel_grid({"bank": [bank], "bank_world_start": seed, "bank_n": 1,
+                                        "starts_per_group": {rows[0]["group"]: 1},
+                                        "resamples": 1, "out": root/"grid.json"})
+            self.assertEqual(frozen["worlds"], [seed])
+            with self.assertRaises(ValueError):
+                load_bank(bank, world_start=seed+1, n=1)
+            with self.assertRaisesRegex(ValueError, "range"):
+                load_bank(bank)
+
     def test_teacher_played_cohorts_require_explicit_analysis_optin(self):
         path = Path(__file__).resolve().parents[2]/"scripts"/"rl"/"fresh_compare.py"
         spec = importlib.util.spec_from_file_location("fresh_compare_cli", path)
