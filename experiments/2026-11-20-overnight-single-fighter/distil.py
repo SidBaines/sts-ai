@@ -22,7 +22,7 @@ def main(mode, out):
             note=note,
             fixed_steps=True,
             snapshots=CFG["snapshots"],
-            replay_reference=(3200, BASE / "head.pt"),
+            replay_reference=(3200, BASE / "player.pt"),
         )
     selection = read(OUT / "first-selection.json")
     if not selection["feedback"]:

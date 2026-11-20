@@ -406,7 +406,10 @@ def phase_forward(*, combat: str = "sample", ooc: str = "sample", temperature: f
             raise ValueError("combat temperatures must be finite, positive and use sampled combat")
 
     def forward(model: torch.nn.Module, batch: Any):
-        logits, values, mask = forward_policy(model, batch)
+        # A shared fighter consumes the usual three tensors. The optional public boss
+        # mask selects its sampling temperature during training only.
+        model_batch = batch[:3] if len(batch) == 4 and not hasattr(model, "boss_specialist") else batch
+        logits, values, mask = forward_policy(model, model_batch)
         is_combat = batch[0][:, 7] > .5
         scale = torch.full_like(values, 1.0 / temperature)
         if strategic_temperature != 1.0:
@@ -437,6 +440,7 @@ def phase_forward(*, combat: str = "sample", ooc: str = "sample", temperature: f
             fixed.scatter_(1,chosen[:,None],0.)
             logits=torch.where(rows[:,None],fixed,logits)
         return logits, values, mask
+    forward.uses_boss_temperature = boss_temperature is not None
     return forward
 
 

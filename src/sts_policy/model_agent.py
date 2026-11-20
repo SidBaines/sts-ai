@@ -240,8 +240,8 @@ def is_act3_boss_combat(observation):
     return state.get("act") == 3 and str(state.get("room", "")).rsplit(".", 1)[-1] == "BOSS"
 
 
-def route_batch(model, batch, observations):
-    if not isinstance(model, Act3BossActorCritic):
+def route_batch(model, batch, observations, *, forward=None):
+    if not isinstance(model, Act3BossActorCritic) and not getattr(forward, "uses_boss_temperature", False):
         return batch
     rows = [is_act3_boss_combat(obs) for obs in observations]
     return (*batch, torch.tensor(rows, device=batch[0].device, dtype=torch.bool))

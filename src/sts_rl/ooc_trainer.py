@@ -171,6 +171,7 @@ def ooc_forward(forward, *, critic_gradient: str = "shared", value_scale: float 
             values = torch.where(is_combat, values, values * value_scale)
         return logits, values, mask
 
+    wrapped.uses_boss_temperature = getattr(forward, "uses_boss_temperature", False)
     return wrapped
 
 
@@ -331,7 +332,8 @@ def collect_ooc_batch(model: torch.nn.Module, workers: Sequence[Any], tasks: Seq
         if combat_samples:
             episodes = [ep for ep in episodes if ep[-1].terminated and not ep[-1].truncated]
             for ep in episodes:
-                for role, sample in samples_from_game(ep, specialist=hasattr(model, "boss_specialist")).items():
+                separate_groups = hasattr(model, "boss_specialist") or forward.uses_boss_temperature
+                for role, sample in samples_from_game(ep, specialist=separate_groups).items():
                     combat_rows[role].extend(sample)
         new = macro_ooc_transitions(episodes, gae_lambda) if credit == "macro" else micro_ooc_transitions(episodes)
         # Kept transitions already carry their encodings; PPO only needs the
@@ -739,7 +741,8 @@ def train(cfg: OOCTrainConfig, *, resume: bool = False) -> None:
                     if rows:
                         # A separate reproducible sample measures behaviour without changing training RNGs.
                         sample = random.Random(iteration).sample(rows, min(2048, len(rows)))
-                        record[role+"_exploration"] = action_diagnostics(getattr(model, role).cpu(), sample, [temperatures[role]])
+                        head = getattr(model, role, model.combat)
+                        record[role+"_exploration"] = action_diagnostics(head.cpu(), sample, [temperatures[role]])
                 model.to(diagnostic_device)
                 model.zero_grad(set_to_none=True)
             update_started = time.time()

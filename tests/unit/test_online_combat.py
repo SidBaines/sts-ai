@@ -6,7 +6,7 @@ import torch
 
 from sts_policy.encoding import ACTION_DIM, STATE_DIM, EncodedObservation
 from sts_policy.model import CandidateActorCritic
-from sts_policy.model_agent import Act3BossActorCritic, route_batch
+from sts_policy.model_agent import Act3BossActorCritic, CompositeActorCritic, route_batch
 from sts_rl.common import phase_forward
 from sts_rl.online_combat import (
     ROLES,
@@ -19,6 +19,7 @@ from sts_rl.online_combat import (
     update_fighters,
     combat_optimizers,
     viable_combat_fit,
+    temperature_for_exploration,
 )
 
 
@@ -49,6 +50,46 @@ def row(seed, act, room, reward, finished=False, truncated=False, phase="combat"
 
 
 class OnlineCombatTests(unittest.TestCase):
+    def test_matched_temperature_excludes_padding_and_equal_moves(self):
+        logits = torch.tensor([[1., 0., 99.], [1., 1., 0.], [2., 2., 2.]])
+        mask = torch.tensor([[True, True, False], [True]*3, [True]*3])
+        result = temperature_for_exploration(logits, mask, .12)
+        self.assertEqual(result["meaningful_menus"], 2)
+        self.assertAlmostEqual(result["expected_rate"], .12, places=7)
+        with self.assertRaises(ValueError):
+            temperature_for_exploration(logits[-1:], mask[-1:], .12)
+
+    def test_single_actor_stratifies_training_without_adding_a_deployment_head(self):
+        from sts_policy.encoding import collate_observations
+        from sts_rl.ooc_trainer import ooc_forward
+        torch.manual_seed(4)
+        model = CompositeActorCritic(*(CandidateActorCritic(size="small") for _ in range(2)))
+        rows = {role: [] for role in ROLES}
+        for seed in range(12):
+            ep = [row(seed,1,"MONSTER",.1),row(seed,3,"BOSS",1 if seed%2 else -1,True)]
+            parts=samples_from_game(ep,specialist=True)
+            for role in ROLES:
+                rows[role].extend(parts[role])
+        samples=rows["combat"]+rows["boss_specialist"]
+        batch=collate_observations([t.encoded_observation for t in samples])
+        observations=[t.observation for t in samples]
+        forward=ooc_forward(phase_forward(combat_temperature=.2,boss_temperature=.5))
+        routed=route_batch(model,batch,observations,forward=forward)
+        self.assertEqual(len(route_batch(model,batch,observations)),3)
+        self.assertEqual(routed[-1].tolist(),[False]*12+[True]*12)
+        raw=model(*batch)[0]
+        logits=forward(model,routed)[0]
+        self.assertTrue(torch.allclose(logits[:12],raw[:12]/.2,atol=1e-6))
+        self.assertTrue(torch.allclose(logits[12:],raw[12:]/.5,atol=1e-6))
+        for i,t in enumerate(samples):
+            t.behavior_log_prob=float(logits[i].detach().log_softmax(0)[t.action_position])
+        before={k:v.clone() for k,v in model.state_dict().items()}
+        out=update_fighters(model,rows,combat_optimizers(model,3e-5),dict(combat=.2,boss_specialist=.5),
+                            rate=3e-5,epochs=1,device="cpu",seed=11,minibatch=32)
+        self.assertEqual(out["combat"]["samples"],24)
+        self.assertTrue(any(not torch.equal(v,before[k]) for k,v in model.state_dict().items() if k.startswith("combat.")))
+        self.assertTrue(all(torch.equal(v,before[k]) for k,v in model.state_dict().items() if k.startswith("ooc.")))
+
     def test_returns_censoring_and_routing(self):
         ep = [
             row(3, 1, "BOSS", 0.05),

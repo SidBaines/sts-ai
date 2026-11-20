@@ -145,7 +145,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
         if not observations:
             return []
         bootstrap_started = time.monotonic()
-        _, next_values, _ = forward(model, route_batch(model, collate(observations, device), observations))
+        _, next_values, _ = forward(model, route_batch(model, collate(observations, device), observations, forward=forward))
         output = next_values.cpu().tolist()
         timings["bootstrap_seconds"] += time.monotonic() - bootstrap_started
         forward_counts["bootstrap_batches"] += 1
@@ -270,7 +270,7 @@ def collect_rollouts(model: torch.nn.Module, workers: Sequence[Any], tasks: Sequ
             policy_batch, actor_encodings = collate_public_with_encodings(observations, device)
         else:
             policy_batch, actor_encodings = collate(observations, device), [None] * len(observations)
-        logits, values, mask = forward(model, route_batch(model, policy_batch, observations))
+        logits, values, mask = forward(model, route_batch(model, policy_batch, observations, forward=forward))
         if actor_only:
             if logits.shape != mask.shape or mask.dtype != torch.bool or not bool(mask.any(-1).all()) or not bool(torch.isfinite(logits[mask]).all()):
                 raise ValueError("Invalid actor-only legal logits/mask")
@@ -468,7 +468,7 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
                 for start in range(0, len(chosen), micro_batch):
                     part, part_indices = chosen[start:start + micro_batch], indices[start:start + micro_batch]
                     observations = [t.observation for t in part]
-                    logits, values, mask = forward(model, route_batch(model, collate(observations, device), observations))
+                    logits, values, mask = forward(model, route_batch(model, collate(observations, device), observations, forward=forward))
                     loss, stats = ppo_objective(
                         logits, mask, values, torch.tensor([t.action_position for t in part], device=device),
                         torch.tensor([t.behavior_log_prob for t in part], device=device),
@@ -494,7 +494,7 @@ def update_ppo(model: torch.nn.Module, transitions: Sequence[Transition], *,
                     break
                 continue
             observations = [t.observation for t in chosen]
-            logits, values, mask = forward(model, route_batch(model, collate(observations, device), observations))
+            logits, values, mask = forward(model, route_batch(model, collate(observations, device), observations, forward=forward))
             actions = torch.tensor([t.action_position for t in chosen], device=device)
             old_log_probs = torch.tensor([t.behavior_log_prob for t in chosen], device=device)
             returns = torch.tensor([t.returns / return_scale for t in chosen], device=device)

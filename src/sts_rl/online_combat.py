@@ -18,6 +18,38 @@ from .fresh_statistics import paired_win_normal_interval
 ROLES = ("combat", "boss_specialist")
 
 
+def temperature_for_exploration(logits, mask, target):
+    """Calibrate on meaningful menus, counting tied best moves as equally greedy."""
+    import math
+
+    if logits.ndim != 2 or logits.shape != mask.shape or not 0 < target < 1:
+        raise ValueError("Expected score and legal-mask matrices and a probability target")
+    if not mask.any(1).all() or not torch.isfinite(logits[mask]).all():
+        raise ValueError("Empty menu or nonfinite legal move score")
+    scores = logits.detach().cpu().double().masked_fill(~mask.cpu(), -torch.inf)
+    scores -= scores.amax(dim=1, keepdim=True)
+    lower = (scores < -1e-5) & mask.cpu()
+    meaningful = lower.any(1)
+    scores, lower = scores[meaningful], lower[meaningful]
+    if not len(scores):
+        raise ValueError("No meaningful menus for calibration")
+
+    def rate(temperature):
+        return float((torch.softmax(scores/temperature,dim=1)*lower).sum(1).mean())
+
+    lo, hi = 1e-6, 1000.
+    if not rate(lo) <= target <= rate(hi):
+        raise ValueError("The requested exploration rate is outside the attainable range")
+    for _ in range(36):
+        mid = math.sqrt(lo*hi)
+        if rate(mid) < target:
+            lo = mid
+        else:
+            hi = mid
+    temp = math.sqrt(lo*hi)
+    return {"temperature":temp, "expected_rate":rate(temp), "meaningful_menus":len(scores)}
+
+
 def samples_from_game(episode, ordinary_limit=32, boss_limit=16, *, specialist=True):
     """Uniformly sample decisions within each role; retain complete-game credit."""
     result = {role: [] for role in ROLES}
@@ -119,6 +151,15 @@ def update_fighters(
         if not batch:
             raise ValueError(f"no completed-game combat samples for {role}")
         center_combat_returns(batch)
+        forward = phase_forward(temperature=temperatures[role])
+        if role == "combat" and not hasattr(model, "boss_specialist") and rows.get("boss_specialist"):
+            # One optimizer sees all sampled moves. Each ratio uses the temperature
+            # that actually generated the move, including the separately sampled bosses.
+            boss_rows = rows["boss_specialist"]
+            center_combat_returns(boss_rows)
+            batch = [*batch, *boss_rows]
+            forward = phase_forward(combat_temperature=temperatures["combat"],
+                                    boss_temperature=temperatures["boss_specialist"])
         _move_optimizer_state(opt, device)
         head = getattr(model, role)
         try:
@@ -136,7 +177,7 @@ def update_fighters(
                 head,
                 batch,
                 collate=collate_public,
-                forward=phase_forward(temperature=temperatures[role]),
+                forward=forward,
                 config=cfg,
                 device=device,
                 seed=seed,
