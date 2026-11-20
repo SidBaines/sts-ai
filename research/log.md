@@ -1,4 +1,4 @@
-# Online combat training progress
+# Non-LLM training progress
 
 - 20 Nov 03:09 GMT — Independent confirmation finished. Joint training won 6,857, frozen combat 6,484 and their starting player 6,458 games on 16,384 assigned worlds. Joint vs frozen gained 2.28 points [+1.44, +3.11].
 - 20 Nov 03:09 GMT — Stage — finished.
@@ -9,52 +9,125 @@
 - 20 Nov 02:27 GMT — Froze joint as the primary nominee after the 16,384-world comparison.
 - 20 Nov 02:09 GMT — Queued primary-joint.
 - 19 Nov 23:58 GMT — Queued primary-control.
+- 19 Nov 22:15 GMT — Both timing schedules, all six gates and independent confirmation are complete.
+- 19 Nov 22:15 GMT — Confirmation: spaced won 6,639, champion won 6,446 on 16,384 worlds, 16,384 complete pairs.
+- 19 Nov 22:15 GMT — Confirmation: early won 6,773, champion won 6,446 on 16,384 worlds, 16,384 complete pairs.
+- 19 Nov 22:15 GMT — Confirmation: early won 6,773, spaced won 6,639 on 16,384 worlds, 16,384 complete pairs.
 - 19 Nov 21:58 GMT — Stage — training and paired update-24 evaluation.
 - 19 Nov 21:58 GMT — Queued train-joint.
 - 19 Nov 21:58 GMT — Queued train-control.
 - 19 Nov 21:57 GMT — Expanded pilot — finished.
 - 19 Nov 21:57 GMT — Expanded pilot independent comparison: challenger 3242, original 3272 wins on 8,192 worlds. Qualified to change settings: False.
+- 19 Nov 16:54 GMT — Evaluation — Queued confirmation-champion.
+- 19 Nov 16:54 GMT — Evaluation — Queued confirmation-spaced.
+- 19 Nov 16:54 GMT — Evaluation — Queued confirmation-early.
+- 19 Nov 16:54 GMT — Froze both endpoints. The selection rule nominated early.
+- 19 Nov 16:54 GMT — Selection: spaced won 6,612, early won 6,830 on 16,384 worlds, 16,383 complete pairs.
+- 19 Nov 16:26 GMT — shared development at update 24: 402/1024 wins, 0 faults.
+- 19 Nov 16:24 GMT — Evaluation — Queued selection-spaced.
+- 19 Nov 16:24 GMT — Evaluation — Queued selection-early.
+- 19 Nov 16:24 GMT — shared finished update 24/24 on 3,072 matched worlds, 1,148 sampled wins and 0 faults.
+- 19 Nov 16:19 GMT — shared finished update 23/24 on 3,072 matched worlds, 1,183 sampled wins and 0 faults.
 - 19 Nov 16:14 GMT — Expanded pilot — comparing the frozen third updates on 8,192 independent worlds.
+- 19 Nov 16:14 GMT — Queued shared strategy training through update 24.
+- 19 Nov 16:14 GMT — Spaced — Update 22: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 16:14 GMT — Spaced — Update 22 BOSS3:unsalted fight gate: active 64.1%, specialist 57.8% on 192 identical entries.
+- 19 Nov 16:14 GMT — Spaced — Update 22 BOSS3:resampled fight gate: active 59.4%, specialist 53.1% on 192 identical entries.
+- 19 Nov 16:14 GMT — Spaced — Queued fights-22.
+- 19 Nov 16:12 GMT — Spaced — Queued fit-22.
+- 19 Nov 16:08 GMT — Spaced — Queued grid-22.
+- 19 Nov 16:04 GMT — shared development at update 22: 387/1024 wins, 0 faults.
+- 19 Nov 16:02 GMT — Spaced — Queued bank-22.
+- 19 Nov 16:02 GMT — Spaced — Queued labels-22.
+- 19 Nov 16:02 GMT — shared finished update 22/24 on 3,072 matched worlds, 1,170 sampled wins and 0 faults.
 - 19 Nov 15:57 GMT — Expanded pilot — testing the two recipes over three real joint updates.
 - 19 Nov 15:57 GMT — Expanded pilot selected x12-lr3e-05-e4 for three fresh joint updates against the original recipe.
+- 19 Nov 15:56 GMT — shared finished update 21/24 on 3,072 matched worlds, 1,157 sampled wins and 0 faults.
 - 19 Nov 15:54 GMT — Expanded pilot — screened 26 of 27 settings.
+- 19 Nov 15:51 GMT — shared development at update 20: 385/1024 wins, 0 faults.
 - 19 Nov 15:50 GMT — Expanded pilot — screened 25 of 27 settings.
+- 19 Nov 15:50 GMT — shared finished update 20/24 on 3,072 matched worlds, 1,172 sampled wins and 0 faults.
 - 19 Nov 15:47 GMT — Expanded pilot — screened 24 of 27 settings.
+- 19 Nov 15:45 GMT — shared finished update 19/24 on 3,072 matched worlds, 1,158 sampled wins and 0 faults.
 - 19 Nov 15:44 GMT — Expanded pilot — screened 23 of 27 settings.
+- 19 Nov 14:04 GMT — shared development at update 18: 406/1024 wins, 0 faults.
 - 19 Nov 13:57 GMT — Expanded pilot — screened 22 of 27 settings.
+- 19 Nov 13:56 GMT — shared finished update 18/24 on 3,072 matched worlds, 1,171 sampled wins and 0 faults.
 - 19 Nov 13:54 GMT — Expanded pilot — screened 21 of 27 settings.
+- 19 Nov 13:51 GMT — shared finished update 17/24 on 3,072 matched worlds, 1,152 sampled wins and 0 faults.
 - 19 Nov 13:50 GMT — Expanded pilot — screened 20 of 27 settings.
 - 19 Nov 13:46 GMT — Expanded pilot — screened 19 of 27 settings.
+- 19 Nov 13:46 GMT — Queued shared strategy training through update 22.
+- 19 Nov 13:46 GMT — Spaced — Update 16: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 13:46 GMT — Spaced — Update 16 BOSS3:unsalted fight gate: active 64.1%, specialist 56.8% on 192 identical entries.
+- 19 Nov 13:46 GMT — Spaced — Update 16 BOSS3:resampled fight gate: active 68.2%, specialist 60.4% on 192 identical entries.
+- 19 Nov 13:46 GMT — Spaced — Queued fights-16.
 - 19 Nov 13:44 GMT — Expanded pilot — screened 18 of 27 settings.
+- 19 Nov 13:44 GMT — Spaced — Queued fit-16.
 - 19 Nov 13:41 GMT — Expanded pilot — screened 17 of 27 settings.
+- 19 Nov 13:40 GMT — Spaced — Queued grid-16.
 - 19 Nov 13:39 GMT — Stage — waiting for the expanded pilot verdict on 8,192 independent worlds.
 - 19 Nov 13:39 GMT — Expanded pilot — screened 16 of 27 settings.
 - 19 Nov 13:38 GMT — Both 24-update trainers will wait for the independent 8,192-world verdict and the Mac training slot. The expanded pilot and the earlier refit run are active.
+- 19 Nov 13:36 GMT — shared development at update 16: 397/1024 wins, 0 faults.
 - 19 Nov 13:35 GMT — Expanded pilot — screened 15 of 27 settings.
+- 19 Nov 13:35 GMT — Spaced — Queued bank-16.
+- 19 Nov 13:35 GMT — Spaced — Queued labels-16.
+- 19 Nov 13:35 GMT — shared finished update 16/24 on 3,072 matched worlds, 1,128 sampled wins and 0 faults.
 - 19 Nov 13:32 GMT — Expanded pilot — screened 14 of 27 settings.
+- 19 Nov 13:29 GMT — shared finished update 15/24 on 3,072 matched worlds, 1,112 sampled wins and 0 faults.
 - 19 Nov 13:28 GMT — Expanded pilot — screened 13 of 27 settings.
 - 19 Nov 13:24 GMT — Expanded pilot — screened 12 of 27 settings.
+- 19 Nov 13:24 GMT — shared development at update 14: 373/1024 wins, 0 faults.
+- 19 Nov 13:23 GMT — shared finished update 14/24 on 3,072 matched worlds, 1,164 sampled wins and 0 faults.
 - 19 Nov 13:17 GMT — Expanded pilot — screened 11 of 27 settings.
+- 19 Nov 13:14 GMT — shared finished update 13/24 on 3,072 matched worlds, 1,116 sampled wins and 0 faults.
 - 19 Nov 13:13 GMT — Expanded pilot — screened 10 of 27 settings.
 - 19 Nov 13:09 GMT — Expanded pilot — screened 9 of 27 settings.
+- 19 Nov 13:09 GMT — shared development at update 12: 391/1024 wins, 0 faults.
+- 19 Nov 13:08 GMT — shared finished update 12/24 on 3,072 matched worlds, 1,121 sampled wins and 0 faults.
 - 19 Nov 13:06 GMT — Expanded pilot — screened 8 of 27 settings.
+- 19 Nov 13:03 GMT — shared finished update 11/24 on 3,072 matched worlds, 1,167 sampled wins and 0 faults.
 - 19 Nov 13:02 GMT — Expanded pilot — screened 7 of 27 settings.
 - 19 Nov 12:55 GMT — Expanded pilot — screened 6 of 27 settings.
+- 19 Nov 12:54 GMT — shared development at update 10: 382/1024 wins, 0 faults.
+- 19 Nov 12:53 GMT — shared finished update 10/24 on 3,072 matched worlds, 1,214 sampled wins and 0 faults.
 - 19 Nov 12:47 GMT — The lower-load evaluator reproduced all 768 screening trajectories, including all 319 reference wins. The seven logical world groups now run at most three at once.
+- 19 Nov 12:47 GMT — shared finished update 9/24 on 3,072 matched worlds, 1,139 sampled wins and 0 faults.
 - 19 Nov 12:45 GMT — Expanded pilot — screened 5 of 27 settings.
 - 19 Nov 12:42 GMT — The original combat setting completed its three joint pilot updates. It won 525, 550 and 522 of 1,536 training games per update, with zero faults or cuts across all 4,608 games. The 128-world development check was 43 wins before training and 52 afterward.
+- 19 Nov 12:42 GMT — early-06 development at update 24: 365/1024 wins, 0 faults.
+- 19 Nov 12:41 GMT — early-06 finished update 24/24 on 3,072 matched worlds, 1,145 sampled wins and 0 faults.
+- 19 Nov 12:32 GMT — early-06 finished update 23/24 on 3,072 matched worlds, 1,190 sampled wins and 0 faults.
+- 19 Nov 12:23 GMT — early-06 development at update 22: 380/1024 wins, 0 faults.
+- 19 Nov 12:22 GMT — early-06 finished update 22/24 on 3,072 matched worlds, 1,191 sampled wins and 0 faults.
 - 19 Nov 12:13 GMT — Expanded pilot — finishing already queued work at lower concurrency.
+- 19 Nov 12:12 GMT — early-06 finished update 21/24 on 3,072 matched worlds, 1,180 sampled wins and 0 faults.
 - 19 Nov 12:05 GMT — Scaled back simultaneous pilot jobs after the preceding trainer slowed. New screens use at most three active evaluator processes, subject to reproducing every trajectory on the 768-world reference.
 - 19 Nov 12:04 GMT — Expanded pilot — screened 4 of 27 settings.
+- 19 Nov 12:03 GMT — early-06 development at update 20: 394/1024 wins, 0 faults.
 - 19 Nov 12:00 GMT — Expanded pilot — screened 3 of 27 settings.
+- 19 Nov 12:00 GMT — early-06 finished update 20/24 on 3,072 matched worlds, 1,188 sampled wins and 0 faults.
 - 19 Nov 11:57 GMT — Expanded pilot — screened 2 of 27 settings.
 - 19 Nov 11:55 GMT — Expanded pilot — screened 1 of 27 settings.
+- 19 Nov 11:48 GMT — early-06 finished update 19/24 on 3,072 matched worlds, 1,209 sampled wins and 0 faults.
 - 19 Nov 11:45 GMT — Opened a 27-setting combat pilot. Exploration, learning rate and passes vary together. The best distinct challenger will replay three joint updates against the original choice on fresh training worlds.
+- 19 Nov 11:42 GMT — early-06 development at update 18: 374/1024 wins, 0 faults.
+- 19 Nov 11:41 GMT — early-06 finished update 18/24 on 3,072 matched worlds, 1,157 sampled wins and 0 faults.
+- 19 Nov 11:37 GMT — early-06 finished update 17/24 on 3,072 matched worlds, 1,184 sampled wins and 0 faults.
+- 19 Nov 11:32 GMT — early-06 development at update 16: 385/1024 wins, 0 faults.
+- 19 Nov 11:11 GMT — early-06 finished update 16/24 on 3,072 matched worlds, 1,163 sampled wins and 0 faults.
+- 19 Nov 11:07 GMT — early-06 finished update 15/24 on 3,072 matched worlds, 1,125 sampled wins and 0 faults.
 - 19 Nov 11:02 GMT — Stage — pilot complete; waiting for the current training jobs to release the Mac GPU.
+- 19 Nov 11:02 GMT — early-06 development at update 14: 377/1024 wins, 0 faults.
+- 19 Nov 11:01 GMT — early-06 finished update 14/24 on 3,072 matched worlds, 1,176 sampled wins and 0 faults.
 - 19 Nov 11:00 GMT — Greedy pilot, 2,048 paired games each. Frozen 800 wins. One pass at 0.00001 won 811, one at 0.00003 won 819, one at 0.0001 won 815, and two at 0.00003 won 825. The selected fit gained 1.22 points [−0.18, +2.62].
 - 19 Nov 11:00 GMT — Frozen exploration screens, 768 worlds per setting. Near-greedy, 5%, 12% and 22% targets won 285, 276, 254 and 220 games respectively. All four cohorts completed.
 - 19 Nov 10:56 GMT — Stage — pilot complete; waiting for the refit study to freeze its two players.
 - 19 Nov 10:56 GMT — Selected combat learning rate 3e-05, 2 pass(es), on the 2,048 pilot worlds.
+- 19 Nov 10:56 GMT — early-06 finished update 13/24 on 3,072 matched worlds, 1,146 sampled wins and 0 faults.
+- 19 Nov 10:49 GMT — early-06 development at update 12: 387/1024 wins, 0 faults.
+- 19 Nov 10:48 GMT — early-06 finished update 12/24 on 3,072 matched worlds, 1,147 sampled wins and 0 faults.
 - 19 Nov 10:40 GMT — Queued pilot-eval-lr3e-05-e2.
 - 19 Nov 10:40 GMT — Queued pilot-eval-lr0.0001-e1.
 - 19 Nov 10:39 GMT — Queued pilot-eval-lr3e-05-e1.
@@ -62,10 +135,68 @@
 - 19 Nov 10:38 GMT — Stage — fitting combat settings and comparing greedy play.
 - 19 Nov 10:38 GMT — Queued pilot-eval-reference.
 - 19 Nov 10:38 GMT — Queued fits.
+- 19 Nov 10:38 GMT — early-06 finished update 11/24 on 3,072 matched worlds, 1,201 sampled wins and 0 faults.
+- 19 Nov 10:31 GMT — early-06 development at update 10: 373/1024 wins, 0 faults.
 - 19 Nov 10:29 GMT — Stage — collecting the combat learning-rate pilot.
 - 19 Nov 10:29 GMT — Queued fit-data.
 - 19 Nov 10:29 GMT — Selected moderate combat exploration after 4 matched 768-world checks.
+- 19 Nov 10:29 GMT — early-06 finished update 10/24 on 3,072 matched worlds, 1,184 sampled wins and 0 faults.
 - 19 Nov 10:28 GMT — Stage — measuring exploration.
+- 19 Nov 10:21 GMT — early-06 finished update 9/24 on 3,072 matched worlds, 1,196 sampled wins and 0 faults.
+- 19 Nov 10:09 GMT — early-06 development at update 8: 367/1024 wins, 0 faults.
+- 19 Nov 10:08 GMT — early-06 finished update 8/24 on 3,072 matched worlds, 1,133 sampled wins and 0 faults.
+- 19 Nov 10:03 GMT — early-06 finished update 7/24 on 3,072 matched worlds, 1,090 sampled wins and 0 faults.
+- 19 Nov 09:59 GMT — Queued shared strategy training through update 16.
+- 19 Nov 09:59 GMT — Spaced — Update 8: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 09:59 GMT — Spaced — Update 8 BOSS3:unsalted fight gate: active 63.5%, specialist 62.0% on 192 identical entries.
+- 19 Nov 09:59 GMT — Spaced — Update 8 BOSS3:resampled fight gate: active 67.7%, specialist 64.1% on 192 identical entries.
+- 19 Nov 09:58 GMT — Queued early-06 strategy training through update 24.
+- 19 Nov 09:58 GMT — Early — Update 6: adopted the specialist for Act 3 boss combat.
+- 19 Nov 09:58 GMT — Early — gate6 finished. active won 1,628, specialist won 1,655. 4,096/4,096 complete pairs. Full-cohort gain bounds [0.6591796875, 0.6591796875].
+- 19 Nov 09:58 GMT — Spaced — Queued fights-8.
+- 19 Nov 09:55 GMT — Spaced — Queued fit-8.
+- 19 Nov 09:50 GMT — Early — Queued gate6-specialist.
+- 19 Nov 09:50 GMT — Early — Queued gate6-active.
+- 19 Nov 09:50 GMT — Early — Update 6 BOSS3:unsalted fight gate: active 62.0%, specialist 64.1% on 192 identical entries.
+- 19 Nov 09:50 GMT — Early — Update 6 BOSS3:resampled fight gate: active 58.9%, specialist 62.0% on 192 identical entries.
+- 19 Nov 09:49 GMT — Early — Queued fights-6.
+- 19 Nov 09:47 GMT — Spaced — Queued grid-8.
+- 19 Nov 09:47 GMT — Early — Queued fit-6.
+- 19 Nov 09:42 GMT — Early — Queued grid-6.
+- 19 Nov 09:41 GMT — shared development at update 8: 384/1024 wins, 0 faults.
+- 19 Nov 09:39 GMT — Spaced — Queued bank-8.
+- 19 Nov 09:39 GMT — Spaced — Queued labels-8.
+- 19 Nov 09:39 GMT — shared finished update 8/24 on 3,072 matched worlds, 1,171 sampled wins and 0 faults.
+- 19 Nov 09:35 GMT — Early — Queued bank-6.
+- 19 Nov 09:35 GMT — Early — Queued labels-6.
+- 19 Nov 09:35 GMT — Early — Update 4: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 09:35 GMT — Early — Update 4 BOSS3:unsalted fight gate: active 63.5%, specialist 43.8% on 192 identical entries.
+- 19 Nov 09:35 GMT — Early — Update 4 BOSS3:resampled fight gate: active 65.6%, specialist 44.8% on 192 identical entries.
+- 19 Nov 09:34 GMT — Early — Queued fights-4.
+- 19 Nov 09:33 GMT — shared finished update 7/24 on 3,072 matched worlds, 1,118 sampled wins and 0 faults.
+- 19 Nov 09:28 GMT — Early — Queued fit-4.
+- 19 Nov 09:23 GMT — shared development at update 6: 367/1024 wins, 0 faults.
+- 19 Nov 09:23 GMT — Early — Queued grid-4.
+- 19 Nov 09:22 GMT — shared finished update 6/24 on 3,072 matched worlds, 1,128 sampled wins and 0 faults.
+- 19 Nov 09:16 GMT — shared finished update 5/24 on 3,072 matched worlds, 1,094 sampled wins and 0 faults.
+- 19 Nov 09:14 GMT — Early — Queued bank-4.
+- 19 Nov 09:14 GMT — Early — Queued labels-4.
+- 19 Nov 09:14 GMT — Early — Update 2: kept the active combat policy. The full-game gate was skipped because the saved-fight gate did not pass.
+- 19 Nov 09:14 GMT — Early — Update 2 BOSS3:unsalted fight gate: active 65.6%, specialist 34.9% on 192 identical entries.
+- 19 Nov 09:14 GMT — Early — Update 2 BOSS3:resampled fight gate: active 66.7%, specialist 35.9% on 192 identical entries.
+- 19 Nov 09:13 GMT — Early — Queued fights-2.
+- 19 Nov 09:10 GMT — shared development at update 4: 365/1024 wins, 0 faults.
+- 19 Nov 09:10 GMT — Early — Queued fit-2.
+- 19 Nov 09:09 GMT — shared finished update 4/24 on 3,072 matched worlds, 1,130 sampled wins and 0 faults.
+- 19 Nov 09:04 GMT — Early — Queued grid-2.
+- 19 Nov 09:03 GMT — shared finished update 3/24 on 3,072 matched worlds, 1,101 sampled wins and 0 faults.
+- 19 Nov 08:56 GMT — shared development at update 2: 351/1024 wins, 0 faults.
+- 19 Nov 08:55 GMT — Early — Queued bank-2.
+- 19 Nov 08:55 GMT — Early — Queued labels-2.
+- 19 Nov 08:55 GMT — shared finished update 2/24 on 3,072 matched worlds, 1,133 sampled wins and 0 faults.
+- 19 Nov 08:50 GMT — shared finished update 1/24 on 3,072 matched worlds, 1,115 sampled wins and 0 faults.
+- 19 Nov 08:46 GMT — shared development at update 0: 381/1024 wins, 0 faults.
+- 19 Nov 08:45 GMT — Set up the two schedules from the 39.42% champion, with three 512-world teacher collections per arm.
 - 19 Nov — Fixed the common starting champion, pilot selection rules, and matched full-game comparison before collecting pilot outcomes.
 
 # Act 3 boss refit progress

@@ -52,6 +52,8 @@ class PlotLineageTests(unittest.TestCase):
             write_run(runs / "c", ppo_events(runs / "splice.pt", 2), {})
             # D: branched by copying A's latest at iteration 3 and resuming
             write_run(runs / "d", ppo_events(root_ckpt, 2, start=4, resume_at=3), {})
+            write_run(runs / "new_branch", ppo_events(root_ckpt, 1, start=3, resume_at=2), {})
+            (runs / "new_branch/training-plan.json").write_text(json.dumps({"parent_run":"a","iteration":2}))
             # E: an OOC distillation of A's iteration 4
             distill = {"checkpoint": str(runs / "a" / "iter_0004.pt"), "head": "ooc", "beta": 1.0}
             write_run(runs / "e", [{"t": 9.0, "event": "start", "config": distill}], {})
@@ -84,6 +86,8 @@ class PlotLineageTests(unittest.TestCase):
             self.assertEqual(edges[("ppo:a", "splice:s")]["type"], "splice")
             self.assertEqual(edges[("splice:s", "ppo:c")]["type"], "ppo")
             self.assertEqual(edges[("ppo:a", "ppo:d")]["type"], "resume")
+            self.assertEqual(edges[("ppo:a", "ppo:new_branch")]["origin"], "training_plan")
+            self.assertEqual(nodes["ppo:new_branch"]["x0"], 2)
             self.assertEqual(edges[("ppo:a", "distill:e")]["type"], "distill")
             self.assertEqual((lineage["champions"][0]["node"], lineage["champions"][0]["iteration"]), ("ppo:a", 2))
             self.assertTrue(nodes["ppo:a"].get("champion_path"))

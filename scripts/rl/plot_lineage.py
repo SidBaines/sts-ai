@@ -258,8 +258,14 @@ def reconstruct(roots: list[Path], extras: dict | None = None, excludes: list[st
     branches = {b["run"]: b for b in extras.get("branches", [])}
     for run in runs:
         nid = by_id[run["id"]]
-        if run["id"] in branches:
-            branch = branches[run["id"]]
+        branch = branches.get(run["id"])
+        origin = "extra_edges"
+        plan = run["dir"] / "training-plan.json"
+        if branch is None and run["branched"] and plan.is_file():
+            info = json.loads(plan.read_text())
+            if info.get("parent_run") and info.get("iteration") == run["base_iter"]:
+                branch, origin = info, "training_plan"
+        if branch is not None:
             parent = by_id.get(branch["parent_run"])
             if parent is None:
                 warnings.append(f"branch {run['id']}: parent run {branch['parent_run']} not found")
@@ -267,7 +273,7 @@ def reconstruct(roots: list[Path], extras: dict | None = None, excludes: list[st
             if not run["branched"] or run["base_iter"] != branch["iteration"]:
                 warnings.append(f"branch {run['id']}: log resumes at {run['base_iter']}, extra edge says "
                                 f"{branch['iteration']}")
-            link(nid, (parent, branch["iteration"]), "resume", "extra_edges",
+            link(nid, (parent, branch["iteration"]), "resume", origin,
                  branch.get("note", "copied latest.pt and resumed"))
             continue
         if run["branched"]:

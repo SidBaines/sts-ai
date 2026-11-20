@@ -56,27 +56,45 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(runs["ooc_r2_lam1"]["label"], dashboard.LABELS["ooc_r2_lam1"])
         self.assertEqual(runs["batch/recipe"]["name"], "batch/recipe")
 
-    def test_current_lineage_is_ordered_and_old_labels_do_not_make_runs_key(self):
+    def test_key_membership_and_labels_do_not_override_start_time_order(self):
         lineage = ("joint_a3_every2_from_0f52/train", "joint_a3_from_0f52/control", "joint_a3_from_0f52/joint_after_8_control",
                    "joint_a3_from_0f52/joint_after_16_control", "joint_a3_from_0f52/joint_after_16_joint",
                    "ppo_fresh_worlds_from_4058/control", "ppo_fresh_worlds_from_4058/challenger",
                    "round4_20261021/round4", "continued2_20261021/train", "continued3_20261022/train",
                    "continued4_20261022/train", "joint_20261022/train", "joint2_20261022/train",
                    "reward_ablation_20261023/floors")
-        self.assertEqual(dashboard.KEY_RUNS, lineage)
+        self.assertEqual(set(dashboard.KEY_RUNS), set(lineage))
         present = [n for n in lineage if "continued4" not in n]
         old = ["large_batch_20261020/" + n for n in ("recipe", "recipe_hidden", "hygiene_hidden")]
-        for name in reversed(present + old + ["active"]):
-            self.log(self.root, name)
+        by_time = list(reversed(present + old + ["active"]))
+        for index, name in enumerate(by_time):
+            self.log(self.root, name, [{"event": "start", "t": 100 + index}])
         self.queue(self.root, self.job(self.root, "job", "active"))
         runs = dashboard.state()["runs"]
-        self.assertEqual(list(runs)[:len(present)], present)
-        self.assertEqual([n for n, r in runs.items() if r["key"]], present)
+        self.assertEqual(list(runs), by_time)
+        self.assertEqual([r["order"] for r in runs.values()], list(range(len(runs))))
+        self.assertEqual({n for n, r in runs.items() if r["key"]}, set(present))
         self.assertNotIn("continued4_20261022/train", runs)
         for name in present + old:
             self.assertEqual(runs[name]["label"], dashboard.LABELS[name])
         self.assertTrue(runs["active"]["active"])
         self.assertFalse(runs["active"]["key"])
+
+    def test_chronology_spans_roots_resumes_ties_and_legacy_queue_dates(self):
+        self.log(self.extra, "2", [{"event": "start", "t": 100}, {"event": "resume", "t": 450}])
+        self.log(self.root, "9", [{"event": "resume", "t": 200}])
+        self.log(self.root, "same-time", [{"event": "train", "t": 200}])
+        self.log(self.root, "old-format")
+        self.log(self.root, "unknown", [{"event": "start", "t": False}])
+        job = self.job(self.root, "old-job", "old-format", "done")
+        self.queue(self.root, dict(job, started=300), dict(job, started=50))
+        first = dashboard.state(extra_roots=[self.extra])
+        self.assertEqual(list(first["runs"]), ["old-format", "2", "9", "same-time", "unknown"])
+        self.assertEqual([r["started_at"] for r in first["runs"].values()], [50, 100, 200, 200, None])
+        self.queue(self.root, dict(job, started=150))
+        changed = dashboard.state(since=first["sig"], extra_roots=[self.extra])
+        self.assertEqual(list(changed["runs"]), ["2", "old-format", "9", "same-time", "unknown"])
+        self.assertEqual(changed["runs"]["2"]["order"], 0)
 
     def test_extra_roots_merge_runs_queues_history_and_runners(self):
         self.log(self.root, "direct")
@@ -150,9 +168,11 @@ class DashboardTests(unittest.TestCase):
     def test_closed_segment_keeps_planned_total_and_active_study(self):
         log = self.log(self.root, "staged", [{"event": "start", "config": {"iterations": 2}},
                        {"event": "train", "iteration": 2, "iteration_seconds": 30}, {"event": "done"}])
-        log.with_name("training-plan.json").write_text(json.dumps({"iterations": 24}))
+        log.with_name("training-plan.json").write_text(json.dumps({"iterations": 24, "label":"Early refits"}))
         run = dashboard.state()["runs"]["staged"]
         self.assertEqual((run["iterations_done"], run["iterations"], run["status"]), (2, 24, "between stages"))
+        self.assertTrue(run["key"])
+        self.assertEqual(run["label"], "Early refits")
         self.assertFalse(run["done"])
         self.assertIsNone(run["remaining_seconds"])
 
@@ -418,9 +438,10 @@ class DashboardPageTests(unittest.TestCase):
         if not shutil.which("node"):
             self.skipTest("node is required for dashboard JavaScript checks")
         runs = {name: {"name": name, "root": "/tmp/data/rl_runs", "label": name, "config": {},
+                       "order": i, "started_at": 1000 + i,
                        "key": name == "key", "active": name == "active", "status": "done",
                        "train": [{"iteration": 1, "collect_floor": 20}], "evals": []}
-                for name in ("key", "active", "old")}
+                for i, name in enumerate(("key", "active", "old"))}
         harness = r"""
 const assert=require('node:assert/strict'), vm=require('node:vm');
 const input=JSON.parse(require('node:fs').readFileSync(0,'utf8'));
@@ -478,13 +499,43 @@ element('default').handlers.click();assert(shown('key')&&shown('active'));assert
 assert.deepEqual(JSON.parse(storage.read()),{key:true,active:true,old:false});
 """)
 
+    def test_chronological_toggles_legends_and_wrapping_colors(self):
+        self.run_js(r"""
+assert(COLORS.length>=6);
+assert.equal(new Set(COLORS).size,COLORS.length);
+// Integer-like keys are enumerated numerically by JavaScript even when JSON arrived in start order.
+const names=Array.from({length:COLORS.length+2},(_,i)=>String(90-i));
+const template=state.runs.key;
+state.runs=Object.fromEntries([...names].reverse().map(n=>[n,{...template,name:n,order:names.indexOf(n)}]));
+await load();
+const tableNames=()=>Array.from(element('runs').innerHTML.matchAll(/<input type="checkbox" data-run="([^"]+)"/g),m=>m[1]);
+assert.deepEqual(tableNames(),names);
+assert.deepEqual(charts.c_wins.data.datasets.map(d=>d.label),names);
+names.forEach((n,i)=>{
+ const hue=COLORS[i%COLORS.length];
+ assert.equal(color(n),hue);
+ assert.equal(charts.c_train.data.datasets[i].borderColor,hue);
+ assert.equal(charts.c_train.data.datasets[i].backgroundColor,hue);
+ assert(element('runs').innerHTML.includes('background-color:'+hue+'" aria-hidden="true"></span>'+n+'</button>'));
+ if(i)assert.notEqual(hue,color(names[i-1]));
+});
+const last=names.at(-1),hue=color(last);
+toggleRun(names[0]);
+state.runs[names[1]].key=false;await load();
+assert(!visible().includes(names[1]));
+element('arch').handlers.click();
+assert.deepEqual(tableNames(),names);
+assert.equal(charts.c_wins.data.datasets.at(-1).borderColor,hue);
+assert(element('runs').innerHTML.includes('<time '));
+""")
+
     def test_selection_restores_and_new_active_runs_default_to_selected(self):
         self.run_js(r"""
 assert.equal(selected.get('key'),false);assert.equal(selected.get('old'),true);
 assert(!visible().includes('old'));assert(element('arch').textContent.includes('1 checked'));
 assert(Object.values(charts).every(c=>c.data.datasets.some(d=>d.label==='old'||d.label.startsWith('old '))));
 element('none').handlers.click();assert(Object.values(JSON.parse(storage.read())).every(v=>v===false));
-state.runs.later={...state.runs.active,name:'later'};await load();
+state.runs.later={...state.runs.active,name:'later',order:3};await load();
 assert.equal(selected.get('later'),true);assert.equal(selected.get('key'),false);
 """, saved=json.dumps({"key": False, "active": True, "old": True}))
 
