@@ -26,11 +26,11 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-The jointly trained challenger and the early-refit champion are scheduled to play the same 16,384 fresh worlds. [Head-to-head comparison](experiments/2026-11-20-joint-vs-early-refit.md).
+Nothing running. The early-refit player retains the title. Joint 6,852 wins, early refits 6,816 on 16,384 worlds. Joint minus early +0.22 percentage points (95% interval -0.62 to +1.06, 16,384 complete pairs). [Joint vs early refits](experiments/2026-11-20-joint-vs-early-refit.md).
 
 ## Next
 
-Choose the next training study with Sid after the head-to-head verdict.
+Choose the next training study with Sid from the early-refit champion. Testing whether one fighter can cover every encounter is an option already discussed.
 
 ## Open questions
 

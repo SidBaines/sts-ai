@@ -104,6 +104,8 @@ def archive_winner(players, evidence, day):
 
 
 def file_result(result, evidence, decision, promoted, champion, day):
+    from bosses import boss_table
+
     research = ROOT / "research"
     page = research / "experiments" / (HERE.name + ".md")
     link = f"[Joint vs early refits](experiments/{page.name})"
@@ -127,8 +129,11 @@ def file_result(result, evidence, decision, promoted, champion, day):
                f"{result['a_only']:,} | {early['faults']} | {early['cuts']} |\n"
                f"| Joint player | {joint['wins']:,} ({100*joint['wins']/N:.2f}%) | "
                f"{result['b_only']:,} | {joint['faults']} | {joint['cuts']} |\n\n"
-               f"![Paired win-rate difference and 95% interval](../figures/{HERE.name}/win-difference.png)\n\n"
-               f"## Conclusion\n\n{decision} The lower 95% bound with unresolved outcomes assigned "
+               f"![Paired win-rate difference and 95% interval](../figures/{HERE.name}/win-difference.png)\n\n")
+    results += boss_table(OUT, research / "figures" / HERE.name, result["paired_completed"])
+    interpretation = ("The fresh games did not establish an advantage for either player. "
+                      if interval[0] <= 0 <= interval[1] else "")
+    results += (f"## Conclusion\n\n{decision} {interpretation}The lower 95% bound with unresolved outcomes assigned "
                f"against joint was {result['worst_case_ci95_pp'][0]:+.2f} percentage points. "
                "The interval measures variation across worlds for these two frozen players.\n")
     commits = sorted({json.loads((OUT / arm / "run.json").read_text())["git_commit"][:8] for arm in JOBS})

@@ -15,7 +15,7 @@ def plot(verdict, folder):
     lower, upper = r.get("ci95_pp", r.get("complete_pair_ci95_pp"))
     folder.mkdir(parents=True, exist_ok=True)
     with (folder / "win-difference.csv").open("w", newline="") as stream:
-        writer = csv.writer(stream)
+        writer = csv.writer(stream, lineterminator="\n")
         writer.writerow(["assigned", "complete_pairs", "joint_only", "early_only", "difference_pp", "lower95", "upper95"])
         writer.writerow([r["n"], r["paired_completed"], r["b_only"], r["a_only"], delta, lower, upper])
     fig, ax = plt.subplots(figsize=(6.2, 1.9), layout="constrained")

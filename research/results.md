@@ -8,6 +8,7 @@ in `CLAUDE.md`; other terms in [metrics](metrics.md).
 
 | Date | Experiment | Tested | Result | Evidence | Verdict |
 |---|---|---|---|---|---|
+| 2026-11-20 | [Joint vs early refits](experiments/2026-11-20-joint-vs-early-refit.md) | Full-game wins, joint vs early refits, env 0.1.5.2 | Joint 6,852 wins, early refits 6,816 on 16,384 worlds. Joint minus early +0.22 percentage points (95% interval -0.62 to +1.06, 16,384 complete pairs). | Confirmed | Inconclusive |
 | 2026-11-20 | [Online combat](experiments/2026-11-19-online-combat.md) | Joint vs frozen combat, primary, env 0.1.5.2 | 6,712 vs 6,502 on 16,384 assigned worlds, +1.28 points [+0.44, +2.12], 16,383 complete pairs | Planned | Better |
 | 2026-11-20 | [Online combat](experiments/2026-11-19-online-combat.md) | Joint vs frozen combat, independent confirmation, env 0.1.5.2 | 6,857 vs 6,484 on 16,384 assigned worlds, +2.28 points [+1.44, +3.11], 16,383 complete pairs | Confirmed | Better |
 | 2026-11-20 | [Online combat](experiments/2026-11-19-online-combat.md) | Frozen combat vs common starting player, independent confirmation, env 0.1.5.2 | 6,484 vs 6,458 on 16,384 assigned worlds, +0.16 points [-0.63, +0.95], 16,383 complete pairs | Confirmed | No clear difference |

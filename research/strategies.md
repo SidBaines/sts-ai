@@ -258,6 +258,8 @@ starts the learner reached.
 
 **Working.** At the same combat exploration level, updating both fighters with strategy won 6,857 vs 6,484 games on 16,384 independent worlds, +2.28 points [+1.44, +3.11] on 16,383 complete pairs. The joint player cleared the Act 2 boss on 471 more matched worlds. This improvement comes from one matched training seed. [Matched online combat study](experiments/2026-11-19-online-combat.md).
 
+The early-refit player retains the title. Joint 6,852 wins, early refits 6,816 on 16,384 worlds. Joint minus early +0.22 percentage points (95% interval -0.62 to +1.06, 16,384 complete pairs). [Joint vs early refits](experiments/2026-11-20-joint-vs-early-refit.md).
+
 ## Joint sparse-win PPO
 
 **Stalled.** Train both networks together from the champion on the full-game

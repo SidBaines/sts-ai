@@ -1,5 +1,11 @@
 # Non-LLM training progress
 
+- 20 Nov 17:55 GMT — Joint 6,852 wins, early refits 6,816 on 16,384 worlds. Joint minus early +0.22 percentage points (95% interval -0.62 to +1.06, 16,384 complete pairs). The early-refit player retains the title.
+- 20 Nov 17:55 GMT — Joint player 16,384 of 16,384 worlds. Early-refit champion 16,384 of 16,384.
+- 20 Nov 17:49 GMT — Joint player 12,288 of 16,384 worlds. Early-refit champion 12,544 of 16,384.
+- 20 Nov 17:43 GMT — Joint player 8,192 of 16,384 worlds. Early-refit champion 8,448 of 16,384.
+- 20 Nov 17:37 GMT — Joint player 4,096 of 16,384 worlds. Early-refit champion 4,352 of 16,384.
+- 20 Nov 17:31 GMT — Joint player 0 of 16,384 worlds. Early-refit champion 0 of 16,384.
 - 20 Nov 17:18 GMT — Queued the joint player and early-refit champion on the same 16,384 unused worlds. Both evaluations will start on AC power. The paired result will decide the champion.
 - 20 Nov 03:09 GMT — Independent confirmation finished. Joint training won 6,857, frozen combat 6,484 and their starting player 6,458 games on 16,384 assigned worlds. Joint vs frozen gained 2.28 points [+1.44, +3.11].
 - 20 Nov 03:09 GMT — Stage — finished.
