@@ -62,13 +62,23 @@ def compact(folder, start, checkpoint, n, *, processes=7, games_per_process=8):
 
 
 def compare(a_folder, b_folder, start, a_name, b_name, a_ck, b_ck, n):
-    from sts_rl.fresh_statistics import exact_discordance, paired_win_normal_interval
-
     natives = [json.loads((p / "run.json").read_bytes()).get("native", {}) for p in (a_folder, b_folder)]
     if not natives[0].get("module_sha256") or natives[0] != natives[1]:
         raise ValueError("Paired evaluations require the same recorded native build")
     a, first = compact(a_folder, start, a_ck, n)
     b, second = compact(b_folder, start, b_ck, n)
+    return dict(start=start, a=a_name, b=b_name, first=first, second=second, **paired_binary_outcomes(a, b))
+
+
+def paired_binary_outcomes(a, b):
+    """Compare second minus first on identical keys with explicit unknown outcomes."""
+    from sts_rl.fresh_statistics import exact_discordance, paired_win_normal_interval
+
+    if a.keys() != b.keys() or len(a) < 2:
+        raise ValueError("Paired outcomes require the same roster of at least two positions")
+    if any(x is not None and type(x) is not bool for arm in (a, b) for x in arm.values()):
+        raise ValueError("A binary outcome must be a boolean or unknown")
+    n = len(a)
     up = down = low_unknown = high_unknown = unknown = 0
     for seed in a:
         x, y = a[seed], b[seed]
@@ -81,12 +91,7 @@ def compare(a_folder, b_folder, start, a_name, b_name, a_ck, b_ck, n):
             down += int(x and not y)
     delta = up - down
     result = dict(
-        start=start,
         n=n,
-        a=a_name,
-        b=b_name,
-        first=first,
-        second=second,
         paired_completed=n - unknown,
         b_only=up,
         a_only=down,

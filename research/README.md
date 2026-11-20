@@ -26,11 +26,11 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-Nothing running. The early-refit player retains the title. Joint 6,852 wins, early refits 6,816 on 16,384 worlds. Joint minus early +0.22 percentage points (95% interval -0.62 to +1.06, 16,384 complete pairs). [Joint vs early refits](experiments/2026-11-20-joint-vs-early-refit.md).
+The early-refit champion is teaching one combat network to play every fight. [Single-fighter study](experiments/2026-11-20-single-fighter.md).
 
 ## Next
 
-Choose the next training study with Sid from the early-refit champion. Testing whether one fighter can cover every encounter is an option already discussed.
+Compare the single fighter with its teacher on fresh full games and identical Act 3 boss starts.
 
 ## Open questions
 

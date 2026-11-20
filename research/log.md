@@ -1,5 +1,8 @@
 # Non-LLM training progress
 
+- 20 Nov 18:38 GMT — Fitting the single fighter with 25% boss examples in each update.
+- 20 Nov 18:37 GMT — Collected champion combat choices on 4,608 of 4,608 assigned worlds.
+- 20 Nov 18:31 GMT — Single-fighter study started. The early-refit champion is supplying combat demonstrations and a separate bank of Act 3 boss starts.
 - 20 Nov 17:55 GMT — Joint 6,852 wins, early refits 6,816 on 16,384 worlds. Joint minus early +0.22 percentage points (95% interval -0.62 to +1.06, 16,384 complete pairs). The early-refit player retains the title.
 - 20 Nov 17:55 GMT — Joint player 16,384 of 16,384 worlds. Early-refit champion 16,384 of 16,384.
 - 20 Nov 17:49 GMT — Joint player 12,288 of 16,384 worlds. Early-refit champion 12,544 of 16,384.

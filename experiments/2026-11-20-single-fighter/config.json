@@ -1,0 +1,22 @@
+{
+  "run": "single_fighter_from_f3c8",
+  "champion": "champions/champion_f3c85d4919b7.pt",
+  "champion_sha256": "f3c85d4919b718e2b4b2a26e60ffaa96883368d8b50a4ca7d1fda8240743049d",
+  "train": [280000000000, 4096],
+  "validation": [281000000000, 512],
+  "development": [282000000000, 2048],
+  "bank": [283000000000, 2048],
+  "confirmation": [284000000000, 16384],
+  "ordinary_samples_per_world": 48,
+  "boss_samples_per_world": 96,
+  "boss_starts": 1024,
+  "resamples": 1,
+  "boss_shares": [0.25, 0.5],
+  "batch": 256,
+  "lr": 0.0001,
+  "steps": 3200,
+  "check_every": 200,
+  "patience": 6,
+  "min_steps": 800,
+  "seed": 1120
+}

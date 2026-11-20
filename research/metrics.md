@@ -135,6 +135,8 @@ confirmation worlds apart.
 | 0.1.5.2 | Equal-budget early and spaced refit schedules at update 24 | 180,000,000,000 | 16,384 |
 | 0.1.5.2 | Independent timing confirmation against the other schedule and the 39.42% starting champion | 181,000,000,000 | 16,384 |
 | 0.1.5.2 | Frozen joint player against the early-refit champion | 270,000,000,000 | 16,384 |
+| 0.1.5.2 | Single-fighter training, imitation validation and full-game selection | 280, 281 and 282 billion | 4,096, 512 and 2,048 |
+| 0.1.5.2 | Single-fighter boss-entry source games and independent full-game confirmation | 283 and 284 billion | 2,048 and 16,384 |
 | All | Out-of-combat PPO training worlds start at the configured base plus 500,000,000 per training seed plus 10,000,000 per iteration | Configured per study | games per iteration |
 
 ## Environment versions

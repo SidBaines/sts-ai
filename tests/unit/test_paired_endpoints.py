@@ -3,10 +3,21 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sts_rl.paired_endpoints import compare, digest
+from sts_rl.paired_endpoints import compare, digest, paired_binary_outcomes
 
 
 class PairedEndpointTests(unittest.TestCase):
+    def test_binary_outcomes_check_roster_and_keep_discordant_arms_straight(self):
+        a = {"A": True, "B": False, "C": False, "D": False}
+        b = {"A": False, "B": True, "C": True, "D": False}
+        result = paired_binary_outcomes(a, b)
+        self.assertEqual((result["a_only"], result["b_only"], result["difference_pp"]), (1, 2, 25))
+        self.assertEqual(result["ci95_pp"], result["worst_case_ci95_pp"])
+        with self.assertRaisesRegex(ValueError, "roster"):
+            paired_binary_outcomes(a, {"other": None})
+        with self.assertRaisesRegex(ValueError, "boolean"):
+            paired_binary_outcomes(a, dict(b, D=0))
+
     def test_missing_outcomes_keep_known_side_and_reject_wrong_roster(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
