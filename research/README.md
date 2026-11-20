@@ -27,11 +27,11 @@ On the learning-rate confirmation panel about 43% of the 18 November champion's 
 
 ## Now
 
-Nothing running. The early-refit player remains champion after the [single-fighter study](experiments/2026-11-20-single-fighter.md).
+The [overnight study](experiments/2026-11-20-overnight-single-fighter.md) extends single-fighter imitation, tests the frozen student, and compares joint learning from the single- and two-fighter parents.
 
 ## Next
 
-Consider a longer fit with 25% final-boss examples. Its last training update had the best held-out imitation score.
+Compare both update-24 players and their starting parents, then independently confirm the nominee.
 
 ## Open questions
 

@@ -1,0 +1,22 @@
+{
+  "run": "overnight_single_fighter_20261120",
+  "previous_run": "single_fighter_from_f3c8",
+  "champion": "champions/champion_f3c85d4919b7.pt",
+  "champion_sha256": "f3c85d4919b718e2b4b2a26e60ffaa96883368d8b50a4ca7d1fda8240743049d",
+  "original_student_sha256": "b9e2909f788033b0c8ce5fac73b2e933167f67511db5571309c315e7553c2371",
+  "boss_shares": [0.25],
+  "lr": 0.0001, "batch": 256, "seed": 1120,
+  "steps": 12800, "snapshots": [6400,12800], "check_every": 200, "min_steps": 800, "patience": 6,
+  "screen": [310000000000,4096],
+  "feedback": [311000000000,2048],
+  "feedback_steps": 3200,
+  "feedback_screen": [312000000000,4096],
+  "bank": [313000000000,2048],
+  "boss_starts": 1024, "resamples": 1,
+  "retention": [314000000000,49152],
+  "development": [315000000000,1024],
+  "smoke_train_base": 316000000000, "smoke_eval": 316900000000,
+  "rl_train_base": 320000000000, "rl_seed": 17, "rl_iterations": 24, "rl_games": 3072,
+  "exploration": 0.12, "combat_lr": 0.00003, "combat_epochs": 2,
+  "rl_panel": [334000000000,16384], "rl_confirmation": [335000000000,16384]
+}
